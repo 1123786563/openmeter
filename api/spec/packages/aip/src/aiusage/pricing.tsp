@@ -74,7 +74,7 @@ model RatingSnapshot {
 @friendlyName("AIUsageLedgerEntryRef")
 model LedgerEntryRef {
   grant_id: Shared.ULID;
-  amount: Shared.Numeric;
+  amount: int64;
 
   // Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = receivable).
   priority: int32;

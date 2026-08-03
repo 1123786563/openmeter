@@ -48,6 +48,8 @@ const GovernanceDescription = "Governance evaluation of customers to check their
 const AIUsageTag = "AI Usage";
 const AIUsageDescription = "Canonical AI usage batch settlement, signed runtime authorization, and integer Credit balance for WeKnora Standard SaaS integration.";
 
+const AIUsageContractVersion = "weknora-billing-p1-v1";
+
 // The functionality should be considered unstable.
 const UnstableExtension = "x-unstable";
 // The functionality is internal and should not be used by customers.

@@ -414,11 +414,11 @@ export interface AiUsageUsageLineCreate {
    * Resource code identifying the billable resource type.
    *
    * Valid codes include:
-   * `chat_input_token`, `chat_output_token`, `chat_cache_read_token`,
-   * `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`,
-   * `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`,
-   * `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`,
-   * `web_search`, `agent_run`.
+   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+   * `web_searches`, `agent_runs`.
    */
   resourceCode: string
   /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */
@@ -941,7 +941,7 @@ export interface UpdateResourceReference {
 /** A reference to a credit grant that was burned during settlement. */
 export interface AiUsageLedgerEntryRef {
   grantId: string
-  amount: string
+  amount: bigint
   priority: number
 }
 
@@ -1178,6 +1178,11 @@ export interface FeatureCostQueryRow {
  * and reservation ceiling.
  */
 export interface AiUsageRuntimeAuthorization {
+  /**
+   * The frozen Phase 1 contract version string (currently
+   * `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+   */
+  contractVersion: string
   /** The timestamp of the authorization check. */
   retrievedAt: Date
   /** Whether the customer is authorized to consume AI resources. */
@@ -3611,11 +3616,11 @@ export interface AiUsageUsageLine {
    * Resource code identifying the billable resource type.
    *
    * Valid codes include:
-   * `chat_input_token`, `chat_output_token`, `chat_cache_read_token`,
-   * `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`,
-   * `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`,
-   * `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`,
-   * `web_search`, `agent_run`.
+   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+   * `web_searches`, `agent_runs`.
    */
   resourceCode: string
   /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */

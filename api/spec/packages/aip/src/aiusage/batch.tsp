@@ -41,11 +41,11 @@ model UsageLineCreate {
    * Resource code identifying the billable resource type.
    *
    * Valid codes include:
-   * `chat_input_token`, `chat_output_token`, `chat_cache_read_token`,
-   * `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`,
-   * `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`,
-   * `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`,
-   * `web_search`, `agent_run`.
+   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+   * `web_searches`, `agent_runs`.
    */
   resource_code: string;
 

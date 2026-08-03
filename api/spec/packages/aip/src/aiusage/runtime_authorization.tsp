@@ -102,6 +102,12 @@ model AICreditTransaction {
 @friendlyName("AIUsageRuntimeAuthorization")
 model RuntimeAuthorization {
   /**
+   * The frozen Phase 1 contract version string (currently
+   * `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+   */
+  contract_version: string;
+
+  /**
    * The timestamp of the authorization check.
    */
   @visibility(Lifecycle.Read)

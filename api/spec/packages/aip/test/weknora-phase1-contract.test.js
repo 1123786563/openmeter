@@ -148,7 +148,7 @@ describe('WeKnora Phase 1 contract', () => {
       assert.equal(batch.reservation_ceiling_credits, 40)
       assert.deepEqual(
         batch.lines.map((line) => line.resource_code),
-        ['chat_input_token', 'rag_retrieval', 'mcp_call'],
+        ['llm_input_tokens', 'rag_queries', 'mcp_tool_calls'],
       )
       assert.equal(batch.billing_mode, 'component')
       assert.equal(batch.tenant_seq, 42)
@@ -156,6 +156,7 @@ describe('WeKnora Phase 1 contract', () => {
 
     it('keeps the runtime-authorization fixture stable', () => {
       const authz = readFixture('weknora/phase1/runtime-authorization.json')
+      assert.equal(authz.contract_version, 'weknora-billing-p1-v1')
       assert.equal(authz.authorized, true)
       assert.equal(authz.available_credits, 1250)
       assert.equal(authz.covered_tenant_seq, 41)

@@ -113,6 +113,9 @@ func (value AIUsageCreditTransactionType) Valid() bool {
 // authorized to consume AI resources, along with their current credit balance
 // and reservation ceiling.
 type AIUsageRuntimeAuthorization struct {
+	// The frozen Phase 1 contract version string (currently
+	// `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+	ContractVersion string `json:"contract_version"`
 	// The timestamp of the authorization check.
 	RetrievedAt time.Time `json:"retrieved_at"`
 	// Whether the customer is authorized to consume AI resources.
@@ -210,11 +213,11 @@ type AIUsageUsageLine struct {
 	// Resource code identifying the billable resource type.
 	//
 	// Valid codes include:
-	// `chat_input_token`, `chat_output_token`, `chat_cache_read_token`,
-	// `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`,
-	// `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`,
-	// `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`,
-	// `web_search`, `agent_run`.
+	// `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+	// `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+	// `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+	// `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+	// `web_searches`, `agent_runs`.
 	ResourceCode string `json:"resource_code"`
 	// Raw consumption quantity (tokens, calls, seconds, pages, or images).
 	Quantity int64 `json:"quantity"`
@@ -242,11 +245,11 @@ type AIUsageUsageLineCreate struct {
 	// Resource code identifying the billable resource type.
 	//
 	// Valid codes include:
-	// `chat_input_token`, `chat_output_token`, `chat_cache_read_token`,
-	// `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`,
-	// `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`,
-	// `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`,
-	// `web_search`, `agent_run`.
+	// `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+	// `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+	// `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+	// `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+	// `web_searches`, `agent_runs`.
 	ResourceCode string `json:"resource_code"`
 	// Raw consumption quantity (tokens, calls, seconds, pages, or images).
 	Quantity int64 `json:"quantity"`

@@ -977,7 +977,7 @@ export const aiUsageUsageLineCreate = z
     resourceCode: z
       .string()
 
-        .describe("Resource code identifying the billable resource type. Valid codes include: `chat_input_token`, `chat_output_token`, `chat_cache_read_token`, `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`, `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`, `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`, `web_search`, `agent_run`."),
+        .describe("Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`."),
     quantity: z.coerce
       .bigint()
       .gte(-9223372036854775808n)
@@ -1688,7 +1688,10 @@ export const updateResourceReference = z
 export const aiUsageLedgerEntryRef = z
   .object({
     grantId: ulid,
-    amount: numeric,
+    amount: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n),
     priority: z.number().int().gte(-2147483648).lte(2147483647),
   })
   .describe("A reference to a credit grant that was burned during settlement.");
@@ -1868,6 +1871,10 @@ export const featureCostQueryRow = z
 
 export const aiUsageRuntimeAuthorization = z
   .object({
+    contractVersion: z
+      .string()
+
+        .describe("The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`). Clients can use this to detect contract changes."),
     retrievedAt: dateTime,
     authorized: z
       .boolean()
@@ -3973,7 +3980,7 @@ export const aiUsageUsageLine = z
     resourceCode: z
       .string()
 
-        .describe("Resource code identifying the billable resource type. Valid codes include: `chat_input_token`, `chat_output_token`, `chat_cache_read_token`, `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`, `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`, `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`, `web_search`, `agent_run`."),
+        .describe("Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`."),
     quantity: z.coerce
       .bigint()
       .gte(-9223372036854775808n)
@@ -7501,7 +7508,7 @@ export const aiUsageUsageLineCreateWire = z
     resource_code: z
       .string()
 
-        .describe("Resource code identifying the billable resource type. Valid codes include: `chat_input_token`, `chat_output_token`, `chat_cache_read_token`, `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`, `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`, `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`, `web_search`, `agent_run`."),
+        .describe("Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`."),
     quantity: z.coerce
       .bigint()
       .gte(-9223372036854775808n)
@@ -8212,7 +8219,10 @@ export const updateResourceReferenceWire = z
 export const aiUsageLedgerEntryRefWire = z
   .strictObject({
     grant_id: ulidWire,
-    amount: numericWire,
+    amount: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n),
     priority: z.number().int().gte(-2147483648).lte(2147483647),
   })
   .describe("A reference to a credit grant that was burned during settlement.");
@@ -8391,6 +8401,10 @@ export const featureCostQueryRowWire = z
 
 export const aiUsageRuntimeAuthorizationWire = z
   .strictObject({
+    contract_version: z
+      .string()
+
+        .describe("The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`). Clients can use this to detect contract changes."),
     retrieved_at: dateTimeWire,
     authorized: z
       .boolean()
@@ -10485,7 +10499,7 @@ export const aiUsageUsageLineWire = z
     resource_code: z
       .string()
 
-        .describe("Resource code identifying the billable resource type. Valid codes include: `chat_input_token`, `chat_output_token`, `chat_cache_read_token`, `chat_cache_write_token`, `chat_reasoning_token`, `embedding_token`, `rerank_call`, `vlm_input_token`, `vlm_output_token`, `vlm_image`, `asr_seconds`, `rag_retrieval`, `doc_parse_page`, `mcp_call`, `web_search`, `agent_run`."),
+        .describe("Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`."),
     quantity: z.coerce
       .bigint()
       .gte(-9223372036854775808n)

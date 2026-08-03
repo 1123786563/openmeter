@@ -12,19 +12,19 @@
   "provider_managed": true,
   "lines": [
     {
-      "resource_code": "chat_input_token",
+      "resource_code": "llm_input_tokens",
       "quantity": 3500,
       "provider": "openai",
       "model": "gpt-4o",
       "canonical_line_index": 0
     },
     {
-      "resource_code": "rag_retrieval",
+      "resource_code": "rag_queries",
       "quantity": 12,
       "canonical_line_index": 1
     },
     {
-      "resource_code": "mcp_call",
+      "resource_code": "mcp_tool_calls",
       "quantity": 3,
       "canonical_line_index": 2
     }
