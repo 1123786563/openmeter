@@ -200,6 +200,9 @@ func main() {
 			TaxCodeService:              app.TaxCodeService,
 			StreamingConnector:          app.StreamingConnector,
 			FeatureGate:                 app.FeatureGate,
+			AIUsageService:              app.AIUsageService,
+			RuntimeAuthorizationService: app.RuntimeAuthorizationService,
+			AIUsageEnabled:              conf.AIUsage.Enabled,
 		},
 		RouterHooks:         lo.FromPtr(app.RouterHooks),
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
@@ -324,6 +327,12 @@ func main() {
 		}
 
 		group.Add(terminationCheckerRun, terminationCheckerShutdown)
+	}
+
+	// AI Usage worker lifecycle
+	{
+		workerRun, workerStop := common.AIUsageWorkerGroup(ctx, app.AIUsageWorker)
+		group.Add(workerRun, workerStop)
 	}
 
 	// Setup signal handler

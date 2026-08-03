@@ -29,11 +29,14 @@ export function listMeteringEvents(
     if (client._options.validate && req.sort !== undefined) {
       assertValid(schemas.listMeteringEventsQueryParams.shape.sort, req.sort)
     }
-    const query = toWire({
-      page: req.page,
-      filter: req.filter,
-      sort: encodeSort(req.sort, toSnakeCase),
-    }, schemas.listMeteringEventsQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+        filter: req.filter,
+        sort: encodeSort(req.sort, toSnakeCase),
+      },
+      schemas.listMeteringEventsQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listMeteringEventsQueryParamsWire, query)
     }

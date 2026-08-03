@@ -22,10 +22,10 @@ interface AIUsageBatchOperations {
   /**
    * Submit a Canonical AI Usage Batch for settlement.
    *
-   * The first submit for a given `idempotency_key` returns HTTP 201 with the
-   * settled batch. An identical replay (same `idempotency_key` and
-   * `payload_hash`) returns HTTP 200 with the stored result. A replay with the
-   * same `idempotency_key` but a different `payload_hash` returns HTTP 409.
+   * The first submit for a given `idempotency_key` returns HTTP 201 with the settled
+   * batch. An identical replay (same `idempotency_key` and `payload_hash`) returns
+   * HTTP 200 with the stored result. A replay with the same `idempotency_key` but a
+   * different `payload_hash` returns HTTP 409.
    */
   @extension(Shared.UnstableExtension, true)
   @post
@@ -59,8 +59,8 @@ interface RuntimeAuthorizationOperations {
   /**
    * Check whether a customer is authorized to consume AI resources.
    *
-   * Returns the current integer credit balance, reservation ceiling, and the
-   * covered tenant sequence watermark.
+   * Returns the current integer credit balance, reservation ceiling, and the covered
+   * tenant sequence watermark.
    */
   @extension(Shared.UnstableExtension, true)
   @get
@@ -87,8 +87,8 @@ interface RuntimeAuthorizationOperations {
  */
 interface CreditBalanceOperations {
   /**
-   * Get a customer's credit balance for AI usage. Returns the same balance
-   * model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
+   * Get a customer's credit balance for AI usage. Returns the same balance model as
+   * the OpenMeter Credits endpoint but scoped to the AI Usage route.
    */
   @extension(Shared.UnstableExtension, true)
   @get
@@ -110,14 +110,13 @@ interface CreditBalanceOperations {
 
 /**
  * AI Usage-scoped credit transaction listing. These mirror the OpenMeter
- * `Customers.Credits.Transactions` operations but use AI Usage-specific
- * operation IDs and route prefixes for the WeKnora integration.
+ * `Customers.Credits.Transactions` operations but use AI Usage-specific operation
+ * IDs and route prefixes for the WeKnora integration.
  */
 interface CreditTransactionOperations {
   /**
-   * List credit transactions for a customer's AI usage. Returns the same
-   * transaction model as the OpenMeter Credits endpoint but scoped to the AI
-   * Usage route.
+   * List credit transactions for a customer's AI usage. Returns the same transaction
+   * model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
    */
   @extension(Shared.UnstableExtension, true)
   @get

@@ -2,9 +2,7 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginatePages,
-} from '../lib/paginate.js'
+import { paginatePages } from '../lib/paginate.js'
 import {
   createSubscription,
   listSubscriptions,
@@ -33,10 +31,7 @@ import type {
   GetSubscriptionAddonRequest,
   GetSubscriptionAddonResponse,
 } from '../models/operations/subscriptions.js'
-import type {
-  Subscription,
-  SubscriptionAddon,
-} from '../models/types.js'
+import type { Subscription, SubscriptionAddon } from '../models/types.js'
 
 export class Subscriptions {
   constructor(private readonly _client: Client) {}

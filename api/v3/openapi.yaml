@@ -26,6 +26,8 @@ servers:
     description: OpenMeter Cloud
     variables: {}
 tags:
+  - name: AI Usage
+    description: Canonical AI usage batch settlement, signed runtime authorization, and integer Credit balance for WeKnora Standard SaaS integration.
   - name: OpenMeter Governance
     description: Governance evaluation of customers to check their feature access.
   - name: OpenMeter Defaults
@@ -55,6 +57,190 @@ tags:
   - name: Meters
     description: Meters specify how to aggregate events for billing and analytics purposes. Meters can be configured with multiple aggregation methods and groupings. Multiple meters can be created for the same event type, enabling flexible metering scenarios.
 paths:
+  /ai-usage-batches:
+    post:
+      operationId: create-ai-usage-batch
+      summary: Submit an AI usage batch
+      description: |-
+        Submit a Canonical AI Usage Batch for settlement.
+
+        The first submit for a given `idempotency_key` returns HTTP 201 with the
+        settled batch. An identical replay (same `idempotency_key` and
+        `payload_hash`) returns HTTP 200 with the stored result. A replay with the
+        same `idempotency_key` but a different `payload_hash` returns HTTP 409.
+      responses:
+        '200':
+          description: UsageBatch response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageUsageBatch'
+        '201':
+          description: UsageBatch created response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageUsageBatch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - AI Usage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIUsageUsageBatchCreate'
+      x-unstable: true
+  /ai-usage-batches/{batchId}:
+    get:
+      operationId: get-ai-usage-batch
+      summary: Get an AI usage batch
+      description: Retrieve a settled AI Usage Batch by its ID.
+      parameters:
+        - name: batchId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ULID'
+      responses:
+        '200':
+          description: UsageBatch response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageUsageBatch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - AI Usage
+      x-unstable: true
+  /customers/{customerId}/credit-balance:
+    get:
+      operationId: get-ai-usage-credit-balance
+      summary: Get AI usage credit balance
+      description: |-
+        Get a customer's credit balance for AI usage. Returns the same balance
+        model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ULID'
+        - name: timestamp
+          in: query
+          required: false
+          description: Return the credit balance as of this timestamp. Defaults to now.
+          schema:
+            $ref: '#/components/schemas/DateTime'
+          explode: false
+          style: form
+      responses:
+        '200':
+          description: AICreditBalance response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageCreditBalance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - AI Usage
+      x-unstable: true
+  /customers/{customerId}/credit-transactions:
+    get:
+      operationId: list-ai-usage-credit-transactions
+      summary: List AI usage credit transactions
+      description: |-
+        List credit transactions for a customer's AI usage. Returns the same
+        transaction model as the OpenMeter Credits endpoint but scoped to the AI
+        Usage route.
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ULID'
+        - $ref: '#/components/parameters/CursorPaginationQuery'
+      responses:
+        '200':
+          description: Cursor paginated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AICreditTransactionPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - AI Usage
+      x-unstable: true
+  /customers/{customerId}/runtime-authorization:
+    get:
+      operationId: get-customer-runtime-authorization
+      summary: Get runtime authorization
+      description: |-
+        Check whether a customer is authorized to consume AI resources.
+
+        Returns the current integer credit balance, reservation ceiling, and the
+        covered tenant sequence watermark.
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ULID'
+        - name: filter
+          in: query
+          required: false
+          description: Filter the authorization check by subject and reservation.
+          schema:
+            $ref: '#/components/schemas/AIUsageRuntimeAuthorizationQuery'
+          style: deepObject
+      responses:
+        '200':
+          description: RuntimeAuthorization response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageRuntimeAuthorization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - AI Usage
+      x-unstable: true
   /openmeter/addons:
     get:
       operationId: list-addons
@@ -3579,6 +3765,476 @@ components:
         additionalProperties: false
       style: deepObject
   schemas:
+    AICreditTransactionPaginatedResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIUsageCreditTransaction'
+        meta:
+          $ref: '#/components/schemas/CursorMeta'
+      additionalProperties: false
+      description: Cursor paginated response.
+    AIUsageBatchStatus:
+      type: string
+      enum:
+        - settled
+        - corrected
+      description: |-
+        Settlement status of a usage batch.
+
+        - `settled`: Batch processed and credits deducted successfully.
+        - `corrected`: Batch reprocessed via a correction or compensation entry.
+    AIUsageBillingMode:
+      type: string
+      enum:
+        - component
+        - bundle
+      description: |-
+        Determines how a usage batch is charged.
+
+        - `component`: Per-resource pricing; each line item is rated individually.
+        - `bundle`: Flat ceiling charge; no per-resource breakdown.
+    AIUsageCostSnapshot:
+      type: object
+      required:
+        - currency
+        - amount
+        - source
+      properties:
+        currency:
+          $ref: '#/components/schemas/BillingCurrencyCode'
+        amount:
+          $ref: '#/components/schemas/Numeric'
+        source:
+          type: string
+      additionalProperties: false
+      description: The provider cost snapshot for a rated line (typically in USD).
+    AIUsageCreditBalance:
+      type: object
+      required:
+        - retrieved_at
+        - available_credits
+        - settled_credits
+        - pending_credits
+      properties:
+        retrieved_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The timestamp of the balance retrieval.
+          readOnly: true
+        available_credits:
+          type: integer
+          format: int64
+          description: Credits available for immediate consumption.
+        settled_credits:
+          type: integer
+          format: int64
+          description: Credits that have been booked on the ledger.
+        pending_credits:
+          type: integer
+          format: int64
+          description: Credits granted but not yet written to the ledger.
+      additionalProperties: false
+      description: |-
+        Integer credit balance for AI usage, scoped to a single currency.
+
+        Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as
+        signed 64-bit integers to avoid floating-point rounding in settlement.
+    AIUsageCreditTransaction:
+      type: object
+      required:
+        - id
+        - booked_at
+        - type
+        - amount
+        - available_balance_before
+        - available_balance_after
+      properties:
+        id:
+          allOf:
+            - $ref: '#/components/schemas/ULID'
+          description: Unique identifier of the transaction.
+          readOnly: true
+        booked_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: When the transaction was booked.
+          readOnly: true
+        type:
+          allOf:
+            - $ref: '#/components/schemas/AIUsageCreditTransactionType'
+          description: The type of credit movement.
+          readOnly: true
+        amount:
+          type: integer
+          format: int64
+          description: Signed credit amount. Positive adds balance, negative reduces it.
+          readOnly: true
+        available_balance_before:
+          type: integer
+          format: int64
+          description: Available balance before this transaction.
+          readOnly: true
+        available_balance_after:
+          type: integer
+          format: int64
+          description: Available balance after this transaction.
+          readOnly: true
+      additionalProperties: false
+      description: An immutable credit movement on the AI Usage integer credit ledger.
+    AIUsageCreditTransactionType:
+      type: string
+      enum:
+        - funded
+        - consumed
+        - expired
+        - voided
+      description: The type of a credit movement on the AI Usage integer credit ledger.
+    AIUsageRuntimeAuthorization:
+      type: object
+      required:
+        - contract_version
+        - retrieved_at
+        - authorized
+        - available_credits
+        - covered_tenant_seq
+      properties:
+        contract_version:
+          type: string
+          description: |-
+            The frozen Phase 1 contract version string (currently
+            `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+        retrieved_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The timestamp of the authorization check.
+          readOnly: true
+        authorized:
+          type: boolean
+          description: Whether the customer is authorized to consume AI resources.
+        available_credits:
+          type: integer
+          format: int64
+          description: Available integer Credit balance for AI consumption.
+        reservation_ceiling_credits:
+          type: integer
+          format: int64
+          description: |-
+            The reservation ceiling in Credits, if a reservation is active. When set,
+            usage is capped at this amount per reservation period.
+        covered_tenant_seq:
+          type: integer
+          format: int64
+          description: |-
+            The highest continuously covered tenant sequence number, used for watermark
+            tracking.
+        denial_reason:
+          type: string
+          description: The reason authorization was denied, when `authorized` is `false`.
+      additionalProperties: false
+      description: |-
+        Runtime authorization decision for a customer's AI usage.
+
+        Returned before processing a usage batch to indicate whether the customer is
+        authorized to consume AI resources, along with their current credit balance
+        and reservation ceiling.
+    AIUsageRuntimeAuthorizationQuery:
+      type: object
+      properties:
+        subject_key:
+          type: string
+          description: |-
+            The subject or tenant key that will produce the usage. Required to check
+            the tenant's sequence watermark and reservation status.
+        reservation_id:
+          type: string
+          description: The reservation ID to check the ceiling against.
+      additionalProperties: false
+      description: Query parameters for the runtime authorization endpoint.
+    AIUsageSalesSnapshot:
+      type: object
+      required:
+        - currency
+        - amount
+        - rate_card_version
+      properties:
+        currency:
+          $ref: '#/components/schemas/BillingCurrencyCode'
+        amount:
+          $ref: '#/components/schemas/Numeric'
+        rate_card_version:
+          type: string
+      additionalProperties: false
+      description: The customer-facing sales price snapshot (typically in CNY for display).
+    AIUsageUsageBatch:
+      type: object
+      required:
+        - id
+        - idempotency_key
+        - payload_hash
+        - billing_customer_id
+        - subject_key
+        - tenant_seq
+        - occurred_at
+        - reservation_id
+        - reservation_ceiling_credits
+        - rate_package_version
+        - billing_mode
+        - provider_managed
+        - lines
+        - status
+        - total_credits
+        - covered_tenant_seq
+        - created_at
+      properties:
+        id:
+          allOf:
+            - $ref: '#/components/schemas/ULID'
+          description: Unique identifier of the batch.
+          readOnly: true
+        idempotency_key:
+          type: string
+          description: The idempotency key from the create request.
+        payload_hash:
+          type: string
+          description: SHA-256 hex digest of the canonical request body.
+        billing_customer_id:
+          $ref: '#/components/schemas/ULID'
+        subject_key:
+          type: string
+        tenant_seq:
+          type: integer
+          format: int64
+        occurred_at:
+          $ref: '#/components/schemas/DateTime'
+        reservation_id:
+          type: string
+        reservation_ceiling_credits:
+          type: integer
+          format: int64
+        rate_package_version:
+          type: string
+        billing_mode:
+          $ref: '#/components/schemas/AIUsageBillingMode'
+        provider_managed:
+          type: boolean
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIUsageUsageLine'
+          description: The consumed line items with resolved pricing.
+        status:
+          allOf:
+            - $ref: '#/components/schemas/AIUsageBatchStatus'
+          description: Settlement status.
+        total_credits:
+          type: integer
+          format: int64
+          description: |-
+            Total integer Credit charge for the batch, after applying the reservation
+            ceiling.
+        covered_tenant_seq:
+          type: integer
+          format: int64
+          description: The highest continuously covered tenant sequence number after settlement.
+        created_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: Creation timestamp.
+          readOnly: true
+      additionalProperties: false
+      description: A settled AI Usage Batch with its rating and settlement results.
+    AIUsageUsageBatchCreate:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+        - billing_customer_id
+        - subject_key
+        - tenant_seq
+        - occurred_at
+        - reservation_id
+        - reservation_ceiling_credits
+        - rate_package_version
+        - billing_mode
+        - provider_managed
+        - lines
+      properties:
+        idempotency_key:
+          type: string
+          description: |-
+            Client-generated idempotency key. Replaying the same key with the same
+            `payload_hash` returns the stored result with HTTP 200. A replay with a
+            different `payload_hash` for the same key returns HTTP 409.
+        payload_hash:
+          type: string
+          description: |-
+            SHA-256 hex digest of the canonical request body, used for idempotency
+            verification.
+        billing_customer_id:
+          allOf:
+            - $ref: '#/components/schemas/ULID'
+          description: The billing customer (payer) in OpenMeter.
+        subject_key:
+          type: string
+          description: The subject or tenant key that produced the usage.
+        tenant_seq:
+          type: integer
+          format: int64
+          description: |-
+            Monotonic per-tenant sequence number for watermark tracking. Must be
+            strictly increasing within a tenant.
+        occurred_at:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: When the business action occurred. Used for rate package version resolution.
+        reservation_id:
+          type: string
+          description: Links to the WeKnora runtime reservation, if any.
+        reservation_ceiling_credits:
+          type: integer
+          format: int64
+          description: |-
+            Caps the total Credit charge for this batch. The platform absorbs any
+            excess above the ceiling.
+        rate_package_version:
+          type: string
+          description: Rate package version snapshot used for settlement.
+        billing_mode:
+          allOf:
+            - $ref: '#/components/schemas/AIUsageBillingMode'
+          description: Billing mode for this batch.
+        provider_managed:
+          type: boolean
+          description: |-
+            Whether model resources are platform-managed. Set to `false` for
+            bring-your-own-key (BYOK) models.
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIUsageUsageLineCreate'
+          minItems: 1
+          description: |-
+            The individual resource consumption entries. Must contain at least one line
+            for `component` billing mode.
+      additionalProperties: false
+      description: |-
+        Request body for submitting a Canonical AI Usage Batch.
+
+        A batch represents one business action (a chat turn, an agent run, etc.) and
+        is the atomic unit of AI billing settlement.
+    AIUsageUsageLine:
+      type: object
+      required:
+        - resource_code
+        - quantity
+        - canonical_line_index
+        - credits
+      properties:
+        resource_code:
+          type: string
+          description: |-
+            Resource code identifying the billable resource type.
+
+            Valid codes include:
+            `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+            `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+            `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+            `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+            `web_searches`, `agent_runs`.
+        quantity:
+          type: integer
+          format: int64
+          description: Raw consumption quantity (tokens, calls, seconds, pages, or images).
+          example: 1500
+        provider:
+          type: string
+          description: |-
+            LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
+            resources.
+        model:
+          type: string
+          description: |-
+            Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
+            for provider-managed resources.
+        pricing_dimensions:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional resource-specific pricing dimensions (e.g. region, tier).
+        canonical_line_index:
+          type: integer
+          format: int32
+          description: |-
+            Stable zero-based position used for deterministic ceiling allocation when
+            the batch total exceeds the reservation ceiling.
+        credits:
+          type: integer
+          format: int64
+          description: Integer Credit charge for this line.
+        cost_snapshot:
+          allOf:
+            - $ref: '#/components/schemas/AIUsageCostSnapshot'
+          description: Provider cost snapshot. Omitted for BYOK resources (cost is zero).
+        sales_snapshot:
+          allOf:
+            - $ref: '#/components/schemas/AIUsageSalesSnapshot'
+          description: Customer sales price snapshot.
+      additionalProperties: false
+      description: |-
+        A rated usage line returned in a settled batch, with resolved cost and sales
+        snapshots.
+    AIUsageUsageLineCreate:
+      type: object
+      required:
+        - resource_code
+        - quantity
+        - canonical_line_index
+      properties:
+        resource_code:
+          type: string
+          description: |-
+            Resource code identifying the billable resource type.
+
+            Valid codes include:
+            `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
+            `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
+            `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
+            `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
+            `web_searches`, `agent_runs`.
+        quantity:
+          type: integer
+          format: int64
+          description: Raw consumption quantity (tokens, calls, seconds, pages, or images).
+          example: 1500
+        provider:
+          type: string
+          description: |-
+            LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
+            resources.
+        model:
+          type: string
+          description: |-
+            Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
+            for provider-managed resources.
+        pricing_dimensions:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional resource-specific pricing dimensions (e.g. region, tier).
+        canonical_line_index:
+          type: integer
+          format: int32
+          description: |-
+            Stable zero-based position used for deterministic ceiling allocation when
+            the batch total exceeds the reservation ceiling.
+      additionalProperties: false
+      description: One billable resource line within a usage batch creation request.
     Addon:
       type: object
       required:
@@ -13261,60 +13917,6 @@ components:
           default: none
       additionalProperties: false
       description: Request body for voiding a credit grant.
-    SortQuery:
-      title: SortQuery
-      type: string
-      example: created_at desc
-      description: |
-        The `asc` suffix is optional as the default sort order is ascending.
-        The `desc` suffix is used to specify a descending order.
-        Multiple sort attributes may be provided via a comma separated list.
-        JSONPath notation may be used to specify a sub-attribute (eg: 'foo.bar desc').
-    Labels:
-      title: Labels
-      type: object
-      example:
-        env: test
-      maxProperties: 50
-      description: |
-        Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types. 
-
-        Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
-      additionalProperties:
-        type: string
-        pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
-        minLength: 1
-        maxLength: 63
-    PageMeta:
-      type: object
-      description: Contains pagination query parameters and the total number of objects returned.
-      required:
-        - number
-        - size
-        - total
-      properties:
-        number:
-          type: number
-          example: 1
-          x-speakeasy-terraform-ignore: true
-        size:
-          type: number
-          example: 10
-          x-speakeasy-terraform-ignore: true
-        total:
-          type: number
-          example: 100
-          x-speakeasy-terraform-ignore: true
-    PaginatedMeta:
-      type: object
-      title: PaginatedMeta
-      x-speakeasy-terraform-ignore: true
-      description: returns the pagination information
-      properties:
-        page:
-          $ref: '#/components/schemas/PageMeta'
-      required:
-        - page
     BaseError:
       type: object
       title: Error
@@ -13607,21 +14209,6 @@ components:
               example: kong:trace:1234567890
             detail:
               example: Not found
-    GoneError:
-      allOf:
-        - $ref: '#/components/schemas/BaseError'
-        - type: object
-          properties:
-            status:
-              example: 410
-            title:
-              example: Gone
-            type:
-              example: https://httpstatuses.com/410
-            instance:
-              example: kong:trace:1234567890
-            detail:
-              example: Gone
     ConflictError:
       allOf:
         - $ref: '#/components/schemas/BaseError'
@@ -13674,6 +14261,75 @@ components:
       properties:
         page:
           $ref: '#/components/schemas/CursorMetaPage'
+    SortQuery:
+      title: SortQuery
+      type: string
+      example: created_at desc
+      description: |
+        The `asc` suffix is optional as the default sort order is ascending.
+        The `desc` suffix is used to specify a descending order.
+        Multiple sort attributes may be provided via a comma separated list.
+        JSONPath notation may be used to specify a sub-attribute (eg: 'foo.bar desc').
+    Labels:
+      title: Labels
+      type: object
+      example:
+        env: test
+      maxProperties: 50
+      description: |
+        Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types. 
+
+        Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
+      additionalProperties:
+        type: string
+        pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+        minLength: 1
+        maxLength: 63
+    PageMeta:
+      type: object
+      description: Contains pagination query parameters and the total number of objects returned.
+      required:
+        - number
+        - size
+        - total
+      properties:
+        number:
+          type: number
+          example: 1
+          x-speakeasy-terraform-ignore: true
+        size:
+          type: number
+          example: 10
+          x-speakeasy-terraform-ignore: true
+        total:
+          type: number
+          example: 100
+          x-speakeasy-terraform-ignore: true
+    PaginatedMeta:
+      type: object
+      title: PaginatedMeta
+      x-speakeasy-terraform-ignore: true
+      description: returns the pagination information
+      properties:
+        page:
+          $ref: '#/components/schemas/PageMeta'
+      required:
+        - page
+    GoneError:
+      allOf:
+        - $ref: '#/components/schemas/BaseError'
+        - type: object
+          properties:
+            status:
+              example: 410
+            title:
+              example: Gone
+            type:
+              example: https://httpstatuses.com/410
+            instance:
+              example: kong:trace:1234567890
+            detail:
+              example: Gone
   responses:
     BadRequest:
       description: Bad Request
@@ -13708,18 +14364,18 @@ components:
           examples:
             NotFoundExample:
               $ref: '#/components/examples/NotFoundExample'
-    Gone:
-      description: Gone
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/GoneError'
     Conflict:
       description: Conflict
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ConflictError'
+    Gone:
+      description: Gone
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/GoneError'
   examples:
     UnauthorizedExample:
       value:

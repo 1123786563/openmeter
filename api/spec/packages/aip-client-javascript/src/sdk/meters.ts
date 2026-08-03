@@ -2,9 +2,7 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginatePages,
-} from '../lib/paginate.js'
+import { paginatePages } from '../lib/paginate.js'
 import {
   createMeter,
   getMeter,
@@ -30,9 +28,7 @@ import type {
   QueryMeterCsvRequest,
   QueryMeterCsvResponse,
 } from '../models/operations/meters.js'
-import type {
-  Meter,
-} from '../models/types.js'
+import type { Meter } from '../models/types.js'
 
 export class Meters {
   constructor(private readonly _client: Client) {}

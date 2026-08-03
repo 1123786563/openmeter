@@ -3,7 +3,15 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { App, AppCatalogItem, AppCatalogItemPagePaginatedResponse, AppPagePaginatedResponse, BillingInstallAppResponse, InstallAppRequest as InstallAppRequestBody, UpdateAppRequest as UpdateAppRequestBody } from '../types.js'
+import type {
+  App,
+  AppCatalogItem,
+  AppCatalogItemPagePaginatedResponse,
+  AppPagePaginatedResponse,
+  BillingInstallAppResponse,
+  InstallAppRequest as InstallAppRequestBody,
+  UpdateAppRequest as UpdateAppRequestBody,
+} from '../types.js'
 
 export interface ListAppsQuery {
   /** Determines which page of the collection to retrieve. */

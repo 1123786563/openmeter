@@ -67,6 +67,8 @@ import (
 	subscriptionhttpdriver "github.com/openmeterio/openmeter/openmeter/productcatalog/subscription/http"
 	"github.com/openmeterio/openmeter/openmeter/progressmanager"
 	progresshttpdriver "github.com/openmeterio/openmeter/openmeter/progressmanager/httpdriver"
+	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/streaming"
 	"github.com/openmeterio/openmeter/openmeter/subject"
 	subjecthttphandler "github.com/openmeterio/openmeter/openmeter/subject/httphandler"
@@ -143,6 +145,10 @@ type Config struct {
 	SubjectService              subject.Service
 	TaxCodeService              taxcode.Service
 	FeatureGate                 *featuregate.FeatureGateChecker
+
+	AIUsageService              aiusage.Service
+	RuntimeAuthorizationService runtimeauthorization.Service
+	AIUsageEnabled              bool
 }
 
 func (c Config) Validate() error {

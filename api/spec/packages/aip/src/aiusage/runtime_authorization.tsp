@@ -23,8 +23,8 @@ enum AICreditTransactionType {
 /**
  * Integer credit balance for AI usage, scoped to a single currency.
  *
- * Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as
- * signed 64-bit integers to avoid floating-point rounding in settlement.
+ * Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed
+ * 64-bit integers to avoid floating-point rounding in settlement.
  */
 @friendlyName("AIUsageCreditBalance")
 model AICreditBalance {
@@ -96,14 +96,14 @@ model AICreditTransaction {
  * Runtime authorization decision for a customer's AI usage.
  *
  * Returned before processing a usage batch to indicate whether the customer is
- * authorized to consume AI resources, along with their current credit balance
- * and reservation ceiling.
+ * authorized to consume AI resources, along with their current credit balance and
+ * reservation ceiling.
  */
 @friendlyName("AIUsageRuntimeAuthorization")
 model RuntimeAuthorization {
   /**
-   * The frozen Phase 1 contract version string (currently
-   * `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+   * The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`).
+   * Clients can use this to detect contract changes.
    */
   contract_version: string;
 
@@ -124,8 +124,8 @@ model RuntimeAuthorization {
   available_credits: int64;
 
   /**
-   * The reservation ceiling in Credits, if a reservation is active. When set,
-   * usage is capped at this amount per reservation period.
+   * The reservation ceiling in Credits, if a reservation is active. When set, usage
+   * is capped at this amount per reservation period.
    */
   reservation_ceiling_credits?: int64;
 
@@ -147,8 +147,8 @@ model RuntimeAuthorization {
 @friendlyName("AIUsageRuntimeAuthorizationQuery")
 model RuntimeAuthorizationQuery {
   /**
-   * The subject or tenant key that will produce the usage. Required to check
-   * the tenant's sequence watermark and reservation status.
+   * The subject or tenant key that will produce the usage. Required to check the
+   * tenant's sequence watermark and reservation status.
    */
   subject_key?: string;
 

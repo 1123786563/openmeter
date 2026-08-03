@@ -54,6 +54,7 @@ type Configuration struct {
 	TaxCode            TaxCodeConfiguration
 	FeatureGate        FeatureGateConfiguration
 	UnitConfig         UnitConfigConfiguration
+	AIUsage            AIUsageConfiguration
 }
 
 // Validate validates the configuration.
@@ -185,6 +186,10 @@ func (c Configuration) Validate() error {
 		}
 	}
 
+	if err := c.AIUsage.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "ai_usage"))
+	}
+
 	if err := c.UnitConfig.Validate(); err != nil {
 		errs = append(errs, errorsx.WithPrefix(err, "unitConfig"))
 	}
@@ -238,4 +243,5 @@ func SetViperDefaults(v *viper.Viper, flags *pflag.FlagSet) {
 	ConfigureTaxCode(v)
 	ConfigureFeatureGate(v, "featureGate")
 	ConfigureUnitConfig(v, "unitConfig")
+	ConfigureAIUsage(v)
 }

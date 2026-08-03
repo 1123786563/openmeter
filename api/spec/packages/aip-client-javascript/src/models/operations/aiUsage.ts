@@ -3,9 +3,18 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { AiCreditTransactionPaginatedResponse, AiUsageCreditBalance, AiUsageRuntimeAuthorization, AiUsageRuntimeAuthorizationQuery, AiUsageUsageBatch, AiUsageUsageBatchCreate, CursorPaginationQueryPage } from '../types.js'
+import type {
+  AiCreditTransactionPaginatedResponse,
+  AiUsageCreditBalance,
+  AiUsageRuntimeAuthorization,
+  AiUsageRuntimeAuthorizationQuery,
+  AiUsageUsageBatch,
+  AiUsageUsageBatchCreate,
+  CursorPaginationQueryPage,
+} from '../types.js'
 
-export type CreateAiUsageBatchRequest = AcceptDateStrings<AiUsageUsageBatchCreate>
+export type CreateAiUsageBatchRequest =
+  AcceptDateStrings<AiUsageUsageBatchCreate>
 export type CreateAiUsageBatchResponse = AiUsageUsageBatch
 
 export type GetAiUsageBatchRequest = {
@@ -18,20 +27,28 @@ export interface GetCustomerRuntimeAuthorizationQuery {
   filter?: AiUsageRuntimeAuthorizationQuery
 }
 
-export type GetCustomerRuntimeAuthorizationRequest = AcceptDateStrings<GetCustomerRuntimeAuthorizationQuery & { customerId: string }>
-export type GetCustomerRuntimeAuthorizationResponse = AiUsageRuntimeAuthorization
+export type GetCustomerRuntimeAuthorizationRequest = AcceptDateStrings<
+  GetCustomerRuntimeAuthorizationQuery & { customerId: string }
+>
+export type GetCustomerRuntimeAuthorizationResponse =
+  AiUsageRuntimeAuthorization
 
 export interface GetAiUsageCreditBalanceQuery {
   /** Return the credit balance as of this timestamp. Defaults to now. */
   timestamp?: Date
 }
 
-export type GetAiUsageCreditBalanceRequest = AcceptDateStrings<GetAiUsageCreditBalanceQuery & { customerId: string }>
+export type GetAiUsageCreditBalanceRequest = AcceptDateStrings<
+  GetAiUsageCreditBalanceQuery & { customerId: string }
+>
 export type GetAiUsageCreditBalanceResponse = AiUsageCreditBalance
 
 export interface ListAiUsageCreditTransactionsQuery {
   page?: CursorPaginationQueryPage
 }
 
-export type ListAiUsageCreditTransactionsRequest = AcceptDateStrings<ListAiUsageCreditTransactionsQuery & { customerId: string }>
-export type ListAiUsageCreditTransactionsResponse = AiCreditTransactionPaginatedResponse
+export type ListAiUsageCreditTransactionsRequest = AcceptDateStrings<
+  ListAiUsageCreditTransactionsQuery & { customerId: string }
+>
+export type ListAiUsageCreditTransactionsResponse =
+  AiCreditTransactionPaginatedResponse

@@ -3,7 +3,13 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { Invoice, InvoicePagePaginatedResponse, ListInvoicesParamsFilter, SortQueryInput, UpdateInvoiceRequestInput } from '../types.js'
+import type {
+  Invoice,
+  InvoicePagePaginatedResponse,
+  ListInvoicesParamsFilter,
+  SortQueryInput,
+  UpdateInvoiceRequestInput,
+} from '../types.js'
 
 export interface ListInvoicesQuery {
   /** Determines which page of the collection to retrieve. */

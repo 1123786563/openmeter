@@ -55,8 +55,8 @@ model SalesSnapshot {
 }
 
 /**
- * A rating snapshot captures the cost and sales price resolution for one line
- * item within a settled batch.
+ * A rating snapshot captures the cost and sales price resolution for one line item
+ * within a settled batch.
  */
 @friendlyName("AIUsageRatingSnapshot")
 model RatingSnapshot {

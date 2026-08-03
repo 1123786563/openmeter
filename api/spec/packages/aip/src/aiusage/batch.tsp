@@ -40,12 +40,11 @@ model UsageLineCreate {
   /**
    * Resource code identifying the billable resource type.
    *
-   * Valid codes include:
-   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
-   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
-   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
-   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
-   * `web_searches`, `agent_runs`.
+   * Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
+   * `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
+   * `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
+   * `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
+   * `mcp_tool_calls`, `web_searches`, `agent_runs`.
    */
   resource_code: string;
 
@@ -62,8 +61,8 @@ model UsageLineCreate {
   provider?: string;
 
   /**
-   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
-   * for provider-managed resources.
+   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
+   * provider-managed resources.
    */
   `model`?: string;
 
@@ -73,8 +72,8 @@ model UsageLineCreate {
   pricing_dimensions?: Record<string>;
 
   /**
-   * Stable zero-based position used for deterministic ceiling allocation when
-   * the batch total exceeds the reservation ceiling.
+   * Stable zero-based position used for deterministic ceiling allocation when the
+   * batch total exceeds the reservation ceiling.
    */
   canonical_line_index: int32;
 }
@@ -106,8 +105,8 @@ model UsageLine {
 /**
  * Request body for submitting a Canonical AI Usage Batch.
  *
- * A batch represents one business action (a chat turn, an agent run, etc.) and
- * is the atomic unit of AI billing settlement.
+ * A batch represents one business action (a chat turn, an agent run, etc.) and is
+ * the atomic unit of AI billing settlement.
  */
 @friendlyName("AIUsageUsageBatchCreate")
 model UsageBatchCreate {
@@ -135,8 +134,8 @@ model UsageBatchCreate {
   subject_key: string;
 
   /**
-   * Monotonic per-tenant sequence number for watermark tracking. Must be
-   * strictly increasing within a tenant.
+   * Monotonic per-tenant sequence number for watermark tracking. Must be strictly
+   * increasing within a tenant.
    */
   tenant_seq: int64;
 
@@ -151,8 +150,8 @@ model UsageBatchCreate {
   reservation_id: string;
 
   /**
-   * Caps the total Credit charge for this batch. The platform absorbs any
-   * excess above the ceiling.
+   * Caps the total Credit charge for this batch. The platform absorbs any excess
+   * above the ceiling.
    */
   reservation_ceiling_credits: int64;
 
@@ -173,8 +172,8 @@ model UsageBatchCreate {
   provider_managed: boolean;
 
   /**
-   * The individual resource consumption entries. Must contain at least one line
-   * for `component` billing mode.
+   * The individual resource consumption entries. Must contain at least one line for
+   * `component` billing mode.
    */
   @minItems(1)
   lines: UsageLineCreate[];

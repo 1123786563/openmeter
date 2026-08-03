@@ -35,15 +35,22 @@ export function queryGovernanceAccess(
     if (client._options.validate) {
       assertValid(schemas.queryGovernanceAccessBodyWire, body)
     }
-    const query = toWire({
-      page: req.page,
-    }, schemas.queryGovernanceAccessQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+      },
+      schemas.queryGovernanceAccessQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.queryGovernanceAccessQueryParamsWire, query)
     }
     const searchParams = toURLSearchParams(query)
     return http(client)
-      .post('openmeter/governance/query', { ...options, searchParams, json: body })
+      .post('openmeter/governance/query', {
+        ...options,
+        searchParams,
+        json: body,
+      })
       .json()
       .then((data) => {
         if (client._options.validate) {

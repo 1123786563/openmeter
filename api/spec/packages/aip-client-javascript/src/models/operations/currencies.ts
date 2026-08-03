@@ -3,7 +3,17 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { CostBasis, CostBasisPagePaginatedResponse, CreateCostBasisRequest as CreateCostBasisRequestBody, CreateCurrencyCustomRequest, CurrencyCustom, CurrencyPagePaginatedResponse, ListCostBasesParamsFilter, ListCurrenciesParamsFilter, SortQueryInput } from '../types.js'
+import type {
+  CostBasis,
+  CostBasisPagePaginatedResponse,
+  CreateCostBasisRequest as CreateCostBasisRequestBody,
+  CreateCurrencyCustomRequest,
+  CurrencyCustom,
+  CurrencyPagePaginatedResponse,
+  ListCostBasesParamsFilter,
+  ListCurrenciesParamsFilter,
+  SortQueryInput,
+} from '../types.js'
 
 export interface ListCurrenciesQuery {
   /** Determines which page of the collection to retrieve. */
@@ -29,13 +39,14 @@ export interface ListCurrenciesQuery {
    *
    * To include the currently-active cost basis add: expand=cost_basis
    */
-  expand?: "cost_basis"[]
+  expand?: 'cost_basis'[]
 }
 
 export type ListCurrenciesRequest = AcceptDateStrings<ListCurrenciesQuery>
 export type ListCurrenciesResponse = CurrencyPagePaginatedResponse
 
-export type CreateCustomCurrencyRequest = AcceptDateStrings<CreateCurrencyCustomRequest>
+export type CreateCustomCurrencyRequest =
+  AcceptDateStrings<CreateCurrencyCustomRequest>
 export type CreateCustomCurrencyResponse = CurrencyCustom
 
 export type GetCustomCurrencyRequest = {
@@ -55,7 +66,9 @@ export interface ListCostBasesQuery {
   page?: { size?: number; number?: number }
 }
 
-export type ListCostBasesRequest = AcceptDateStrings<ListCostBasesQuery & { currencyId: string }>
+export type ListCostBasesRequest = AcceptDateStrings<
+  ListCostBasesQuery & { currencyId: string }
+>
 export type ListCostBasesResponse = CostBasisPagePaginatedResponse
 
 export type CreateCostBasisRequest = AcceptDateStrings<{

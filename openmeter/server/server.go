@@ -171,6 +171,9 @@ func NewServer(config *Config) (*Server, error) {
 		PostAuthMiddlewares:         config.PostAuthMiddlewares,
 		ResponseValidation:          config.ResponseValidation,
 		FeatureGate:                 config.RouterConfig.FeatureGate,
+		AIUsageEnabled:              config.RouterConfig.AIUsageEnabled,
+		AIUsageService:              config.RouterConfig.AIUsageService,
+		RuntimeAuthorizationService: config.RouterConfig.RuntimeAuthorizationService,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create v3 API: %w", err)

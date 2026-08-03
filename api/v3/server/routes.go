@@ -3,6 +3,9 @@ package server
 import (
 	"net/http"
 
+	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
+	"github.com/openmeterio/openmeter/api/v3/apierrors"
+
 	api "github.com/openmeterio/openmeter/api/v3"
 	"github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"
 	currencieshandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
@@ -578,4 +581,55 @@ func (s *Server) UpdateOrganizationDefaultTaxCodes(w http.ResponseWriter, r *htt
 
 func (s *Server) QueryGovernanceAccess(w http.ResponseWriter, r *http.Request, params api.QueryGovernanceAccessParams) {
 	s.governanceHandler.QueryGovernanceAccess().With(params).ServeHTTP(w, r)
+}
+
+// AI Usage
+
+func (s *Server) CreateAiUsageBatch(w http.ResponseWriter, r *http.Request) {
+	if s.aiusageHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+		return
+	}
+	s.aiusageHandler.CreateAiUsageBatch().ServeHTTP(w, r)
+}
+
+func (s *Server) GetAiUsageBatch(w http.ResponseWriter, r *http.Request, batchId api.ULID) {
+	if s.aiusageHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+		return
+	}
+	s.aiusageHandler.GetAiUsageBatch().With(aiusagehandler.GetAiUsageBatchParams{BatchID: batchId}).ServeHTTP(w, r)
+}
+
+func (s *Server) GetAiUsageCreditBalance(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetAiUsageCreditBalanceParams) {
+	if s.aiusageHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+		return
+	}
+	s.aiusageHandler.GetAiUsageCreditBalance().With(aiusagehandler.GetAiUsageCreditBalanceParams{
+		CustomerID: customerId,
+		Timestamp:  params.Timestamp,
+	}).ServeHTTP(w, r)
+}
+
+func (s *Server) ListAiUsageCreditTransactions(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.ListAiUsageCreditTransactionsParams) {
+	if s.aiusageHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+		return
+	}
+	s.aiusageHandler.ListAiUsageCreditTransactions().With(aiusagehandler.ListAiUsageCreditTransactionsParams{
+		CustomerID: customerId,
+		Page:       params.Page,
+	}).ServeHTTP(w, r)
+}
+
+func (s *Server) GetCustomerRuntimeAuthorization(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetCustomerRuntimeAuthorizationParams) {
+	if s.aiusageHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+		return
+	}
+	s.aiusageHandler.GetCustomerRuntimeAuthorization().With(aiusagehandler.GetCustomerRuntimeAuthorizationParams{
+		CustomerID: customerId,
+		Filter:     params.Filter,
+	}).ServeHTTP(w, r)
 }

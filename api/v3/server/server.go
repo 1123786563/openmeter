@@ -67,6 +67,9 @@ import (
 	subscriptionaddon "github.com/openmeterio/openmeter/openmeter/subscription/addon"
 	subscriptionworkflow "github.com/openmeterio/openmeter/openmeter/subscription/workflow"
 	"github.com/openmeterio/openmeter/openmeter/taxcode"
+	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
+	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
 	"github.com/openmeterio/openmeter/pkg/errorsx"
 	"github.com/openmeterio/openmeter/pkg/featuregate"
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
@@ -113,6 +116,11 @@ type Config struct {
 	FeatureConnector            feature.FeatureConnector
 
 	FeatureGate *featuregate.FeatureGateChecker
+
+	// AI Usage
+	AIUsageEnabled              bool
+	AIUsageService              aiusage.Service
+	RuntimeAuthorizationService runtimeauthorization.Service
 }
 
 func (c *Config) Validate() error {
@@ -224,6 +232,12 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if c.AIUsageEnabled {
+		if c.AIUsageService == nil {
+			errs = append(errs, errors.New("ai usage service is required when ai usage is enabled"))
+		}
+	}
+
 	if c.AddonService == nil {
 		errs = append(errs, errors.New("addon service is required"))
 	}
@@ -270,6 +284,7 @@ type Server struct {
 	currenciesHandler           currencieshandler.Handler
 	featuresHandler             featureshandler.Handler
 	featureCostHandler          featurecosthandler.Handler
+	aiusageHandler              aiusagehandler.Handler
 }
 
 // Make sure we conform to ServerInterface
@@ -342,6 +357,11 @@ func NewServer(config *Config) (*Server, error) {
 	featuresH := featureshandler.New(resolveNamespace, config.FeatureConnector, config.MeterService, config.LLMCostService, httptransport.WithErrorHandler(config.ErrorHandler))
 	governanceHandler := governancehandler.New(resolveNamespace, config.GovernanceService, httptransport.WithErrorHandler(config.ErrorHandler))
 
+	var aiusageH aiusagehandler.Handler
+	if config.AIUsageService != nil {
+		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, nil, httptransport.WithErrorHandler(config.ErrorHandler))
+	}
+
 	var llmcostH llmcosthandler.Handler
 	if config.LLMCostService != nil {
 		llmcostH = llmcosthandler.New(resolveNamespace, config.LLMCostService, httptransport.WithErrorHandler(config.ErrorHandler))
@@ -376,6 +396,7 @@ func NewServer(config *Config) (*Server, error) {
 		featuresHandler:             featuresH,
 		featureCostHandler:          featureCostH,
 		governanceHandler:           governanceHandler,
+		aiusageHandler:              aiusageH,
 	}, nil
 }
 

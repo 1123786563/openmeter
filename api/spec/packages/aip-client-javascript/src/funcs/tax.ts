@@ -66,7 +66,12 @@ export function getTaxCode(
     if (client._options.validate) {
       assertValid(schemas.getTaxCodePathParamsWire, pathParams)
     }
-    const path = `openmeter/tax-codes/${(() => { if (pathParams.taxCodeId === undefined) { throw new Error('missing path parameter: taxCodeId') } return encodeURIComponent(String(pathParams.taxCodeId)) })()}`
+    const path = `openmeter/tax-codes/${(() => {
+      if (pathParams.taxCodeId === undefined) {
+        throw new Error('missing path parameter: taxCodeId')
+      }
+      return encodeURIComponent(String(pathParams.taxCodeId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -90,10 +95,13 @@ export function listTaxCodes(
   options?: RequestOptions,
 ): Promise<Result<ListTaxCodesResponse>> {
   return request(() => {
-    const query = toWire({
-      page: req.page,
-      includeDeleted: req.includeDeleted,
-    }, schemas.listTaxCodesQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+        includeDeleted: req.includeDeleted,
+      },
+      schemas.listTaxCodesQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listTaxCodesQueryParamsWire, query)
     }
@@ -130,7 +138,12 @@ export function upsertTaxCode(
     if (client._options.validate) {
       assertValid(schemas.upsertTaxCodePathParamsWire, pathParams)
     }
-    const path = `openmeter/tax-codes/${(() => { if (pathParams.taxCodeId === undefined) { throw new Error('missing path parameter: taxCodeId') } return encodeURIComponent(String(pathParams.taxCodeId)) })()}`
+    const path = `openmeter/tax-codes/${(() => {
+      if (pathParams.taxCodeId === undefined) {
+        throw new Error('missing path parameter: taxCodeId')
+      }
+      return encodeURIComponent(String(pathParams.taxCodeId))
+    })()}`
     const body = toWire(req.body, schemas.upsertTaxCodeBody)
     if (client._options.validate) {
       assertValid(schemas.upsertTaxCodeBodyWire, body)
@@ -167,7 +180,12 @@ export function deleteTaxCode(
     if (client._options.validate) {
       assertValid(schemas.deleteTaxCodePathParamsWire, pathParams)
     }
-    const path = `openmeter/tax-codes/${(() => { if (pathParams.taxCodeId === undefined) { throw new Error('missing path parameter: taxCodeId') } return encodeURIComponent(String(pathParams.taxCodeId)) })()}`
+    const path = `openmeter/tax-codes/${(() => {
+      if (pathParams.taxCodeId === undefined) {
+        throw new Error('missing path parameter: taxCodeId')
+      }
+      return encodeURIComponent(String(pathParams.taxCodeId))
+    })()}`
     await http(client).delete(path, options)
   })
 }

@@ -11,6 +11,9 @@ import (
 	kafka2 "github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	"github.com/openmeterio/openmeter/openmeter/cost"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
@@ -671,6 +674,67 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		return Application{}, nil, err
 	}
 	handler := common.NewLedgerNamespaceHandler(accountResolver)
+	aiUsageConfiguration := common.NewAIUsageConfig(conf)
+	aiusageRepository, err := common.NewAIUsageRepository(aiUsageConfiguration, client, logger)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	aiusageService, err := common.NewAIUsageService(aiUsageConfiguration, aiusageRepository, logger)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	signer, err := common.NewAIUsageSigner(aiUsageConfiguration)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, ledger, logger)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	worker, err := common.NewAIUsageWorker(aiUsageConfiguration)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
 	v4 := conf.Meters
 	v5 := conf.ReservedEventTypes
 	v6, err := common.NewReservedEventTypePatterns(v5)
@@ -870,6 +934,10 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		KafkaIngestNamespaceHandler:      namespaceHandler,
 		LedgerNamespaceHandler:           handler,
 		LLMCostService:                   llmcostService,
+		AIUsageService:                   aiusageService,
+		AIUsageRepository:                aiusageRepository,
+		RuntimeAuthorizationService:      runtimeauthorizationService,
+		AIUsageWorker:                    worker,
 		Logger:                           logger,
 		MetricMeter:                      meter,
 		MeterConfigInitializer:           v7,
@@ -943,6 +1011,10 @@ type Application struct {
 	KafkaIngestNamespaceHandler      *kafkaingest.NamespaceHandler
 	LedgerNamespaceHandler           namespace.Handler
 	LLMCostService                   llmcost.Service
+	AIUsageService                   aiusage.Service
+	AIUsageRepository                aiusage.Repository
+	RuntimeAuthorizationService      runtimeauthorization.Service
+	AIUsageWorker                    *worker.Worker
 	Logger                           *slog.Logger
 	MetricMeter                      metric.Meter
 	MeterConfigInitializer           common.MeterConfigInitializer

@@ -3,7 +3,14 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { Addon, AddonPagePaginatedResponse, CreateAddonRequestInput, ListAddonsParamsFilter, SortQueryInput, UpsertAddonRequestInput } from '../types.js'
+import type {
+  Addon,
+  AddonPagePaginatedResponse,
+  CreateAddonRequestInput,
+  ListAddonsParamsFilter,
+  SortQueryInput,
+  UpsertAddonRequestInput,
+} from '../types.js'
 
 export interface ListAddonsQuery {
   /** Determines which page of the collection to retrieve. */

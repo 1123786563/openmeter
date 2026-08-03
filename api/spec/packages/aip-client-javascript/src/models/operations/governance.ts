@@ -3,13 +3,19 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type { CursorPaginationQueryPage, GovernanceQueryRequestInput, GovernanceQueryResponse } from '../types.js'
+import type {
+  CursorPaginationQueryPage,
+  GovernanceQueryRequestInput,
+  GovernanceQueryResponse,
+} from '../types.js'
 
 export interface QueryGovernanceAccessQuery {
   page?: CursorPaginationQueryPage
 }
 
-export type QueryGovernanceAccessRequest = AcceptDateStrings<{
-  body: GovernanceQueryRequestInput
-} & QueryGovernanceAccessQuery>
+export type QueryGovernanceAccessRequest = AcceptDateStrings<
+  {
+    body: GovernanceQueryRequestInput
+  } & QueryGovernanceAccessQuery
+>
 export type QueryGovernanceAccessResponse = GovernanceQueryResponse

@@ -25,12 +25,23 @@ export function listCustomerEntitlementAccess(
       customerId: req.customerId,
     }
     const pathParams = client._options.validate
-      ? toPathWire(pathParamsInput, schemas.listCustomerEntitlementAccessPathParams)
+      ? toPathWire(
+          pathParamsInput,
+          schemas.listCustomerEntitlementAccessPathParams,
+        )
       : pathParamsInput
     if (client._options.validate) {
-      assertValid(schemas.listCustomerEntitlementAccessPathParamsWire, pathParams)
+      assertValid(
+        schemas.listCustomerEntitlementAccessPathParamsWire,
+        pathParams,
+      )
     }
-    const path = `openmeter/customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/entitlement-access`
+    const path = `openmeter/customers/${(() => {
+      if (pathParams.customerId === undefined) {
+        throw new Error('missing path parameter: customerId')
+      }
+      return encodeURIComponent(String(pathParams.customerId))
+    })()}/entitlement-access`
     return http(client)
       .get(path, options)
       .json()
