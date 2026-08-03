@@ -157,18 +157,21 @@ SBOM_SHA256=$(sha256sum "$SBOM_FILE" | awk '{print $1}')
 
 log "scanning for vulnerabilities with grype"
 GRYPE_FILE="$OUTPUT_DIR/grype.json"
-grype "$IMAGE_NAME:$CONTRACT_VERSION" --output json > "$GRYPE_FILE" 2>&1 || true
 
-# grype JSON uses .matches[].vulnerability.severity (a string), not the
-# rating array. Count Critical matches directly.
-CRITICAL_COUNT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' "$GRYPE_FILE" 2>/dev/null || echo "0")
-
-VULN_RESULT="PASS ($CRITICAL_COUNT critical)"
-if [ "$CRITICAL_COUNT" != "0" ]; then
-    VULN_RESULT="BLOCKED ($CRITICAL_COUNT critical vulnerabilities)"
-    log "$VULN_RESULT"
-    fail "unresolved CRITICAL vulnerabilities block the provider artifact"
+# grype exits non-zero when --fail-on threshold is breached; that is the
+# primary gate. stderr (progress noise) is discarded so the JSON file stays
+# clean for jq. The jq check below is a secondary guard.
+if ! grype "$IMAGE_NAME:$CONTRACT_VERSION" --output json --fail-on critical > "$GRYPE_FILE" 2>/dev/null; then
+    # Re-run without --fail-on to capture the full JSON for the report.
+    grype "$IMAGE_NAME:$CONTRACT_VERSION" --output json > "$GRYPE_FILE" 2>/dev/null || true
+    CRITICAL_COUNT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' "$GRYPE_FILE" 2>/dev/null || echo "unknown")
+    fail "unresolved CRITICAL vulnerabilities block the provider artifact: $CRITICAL_COUNT found"
 fi
+
+# Confirm the JSON parsed correctly — a corrupt file means the gate silently
+# passed, which is itself a failure.
+CRITICAL_COUNT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' "$GRYPE_FILE" 2>/dev/null) || fail "grype JSON output is corrupt or unparseable"
+VULN_RESULT="PASS ($CRITICAL_COUNT critical)"
 log "no critical vulnerabilities found"
 
 # ---------------------------------------------------------------------------
@@ -200,7 +203,7 @@ if [ -n "${CLICKHOUSE_URL:-}" ]; then
     # Round-trip: dump table count, restore into a smoke table, verify.
     if clickhouse-client --query "CREATE TABLE IF NOT EXISTS _phase1_smoke (id Int32) ENGINE = Memory" >/dev/null 2>&1 && \
        clickhouse-client --query "INSERT INTO _phase1_smoke VALUES (1)" >/dev/null 2>&1 && \
-       clickhouse-client --query "SELECT count() FROM _phase1_smoke" >/dev/null 2>&1 | grep -q "1"; then
+       clickhouse-client --query "SELECT count() FROM _phase1_smoke" 2>/dev/null | grep -q "^1$"; then
         CH_SMOKE="PASS"
         clickhouse-client --query "DROP TABLE _phase1_smoke" >/dev/null 2>&1 || true
         log "ClickHouse backup-restore smoke: PASS"
