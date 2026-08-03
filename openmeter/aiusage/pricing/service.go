@@ -3,6 +3,7 @@ package pricing
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/alpacahq/alpacadecimal"
@@ -39,6 +40,10 @@ func NewService(rates RateEntryProvider) *Service {
 //   - Zero quantity → 0 credits.
 //   - Component and bundle modes are mutually exclusive within a batch.
 func (s *Service) Resolve(ctx context.Context, input ResolveInput) (ResolvedBatch, error) {
+	if err := input.BillingMode.Validate(); err != nil {
+		return ResolvedBatch{}, err
+	}
+
 	// Billing-mode mutual exclusivity: if the input carries both line items
 	// (component) and a ceiling (bundle) we reject it.
 	if input.BillingMode == aiusage.BillingModeBundle && len(input.Lines) > 0 {
@@ -57,7 +62,10 @@ func (s *Service) Resolve(ctx context.Context, input ResolveInput) (ResolvedBatc
 	}
 
 	// Merge homogeneous lines (same resource + provider + model).
-	merged := mergeLines(input.Lines)
+	merged, err := mergeLines(input.Lines)
+	if err != nil {
+		return ResolvedBatch{}, err
+	}
 
 	entries, err := s.rates.GetEntries(ctx, input.RatePackageVersion)
 	if err != nil {
@@ -93,7 +101,7 @@ type mergedLine struct {
 // mergeLines combines lines that share the same resource code, provider, and
 // model into a single entry with summed quantity. Order of first appearance
 // is preserved.
-func mergeLines(lines []aiusage.UsageLineInput) []mergedLine {
+func mergeLines(lines []aiusage.UsageLineInput) ([]mergedLine, error) {
 	type key struct {
 		resource aiusage.ResourceCode
 		provider string
@@ -106,6 +114,9 @@ func mergeLines(lines []aiusage.UsageLineInput) []mergedLine {
 	for _, l := range lines {
 		k := key{resource: l.ResourceCode, provider: l.Provider, model: l.Model}
 		if existing, ok := merged[k]; ok {
+			if existing.Quantity > math.MaxInt64-l.Quantity {
+				return nil, aiusage.ErrCreditOverflow
+			}
 			existing.Quantity += l.Quantity
 		} else {
 			merged[k] = &mergedLine{
@@ -122,7 +133,7 @@ func mergeLines(lines []aiusage.UsageLineInput) []mergedLine {
 	for _, k := range order {
 		result = append(result, *merged[k])
 	}
-	return result
+	return result, nil
 }
 
 // resolveLine rates a single merged line, handling BYOK and ambiguity.

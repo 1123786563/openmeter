@@ -200,7 +200,7 @@ func TestResolveTableCases(t *testing.T) {
 	}
 }
 
-func TestResolveMergesHeterogeneousSeparately(t *testing.T) {
+func TestResolveMergesHomogeneousLines(t *testing.T) {
 	svc := newPricingServiceWithRates(t)
 
 	// Two lines with different providers should NOT merge.
