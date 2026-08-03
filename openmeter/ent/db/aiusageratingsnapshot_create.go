@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -35,48 +34,6 @@ func (_c *AIUsageRatingSnapshotCreate) SetNamespace(v string) *AIUsageRatingSnap
 // SetAnnotations sets the "annotations" field.
 func (_c *AIUsageRatingSnapshotCreate) SetAnnotations(v models.Annotations) *AIUsageRatingSnapshotCreate {
 	_c.mutation.SetAnnotations(v)
-	return _c
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (_c *AIUsageRatingSnapshotCreate) SetCreatedAt(v time.Time) *AIUsageRatingSnapshotCreate {
-	_c.mutation.SetCreatedAt(v)
-	return _c
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (_c *AIUsageRatingSnapshotCreate) SetNillableCreatedAt(v *time.Time) *AIUsageRatingSnapshotCreate {
-	if v != nil {
-		_c.SetCreatedAt(*v)
-	}
-	return _c
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_c *AIUsageRatingSnapshotCreate) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotCreate {
-	_c.mutation.SetUpdatedAt(v)
-	return _c
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (_c *AIUsageRatingSnapshotCreate) SetNillableUpdatedAt(v *time.Time) *AIUsageRatingSnapshotCreate {
-	if v != nil {
-		_c.SetUpdatedAt(*v)
-	}
-	return _c
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_c *AIUsageRatingSnapshotCreate) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotCreate {
-	_c.mutation.SetDeletedAt(v)
-	return _c
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_c *AIUsageRatingSnapshotCreate) SetNillableDeletedAt(v *time.Time) *AIUsageRatingSnapshotCreate {
-	if v != nil {
-		_c.SetDeletedAt(*v)
-	}
 	return _c
 }
 
@@ -228,14 +185,6 @@ func (_c *AIUsageRatingSnapshotCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *AIUsageRatingSnapshotCreate) defaults() {
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		v := aiusageratingsnapshot.DefaultCreatedAt()
-		_c.mutation.SetCreatedAt(v)
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		v := aiusageratingsnapshot.DefaultUpdatedAt()
-		_c.mutation.SetUpdatedAt(v)
-	}
 	if _, ok := _c.mutation.CostCurrency(); !ok {
 		v := aiusageratingsnapshot.DefaultCostCurrency
 		_c.mutation.SetCostCurrency(v)
@@ -271,12 +220,6 @@ func (_c *AIUsageRatingSnapshotCreate) check() error {
 		if err := aiusageratingsnapshot.NamespaceValidator(v); err != nil {
 			return &ValidationError{Name: "namespace", err: fmt.Errorf(`db: validator failed for field "AIUsageRatingSnapshot.namespace": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`db: missing required field "AIUsageRatingSnapshot.created_at"`)}
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`db: missing required field "AIUsageRatingSnapshot.updated_at"`)}
 	}
 	if _, ok := _c.mutation.ResourceCode(); !ok {
 		return &ValidationError{Name: "resource_code", err: errors.New(`db: missing required field "AIUsageRatingSnapshot.resource_code"`)}
@@ -353,18 +296,6 @@ func (_c *AIUsageRatingSnapshotCreate) createSpec() (*AIUsageRatingSnapshot, *sq
 	if value, ok := _c.mutation.Annotations(); ok {
 		_spec.SetField(aiusageratingsnapshot.FieldAnnotations, field.TypeJSON, value)
 		_node.Annotations = value
-	}
-	if value, ok := _c.mutation.CreatedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := _c.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := _c.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldDeletedAt, field.TypeTime, value)
-		_node.DeletedAt = &value
 	}
 	if value, ok := _c.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusageratingsnapshot.FieldResourceCode, field.TypeString, value)
@@ -482,36 +413,6 @@ func (u *AIUsageRatingSnapshotUpsert) UpdateAnnotations() *AIUsageRatingSnapshot
 // ClearAnnotations clears the value of the "annotations" field.
 func (u *AIUsageRatingSnapshotUpsert) ClearAnnotations() *AIUsageRatingSnapshotUpsert {
 	u.SetNull(aiusageratingsnapshot.FieldAnnotations)
-	return u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageRatingSnapshotUpsert) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotUpsert {
-	u.Set(aiusageratingsnapshot.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsert) UpdateUpdatedAt() *AIUsageRatingSnapshotUpsert {
-	u.SetExcluded(aiusageratingsnapshot.FieldUpdatedAt)
-	return u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsert) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotUpsert {
-	u.Set(aiusageratingsnapshot.FieldDeletedAt, v)
-	return u
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsert) UpdateDeletedAt() *AIUsageRatingSnapshotUpsert {
-	u.SetExcluded(aiusageratingsnapshot.FieldDeletedAt)
-	return u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsert) ClearDeletedAt() *AIUsageRatingSnapshotUpsert {
-	u.SetNull(aiusageratingsnapshot.FieldDeletedAt)
 	return u
 }
 
@@ -637,9 +538,6 @@ func (u *AIUsageRatingSnapshotUpsertOne) UpdateNewValues() *AIUsageRatingSnapsho
 		if _, exists := u.create.mutation.Namespace(); exists {
 			s.SetIgnore(aiusageratingsnapshot.FieldNamespace)
 		}
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(aiusageratingsnapshot.FieldCreatedAt)
-		}
 	}))
 	return u
 }
@@ -689,41 +587,6 @@ func (u *AIUsageRatingSnapshotUpsertOne) UpdateAnnotations() *AIUsageRatingSnaps
 func (u *AIUsageRatingSnapshotUpsertOne) ClearAnnotations() *AIUsageRatingSnapshotUpsertOne {
 	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageRatingSnapshotUpsertOne) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotUpsertOne {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsertOne) UpdateUpdatedAt() *AIUsageRatingSnapshotUpsertOne {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsertOne) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotUpsertOne {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsertOne) UpdateDeletedAt() *AIUsageRatingSnapshotUpsertOne {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsertOne) ClearDeletedAt() *AIUsageRatingSnapshotUpsertOne {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 
@@ -1032,9 +895,6 @@ func (u *AIUsageRatingSnapshotUpsertBulk) UpdateNewValues() *AIUsageRatingSnapsh
 			if _, exists := b.mutation.Namespace(); exists {
 				s.SetIgnore(aiusageratingsnapshot.FieldNamespace)
 			}
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(aiusageratingsnapshot.FieldCreatedAt)
-			}
 		}
 	}))
 	return u
@@ -1085,41 +945,6 @@ func (u *AIUsageRatingSnapshotUpsertBulk) UpdateAnnotations() *AIUsageRatingSnap
 func (u *AIUsageRatingSnapshotUpsertBulk) ClearAnnotations() *AIUsageRatingSnapshotUpsertBulk {
 	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageRatingSnapshotUpsertBulk) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotUpsertBulk {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsertBulk) UpdateUpdatedAt() *AIUsageRatingSnapshotUpsertBulk {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsertBulk) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotUpsertBulk {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageRatingSnapshotUpsertBulk) UpdateDeletedAt() *AIUsageRatingSnapshotUpsertBulk {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageRatingSnapshotUpsertBulk) ClearDeletedAt() *AIUsageRatingSnapshotUpsertBulk {
-	return u.Update(func(s *AIUsageRatingSnapshotUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 

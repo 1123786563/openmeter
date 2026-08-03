@@ -4,7 +4,6 @@ package aiusagebatch
 
 import (
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -19,12 +18,6 @@ const (
 	FieldNamespace = "namespace"
 	// FieldAnnotations holds the string denoting the annotations field in the database.
 	FieldAnnotations = "annotations"
-	// FieldCreatedAt holds the string denoting the created_at field in the database.
-	FieldCreatedAt = "created_at"
-	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
-	FieldUpdatedAt = "updated_at"
-	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
-	FieldDeletedAt = "deleted_at"
 	// FieldCustomerID holds the string denoting the customer_id field in the database.
 	FieldCustomerID = "customer_id"
 	// FieldSubjectID holds the string denoting the subject_id field in the database.
@@ -98,9 +91,6 @@ var Columns = []string{
 	FieldID,
 	FieldNamespace,
 	FieldAnnotations,
-	FieldCreatedAt,
-	FieldUpdatedAt,
-	FieldDeletedAt,
 	FieldCustomerID,
 	FieldSubjectID,
 	FieldUsageBatchID,
@@ -130,12 +120,6 @@ func ValidColumn(column string) bool {
 var (
 	// NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	NamespaceValidator func(string) error
-	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
-	DefaultCreatedAt func() time.Time
-	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
-	DefaultUpdatedAt func() time.Time
-	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
-	UpdateDefaultUpdatedAt func() time.Time
 	// CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
 	CustomerIDValidator func(string) error
 	// SubjectIDValidator is a validator for the "subject_id" field. It is called by the builders before save.
@@ -195,21 +179,6 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByNamespace orders the results by the namespace field.
 func ByNamespace(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNamespace, opts...).ToFunc()
-}
-
-// ByCreatedAt orders the results by the created_at field.
-func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
-// ByDeletedAt orders the results by the deleted_at field.
-func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
 // ByCustomerID orders the results by the customer_id field.

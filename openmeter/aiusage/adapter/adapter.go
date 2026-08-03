@@ -35,7 +35,7 @@ func (c Config) Validate() error {
 // TxAdapter exposes the operations available inside a customer-locked transaction.
 type TxAdapter interface {
 	GetBatchByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*aiusage.AIUsageBatch, error)
-	CreateSettledBatch(ctx context.Context, in aiusage.SettledBatch) (*aiusage.AIUsageBatch, error)
+	CreateSettledBatch(ctx context.Context, in aiusage.SettledBatch) (*aiusage.AIUsageBatch, bool, error)
 	AdvanceWatermark(ctx context.Context, namespace, subjectID string, seq int64) (int64, error)
 	AppendOutbox(ctx context.Context, namespace, customerID, subjectID string, events []aiusage.OutboxEvent, batchID string) error
 }

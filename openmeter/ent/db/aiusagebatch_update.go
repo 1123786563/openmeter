@@ -45,32 +45,6 @@ func (_u *AIUsageBatchUpdate) ClearAnnotations() *AIUsageBatchUpdate {
 	return _u
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageBatchUpdate) SetUpdatedAt(v time.Time) *AIUsageBatchUpdate {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageBatchUpdate) SetDeletedAt(v time.Time) *AIUsageBatchUpdate {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageBatchUpdate) SetNillableDeletedAt(v *time.Time) *AIUsageBatchUpdate {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageBatchUpdate) ClearDeletedAt() *AIUsageBatchUpdate {
-	_u.mutation.ClearDeletedAt()
-	return _u
-}
-
 // SetCustomerID sets the "customer_id" field.
 func (_u *AIUsageBatchUpdate) SetCustomerID(v string) *AIUsageBatchUpdate {
 	_u.mutation.SetCustomerID(v)
@@ -219,20 +193,6 @@ func (_u *AIUsageBatchUpdate) SetBillingMode(v string) *AIUsageBatchUpdate {
 func (_u *AIUsageBatchUpdate) SetNillableBillingMode(v *string) *AIUsageBatchUpdate {
 	if v != nil {
 		_u.SetBillingMode(*v)
-	}
-	return _u
-}
-
-// SetPayloadHash sets the "payload_hash" field.
-func (_u *AIUsageBatchUpdate) SetPayloadHash(v string) *AIUsageBatchUpdate {
-	_u.mutation.SetPayloadHash(v)
-	return _u
-}
-
-// SetNillablePayloadHash sets the "payload_hash" field if the given value is not nil.
-func (_u *AIUsageBatchUpdate) SetNillablePayloadHash(v *string) *AIUsageBatchUpdate {
-	if v != nil {
-		_u.SetPayloadHash(*v)
 	}
 	return _u
 }
@@ -444,7 +404,6 @@ func (_u *AIUsageBatchUpdate) RemoveOutboxEvents(v ...*AIUsageOutbox) *AIUsageBa
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AIUsageBatchUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -470,14 +429,6 @@ func (_u *AIUsageBatchUpdate) ExecX(ctx context.Context) {
 	}
 }
 
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageBatchUpdate) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusagebatch.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
-	}
-}
-
 // check runs all checks and user-defined validators on the builder.
 func (_u *AIUsageBatchUpdate) check() error {
 	if v, ok := _u.mutation.CustomerID(); ok {
@@ -500,11 +451,6 @@ func (_u *AIUsageBatchUpdate) check() error {
 			return &ValidationError{Name: "billing_mode", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.billing_mode": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.PayloadHash(); ok {
-		if err := aiusagebatch.PayloadHashValidator(v); err != nil {
-			return &ValidationError{Name: "payload_hash", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.payload_hash": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -525,15 +471,6 @@ func (_u *AIUsageBatchUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusagebatch.FieldAnnotations, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusagebatch.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.CustomerID(); ok {
 		_spec.SetField(aiusagebatch.FieldCustomerID, field.TypeString, value)
@@ -573,9 +510,6 @@ func (_u *AIUsageBatchUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.BillingMode(); ok {
 		_spec.SetField(aiusagebatch.FieldBillingMode, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.PayloadHash(); ok {
-		_spec.SetField(aiusagebatch.FieldPayloadHash, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(aiusagebatch.FieldStatus, field.TypeString, value)
@@ -804,32 +738,6 @@ func (_u *AIUsageBatchUpdateOne) ClearAnnotations() *AIUsageBatchUpdateOne {
 	return _u
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageBatchUpdateOne) SetUpdatedAt(v time.Time) *AIUsageBatchUpdateOne {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageBatchUpdateOne) SetDeletedAt(v time.Time) *AIUsageBatchUpdateOne {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageBatchUpdateOne) SetNillableDeletedAt(v *time.Time) *AIUsageBatchUpdateOne {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageBatchUpdateOne) ClearDeletedAt() *AIUsageBatchUpdateOne {
-	_u.mutation.ClearDeletedAt()
-	return _u
-}
-
 // SetCustomerID sets the "customer_id" field.
 func (_u *AIUsageBatchUpdateOne) SetCustomerID(v string) *AIUsageBatchUpdateOne {
 	_u.mutation.SetCustomerID(v)
@@ -978,20 +886,6 @@ func (_u *AIUsageBatchUpdateOne) SetBillingMode(v string) *AIUsageBatchUpdateOne
 func (_u *AIUsageBatchUpdateOne) SetNillableBillingMode(v *string) *AIUsageBatchUpdateOne {
 	if v != nil {
 		_u.SetBillingMode(*v)
-	}
-	return _u
-}
-
-// SetPayloadHash sets the "payload_hash" field.
-func (_u *AIUsageBatchUpdateOne) SetPayloadHash(v string) *AIUsageBatchUpdateOne {
-	_u.mutation.SetPayloadHash(v)
-	return _u
-}
-
-// SetNillablePayloadHash sets the "payload_hash" field if the given value is not nil.
-func (_u *AIUsageBatchUpdateOne) SetNillablePayloadHash(v *string) *AIUsageBatchUpdateOne {
-	if v != nil {
-		_u.SetPayloadHash(*v)
 	}
 	return _u
 }
@@ -1216,7 +1110,6 @@ func (_u *AIUsageBatchUpdateOne) Select(field string, fields ...string) *AIUsage
 
 // Save executes the query and returns the updated AIUsageBatch entity.
 func (_u *AIUsageBatchUpdateOne) Save(ctx context.Context) (*AIUsageBatch, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -1242,14 +1135,6 @@ func (_u *AIUsageBatchUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageBatchUpdateOne) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusagebatch.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
-	}
-}
-
 // check runs all checks and user-defined validators on the builder.
 func (_u *AIUsageBatchUpdateOne) check() error {
 	if v, ok := _u.mutation.CustomerID(); ok {
@@ -1270,11 +1155,6 @@ func (_u *AIUsageBatchUpdateOne) check() error {
 	if v, ok := _u.mutation.BillingMode(); ok {
 		if err := aiusagebatch.BillingModeValidator(v); err != nil {
 			return &ValidationError{Name: "billing_mode", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.billing_mode": %w`, err)}
-		}
-	}
-	if v, ok := _u.mutation.PayloadHash(); ok {
-		if err := aiusagebatch.PayloadHashValidator(v); err != nil {
-			return &ValidationError{Name: "payload_hash", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.payload_hash": %w`, err)}
 		}
 	}
 	return nil
@@ -1315,15 +1195,6 @@ func (_u *AIUsageBatchUpdateOne) sqlSave(ctx context.Context) (_node *AIUsageBat
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusagebatch.FieldAnnotations, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusagebatch.FieldDeletedAt, field.TypeTime)
-	}
 	if value, ok := _u.mutation.CustomerID(); ok {
 		_spec.SetField(aiusagebatch.FieldCustomerID, field.TypeString, value)
 	}
@@ -1362,9 +1233,6 @@ func (_u *AIUsageBatchUpdateOne) sqlSave(ctx context.Context) (_node *AIUsageBat
 	}
 	if value, ok := _u.mutation.BillingMode(); ok {
 		_spec.SetField(aiusagebatch.FieldBillingMode, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.PayloadHash(); ok {
-		_spec.SetField(aiusagebatch.FieldPayloadHash, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(aiusagebatch.FieldStatus, field.TypeString, value)

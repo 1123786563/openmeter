@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -34,48 +33,6 @@ func (_c *AIUsageLineItemCreate) SetNamespace(v string) *AIUsageLineItemCreate {
 // SetAnnotations sets the "annotations" field.
 func (_c *AIUsageLineItemCreate) SetAnnotations(v models.Annotations) *AIUsageLineItemCreate {
 	_c.mutation.SetAnnotations(v)
-	return _c
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (_c *AIUsageLineItemCreate) SetCreatedAt(v time.Time) *AIUsageLineItemCreate {
-	_c.mutation.SetCreatedAt(v)
-	return _c
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (_c *AIUsageLineItemCreate) SetNillableCreatedAt(v *time.Time) *AIUsageLineItemCreate {
-	if v != nil {
-		_c.SetCreatedAt(*v)
-	}
-	return _c
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_c *AIUsageLineItemCreate) SetUpdatedAt(v time.Time) *AIUsageLineItemCreate {
-	_c.mutation.SetUpdatedAt(v)
-	return _c
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (_c *AIUsageLineItemCreate) SetNillableUpdatedAt(v *time.Time) *AIUsageLineItemCreate {
-	if v != nil {
-		_c.SetUpdatedAt(*v)
-	}
-	return _c
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_c *AIUsageLineItemCreate) SetDeletedAt(v time.Time) *AIUsageLineItemCreate {
-	_c.mutation.SetDeletedAt(v)
-	return _c
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_c *AIUsageLineItemCreate) SetNillableDeletedAt(v *time.Time) *AIUsageLineItemCreate {
-	if v != nil {
-		_c.SetDeletedAt(*v)
-	}
 	return _c
 }
 
@@ -199,14 +156,6 @@ func (_c *AIUsageLineItemCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *AIUsageLineItemCreate) defaults() {
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		v := aiusagelineitem.DefaultCreatedAt()
-		_c.mutation.SetCreatedAt(v)
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		v := aiusagelineitem.DefaultUpdatedAt()
-		_c.mutation.SetUpdatedAt(v)
-	}
 	if _, ok := _c.mutation.Provider(); !ok {
 		v := aiusagelineitem.DefaultProvider
 		_c.mutation.SetProvider(v)
@@ -234,12 +183,6 @@ func (_c *AIUsageLineItemCreate) check() error {
 		if err := aiusagelineitem.NamespaceValidator(v); err != nil {
 			return &ValidationError{Name: "namespace", err: fmt.Errorf(`db: validator failed for field "AIUsageLineItem.namespace": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`db: missing required field "AIUsageLineItem.created_at"`)}
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`db: missing required field "AIUsageLineItem.updated_at"`)}
 	}
 	if _, ok := _c.mutation.ResourceCode(); !ok {
 		return &ValidationError{Name: "resource_code", err: errors.New(`db: missing required field "AIUsageLineItem.resource_code"`)}
@@ -307,18 +250,6 @@ func (_c *AIUsageLineItemCreate) createSpec() (*AIUsageLineItem, *sqlgraph.Creat
 	if value, ok := _c.mutation.Annotations(); ok {
 		_spec.SetField(aiusagelineitem.FieldAnnotations, field.TypeJSON, value)
 		_node.Annotations = value
-	}
-	if value, ok := _c.mutation.CreatedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := _c.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := _c.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldDeletedAt, field.TypeTime, value)
-		_node.DeletedAt = &value
 	}
 	if value, ok := _c.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusagelineitem.FieldResourceCode, field.TypeString, value)
@@ -431,36 +362,6 @@ func (u *AIUsageLineItemUpsert) ClearAnnotations() *AIUsageLineItemUpsert {
 	return u
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageLineItemUpsert) SetUpdatedAt(v time.Time) *AIUsageLineItemUpsert {
-	u.Set(aiusagelineitem.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsert) UpdateUpdatedAt() *AIUsageLineItemUpsert {
-	u.SetExcluded(aiusagelineitem.FieldUpdatedAt)
-	return u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageLineItemUpsert) SetDeletedAt(v time.Time) *AIUsageLineItemUpsert {
-	u.Set(aiusagelineitem.FieldDeletedAt, v)
-	return u
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsert) UpdateDeletedAt() *AIUsageLineItemUpsert {
-	u.SetExcluded(aiusagelineitem.FieldDeletedAt)
-	return u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageLineItemUpsert) ClearDeletedAt() *AIUsageLineItemUpsert {
-	u.SetNull(aiusagelineitem.FieldDeletedAt)
-	return u
-}
-
 // SetResourceCode sets the "resource_code" field.
 func (u *AIUsageLineItemUpsert) SetResourceCode(v string) *AIUsageLineItemUpsert {
 	u.Set(aiusagelineitem.FieldResourceCode, v)
@@ -565,9 +466,6 @@ func (u *AIUsageLineItemUpsertOne) UpdateNewValues() *AIUsageLineItemUpsertOne {
 		if _, exists := u.create.mutation.Namespace(); exists {
 			s.SetIgnore(aiusagelineitem.FieldNamespace)
 		}
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(aiusagelineitem.FieldCreatedAt)
-		}
 	}))
 	return u
 }
@@ -617,41 +515,6 @@ func (u *AIUsageLineItemUpsertOne) UpdateAnnotations() *AIUsageLineItemUpsertOne
 func (u *AIUsageLineItemUpsertOne) ClearAnnotations() *AIUsageLineItemUpsertOne {
 	return u.Update(func(s *AIUsageLineItemUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageLineItemUpsertOne) SetUpdatedAt(v time.Time) *AIUsageLineItemUpsertOne {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsertOne) UpdateUpdatedAt() *AIUsageLineItemUpsertOne {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageLineItemUpsertOne) SetDeletedAt(v time.Time) *AIUsageLineItemUpsertOne {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsertOne) UpdateDeletedAt() *AIUsageLineItemUpsertOne {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageLineItemUpsertOne) ClearDeletedAt() *AIUsageLineItemUpsertOne {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 
@@ -939,9 +802,6 @@ func (u *AIUsageLineItemUpsertBulk) UpdateNewValues() *AIUsageLineItemUpsertBulk
 			if _, exists := b.mutation.Namespace(); exists {
 				s.SetIgnore(aiusagelineitem.FieldNamespace)
 			}
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(aiusagelineitem.FieldCreatedAt)
-			}
 		}
 	}))
 	return u
@@ -992,41 +852,6 @@ func (u *AIUsageLineItemUpsertBulk) UpdateAnnotations() *AIUsageLineItemUpsertBu
 func (u *AIUsageLineItemUpsertBulk) ClearAnnotations() *AIUsageLineItemUpsertBulk {
 	return u.Update(func(s *AIUsageLineItemUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageLineItemUpsertBulk) SetUpdatedAt(v time.Time) *AIUsageLineItemUpsertBulk {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsertBulk) UpdateUpdatedAt() *AIUsageLineItemUpsertBulk {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageLineItemUpsertBulk) SetDeletedAt(v time.Time) *AIUsageLineItemUpsertBulk {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageLineItemUpsertBulk) UpdateDeletedAt() *AIUsageLineItemUpsertBulk {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageLineItemUpsertBulk) ClearDeletedAt() *AIUsageLineItemUpsertBulk {
-	return u.Update(func(s *AIUsageLineItemUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 

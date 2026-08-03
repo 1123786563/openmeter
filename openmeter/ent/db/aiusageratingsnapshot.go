@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -25,12 +24,6 @@ type AIUsageRatingSnapshot struct {
 	Namespace string `json:"namespace,omitempty"`
 	// Annotations holds the value of the "annotations" field.
 	Annotations models.Annotations `json:"annotations,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// DeletedAt holds the value of the "deleted_at" field.
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// ResourceCode holds the value of the "resource_code" field.
 	ResourceCode string `json:"resource_code,omitempty"`
 	// CostCurrency holds the value of the "cost_currency" field.
@@ -87,8 +80,6 @@ func (*AIUsageRatingSnapshot) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case aiusageratingsnapshot.FieldID, aiusageratingsnapshot.FieldNamespace, aiusageratingsnapshot.FieldResourceCode, aiusageratingsnapshot.FieldCostCurrency, aiusageratingsnapshot.FieldCostSource, aiusageratingsnapshot.FieldSalesCurrency, aiusageratingsnapshot.FieldRateCardVersion:
 			values[i] = new(sql.NullString)
-		case aiusageratingsnapshot.FieldCreatedAt, aiusageratingsnapshot.FieldUpdatedAt, aiusageratingsnapshot.FieldDeletedAt:
-			values[i] = new(sql.NullTime)
 		case aiusageratingsnapshot.ForeignKeys[0]: // ai_usage_batch_rating_snapshots
 			values[i] = new(sql.NullString)
 		default:
@@ -125,25 +116,6 @@ func (_m *AIUsageRatingSnapshot) assignValues(columns []string, values []any) er
 				if err := json.Unmarshal(*value, &_m.Annotations); err != nil {
 					return fmt.Errorf("unmarshal field annotations: %w", err)
 				}
-			}
-		case aiusageratingsnapshot.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				_m.CreatedAt = value.Time
-			}
-		case aiusageratingsnapshot.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
-			} else if value.Valid {
-				_m.UpdatedAt = value.Time
-			}
-		case aiusageratingsnapshot.FieldDeletedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
-			} else if value.Valid {
-				_m.DeletedAt = new(time.Time)
-				*_m.DeletedAt = value.Time
 			}
 		case aiusageratingsnapshot.FieldResourceCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -246,17 +218,6 @@ func (_m *AIUsageRatingSnapshot) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("annotations=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Annotations))
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := _m.DeletedAt; v != nil {
-		builder.WriteString("deleted_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("resource_code=")
 	builder.WriteString(_m.ResourceCode)

@@ -1,5 +1,13 @@
 -- reverse: drop tables and indexes (child tables first, then parent)
 
+-- drop "manual_resource_costs"
+DROP INDEX IF EXISTS "manualresourcecost_namespace_resource_code";
+DROP INDEX IF EXISTS "manualresourcecost_namespace_resource_code_provider_model_effective_from";
+DROP INDEX IF EXISTS "manualresourcecost_annotations";
+DROP INDEX IF EXISTS "manualresourcecost_namespace";
+DROP INDEX IF EXISTS "manualresourcecost_id";
+DROP TABLE IF EXISTS "manual_resource_costs";
+
 -- drop "customer_ai_rate_packages"
 DROP INDEX IF EXISTS "customerairatepackage_namespace_customer_id_status";
 DROP INDEX IF EXISTS "customerairatepackage_namespace_customer_id_package_code";
@@ -45,7 +53,7 @@ DROP TABLE IF EXISTS "ai_usage_line_items";
 DROP INDEX IF EXISTS "aiusagebatch_namespace_customer_id_status";
 DROP INDEX IF EXISTS "aiusagebatch_namespace_customer_id_tenant_seq";
 DROP INDEX IF EXISTS "aiusagebatch_namespace_subject_id_tenant_seq";
-DROP INDEX IF EXISTS "aiusagebatch_namespace_usage_batch_id";
+DROP INDEX IF EXISTS "aiusagebatch_namespace_customer_id_usage_batch_id";
 DROP INDEX IF EXISTS "aiusagebatch_annotations";
 DROP INDEX IF EXISTS "aiusagebatch_namespace";
 DROP INDEX IF EXISTS "aiusagebatch_id";

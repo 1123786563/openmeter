@@ -1063,9 +1063,6 @@ type AIUsageBatchMutation struct {
 	id                      *string
 	namespace               *string
 	annotations             *models.Annotations
-	created_at              *time.Time
-	updated_at              *time.Time
-	deleted_at              *time.Time
 	customer_id             *string
 	subject_id              *string
 	usage_batch_id          *string
@@ -1289,127 +1286,6 @@ func (m *AIUsageBatchMutation) AnnotationsCleared() bool {
 func (m *AIUsageBatchMutation) ResetAnnotations() {
 	m.annotations = nil
 	delete(m.clearedFields, aiusagebatch.FieldAnnotations)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *AIUsageBatchMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *AIUsageBatchMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the AIUsageBatch entity.
-// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageBatchMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *AIUsageBatchMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *AIUsageBatchMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *AIUsageBatchMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageBatch entity.
-// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageBatchMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *AIUsageBatchMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (m *AIUsageBatchMutation) SetDeletedAt(t time.Time) {
-	m.deleted_at = &t
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *AIUsageBatchMutation) DeletedAt() (r time.Time, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageBatch entity.
-// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageBatchMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *AIUsageBatchMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[aiusagebatch.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *AIUsageBatchMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[aiusagebatch.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *AIUsageBatchMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, aiusagebatch.FieldDeletedAt)
 }
 
 // SetCustomerID sets the "customer_id" field.
@@ -2273,21 +2149,12 @@ func (m *AIUsageBatchMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AIUsageBatchMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 16)
 	if m.namespace != nil {
 		fields = append(fields, aiusagebatch.FieldNamespace)
 	}
 	if m.annotations != nil {
 		fields = append(fields, aiusagebatch.FieldAnnotations)
-	}
-	if m.created_at != nil {
-		fields = append(fields, aiusagebatch.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, aiusagebatch.FieldUpdatedAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, aiusagebatch.FieldDeletedAt)
 	}
 	if m.customer_id != nil {
 		fields = append(fields, aiusagebatch.FieldCustomerID)
@@ -2343,12 +2210,6 @@ func (m *AIUsageBatchMutation) Field(name string) (ent.Value, bool) {
 		return m.Namespace()
 	case aiusagebatch.FieldAnnotations:
 		return m.Annotations()
-	case aiusagebatch.FieldCreatedAt:
-		return m.CreatedAt()
-	case aiusagebatch.FieldUpdatedAt:
-		return m.UpdatedAt()
-	case aiusagebatch.FieldDeletedAt:
-		return m.DeletedAt()
 	case aiusagebatch.FieldCustomerID:
 		return m.CustomerID()
 	case aiusagebatch.FieldSubjectID:
@@ -2390,12 +2251,6 @@ func (m *AIUsageBatchMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldNamespace(ctx)
 	case aiusagebatch.FieldAnnotations:
 		return m.OldAnnotations(ctx)
-	case aiusagebatch.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case aiusagebatch.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	case aiusagebatch.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
 	case aiusagebatch.FieldCustomerID:
 		return m.OldCustomerID(ctx)
 	case aiusagebatch.FieldSubjectID:
@@ -2446,27 +2301,6 @@ func (m *AIUsageBatchMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAnnotations(v)
-		return nil
-	case aiusagebatch.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case aiusagebatch.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	case aiusagebatch.FieldDeletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
 		return nil
 	case aiusagebatch.FieldCustomerID:
 		v, ok := value.(string)
@@ -2650,9 +2484,6 @@ func (m *AIUsageBatchMutation) ClearedFields() []string {
 	if m.FieldCleared(aiusagebatch.FieldAnnotations) {
 		fields = append(fields, aiusagebatch.FieldAnnotations)
 	}
-	if m.FieldCleared(aiusagebatch.FieldDeletedAt) {
-		fields = append(fields, aiusagebatch.FieldDeletedAt)
-	}
 	if m.FieldCleared(aiusagebatch.FieldReservationID) {
 		fields = append(fields, aiusagebatch.FieldReservationID)
 	}
@@ -2676,9 +2507,6 @@ func (m *AIUsageBatchMutation) ClearField(name string) error {
 	case aiusagebatch.FieldAnnotations:
 		m.ClearAnnotations()
 		return nil
-	case aiusagebatch.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
 	case aiusagebatch.FieldReservationID:
 		m.ClearReservationID()
 		return nil
@@ -2698,15 +2526,6 @@ func (m *AIUsageBatchMutation) ResetField(name string) error {
 		return nil
 	case aiusagebatch.FieldAnnotations:
 		m.ResetAnnotations()
-		return nil
-	case aiusagebatch.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case aiusagebatch.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	case aiusagebatch.FieldDeletedAt:
-		m.ResetDeletedAt()
 		return nil
 	case aiusagebatch.FieldCustomerID:
 		m.ResetCustomerID()
@@ -2924,9 +2743,6 @@ type AIUsageLineItemMutation struct {
 	id               *string
 	namespace        *string
 	annotations      *models.Annotations
-	created_at       *time.Time
-	updated_at       *time.Time
-	deleted_at       *time.Time
 	resource_code    *string
 	quantity         *int64
 	addquantity      *int64
@@ -3129,127 +2945,6 @@ func (m *AIUsageLineItemMutation) AnnotationsCleared() bool {
 func (m *AIUsageLineItemMutation) ResetAnnotations() {
 	m.annotations = nil
 	delete(m.clearedFields, aiusagelineitem.FieldAnnotations)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *AIUsageLineItemMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *AIUsageLineItemMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the AIUsageLineItem entity.
-// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageLineItemMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *AIUsageLineItemMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *AIUsageLineItemMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *AIUsageLineItemMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageLineItem entity.
-// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageLineItemMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *AIUsageLineItemMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (m *AIUsageLineItemMutation) SetDeletedAt(t time.Time) {
-	m.deleted_at = &t
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *AIUsageLineItemMutation) DeletedAt() (r time.Time, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageLineItem entity.
-// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageLineItemMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *AIUsageLineItemMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[aiusagelineitem.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *AIUsageLineItemMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[aiusagelineitem.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *AIUsageLineItemMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, aiusagelineitem.FieldDeletedAt)
 }
 
 // SetResourceCode sets the "resource_code" field.
@@ -3574,21 +3269,12 @@ func (m *AIUsageLineItemMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AIUsageLineItemMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 8)
 	if m.namespace != nil {
 		fields = append(fields, aiusagelineitem.FieldNamespace)
 	}
 	if m.annotations != nil {
 		fields = append(fields, aiusagelineitem.FieldAnnotations)
-	}
-	if m.created_at != nil {
-		fields = append(fields, aiusagelineitem.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, aiusagelineitem.FieldUpdatedAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, aiusagelineitem.FieldDeletedAt)
 	}
 	if m.resource_code != nil {
 		fields = append(fields, aiusagelineitem.FieldResourceCode)
@@ -3620,12 +3306,6 @@ func (m *AIUsageLineItemMutation) Field(name string) (ent.Value, bool) {
 		return m.Namespace()
 	case aiusagelineitem.FieldAnnotations:
 		return m.Annotations()
-	case aiusagelineitem.FieldCreatedAt:
-		return m.CreatedAt()
-	case aiusagelineitem.FieldUpdatedAt:
-		return m.UpdatedAt()
-	case aiusagelineitem.FieldDeletedAt:
-		return m.DeletedAt()
 	case aiusagelineitem.FieldResourceCode:
 		return m.ResourceCode()
 	case aiusagelineitem.FieldQuantity:
@@ -3651,12 +3331,6 @@ func (m *AIUsageLineItemMutation) OldField(ctx context.Context, name string) (en
 		return m.OldNamespace(ctx)
 	case aiusagelineitem.FieldAnnotations:
 		return m.OldAnnotations(ctx)
-	case aiusagelineitem.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case aiusagelineitem.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	case aiusagelineitem.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
 	case aiusagelineitem.FieldResourceCode:
 		return m.OldResourceCode(ctx)
 	case aiusagelineitem.FieldQuantity:
@@ -3691,27 +3365,6 @@ func (m *AIUsageLineItemMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAnnotations(v)
-		return nil
-	case aiusagelineitem.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case aiusagelineitem.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	case aiusagelineitem.FieldDeletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
 		return nil
 	case aiusagelineitem.FieldResourceCode:
 		v, ok := value.(string)
@@ -3803,9 +3456,6 @@ func (m *AIUsageLineItemMutation) ClearedFields() []string {
 	if m.FieldCleared(aiusagelineitem.FieldAnnotations) {
 		fields = append(fields, aiusagelineitem.FieldAnnotations)
 	}
-	if m.FieldCleared(aiusagelineitem.FieldDeletedAt) {
-		fields = append(fields, aiusagelineitem.FieldDeletedAt)
-	}
 	if m.FieldCleared(aiusagelineitem.FieldDimensions) {
 		fields = append(fields, aiusagelineitem.FieldDimensions)
 	}
@@ -3826,9 +3476,6 @@ func (m *AIUsageLineItemMutation) ClearField(name string) error {
 	case aiusagelineitem.FieldAnnotations:
 		m.ClearAnnotations()
 		return nil
-	case aiusagelineitem.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
 	case aiusagelineitem.FieldDimensions:
 		m.ClearDimensions()
 		return nil
@@ -3845,15 +3492,6 @@ func (m *AIUsageLineItemMutation) ResetField(name string) error {
 		return nil
 	case aiusagelineitem.FieldAnnotations:
 		m.ResetAnnotations()
-		return nil
-	case aiusagelineitem.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case aiusagelineitem.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	case aiusagelineitem.FieldDeletedAt:
-		m.ResetDeletedAt()
 		return nil
 	case aiusagelineitem.FieldResourceCode:
 		m.ResetResourceCode()
@@ -5891,9 +5529,6 @@ type AIUsageRatingSnapshotMutation struct {
 	id                *string
 	namespace         *string
 	annotations       *models.Annotations
-	created_at        *time.Time
-	updated_at        *time.Time
-	deleted_at        *time.Time
 	resource_code     *string
 	cost_currency     *string
 	cost_amount       *alpacadecimal.Decimal
@@ -6098,127 +5733,6 @@ func (m *AIUsageRatingSnapshotMutation) AnnotationsCleared() bool {
 func (m *AIUsageRatingSnapshotMutation) ResetAnnotations() {
 	m.annotations = nil
 	delete(m.clearedFields, aiusageratingsnapshot.FieldAnnotations)
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (m *AIUsageRatingSnapshotMutation) SetCreatedAt(t time.Time) {
-	m.created_at = &t
-}
-
-// CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *AIUsageRatingSnapshotMutation) CreatedAt() (r time.Time, exists bool) {
-	v := m.created_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCreatedAt returns the old "created_at" field's value of the AIUsageRatingSnapshot entity.
-// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageRatingSnapshotMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
-	}
-	return oldValue.CreatedAt, nil
-}
-
-// ResetCreatedAt resets all changes to the "created_at" field.
-func (m *AIUsageRatingSnapshotMutation) ResetCreatedAt() {
-	m.created_at = nil
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (m *AIUsageRatingSnapshotMutation) SetUpdatedAt(t time.Time) {
-	m.updated_at = &t
-}
-
-// UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *AIUsageRatingSnapshotMutation) UpdatedAt() (r time.Time, exists bool) {
-	v := m.updated_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageRatingSnapshot entity.
-// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageRatingSnapshotMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
-	}
-	return oldValue.UpdatedAt, nil
-}
-
-// ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *AIUsageRatingSnapshotMutation) ResetUpdatedAt() {
-	m.updated_at = nil
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (m *AIUsageRatingSnapshotMutation) SetDeletedAt(t time.Time) {
-	m.deleted_at = &t
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *AIUsageRatingSnapshotMutation) DeletedAt() (r time.Time, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageRatingSnapshot entity.
-// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AIUsageRatingSnapshotMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *AIUsageRatingSnapshotMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[aiusageratingsnapshot.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *AIUsageRatingSnapshotMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[aiusageratingsnapshot.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *AIUsageRatingSnapshotMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, aiusageratingsnapshot.FieldDeletedAt)
 }
 
 // SetResourceCode sets the "resource_code" field.
@@ -6602,21 +6116,12 @@ func (m *AIUsageRatingSnapshotMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AIUsageRatingSnapshotMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 10)
 	if m.namespace != nil {
 		fields = append(fields, aiusageratingsnapshot.FieldNamespace)
 	}
 	if m.annotations != nil {
 		fields = append(fields, aiusageratingsnapshot.FieldAnnotations)
-	}
-	if m.created_at != nil {
-		fields = append(fields, aiusageratingsnapshot.FieldCreatedAt)
-	}
-	if m.updated_at != nil {
-		fields = append(fields, aiusageratingsnapshot.FieldUpdatedAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, aiusageratingsnapshot.FieldDeletedAt)
 	}
 	if m.resource_code != nil {
 		fields = append(fields, aiusageratingsnapshot.FieldResourceCode)
@@ -6654,12 +6159,6 @@ func (m *AIUsageRatingSnapshotMutation) Field(name string) (ent.Value, bool) {
 		return m.Namespace()
 	case aiusageratingsnapshot.FieldAnnotations:
 		return m.Annotations()
-	case aiusageratingsnapshot.FieldCreatedAt:
-		return m.CreatedAt()
-	case aiusageratingsnapshot.FieldUpdatedAt:
-		return m.UpdatedAt()
-	case aiusageratingsnapshot.FieldDeletedAt:
-		return m.DeletedAt()
 	case aiusageratingsnapshot.FieldResourceCode:
 		return m.ResourceCode()
 	case aiusageratingsnapshot.FieldCostCurrency:
@@ -6689,12 +6188,6 @@ func (m *AIUsageRatingSnapshotMutation) OldField(ctx context.Context, name strin
 		return m.OldNamespace(ctx)
 	case aiusageratingsnapshot.FieldAnnotations:
 		return m.OldAnnotations(ctx)
-	case aiusageratingsnapshot.FieldCreatedAt:
-		return m.OldCreatedAt(ctx)
-	case aiusageratingsnapshot.FieldUpdatedAt:
-		return m.OldUpdatedAt(ctx)
-	case aiusageratingsnapshot.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
 	case aiusageratingsnapshot.FieldResourceCode:
 		return m.OldResourceCode(ctx)
 	case aiusageratingsnapshot.FieldCostCurrency:
@@ -6733,27 +6226,6 @@ func (m *AIUsageRatingSnapshotMutation) SetField(name string, value ent.Value) e
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAnnotations(v)
-		return nil
-	case aiusageratingsnapshot.FieldCreatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCreatedAt(v)
-		return nil
-	case aiusageratingsnapshot.FieldUpdatedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUpdatedAt(v)
-		return nil
-	case aiusageratingsnapshot.FieldDeletedAt:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
 		return nil
 	case aiusageratingsnapshot.FieldResourceCode:
 		v, ok := value.(string)
@@ -6859,9 +6331,6 @@ func (m *AIUsageRatingSnapshotMutation) ClearedFields() []string {
 	if m.FieldCleared(aiusageratingsnapshot.FieldAnnotations) {
 		fields = append(fields, aiusageratingsnapshot.FieldAnnotations)
 	}
-	if m.FieldCleared(aiusageratingsnapshot.FieldDeletedAt) {
-		fields = append(fields, aiusageratingsnapshot.FieldDeletedAt)
-	}
 	return fields
 }
 
@@ -6879,9 +6348,6 @@ func (m *AIUsageRatingSnapshotMutation) ClearField(name string) error {
 	case aiusageratingsnapshot.FieldAnnotations:
 		m.ClearAnnotations()
 		return nil
-	case aiusageratingsnapshot.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
 	}
 	return fmt.Errorf("unknown AIUsageRatingSnapshot nullable field %s", name)
 }
@@ -6895,15 +6361,6 @@ func (m *AIUsageRatingSnapshotMutation) ResetField(name string) error {
 		return nil
 	case aiusageratingsnapshot.FieldAnnotations:
 		m.ResetAnnotations()
-		return nil
-	case aiusageratingsnapshot.FieldCreatedAt:
-		m.ResetCreatedAt()
-		return nil
-	case aiusageratingsnapshot.FieldUpdatedAt:
-		m.ResetUpdatedAt()
-		return nil
-	case aiusageratingsnapshot.FieldDeletedAt:
-		m.ResetDeletedAt()
 		return nil
 	case aiusageratingsnapshot.FieldResourceCode:
 		m.ResetResourceCode()

@@ -40,48 +40,6 @@ func (_c *AIUsageBatchCreate) SetAnnotations(v models.Annotations) *AIUsageBatch
 	return _c
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (_c *AIUsageBatchCreate) SetCreatedAt(v time.Time) *AIUsageBatchCreate {
-	_c.mutation.SetCreatedAt(v)
-	return _c
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (_c *AIUsageBatchCreate) SetNillableCreatedAt(v *time.Time) *AIUsageBatchCreate {
-	if v != nil {
-		_c.SetCreatedAt(*v)
-	}
-	return _c
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_c *AIUsageBatchCreate) SetUpdatedAt(v time.Time) *AIUsageBatchCreate {
-	_c.mutation.SetUpdatedAt(v)
-	return _c
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (_c *AIUsageBatchCreate) SetNillableUpdatedAt(v *time.Time) *AIUsageBatchCreate {
-	if v != nil {
-		_c.SetUpdatedAt(*v)
-	}
-	return _c
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_c *AIUsageBatchCreate) SetDeletedAt(v time.Time) *AIUsageBatchCreate {
-	_c.mutation.SetDeletedAt(v)
-	return _c
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_c *AIUsageBatchCreate) SetNillableDeletedAt(v *time.Time) *AIUsageBatchCreate {
-	if v != nil {
-		_c.SetDeletedAt(*v)
-	}
-	return _c
-}
-
 // SetCustomerID sets the "customer_id" field.
 func (_c *AIUsageBatchCreate) SetCustomerID(v string) *AIUsageBatchCreate {
 	_c.mutation.SetCustomerID(v)
@@ -331,14 +289,6 @@ func (_c *AIUsageBatchCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *AIUsageBatchCreate) defaults() {
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		v := aiusagebatch.DefaultCreatedAt()
-		_c.mutation.SetCreatedAt(v)
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		v := aiusagebatch.DefaultUpdatedAt()
-		_c.mutation.SetUpdatedAt(v)
-	}
 	if _, ok := _c.mutation.RateVersion(); !ok {
 		v := aiusagebatch.DefaultRateVersion
 		_c.mutation.SetRateVersion(v)
@@ -374,12 +324,6 @@ func (_c *AIUsageBatchCreate) check() error {
 		if err := aiusagebatch.NamespaceValidator(v); err != nil {
 			return &ValidationError{Name: "namespace", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.namespace": %w`, err)}
 		}
-	}
-	if _, ok := _c.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`db: missing required field "AIUsageBatch.created_at"`)}
-	}
-	if _, ok := _c.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`db: missing required field "AIUsageBatch.updated_at"`)}
 	}
 	if _, ok := _c.mutation.CustomerID(); !ok {
 		return &ValidationError{Name: "customer_id", err: errors.New(`db: missing required field "AIUsageBatch.customer_id"`)}
@@ -490,18 +434,6 @@ func (_c *AIUsageBatchCreate) createSpec() (*AIUsageBatch, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Annotations(); ok {
 		_spec.SetField(aiusagebatch.FieldAnnotations, field.TypeJSON, value)
 		_node.Annotations = value
-	}
-	if value, ok := _c.mutation.CreatedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := _c.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := _c.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagebatch.FieldDeletedAt, field.TypeTime, value)
-		_node.DeletedAt = &value
 	}
 	if value, ok := _c.mutation.CustomerID(); ok {
 		_spec.SetField(aiusagebatch.FieldCustomerID, field.TypeString, value)
@@ -693,36 +625,6 @@ func (u *AIUsageBatchUpsert) ClearAnnotations() *AIUsageBatchUpsert {
 	return u
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageBatchUpsert) SetUpdatedAt(v time.Time) *AIUsageBatchUpsert {
-	u.Set(aiusagebatch.FieldUpdatedAt, v)
-	return u
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsert) UpdateUpdatedAt() *AIUsageBatchUpsert {
-	u.SetExcluded(aiusagebatch.FieldUpdatedAt)
-	return u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageBatchUpsert) SetDeletedAt(v time.Time) *AIUsageBatchUpsert {
-	u.Set(aiusagebatch.FieldDeletedAt, v)
-	return u
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsert) UpdateDeletedAt() *AIUsageBatchUpsert {
-	u.SetExcluded(aiusagebatch.FieldDeletedAt)
-	return u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageBatchUpsert) ClearDeletedAt() *AIUsageBatchUpsert {
-	u.SetNull(aiusagebatch.FieldDeletedAt)
-	return u
-}
-
 // SetCustomerID sets the "customer_id" field.
 func (u *AIUsageBatchUpsert) SetCustomerID(v string) *AIUsageBatchUpsert {
 	u.Set(aiusagebatch.FieldCustomerID, v)
@@ -855,18 +757,6 @@ func (u *AIUsageBatchUpsert) UpdateBillingMode() *AIUsageBatchUpsert {
 	return u
 }
 
-// SetPayloadHash sets the "payload_hash" field.
-func (u *AIUsageBatchUpsert) SetPayloadHash(v string) *AIUsageBatchUpsert {
-	u.Set(aiusagebatch.FieldPayloadHash, v)
-	return u
-}
-
-// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
-func (u *AIUsageBatchUpsert) UpdatePayloadHash() *AIUsageBatchUpsert {
-	u.SetExcluded(aiusagebatch.FieldPayloadHash)
-	return u
-}
-
 // SetStatus sets the "status" field.
 func (u *AIUsageBatchUpsert) SetStatus(v string) *AIUsageBatchUpsert {
 	u.Set(aiusagebatch.FieldStatus, v)
@@ -935,8 +825,8 @@ func (u *AIUsageBatchUpsertOne) UpdateNewValues() *AIUsageBatchUpsertOne {
 		if _, exists := u.create.mutation.Namespace(); exists {
 			s.SetIgnore(aiusagebatch.FieldNamespace)
 		}
-		if _, exists := u.create.mutation.CreatedAt(); exists {
-			s.SetIgnore(aiusagebatch.FieldCreatedAt)
+		if _, exists := u.create.mutation.PayloadHash(); exists {
+			s.SetIgnore(aiusagebatch.FieldPayloadHash)
 		}
 		if _, exists := u.create.mutation.SettlementScope(); exists {
 			s.SetIgnore(aiusagebatch.FieldSettlementScope)
@@ -990,41 +880,6 @@ func (u *AIUsageBatchUpsertOne) UpdateAnnotations() *AIUsageBatchUpsertOne {
 func (u *AIUsageBatchUpsertOne) ClearAnnotations() *AIUsageBatchUpsertOne {
 	return u.Update(func(s *AIUsageBatchUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageBatchUpsertOne) SetUpdatedAt(v time.Time) *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertOne) UpdateUpdatedAt() *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageBatchUpsertOne) SetDeletedAt(v time.Time) *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertOne) UpdateDeletedAt() *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageBatchUpsertOne) ClearDeletedAt() *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 
@@ -1179,20 +1034,6 @@ func (u *AIUsageBatchUpsertOne) SetBillingMode(v string) *AIUsageBatchUpsertOne 
 func (u *AIUsageBatchUpsertOne) UpdateBillingMode() *AIUsageBatchUpsertOne {
 	return u.Update(func(s *AIUsageBatchUpsert) {
 		s.UpdateBillingMode()
-	})
-}
-
-// SetPayloadHash sets the "payload_hash" field.
-func (u *AIUsageBatchUpsertOne) SetPayloadHash(v string) *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetPayloadHash(v)
-	})
-}
-
-// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertOne) UpdatePayloadHash() *AIUsageBatchUpsertOne {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdatePayloadHash()
 	})
 }
 
@@ -1438,8 +1279,8 @@ func (u *AIUsageBatchUpsertBulk) UpdateNewValues() *AIUsageBatchUpsertBulk {
 			if _, exists := b.mutation.Namespace(); exists {
 				s.SetIgnore(aiusagebatch.FieldNamespace)
 			}
-			if _, exists := b.mutation.CreatedAt(); exists {
-				s.SetIgnore(aiusagebatch.FieldCreatedAt)
+			if _, exists := b.mutation.PayloadHash(); exists {
+				s.SetIgnore(aiusagebatch.FieldPayloadHash)
 			}
 			if _, exists := b.mutation.SettlementScope(); exists {
 				s.SetIgnore(aiusagebatch.FieldSettlementScope)
@@ -1494,41 +1335,6 @@ func (u *AIUsageBatchUpsertBulk) UpdateAnnotations() *AIUsageBatchUpsertBulk {
 func (u *AIUsageBatchUpsertBulk) ClearAnnotations() *AIUsageBatchUpsertBulk {
 	return u.Update(func(s *AIUsageBatchUpsert) {
 		s.ClearAnnotations()
-	})
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (u *AIUsageBatchUpsertBulk) SetUpdatedAt(v time.Time) *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetUpdatedAt(v)
-	})
-}
-
-// UpdateUpdatedAt sets the "updated_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertBulk) UpdateUpdatedAt() *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdateUpdatedAt()
-	})
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (u *AIUsageBatchUpsertBulk) SetDeletedAt(v time.Time) *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetDeletedAt(v)
-	})
-}
-
-// UpdateDeletedAt sets the "deleted_at" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertBulk) UpdateDeletedAt() *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdateDeletedAt()
-	})
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (u *AIUsageBatchUpsertBulk) ClearDeletedAt() *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.ClearDeletedAt()
 	})
 }
 
@@ -1683,20 +1489,6 @@ func (u *AIUsageBatchUpsertBulk) SetBillingMode(v string) *AIUsageBatchUpsertBul
 func (u *AIUsageBatchUpsertBulk) UpdateBillingMode() *AIUsageBatchUpsertBulk {
 	return u.Update(func(s *AIUsageBatchUpsert) {
 		s.UpdateBillingMode()
-	})
-}
-
-// SetPayloadHash sets the "payload_hash" field.
-func (u *AIUsageBatchUpsertBulk) SetPayloadHash(v string) *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.SetPayloadHash(v)
-	})
-}
-
-// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
-func (u *AIUsageBatchUpsertBulk) UpdatePayloadHash() *AIUsageBatchUpsertBulk {
-	return u.Update(func(s *AIUsageBatchUpsert) {
-		s.UpdatePayloadHash()
 	})
 }
 

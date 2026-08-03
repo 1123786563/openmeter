@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -40,32 +39,6 @@ func (_u *AIUsageRatingSnapshotUpdate) SetAnnotations(v models.Annotations) *AIU
 // ClearAnnotations clears the value of the "annotations" field.
 func (_u *AIUsageRatingSnapshotUpdate) ClearAnnotations() *AIUsageRatingSnapshotUpdate {
 	_u.mutation.ClearAnnotations()
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageRatingSnapshotUpdate) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotUpdate {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageRatingSnapshotUpdate) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotUpdate {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageRatingSnapshotUpdate) SetNillableDeletedAt(v *time.Time) *AIUsageRatingSnapshotUpdate {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageRatingSnapshotUpdate) ClearDeletedAt() *AIUsageRatingSnapshotUpdate {
-	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -212,7 +185,6 @@ func (_u *AIUsageRatingSnapshotUpdate) ClearBatch() *AIUsageRatingSnapshotUpdate
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AIUsageRatingSnapshotUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -235,14 +207,6 @@ func (_u *AIUsageRatingSnapshotUpdate) Exec(ctx context.Context) error {
 func (_u *AIUsageRatingSnapshotUpdate) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
-	}
-}
-
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageRatingSnapshotUpdate) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusageratingsnapshot.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -276,15 +240,6 @@ func (_u *AIUsageRatingSnapshotUpdate) sqlSave(ctx context.Context) (_node int, 
 	}
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusageratingsnapshot.FieldAnnotations, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusageratingsnapshot.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusageratingsnapshot.FieldResourceCode, field.TypeString, value)
@@ -371,32 +326,6 @@ func (_u *AIUsageRatingSnapshotUpdateOne) SetAnnotations(v models.Annotations) *
 // ClearAnnotations clears the value of the "annotations" field.
 func (_u *AIUsageRatingSnapshotUpdateOne) ClearAnnotations() *AIUsageRatingSnapshotUpdateOne {
 	_u.mutation.ClearAnnotations()
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageRatingSnapshotUpdateOne) SetUpdatedAt(v time.Time) *AIUsageRatingSnapshotUpdateOne {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageRatingSnapshotUpdateOne) SetDeletedAt(v time.Time) *AIUsageRatingSnapshotUpdateOne {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageRatingSnapshotUpdateOne) SetNillableDeletedAt(v *time.Time) *AIUsageRatingSnapshotUpdateOne {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageRatingSnapshotUpdateOne) ClearDeletedAt() *AIUsageRatingSnapshotUpdateOne {
-	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -556,7 +485,6 @@ func (_u *AIUsageRatingSnapshotUpdateOne) Select(field string, fields ...string)
 
 // Save executes the query and returns the updated AIUsageRatingSnapshot entity.
 func (_u *AIUsageRatingSnapshotUpdateOne) Save(ctx context.Context) (*AIUsageRatingSnapshot, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -579,14 +507,6 @@ func (_u *AIUsageRatingSnapshotUpdateOne) Exec(ctx context.Context) error {
 func (_u *AIUsageRatingSnapshotUpdateOne) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
-	}
-}
-
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageRatingSnapshotUpdateOne) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusageratingsnapshot.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -637,15 +557,6 @@ func (_u *AIUsageRatingSnapshotUpdateOne) sqlSave(ctx context.Context) (_node *A
 	}
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusageratingsnapshot.FieldAnnotations, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusageratingsnapshot.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusageratingsnapshot.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusageratingsnapshot.FieldResourceCode, field.TypeString, value)

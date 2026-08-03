@@ -39,18 +39,6 @@ func (e *AIUsageBatch) GetAnnotations() models.Annotations {
 	return e.Annotations
 }
 
-func (e *AIUsageBatch) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *AIUsageBatch) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *AIUsageBatch) GetDeletedAt() *time.Time {
-	return e.DeletedAt
-}
-
 func (e *AIUsageLineItem) GetID() string {
 	return e.ID
 }
@@ -61,18 +49,6 @@ func (e *AIUsageLineItem) GetNamespace() string {
 
 func (e *AIUsageLineItem) GetAnnotations() models.Annotations {
 	return e.Annotations
-}
-
-func (e *AIUsageLineItem) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *AIUsageLineItem) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *AIUsageLineItem) GetDeletedAt() *time.Time {
-	return e.DeletedAt
 }
 
 func (e *AIUsageOutbox) GetID() string {
@@ -117,18 +93,6 @@ func (e *AIUsageRatingSnapshot) GetNamespace() string {
 
 func (e *AIUsageRatingSnapshot) GetAnnotations() models.Annotations {
 	return e.Annotations
-}
-
-func (e *AIUsageRatingSnapshot) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *AIUsageRatingSnapshot) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *AIUsageRatingSnapshot) GetDeletedAt() *time.Time {
-	return e.DeletedAt
 }
 
 func (e *AIUsageWatermark) GetID() string {

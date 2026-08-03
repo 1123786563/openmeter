@@ -23,12 +23,6 @@ type AIUsageBatch struct {
 	Namespace string `json:"namespace,omitempty"`
 	// Annotations holds the value of the "annotations" field.
 	Annotations models.Annotations `json:"annotations,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// DeletedAt holds the value of the "deleted_at" field.
-	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID string `json:"customer_id,omitempty"`
 	// SubjectID holds the value of the "subject_id" field.
@@ -125,7 +119,7 @@ func (*AIUsageBatch) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case aiusagebatch.FieldID, aiusagebatch.FieldNamespace, aiusagebatch.FieldCustomerID, aiusagebatch.FieldSubjectID, aiusagebatch.FieldUsageBatchID, aiusagebatch.FieldReservationID, aiusagebatch.FieldRateVersion, aiusagebatch.FieldBillingMode, aiusagebatch.FieldPayloadHash, aiusagebatch.FieldStatus, aiusagebatch.FieldSettlementScope:
 			values[i] = new(sql.NullString)
-		case aiusagebatch.FieldCreatedAt, aiusagebatch.FieldUpdatedAt, aiusagebatch.FieldDeletedAt, aiusagebatch.FieldOccurredAt:
+		case aiusagebatch.FieldOccurredAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -161,25 +155,6 @@ func (_m *AIUsageBatch) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Annotations); err != nil {
 					return fmt.Errorf("unmarshal field annotations: %w", err)
 				}
-			}
-		case aiusagebatch.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				_m.CreatedAt = value.Time
-			}
-		case aiusagebatch.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
-			} else if value.Valid {
-				_m.UpdatedAt = value.Time
-			}
-		case aiusagebatch.FieldDeletedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
-			} else if value.Valid {
-				_m.DeletedAt = new(time.Time)
-				*_m.DeletedAt = value.Time
 			}
 		case aiusagebatch.FieldCustomerID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -328,17 +303,6 @@ func (_m *AIUsageBatch) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("annotations=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Annotations))
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := _m.DeletedAt; v != nil {
-		builder.WriteString("deleted_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("customer_id=")
 	builder.WriteString(_m.CustomerID)

@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -39,32 +38,6 @@ func (_u *AIUsageLineItemUpdate) SetAnnotations(v models.Annotations) *AIUsageLi
 // ClearAnnotations clears the value of the "annotations" field.
 func (_u *AIUsageLineItemUpdate) ClearAnnotations() *AIUsageLineItemUpdate {
 	_u.mutation.ClearAnnotations()
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageLineItemUpdate) SetUpdatedAt(v time.Time) *AIUsageLineItemUpdate {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageLineItemUpdate) SetDeletedAt(v time.Time) *AIUsageLineItemUpdate {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageLineItemUpdate) SetNillableDeletedAt(v *time.Time) *AIUsageLineItemUpdate {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageLineItemUpdate) ClearDeletedAt() *AIUsageLineItemUpdate {
-	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -181,7 +154,6 @@ func (_u *AIUsageLineItemUpdate) ClearBatch() *AIUsageLineItemUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AIUsageLineItemUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -204,14 +176,6 @@ func (_u *AIUsageLineItemUpdate) Exec(ctx context.Context) error {
 func (_u *AIUsageLineItemUpdate) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
-	}
-}
-
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageLineItemUpdate) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusagelineitem.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -245,15 +209,6 @@ func (_u *AIUsageLineItemUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusagelineitem.FieldAnnotations, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusagelineitem.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusagelineitem.FieldResourceCode, field.TypeString, value)
@@ -337,32 +292,6 @@ func (_u *AIUsageLineItemUpdateOne) SetAnnotations(v models.Annotations) *AIUsag
 // ClearAnnotations clears the value of the "annotations" field.
 func (_u *AIUsageLineItemUpdateOne) ClearAnnotations() *AIUsageLineItemUpdateOne {
 	_u.mutation.ClearAnnotations()
-	return _u
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (_u *AIUsageLineItemUpdateOne) SetUpdatedAt(v time.Time) *AIUsageLineItemUpdateOne {
-	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *AIUsageLineItemUpdateOne) SetDeletedAt(v time.Time) *AIUsageLineItemUpdateOne {
-	_u.mutation.SetDeletedAt(v)
-	return _u
-}
-
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *AIUsageLineItemUpdateOne) SetNillableDeletedAt(v *time.Time) *AIUsageLineItemUpdateOne {
-	if v != nil {
-		_u.SetDeletedAt(*v)
-	}
-	return _u
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *AIUsageLineItemUpdateOne) ClearDeletedAt() *AIUsageLineItemUpdateOne {
-	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -492,7 +421,6 @@ func (_u *AIUsageLineItemUpdateOne) Select(field string, fields ...string) *AIUs
 
 // Save executes the query and returns the updated AIUsageLineItem entity.
 func (_u *AIUsageLineItemUpdateOne) Save(ctx context.Context) (*AIUsageLineItem, error) {
-	_u.defaults()
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -515,14 +443,6 @@ func (_u *AIUsageLineItemUpdateOne) Exec(ctx context.Context) error {
 func (_u *AIUsageLineItemUpdateOne) ExecX(ctx context.Context) {
 	if err := _u.Exec(ctx); err != nil {
 		panic(err)
-	}
-}
-
-// defaults sets the default values of the builder before save.
-func (_u *AIUsageLineItemUpdateOne) defaults() {
-	if _, ok := _u.mutation.UpdatedAt(); !ok {
-		v := aiusagelineitem.UpdateDefaultUpdatedAt()
-		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -573,15 +493,6 @@ func (_u *AIUsageLineItemUpdateOne) sqlSave(ctx context.Context) (_node *AIUsage
 	}
 	if _u.mutation.AnnotationsCleared() {
 		_spec.ClearField(aiusagelineitem.FieldAnnotations, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.UpdatedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(aiusagelineitem.FieldDeletedAt, field.TypeTime, value)
-	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(aiusagelineitem.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.ResourceCode(); ok {
 		_spec.SetField(aiusagelineitem.FieldResourceCode, field.TypeString, value)

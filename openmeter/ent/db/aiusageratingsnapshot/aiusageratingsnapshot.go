@@ -3,8 +3,6 @@
 package aiusageratingsnapshot
 
 import (
-	"time"
-
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 )
@@ -18,12 +16,6 @@ const (
 	FieldNamespace = "namespace"
 	// FieldAnnotations holds the string denoting the annotations field in the database.
 	FieldAnnotations = "annotations"
-	// FieldCreatedAt holds the string denoting the created_at field in the database.
-	FieldCreatedAt = "created_at"
-	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
-	FieldUpdatedAt = "updated_at"
-	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
-	FieldDeletedAt = "deleted_at"
 	// FieldResourceCode holds the string denoting the resource_code field in the database.
 	FieldResourceCode = "resource_code"
 	// FieldCostCurrency holds the string denoting the cost_currency field in the database.
@@ -58,9 +50,6 @@ var Columns = []string{
 	FieldID,
 	FieldNamespace,
 	FieldAnnotations,
-	FieldCreatedAt,
-	FieldUpdatedAt,
-	FieldDeletedAt,
 	FieldResourceCode,
 	FieldCostCurrency,
 	FieldCostAmount,
@@ -95,12 +84,6 @@ func ValidColumn(column string) bool {
 var (
 	// NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	NamespaceValidator func(string) error
-	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
-	DefaultCreatedAt func() time.Time
-	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
-	DefaultUpdatedAt func() time.Time
-	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
-	UpdateDefaultUpdatedAt func() time.Time
 	// ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.
 	ResourceCodeValidator func(string) error
 	// DefaultCostCurrency holds the default value on creation for the "cost_currency" field.
@@ -128,21 +111,6 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByNamespace orders the results by the namespace field.
 func ByNamespace(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNamespace, opts...).ToFunc()
-}
-
-// ByCreatedAt orders the results by the created_at field.
-func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
-// ByDeletedAt orders the results by the deleted_at field.
-func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
 // ByResourceCode orders the results by the resource_code field.

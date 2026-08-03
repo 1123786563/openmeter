@@ -34,20 +34,6 @@ func (u *AIUsageBatchUpdateOne) SetOrClearAnnotations(value *models.Annotations)
 	return u.SetAnnotations(*value)
 }
 
-func (u *AIUsageBatchUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageBatchUpdate {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
-}
-
-func (u *AIUsageBatchUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageBatchUpdateOne {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
-}
-
 func (u *AIUsageBatchUpdate) SetOrClearReservationID(value *string) *AIUsageBatchUpdate {
 	if value == nil {
 		return u.ClearReservationID()
@@ -88,20 +74,6 @@ func (u *AIUsageLineItemUpdateOne) SetOrClearAnnotations(value *models.Annotatio
 		return u.ClearAnnotations()
 	}
 	return u.SetAnnotations(*value)
-}
-
-func (u *AIUsageLineItemUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageLineItemUpdate {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
-}
-
-func (u *AIUsageLineItemUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageLineItemUpdateOne {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
 }
 
 func (u *AIUsageLineItemUpdate) SetOrClearDimensions(value *map[string]string) *AIUsageLineItemUpdate {
@@ -228,20 +200,6 @@ func (u *AIUsageRatingSnapshotUpdateOne) SetOrClearAnnotations(value *models.Ann
 		return u.ClearAnnotations()
 	}
 	return u.SetAnnotations(*value)
-}
-
-func (u *AIUsageRatingSnapshotUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageRatingSnapshotUpdate {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
-}
-
-func (u *AIUsageRatingSnapshotUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageRatingSnapshotUpdateOne {
-	if value == nil {
-		return u.ClearDeletedAt()
-	}
-	return u.SetDeletedAt(*value)
 }
 
 func (u *AddonUpdate) SetOrClearMetadata(value *map[string]string) *AddonUpdate {

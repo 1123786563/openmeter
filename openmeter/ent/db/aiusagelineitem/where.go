@@ -3,8 +3,6 @@
 package aiusagelineitem
 
 import (
-	"time"
-
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/predicate"
@@ -68,21 +66,6 @@ func IDContainsFold(id string) predicate.AIUsageLineItem {
 // Namespace applies equality check predicate on the "namespace" field. It's identical to NamespaceEQ.
 func Namespace(v string) predicate.AIUsageLineItem {
 	return predicate.AIUsageLineItem(sql.FieldEQ(FieldNamespace, v))
-}
-
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldCreatedAt, v))
-}
-
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
-func DeletedAt(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldDeletedAt, v))
 }
 
 // ResourceCode applies equality check predicate on the "resource_code" field. It's identical to ResourceCodeEQ.
@@ -183,136 +166,6 @@ func AnnotationsIsNil() predicate.AIUsageLineItem {
 // AnnotationsNotNil applies the NotNil predicate on the "annotations" field.
 func AnnotationsNotNil() predicate.AIUsageLineItem {
 	return predicate.AIUsageLineItem(sql.FieldNotNull(FieldAnnotations))
-}
-
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldCreatedAt, v))
-}
-
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNEQ(FieldCreatedAt, v))
-}
-
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldIn(FieldCreatedAt, vs...))
-}
-
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNotIn(FieldCreatedAt, vs...))
-}
-
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGT(FieldCreatedAt, v))
-}
-
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGTE(FieldCreatedAt, v))
-}
-
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLT(FieldCreatedAt, v))
-}
-
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLTE(FieldCreatedAt, v))
-}
-
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNotIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGTE(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLTE(FieldUpdatedAt, v))
-}
-
-// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
-func DeletedAtEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldEQ(FieldDeletedAt, v))
-}
-
-// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
-func DeletedAtNEQ(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNEQ(FieldDeletedAt, v))
-}
-
-// DeletedAtIn applies the In predicate on the "deleted_at" field.
-func DeletedAtIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldIn(FieldDeletedAt, vs...))
-}
-
-// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
-func DeletedAtNotIn(vs ...time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNotIn(FieldDeletedAt, vs...))
-}
-
-// DeletedAtGT applies the GT predicate on the "deleted_at" field.
-func DeletedAtGT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGT(FieldDeletedAt, v))
-}
-
-// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
-func DeletedAtGTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldGTE(FieldDeletedAt, v))
-}
-
-// DeletedAtLT applies the LT predicate on the "deleted_at" field.
-func DeletedAtLT(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLT(FieldDeletedAt, v))
-}
-
-// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
-func DeletedAtLTE(v time.Time) predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldLTE(FieldDeletedAt, v))
-}
-
-// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
-func DeletedAtIsNil() predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldIsNull(FieldDeletedAt))
-}
-
-// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
-func DeletedAtNotNil() predicate.AIUsageLineItem {
-	return predicate.AIUsageLineItem(sql.FieldNotNull(FieldDeletedAt))
 }
 
 // ResourceCodeEQ applies the EQ predicate on the "resource_code" field.

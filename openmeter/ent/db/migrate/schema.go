@@ -50,9 +50,6 @@ var (
 				Name:    "aiusageallocation_namespace_customer_id",
 				Unique:  false,
 				Columns: []*schema.Column{AiUsageAllocationsColumns[1], AiUsageAllocationsColumns[3]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
 			},
 		},
 	}
@@ -61,9 +58,6 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
 		{Name: "namespace", Type: field.TypeString},
 		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "customer_id", Type: field.TypeString},
 		{Name: "subject_id", Type: field.TypeString},
 		{Name: "usage_batch_id", Type: field.TypeString},
@@ -106,36 +100,24 @@ var (
 				},
 			},
 			{
-				Name:    "aiusagebatch_namespace_usage_batch_id",
+				Name:    "aiusagebatch_namespace_customer_id_usage_batch_id",
 				Unique:  true,
-				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[8]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[3], AiUsageBatchesColumns[5]},
 			},
 			{
 				Name:    "aiusagebatch_namespace_subject_id_tenant_seq",
 				Unique:  true,
-				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[7], AiUsageBatchesColumns[9]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[4], AiUsageBatchesColumns[6]},
 			},
 			{
 				Name:    "aiusagebatch_namespace_customer_id_tenant_seq",
 				Unique:  false,
-				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[6], AiUsageBatchesColumns[9]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[3], AiUsageBatchesColumns[6]},
 			},
 			{
 				Name:    "aiusagebatch_namespace_customer_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[6], AiUsageBatchesColumns[16]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[3], AiUsageBatchesColumns[13]},
 			},
 		},
 	}
@@ -144,9 +126,6 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
 		{Name: "namespace", Type: field.TypeString},
 		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "resource_code", Type: field.TypeString},
 		{Name: "quantity", Type: field.TypeInt64},
 		{Name: "provider", Type: field.TypeString, Default: ""},
@@ -163,7 +142,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ai_usage_line_items_ai_usage_batches_line_items",
-				Columns:    []*schema.Column{AiUsageLineItemsColumns[12]},
+				Columns:    []*schema.Column{AiUsageLineItemsColumns[9]},
 				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -306,9 +285,6 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
 		{Name: "namespace", Type: field.TypeString},
 		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "resource_code", Type: field.TypeString},
 		{Name: "cost_currency", Type: field.TypeString, Default: "USD"},
 		{Name: "cost_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
@@ -327,7 +303,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ai_usage_rating_snapshots_ai_usage_batches_rating_snapshots",
-				Columns:    []*schema.Column{AiUsageRatingSnapshotsColumns[14]},
+				Columns:    []*schema.Column{AiUsageRatingSnapshotsColumns[11]},
 				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

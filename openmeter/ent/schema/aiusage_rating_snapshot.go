@@ -12,6 +12,7 @@ import (
 )
 
 // AIUsageRatingSnapshot stores the cost and sales price resolution for one line item.
+// Immutable append-only record; no soft delete.
 type AIUsageRatingSnapshot struct {
 	ent.Schema
 }
@@ -21,7 +22,6 @@ func (AIUsageRatingSnapshot) Mixin() []ent.Mixin {
 		entutils.IDMixin{},
 		entutils.NamespaceMixin{},
 		entutils.AnnotationsMixin{},
-		entutils.TimeMixin{},
 	}
 }
 

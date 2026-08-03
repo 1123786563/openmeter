@@ -164,24 +164,12 @@ func init() {
 	_ = aiusagebatchMixinFields0
 	aiusagebatchMixinFields1 := aiusagebatchMixin[1].Fields()
 	_ = aiusagebatchMixinFields1
-	aiusagebatchMixinFields3 := aiusagebatchMixin[3].Fields()
-	_ = aiusagebatchMixinFields3
 	aiusagebatchFields := schema.AIUsageBatch{}.Fields()
 	_ = aiusagebatchFields
 	// aiusagebatchDescNamespace is the schema descriptor for namespace field.
 	aiusagebatchDescNamespace := aiusagebatchMixinFields1[0].Descriptor()
 	// aiusagebatch.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	aiusagebatch.NamespaceValidator = aiusagebatchDescNamespace.Validators[0].(func(string) error)
-	// aiusagebatchDescCreatedAt is the schema descriptor for created_at field.
-	aiusagebatchDescCreatedAt := aiusagebatchMixinFields3[0].Descriptor()
-	// aiusagebatch.DefaultCreatedAt holds the default value on creation for the created_at field.
-	aiusagebatch.DefaultCreatedAt = aiusagebatchDescCreatedAt.Default.(func() time.Time)
-	// aiusagebatchDescUpdatedAt is the schema descriptor for updated_at field.
-	aiusagebatchDescUpdatedAt := aiusagebatchMixinFields3[1].Descriptor()
-	// aiusagebatch.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	aiusagebatch.DefaultUpdatedAt = aiusagebatchDescUpdatedAt.Default.(func() time.Time)
-	// aiusagebatch.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	aiusagebatch.UpdateDefaultUpdatedAt = aiusagebatchDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// aiusagebatchDescCustomerID is the schema descriptor for customer_id field.
 	aiusagebatchDescCustomerID := aiusagebatchFields[0].Descriptor()
 	// aiusagebatch.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
@@ -227,24 +215,12 @@ func init() {
 	_ = aiusagelineitemMixinFields0
 	aiusagelineitemMixinFields1 := aiusagelineitemMixin[1].Fields()
 	_ = aiusagelineitemMixinFields1
-	aiusagelineitemMixinFields3 := aiusagelineitemMixin[3].Fields()
-	_ = aiusagelineitemMixinFields3
 	aiusagelineitemFields := schema.AIUsageLineItem{}.Fields()
 	_ = aiusagelineitemFields
 	// aiusagelineitemDescNamespace is the schema descriptor for namespace field.
 	aiusagelineitemDescNamespace := aiusagelineitemMixinFields1[0].Descriptor()
 	// aiusagelineitem.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	aiusagelineitem.NamespaceValidator = aiusagelineitemDescNamespace.Validators[0].(func(string) error)
-	// aiusagelineitemDescCreatedAt is the schema descriptor for created_at field.
-	aiusagelineitemDescCreatedAt := aiusagelineitemMixinFields3[0].Descriptor()
-	// aiusagelineitem.DefaultCreatedAt holds the default value on creation for the created_at field.
-	aiusagelineitem.DefaultCreatedAt = aiusagelineitemDescCreatedAt.Default.(func() time.Time)
-	// aiusagelineitemDescUpdatedAt is the schema descriptor for updated_at field.
-	aiusagelineitemDescUpdatedAt := aiusagelineitemMixinFields3[1].Descriptor()
-	// aiusagelineitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	aiusagelineitem.DefaultUpdatedAt = aiusagelineitemDescUpdatedAt.Default.(func() time.Time)
-	// aiusagelineitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	aiusagelineitem.UpdateDefaultUpdatedAt = aiusagelineitemDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// aiusagelineitemDescResourceCode is the schema descriptor for resource_code field.
 	aiusagelineitemDescResourceCode := aiusagelineitemFields[0].Descriptor()
 	// aiusagelineitem.ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.
@@ -340,24 +316,12 @@ func init() {
 	_ = aiusageratingsnapshotMixinFields0
 	aiusageratingsnapshotMixinFields1 := aiusageratingsnapshotMixin[1].Fields()
 	_ = aiusageratingsnapshotMixinFields1
-	aiusageratingsnapshotMixinFields3 := aiusageratingsnapshotMixin[3].Fields()
-	_ = aiusageratingsnapshotMixinFields3
 	aiusageratingsnapshotFields := schema.AIUsageRatingSnapshot{}.Fields()
 	_ = aiusageratingsnapshotFields
 	// aiusageratingsnapshotDescNamespace is the schema descriptor for namespace field.
 	aiusageratingsnapshotDescNamespace := aiusageratingsnapshotMixinFields1[0].Descriptor()
 	// aiusageratingsnapshot.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	aiusageratingsnapshot.NamespaceValidator = aiusageratingsnapshotDescNamespace.Validators[0].(func(string) error)
-	// aiusageratingsnapshotDescCreatedAt is the schema descriptor for created_at field.
-	aiusageratingsnapshotDescCreatedAt := aiusageratingsnapshotMixinFields3[0].Descriptor()
-	// aiusageratingsnapshot.DefaultCreatedAt holds the default value on creation for the created_at field.
-	aiusageratingsnapshot.DefaultCreatedAt = aiusageratingsnapshotDescCreatedAt.Default.(func() time.Time)
-	// aiusageratingsnapshotDescUpdatedAt is the schema descriptor for updated_at field.
-	aiusageratingsnapshotDescUpdatedAt := aiusageratingsnapshotMixinFields3[1].Descriptor()
-	// aiusageratingsnapshot.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	aiusageratingsnapshot.DefaultUpdatedAt = aiusageratingsnapshotDescUpdatedAt.Default.(func() time.Time)
-	// aiusageratingsnapshot.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	aiusageratingsnapshot.UpdateDefaultUpdatedAt = aiusageratingsnapshotDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// aiusageratingsnapshotDescResourceCode is the schema descriptor for resource_code field.
 	aiusageratingsnapshotDescResourceCode := aiusageratingsnapshotFields[0].Descriptor()
 	// aiusageratingsnapshot.ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.

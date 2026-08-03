@@ -3,7 +3,6 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
-	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -59,7 +58,6 @@ func (AIUsageAllocation) Edges() []ent.Edge {
 
 func (AIUsageAllocation) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("namespace", "customer_id").
-			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("namespace", "customer_id"),
 	}
 }

@@ -11,12 +11,13 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
 )
 
-// GetBatchByIdempotencyKey looks up an existing batch by (namespace, usage_batch_id).
+// GetBatchByIdempotencyKey looks up an existing batch by (namespace, customer_id, usage_batch_id).
 // Returns nil (not an error) when no batch is found.
 func (t *txAdapter) GetBatchByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*aiusage.AIUsageBatch, error) {
 	ent, err := t.db.AIUsageBatch.Query().
 		Where(
 			aiusagebatch.Namespace(namespace),
+			aiusagebatch.CustomerIDEQ(customerID),
 			aiusagebatch.UsageBatchID(key),
 		).
 		WithLineItems().
@@ -34,30 +35,31 @@ func (t *txAdapter) GetBatchByIdempotencyKey(ctx context.Context, namespace, cus
 
 // CreateSettledBatch persists a fully rated and settled batch atomically.
 //
-// Idempotency:
-//   - If a batch with the same (namespace, usage_batch_id) exists and has the same
-//     payload_hash, the existing batch is returned without error.
+// Returns (batch, created, error):
+//   - If a batch with the same (namespace, customer_id, usage_batch_id) exists and
+//     has the same payload_hash, the existing batch is returned with created=false.
 //   - If the hash differs, ErrIdempotencyConflict is returned.
+//   - Otherwise a new batch is created and returned with created=true.
 //
 // Side effects: batch row, line items, rating snapshots, allocations, outbox events,
 // and a watermark advance — all in the caller's transaction.
-func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBatch) (*aiusage.AIUsageBatch, error) {
+func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBatch) (*aiusage.AIUsageBatch, bool, error) {
 	// ---- idempotency check ----
 	existing, err := t.GetBatchByIdempotencyKey(ctx, in.Namespace, in.CustomerID, in.UsageBatchID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if existing != nil {
 		if existing.PayloadHash == in.PayloadHash {
-			return existing, nil
+			return existing, false, nil
 		}
-		return nil, aiusage.ErrIdempotencyConflict
+		return nil, false, aiusage.ErrIdempotencyConflict
 	}
 
 	// ---- advance watermark (gap-aware) ----
 	covered, err := t.AdvanceWatermark(ctx, in.Namespace, in.SubjectID, in.TenantSeq)
 	if err != nil {
-		return nil, fmt.Errorf("advance watermark: %w", err)
+		return nil, false, fmt.Errorf("advance watermark: %w", err)
 	}
 
 	// ---- create batch row ----
@@ -85,7 +87,7 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 
 	ent, err := batchCreate.Save(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("create batch: %w", err)
+		return nil, false, fmt.Errorf("create batch: %w", err)
 	}
 
 	// ---- line items ----
@@ -104,7 +106,7 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 		}
 
 		if _, err := builder.Save(ctx); err != nil {
-			return nil, fmt.Errorf("create line item: %w", err)
+			return nil, false, fmt.Errorf("create line item: %w", err)
 		}
 	}
 
@@ -122,7 +124,7 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 			SetCredits(snap.Credits).
 			SetBatchID(ent.ID).
 			Save(ctx); err != nil {
-			return nil, fmt.Errorf("create rating snapshot: %w", err)
+			return nil, false, fmt.Errorf("create rating snapshot: %w", err)
 		}
 	}
 
@@ -138,16 +140,16 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 			SetFundingSource(alloc.FundingSource).
 			SetBatchID(ent.ID).
 			Save(ctx); err != nil {
-			return nil, fmt.Errorf("create allocation: %w", err)
+			return nil, false, fmt.Errorf("create allocation: %w", err)
 		}
 	}
 
 	// ---- outbox events ----
 	if err := t.AppendOutbox(ctx, in.Namespace, in.CustomerID, in.SubjectID, in.OutboxEvents, ent.ID); err != nil {
-		return nil, fmt.Errorf("append outbox: %w", err)
+		return nil, false, fmt.Errorf("append outbox: %w", err)
 	}
 
-	return mapEntityToBatch(ent), nil
+	return mapEntityToBatch(ent), true, nil
 }
 
 // ---- mapping helpers ----

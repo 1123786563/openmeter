@@ -10,6 +10,7 @@ import (
 )
 
 // AIUsageLineItem stores one billable resource within a batch.
+// Immutable append-only record; no soft delete.
 type AIUsageLineItem struct {
 	ent.Schema
 }
@@ -19,7 +20,6 @@ func (AIUsageLineItem) Mixin() []ent.Mixin {
 		entutils.IDMixin{},
 		entutils.NamespaceMixin{},
 		entutils.AnnotationsMixin{},
-		entutils.TimeMixin{},
 	}
 }
 
