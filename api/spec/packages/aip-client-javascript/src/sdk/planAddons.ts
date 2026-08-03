@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginatePages } from '../lib/paginate.js'
+import {
+  paginatePages,
+} from '../lib/paginate.js'
 import {
   listPlanAddons,
   createPlanAddon,
@@ -22,7 +24,9 @@ import type {
   DeletePlanAddonRequest,
   DeletePlanAddonResponse,
 } from '../models/operations/planAddons.js'
-import type { PlanAddon } from '../models/types.js'
+import type {
+  PlanAddon,
+} from '../models/types.js'
 
 export class PlanAddons {
   constructor(private readonly _client: Client) {}

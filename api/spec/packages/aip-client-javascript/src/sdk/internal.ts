@@ -2,8 +2,12 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginatePages } from '../lib/paginate.js'
-import { createSubscriptionAddon } from '../funcs/subscriptions.js'
+import {
+  paginatePages,
+} from '../lib/paginate.js'
+import {
+  createSubscriptionAddon,
+} from '../funcs/subscriptions.js'
 import {
   listApps,
   getApp,
@@ -30,7 +34,9 @@ import {
   listCostBases,
   createCostBasis,
 } from '../funcs/currencies.js'
-import { queryGovernanceAccess } from '../funcs/governance.js'
+import {
+  queryGovernanceAccess,
+} from '../funcs/governance.js'
 import type {
   CreateSubscriptionAddonRequest,
   CreateSubscriptionAddonResponse,
@@ -464,9 +470,7 @@ export class InternalInvoices {
     request: SnapshotQuantitiesInvoiceRequest,
     options?: RequestOptions,
   ): Promise<SnapshotQuantitiesInvoiceResponse> {
-    return unwrap(
-      await snapshotQuantitiesInvoice(this._client, request, options),
-    )
+    return unwrap(await snapshotQuantitiesInvoice(this._client, request, options))
   }
 }
 

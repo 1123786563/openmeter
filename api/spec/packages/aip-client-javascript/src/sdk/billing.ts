@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginatePages } from '../lib/paginate.js'
+import {
+  paginatePages,
+} from '../lib/paginate.js'
 import {
   listBillingProfiles,
   createBillingProfile,
@@ -22,7 +24,9 @@ import type {
   DeleteBillingProfileRequest,
   DeleteBillingProfileResponse,
 } from '../models/operations/billing.js'
-import type { Profile } from '../models/types.js'
+import type {
+  Profile,
+} from '../models/types.js'
 
 export class Billing {
   constructor(private readonly _client: Client) {}

@@ -507,6 +507,7 @@ function resolveStrippedNames(
 
 export function goExportedName(name: string): string {
   const initialisms = new Map([
+    ['ai', 'AI'],
     ['api', 'API'],
     ['csv', 'CSV'],
     ['http', 'HTTP'],

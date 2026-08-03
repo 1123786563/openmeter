@@ -14,6 +14,7 @@ import { Plans } from './plans.js'
 import { Addons } from './addons.js'
 import { PlanAddons } from './planAddons.js'
 import { Defaults } from './defaults.js'
+import { AIUsage } from './aiUsage.js'
 import { Internal } from './internal.js'
 
 export class OpenMeter extends Client {
@@ -80,6 +81,11 @@ export class OpenMeter extends Client {
   private _defaults?: Defaults
   get defaults(): Defaults {
     return (this._defaults ??= new Defaults(this))
+  }
+
+  private _aiUsage?: AIUsage
+  get aiUsage(): AIUsage {
+    return (this._aiUsage ??= new AIUsage(this))
   }
 
   private _internal?: Internal

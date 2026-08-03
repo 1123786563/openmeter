@@ -14,13 +14,10 @@ export { Plans } from './sdk/plans.js'
 export { Addons } from './sdk/addons.js'
 export { PlanAddons } from './sdk/planAddons.js'
 export { Defaults } from './sdk/defaults.js'
+export { AIUsage } from './sdk/aiUsage.js'
 export { Client } from './core.js'
 export { HTTPError } from './models/errors.js'
-export {
-  ValidationError,
-  DepthLimitExceededError,
-  UnsafeIntegerError,
-} from './lib/wire.js'
+export { ValidationError, DepthLimitExceededError, UnsafeIntegerError } from './lib/wire.js'
 export type { AcceptDateStrings, DateString } from './lib/wire.js'
 export { PaginationLimitExceededError } from './lib/paginate.js'
 
@@ -55,6 +52,7 @@ export type * from './models/operations/addons.js'
 export type * from './models/operations/planAddons.js'
 export type * from './models/operations/defaults.js'
 export type * from './models/operations/governance.js'
+export type * from './models/operations/aiUsage.js'
 
 export type {
   Labels,
@@ -94,6 +92,8 @@ export type {
   ProductCatalogValidationError,
   GovernanceQueryRequestCustomers,
   GovernanceQueryRequestFeatures,
+  AiUsageUsageLineCreate,
+  AiUsageRuntimeAuthorizationQuery,
   QueryFilterInteger,
   QueryFilterFloat,
   QueryFilterBoolean,
@@ -137,6 +137,7 @@ export type {
   AppReference,
   ChargeReference,
   UpdateResourceReference,
+  AiUsageLedgerEntryRef,
   Event,
   MeterQueryRow,
   AppStripeCreateCustomerPortalSessionResult,
@@ -145,6 +146,8 @@ export type {
   UpdateClosedPeriod,
   CostBasis,
   FeatureCostQueryRow,
+  AiUsageRuntimeAuthorization,
+  AiUsageCreditBalance,
   Resource,
   ResourceImmutable,
   QueryFilterDateTime,
@@ -213,12 +216,16 @@ export type {
   GovernanceQueryRequest,
   GovernanceFeatureAccessReason,
   GovernanceQueryError,
+  AiUsageUsageBatchCreate,
+  AiUsageCreditTransaction,
   AppCustomerData,
   UpsertAppCustomerDataRequest,
   CreditAdjustment,
   CreditBalance,
   ListCreditTransactionsParamsFilter,
   CreditTransaction,
+  AiUsageCostSnapshot,
+  AiUsageSalesSnapshot,
   PriceTier,
   ChargeTotals,
   UpdatePriceTier,
@@ -271,10 +278,13 @@ export type {
   InvoiceLineDiscounts,
   UpdateBillingInvoiceWorkflow,
   GovernanceFeatureAccess,
+  AiCreditTransactionPaginatedResponse,
   CustomerData,
   UpsertCustomerBillingDataRequest,
   CreditBalances,
   CreditTransactionPaginatedResponse,
+  AiUsageUsageLine,
+  AiUsageRatingSnapshot,
   PriceGraduated,
   PriceVolume,
   UpdatePriceGraduated,
@@ -301,6 +311,8 @@ export type {
   InvoiceDetailedLine,
   UpdateInvoiceWorkflowSettings,
   GovernanceQueryResult,
+  AiUsageUsageBatch,
+  AiUsageBatchSettlementResult,
   Feature,
   CreditGrantPagePaginatedResponse,
   CurrencyPagePaginatedResponse,

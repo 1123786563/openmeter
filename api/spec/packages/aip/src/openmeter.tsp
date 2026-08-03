@@ -228,10 +228,10 @@ interface CustomerRuntimeAuthorizationEndpoints
 
 @route("/customers/{customerId}/credit-balance")
 @tag(Shared.AIUsageTag)
-interface CustomerCreditBalanceEndpointsAIUsage
+interface AIUsageCustomerCreditBalanceEndpoints
   extends AIUsage.CreditBalanceOperations {}
 
 @route("/customers/{customerId}/credit-transactions")
 @tag(Shared.AIUsageTag)
-interface CustomerCreditTransactionEndpointsAIUsage
+interface AIUsageCustomerCreditTransactionEndpoints
   extends AIUsage.CreditTransactionOperations {}

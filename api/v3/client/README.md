@@ -34,6 +34,7 @@ TypeSpec definitions and ships typed request and response models.
   - [PlanAddons](#planaddons)
   - [Defaults](#defaults)
   - [Governance](#governance)
+  - [AIUsage](#aiusage)
 - [Error Handling](#error-handling)
 - [Pagination and Streaming](#pagination-and-streaming)
 
@@ -318,6 +319,16 @@ The full call path, HTTP route, and a short description are listed below.
 | Method | HTTP | Description |
 | --- | --- | --- |
 | `om.Governance.QueryAccess` | `POST /openmeter/governance/query` | Query feature access for a list of customers. The endpoint resolves each provided identifier to a customer and returns the access status for the requested features, plus optional credit balance availability. _Designed to be called on a fixed refresh interval and the query response is intended to be cached._ |
+
+### AIUsage
+
+| Method | HTTP | Description |
+| --- | --- | --- |
+| `om.AIUsage.CreateBatch` | `POST /ai-usage-batches` | Submit a Canonical AI Usage Batch for settlement. The first submit for a given `idempotency_key` returns HTTP 201 with the settled batch. An identical replay (same `idempotency_key` and `payload_hash`) returns HTTP 200 with the stored result. A replay with the same `idempotency_key` but a different `payload_hash` returns HTTP 409. |
+| `om.AIUsage.GetBatch` | `GET /ai-usage-batches/{batchId}` | Retrieve a settled AI Usage Batch by its ID. |
+| `om.AIUsage.GetCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark. |
+| `om.AIUsage.GetCreditBalance` | `GET /customers/{customerId}/credit-balance` | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
+| `om.AIUsage.ListCreditTransactions` | `GET /customers/{customerId}/credit-transactions` | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
 
 ## Error Handling
 

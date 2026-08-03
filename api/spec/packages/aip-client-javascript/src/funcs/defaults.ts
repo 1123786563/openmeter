@@ -55,10 +55,7 @@ export function updateOrganizationDefaultTaxCodes(
       .json()
       .then((data) => {
         if (client._options.validate) {
-          assertValid(
-            schemas.updateOrganizationDefaultTaxCodesResponseWire,
-            data,
-          )
+          assertValid(schemas.updateOrganizationDefaultTaxCodesResponseWire, data)
         }
         return fromWire(data, schemas.updateOrganizationDefaultTaxCodesResponse)
       })

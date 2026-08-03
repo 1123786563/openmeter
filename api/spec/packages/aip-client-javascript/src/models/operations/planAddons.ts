@@ -3,21 +3,14 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type {
-  CreatePlanAddonRequest as CreatePlanAddonRequestBody,
-  PlanAddon,
-  PlanAddonPagePaginatedResponse,
-  UpsertPlanAddonRequest,
-} from '../types.js'
+import type { CreatePlanAddonRequest as CreatePlanAddonRequestBody, PlanAddon, PlanAddonPagePaginatedResponse, UpsertPlanAddonRequest } from '../types.js'
 
 export interface ListPlanAddonsQuery {
   /** Determines which page of the collection to retrieve. */
   page?: { size?: number; number?: number }
 }
 
-export type ListPlanAddonsRequest = AcceptDateStrings<
-  ListPlanAddonsQuery & { planId: string }
->
+export type ListPlanAddonsRequest = AcceptDateStrings<ListPlanAddonsQuery & { planId: string }>
 export type ListPlanAddonsResponse = PlanAddonPagePaginatedResponse
 
 export type CreatePlanAddonRequest = AcceptDateStrings<{

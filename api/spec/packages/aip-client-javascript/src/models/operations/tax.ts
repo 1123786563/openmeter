@@ -3,12 +3,7 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type {
-  CreateTaxCodeRequest as CreateTaxCodeRequestBody,
-  TaxCode,
-  TaxCodePagePaginatedResponse,
-  UpsertTaxCodeRequest as UpsertTaxCodeRequestBody,
-} from '../types.js'
+import type { CreateTaxCodeRequest as CreateTaxCodeRequestBody, TaxCode, TaxCodePagePaginatedResponse, UpsertTaxCodeRequest as UpsertTaxCodeRequestBody } from '../types.js'
 
 export type CreateTaxCodeRequest = AcceptDateStrings<CreateTaxCodeRequestBody>
 export type CreateTaxCodeResponse = TaxCode

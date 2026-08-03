@@ -1,0 +1,8 @@
+{
+  "retrieved_at": "2026-01-15T10:29:55.000Z",
+  "authorized": true,
+  "available_credits": 1250,
+  "reservation_ceiling_credits": 500,
+  "covered_tenant_seq": 41,
+  "denial_reason": null
+}

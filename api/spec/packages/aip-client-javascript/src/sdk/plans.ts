@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginatePages } from '../lib/paginate.js'
+import {
+  paginatePages,
+} from '../lib/paginate.js'
 import {
   listPlans,
   createPlan,
@@ -28,7 +30,9 @@ import type {
   PublishPlanRequest,
   PublishPlanResponse,
 } from '../models/operations/plans.js'
-import type { Plan } from '../models/types.js'
+import type {
+  Plan,
+} from '../models/types.js'
 
 export class Plans {
   constructor(private readonly _client: Client) {}
