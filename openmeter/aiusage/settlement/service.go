@@ -162,14 +162,31 @@ func (s *service) AllocateAndBook(ctx context.Context, _ adapter.TxAdapter, in S
 
 	allocations := mapCollectorAllocations(allocInputs)
 
+	// Coverage check: if the collector returned fewer credits than charged
+	// and no enterprise-receivable source was available, fail-closed with
+	// ErrCreditInsufficient. This enforces the "prepaid shortage without
+	// Enterprise account -> ErrCreditInsufficient" contract.
+	covered := int64(0)
+	hasEnterprise := false
+	for _, a := range allocations {
+		covered += a.Amount
+		if a.FundingSource == aiusage.FundingSourceEnterpriseReceivable {
+			hasEnterprise = true
+		}
+	}
+	if covered < charged && !hasEnterprise {
+		return nil, aiusage.ErrCreditInsufficient
+	}
+
 	// Enforce receivable hard limit when set.
 	if in.ReceivableHardLimit != nil {
-		totalAllocated := int64(0)
+		receivableAmount := int64(0)
 		for _, a := range allocations {
-			totalAllocated += a.Amount
+			if a.FundingSource == aiusage.FundingSourceEnterpriseReceivable {
+				receivableAmount += a.Amount
+			}
 		}
-		receivable := charged - totalAllocated
-		if receivable > *in.ReceivableHardLimit {
+		if receivableAmount > *in.ReceivableHardLimit {
 			return nil, aiusage.ErrCreditLimitExceeded
 		}
 	}
@@ -254,6 +271,7 @@ func mapCollectorAllocations(inputs creditrealization.CreateAllocationInputs) []
 			Amount: input.Amount.IntPart(),
 			Ledger: aiusage.LedgerProvenance{
 				TransactionGroupID: input.LedgerTransaction.TransactionGroupID,
+				RealizationID:      input.ID,
 				SortHint:           i,
 			},
 			FundingSource: inferFundingSource(input),
@@ -263,9 +281,22 @@ func mapCollectorAllocations(inputs creditrealization.CreateAllocationInputs) []
 }
 
 // inferFundingSource derives the funding source from the collector allocation's
-// lineage annotations. The collector tags each allocation with an origin kind
-// (real_credit or advance).
+// annotations. It first checks for the explicit funding_source annotation
+// key (set by the collector or test helpers), falling back to origin kind
+// (advance -> enterprise_receivable, real_credit -> paid_top_up) when the
+// key is absent. This distinguishes all four categories: plan, promotional,
+// paid_top_up, and enterprise_receivable.
 func inferFundingSource(input creditrealization.CreateAllocationInput) aiusage.FundingSource {
+	// Explicit funding-source annotation wins.
+	if fs, ok := creditrealization.FundingSourceFromAnnotations(input.Annotations); ok {
+		switch aiusage.FundingSource(fs) {
+		case aiusage.FundingSourcePlan, aiusage.FundingSourcePromotional,
+			aiusage.FundingSourcePaidTopUp, aiusage.FundingSourceEnterpriseReceivable:
+			return aiusage.FundingSource(fs)
+		}
+	}
+
+	// Fall back to origin kind for backward compatibility.
 	originKind, ok := input.Annotations.GetString(creditrealization.AnnotationLineageOriginKind)
 	if !ok {
 		return aiusage.FundingSourcePaidTopUp

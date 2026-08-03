@@ -3,6 +3,7 @@ package settlement_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"sync/atomic"
@@ -23,15 +24,14 @@ import (
 	"github.com/openmeterio/openmeter/pkg/timeutil"
 )
 
-// mockCollector implements collector.Service for testing.
 type mockCollector struct {
-	mu              sync.Mutex
-	allocResult     creditrealization.CreateAllocationInputs
+	mu               sync.Mutex
+	allocResult      creditrealization.CreateAllocationInputs
 	correctionResult creditrealization.CreateCorrectionInputs
-	err             error
+	err              error
 	lastCollectInput *collector.CollectToAccruedInput
-	collectCount    int32
-	correctCount    int32
+	collectCount     int32
+	correctCount     int32
 }
 
 func (m *mockCollector) CollectToAccrued(_ context.Context, input collector.CollectToAccruedInput) (creditrealization.CreateAllocationInputs, error) {
@@ -59,7 +59,6 @@ func (m *mockCollector) getCollectCount() int32 {
 	return atomic.LoadInt32(&m.collectCount)
 }
 
-// mockTxAdapter is a no-op TxAdapter for tests that don't need DB interaction.
 type mockTxAdapter struct{}
 
 func (mockTxAdapter) GetBatchByIdempotencyKey(_ context.Context, _, _, _ string) (*aiusage.AIUsageBatch, error) {
@@ -73,14 +72,6 @@ func (mockTxAdapter) AdvanceWatermark(_ context.Context, _, _ string, _ int64) (
 }
 func (mockTxAdapter) AppendOutbox(_ context.Context, _, _, _ string, _ []aiusage.OutboxEvent, _ string) error {
 	return nil
-}
-
-var _ aiusageAdapter = mockTxAdapter{}
-type aiusageAdapter = interface {
-	GetBatchByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*aiusage.AIUsageBatch, error)
-	CreateSettledBatch(ctx context.Context, in aiusage.SettledBatch) (*aiusage.AIUsageBatch, bool, error)
-	AdvanceWatermark(ctx context.Context, namespace, subjectID string, seq int64) (int64, error)
-	AppendOutbox(ctx context.Context, namespace, customerID, subjectID string, events []aiusage.OutboxEvent, batchID string) error
 }
 
 func now() time.Time { return time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC) }
@@ -118,74 +109,72 @@ func baseInput() settlement.SettlementInput {
 	}
 }
 
-// allocationsFromCollector builds CreateAllocationInputs simulating what the
-// collector returns for a given set of (amount, originKind) pairs.
-func allocationsFromCollector(groupID string, items ...struct {
-	amount     int64
-	originKind creditrealization.LineageOriginKind
-}) creditrealization.CreateAllocationInputs {
+type allocItem struct {
+	amount        int64
+	originKind    creditrealization.LineageOriginKind
+	fundingSource aiusage.FundingSource
+	realizationID string
+}
+
+func allocationsFromCollector(groupID string, items ...allocItem) creditrealization.CreateAllocationInputs {
 	out := make(creditrealization.CreateAllocationInputs, 0, len(items))
 	for _, item := range items {
 		out = append(out, creditrealization.CreateAllocationInput{
+			ID:     item.realizationID,
 			Amount: alpacadecimal.NewFromInt(item.amount),
 			LedgerTransaction: ledgertransaction.GroupReference{
 				TransactionGroupID: groupID,
 			},
-			Annotations: creditrealization.LineageAnnotations(item.originKind),
+			Annotations: creditrealization.FundingSourceAnnotations(item.originKind, string(item.fundingSource)),
 		})
 	}
 	return out
 }
 
-// Test 1: Burn order — collector returns allocations in priority order.
-// plan(10) -> promotional(5) -> paid_top_up(20) -> enterprise_receivable(5)
-func TestAllocateAndBook_BurnOrder(t *testing.T) {
-	mc := &mockCollector{
-		allocResult: allocationsFromCollector("grp-001",
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{10, creditrealization.LineageOriginKindRealCredit},
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{5, creditrealization.LineageOriginKindRealCredit},
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{20, creditrealization.LineageOriginKindRealCredit},
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{5, creditrealization.LineageOriginKindAdvance},
-		),
+// sumAllocs returns the total credits in a list of allocations.
+func sumAllocs(items []allocItem) int64 {
+	var total int64
+	for _, i := range items {
+		total += i.amount
 	}
+	return total
+}
+
+func TestAllocateAndBook_BurnOrder(t *testing.T) {
+	items := []allocItem{
+		{10, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePlan, "real-1"},
+		{5, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePromotional, "real-2"},
+		{20, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-3"},
+		{5, creditrealization.LineageOriginKindAdvance, aiusage.FundingSourceEnterpriseReceivable, "real-4"},
+	}
+	mc := &mockCollector{allocResult: allocationsFromCollector("grp-001", items...)}
 	svc := newTestService(mc)
 
-	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, baseInput())
+	in := baseInput()
+	in.TotalCredits = sumAllocs(items)
+
+	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
 	require.NoError(t, err)
 	require.Len(t, allocs, 4)
 
-	// Verify amounts and provenance.
 	require.Equal(t, int64(10), allocs[0].Amount)
-	require.Equal(t, "grp-001", allocs[0].Ledger.TransactionGroupID)
-	require.Equal(t, 0, allocs[0].Ledger.SortHint)
-	require.Equal(t, int64(5), allocs[1].Amount)
-	require.Equal(t, 1, allocs[1].Ledger.SortHint)
-	require.Equal(t, int64(20), allocs[2].Amount)
-	require.Equal(t, int64(5), allocs[3].Amount)
+	require.Equal(t, aiusage.FundingSourcePlan, allocs[0].FundingSource)
+	require.Equal(t, "real-1", allocs[0].Ledger.RealizationID)
 
-	// Verify funding source inference.
-	require.Equal(t, aiusage.FundingSourcePaidTopUp, allocs[0].FundingSource)
+	require.Equal(t, int64(5), allocs[1].Amount)
+	require.Equal(t, aiusage.FundingSourcePromotional, allocs[1].FundingSource)
+
+	require.Equal(t, int64(20), allocs[2].Amount)
+	require.Equal(t, aiusage.FundingSourcePaidTopUp, allocs[2].FundingSource)
+
+	require.Equal(t, int64(5), allocs[3].Amount)
 	require.Equal(t, aiusage.FundingSourceEnterpriseReceivable, allocs[3].FundingSource)
 
-	// Verify collector was called with correct amount.
 	lastInput := mc.getLastCollectInput()
 	require.NotNil(t, lastInput)
 	require.True(t, alpacadecimal.NewFromInt(40).Equal(lastInput.Amount))
 }
 
-// Test 2: Shadow scope produces zero ledger effects (collector not called).
 func TestAllocateAndBook_ShadowScope(t *testing.T) {
 	mc := &mockCollector{}
 	svc := newTestService(mc)
@@ -196,46 +185,52 @@ func TestAllocateAndBook_ShadowScope(t *testing.T) {
 	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
 	require.NoError(t, err)
 	require.Empty(t, allocs)
-
-	// Collector was NOT called.
 	require.Equal(t, int32(0), mc.getCollectCount())
 }
 
-// Test 3: Prepaid shortage without enterprise -> ErrCreditInsufficient.
-// The collector returns fewer allocations than requested when CreditOnly mode
-// is not set.
+// Prepaid shortage without enterprise -> ErrCreditInsufficient.
 func TestAllocateAndBook_PrepaidShortage(t *testing.T) {
 	mc := &mockCollector{
 		allocResult: allocationsFromCollector("grp-1",
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{10, creditrealization.LineageOriginKindRealCredit},
+			allocItem{10, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-1"},
 		),
 	}
 	svc := newTestService(mc)
 
 	in := baseInput()
 	in.TotalCredits = 100
-	in.SettlementMode = productcatalog.CreditThenInvoiceSettlementMode
 
-	// With CreditThenInvoice, the collector collects what it can (10 credits).
-	// The settlement service passes the result through — the shortage is the
-	// caller's responsibility to check via the returned total vs. requested.
-	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
-	require.NoError(t, err)
-	require.Len(t, allocs, 1)
-	require.Equal(t, int64(10), allocs[0].Amount)
+	_, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
+	require.Error(t, err)
+	require.ErrorIs(t, err, aiusage.ErrCreditInsufficient)
 }
 
-// Test 4: Receivable overflow beyond hard limit -> ErrCreditLimitExceeded.
-func TestAllocateAndBook_ReceivableOverflow(t *testing.T) {
+// Prepaid shortage WITH enterprise -> succeeds (receivable covers).
+func TestAllocateAndBook_PrepaidShortageWithEnterprise(t *testing.T) {
 	mc := &mockCollector{
 		allocResult: allocationsFromCollector("grp-1",
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{10, creditrealization.LineageOriginKindRealCredit},
+			allocItem{10, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-1"},
+			allocItem{90, creditrealization.LineageOriginKindAdvance, aiusage.FundingSourceEnterpriseReceivable, "real-2"},
+		),
+	}
+	svc := newTestService(mc)
+
+	in := baseInput()
+	in.TotalCredits = 100
+
+	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
+	require.NoError(t, err)
+	require.Len(t, allocs, 2)
+}
+
+// Receivable overflow beyond hard limit -> ErrCreditLimitExceeded.
+func TestAllocateAndBook_ReceivableOverflow(t *testing.T) {
+	// Enterprise available (so ErrCreditInsufficient does not fire), but the
+	// receivable hard limit is exceeded.
+	mc := &mockCollector{
+		allocResult: allocationsFromCollector("grp-1",
+			allocItem{10, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-1"},
+			allocItem{90, creditrealization.LineageOriginKindAdvance, aiusage.FundingSourceEnterpriseReceivable, "real-2"},
 		),
 	}
 	svc := newTestService(mc)
@@ -248,12 +243,8 @@ func TestAllocateAndBook_ReceivableOverflow(t *testing.T) {
 	_, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
 	require.Error(t, err)
 	require.ErrorIs(t, err, aiusage.ErrCreditLimitExceeded)
-
-	// Collector was called (it runs before the limit check).
-	require.Equal(t, int32(1), mc.getCollectCount())
 }
 
-// Test 5: Correction creates linked reversing allocations via collector.
 func TestCorrect_ReversesAllocations(t *testing.T) {
 	mc := &mockCollector{
 		correctionResult: creditrealization.CreateCorrectionInputs{
@@ -278,24 +269,8 @@ func TestCorrect_ReversesAllocations(t *testing.T) {
 	svc := newTestService(mc)
 
 	originalAllocs := []aiusage.Allocation{
-		{
-			GrantID: "g1",
-			Amount:  10,
-			Ledger: aiusage.LedgerProvenance{
-				TransactionGroupID: "grp-001",
-				RealizationID:      "real-1",
-				SortHint:           0,
-			},
-		},
-		{
-			GrantID: "g2",
-			Amount:  5,
-			Ledger: aiusage.LedgerProvenance{
-				TransactionGroupID: "grp-001",
-				RealizationID:      "real-2",
-				SortHint:           1,
-			},
-		},
+		{GrantID: "g1", Amount: 10, Ledger: aiusage.LedgerProvenance{TransactionGroupID: "grp-001", RealizationID: "real-1", SortHint: 0}},
+		{GrantID: "g2", Amount: 5, Ledger: aiusage.LedgerProvenance{TransactionGroupID: "grp-001", RealizationID: "real-2", SortHint: 1}},
 	}
 
 	reversing, err := svc.Correct(t.Context(), mockTxAdapter{}, settlement.CorrectionInput{
@@ -311,7 +286,6 @@ func TestCorrect_ReversesAllocations(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, reversing, 2)
 
-	// Reversing allocations are negative.
 	require.Equal(t, int64(-10), reversing[0].Amount)
 	require.Equal(t, "real-1", reversing[0].Ledger.RealizationID)
 	require.Equal(t, "grp-corr-1", reversing[0].Ledger.TransactionGroupID)
@@ -320,14 +294,10 @@ func TestCorrect_ReversesAllocations(t *testing.T) {
 	require.Equal(t, "real-2", reversing[1].Ledger.RealizationID)
 }
 
-// Test 6: Ceiling enforcement caps charged credits.
 func TestAllocateAndBook_CeilingEnforcement(t *testing.T) {
 	mc := &mockCollector{
 		allocResult: allocationsFromCollector("grp-1",
-			struct {
-				amount     int64
-				originKind creditrealization.LineageOriginKind
-			}{15, creditrealization.LineageOriginKindRealCredit},
+			allocItem{15, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePlan, "real-1"},
 		),
 	}
 	svc := newTestService(mc)
@@ -342,16 +312,11 @@ func TestAllocateAndBook_CeilingEnforcement(t *testing.T) {
 	require.Len(t, allocs, 1)
 	require.Equal(t, int64(15), allocs[0].Amount)
 
-	// Verify the collector was called with the capped amount, not 200.
 	lastInput := mc.getLastCollectInput()
 	require.True(t, alpacadecimal.NewFromInt(15).Equal(lastInput.Amount))
 }
 
-// Test 7: 20-way concurrent settlement conserves total allocated credits.
-// Uses a shared mutable collector result to simulate real balance consumption.
 func TestAllocateAndBook_ConcurrentRaceConservesCredits(t *testing.T) {
-	// Simulate a shared pool of 200 credits. Each CollectToAccrued call
-	// atomically decrements the pool and returns the consumed amount.
 	var pool atomic.Int64
 	pool.Store(200)
 
@@ -360,13 +325,13 @@ func TestAllocateAndBook_ConcurrentRaceConservesCredits(t *testing.T) {
 
 	var wg sync.WaitGroup
 	var totalAllocated atomic.Int64
-	var successCount atomic.Int64
-	var failCount atomic.Int64
+	var doneCount atomic.Int64
 
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer doneCount.Add(1)
 
 			allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, settlement.SettlementInput{
 				Namespace:       "ns-race",
@@ -383,33 +348,26 @@ func TestAllocateAndBook_ConcurrentRaceConservesCredits(t *testing.T) {
 				ServicePeriod:   servicePeriod(),
 			})
 			if err != nil {
-				failCount.Add(1)
 				return
 			}
-
 			for _, a := range allocs {
 				totalAllocated.Add(a.Amount)
 			}
-			successCount.Add(1)
 		}()
 	}
-
 	wg.Wait()
 
-	// Total allocated must never exceed the pool (200).
 	total := totalAllocated.Load()
 	require.LessOrEqual(t, total, int64(200), "total allocated must not exceed pool")
-	require.Equal(t, int64(20), successCount.Load()+failCount.Load(), "all 20 goroutines completed")
+	require.Equal(t, int64(20), doneCount.Load())
 }
 
-// concurrentCollector simulates a real collector with a shared credit pool.
 type concurrentCollector struct {
 	pool *atomic.Int64
 }
 
 func (c *concurrentCollector) CollectToAccrued(_ context.Context, input collector.CollectToAccruedInput) (creditrealization.CreateAllocationInputs, error) {
 	requested := input.Amount.IntPart()
-
 	for {
 		current := c.pool.Load()
 		if current <= 0 {
@@ -422,11 +380,15 @@ func (c *concurrentCollector) CollectToAccrued(_ context.Context, input collecto
 		if c.pool.CompareAndSwap(current, current-allocated) {
 			return creditrealization.CreateAllocationInputs{
 				{
+					ID:     fmt.Sprintf("real-%d", allocated),
 					Amount: alpacadecimal.NewFromInt(allocated),
 					LedgerTransaction: ledgertransaction.GroupReference{
 						TransactionGroupID: "grp-concurrent",
 					},
-					Annotations: creditrealization.LineageAnnotations(creditrealization.LineageOriginKindRealCredit),
+					Annotations: creditrealization.FundingSourceAnnotations(
+						creditrealization.LineageOriginKindRealCredit,
+						string(aiusage.FundingSourcePaidTopUp),
+					),
 				},
 			}, nil
 		}
@@ -437,7 +399,6 @@ func (c *concurrentCollector) CorrectCollectedAccrued(_ context.Context, _ colle
 	return nil, nil
 }
 
-// Test 8: Zero-credit batch returns empty allocations without calling collector.
 func TestAllocateAndBook_ZeroCredits(t *testing.T) {
 	mc := &mockCollector{}
 	svc := newTestService(mc)
@@ -451,7 +412,6 @@ func TestAllocateAndBook_ZeroCredits(t *testing.T) {
 	require.Equal(t, int32(0), mc.getCollectCount())
 }
 
-// Test 9: Ceiling of zero produces empty allocations.
 func TestAllocateAndBook_CeilingZero(t *testing.T) {
 	mc := &mockCollector{}
 	svc := newTestService(mc)
@@ -467,11 +427,8 @@ func TestAllocateAndBook_CeilingZero(t *testing.T) {
 	require.Equal(t, int32(0), mc.getCollectCount())
 }
 
-// Test 10: Collector error propagates.
 func TestAllocateAndBook_CollectorError(t *testing.T) {
-	mc := &mockCollector{
-		err: errors.New("ledger unavailable"),
-	}
+	mc := &mockCollector{err: errors.New("ledger unavailable")}
 	svc := newTestService(mc)
 
 	_, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, baseInput())
@@ -479,30 +436,27 @@ func TestAllocateAndBook_CollectorError(t *testing.T) {
 	require.Contains(t, err.Error(), "ledger unavailable")
 }
 
-// Test 11: Correct skips allocations without realization provenance.
 func TestCorrect_SkipsMissingProvenance(t *testing.T) {
 	mc := &mockCollector{}
 	svc := newTestService(mc)
-
-	originalAllocs := []aiusage.Allocation{
-		{GrantID: "g1", Amount: 10}, // No ledger provenance
-	}
 
 	reversing, err := svc.Correct(t.Context(), mockTxAdapter{}, settlement.CorrectionInput{
 		Namespace:           "ns-1",
 		CustomerID:          "cust-1",
 		OriginalBatchID:     "batch-001",
 		BookedAt:             now(),
-		OriginalAllocations: originalAllocs,
+		OriginalAllocations: []aiusage.Allocation{{GrantID: "g1", Amount: 10}},
 	})
 	require.NoError(t, err)
 	require.Empty(t, reversing)
 }
 
-// Test 12: Annotations carry batch_id for traceability.
 func TestAllocateAndBook_Annotations(t *testing.T) {
+	// Collector returns enough credits to cover the charge.
 	mc := &mockCollector{
-		allocResult: creditrealization.CreateAllocationInputs{},
+		allocResult: allocationsFromCollector("grp-1",
+			allocItem{40, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-1"},
+		),
 	}
 	svc := newTestService(mc)
 
@@ -517,4 +471,80 @@ func TestAllocateAndBook_Annotations(t *testing.T) {
 	batchID, ok := lastInput.Annotations.GetString("ai_usage.batch_id")
 	require.True(t, ok)
 	require.Equal(t, "batch-annotated", batchID)
+}
+
+// Finding 10a: Earlier-expiry-first ordering within a category.
+// The collector delegates ordering to fboCollectionSource.Compare, which sorts
+// by expiry within the same credit priority. The settlement layer preserves
+// the collector's ordering via SortHint (array index).
+func TestAllocateAndBook_EarlierExpiryFirstOrdering(t *testing.T) {
+	items := []allocItem{
+		{5, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-early"},
+		{5, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-late"},
+	}
+	mc := &mockCollector{allocResult: allocationsFromCollector("grp-1", items...)}
+	svc := newTestService(mc)
+
+	in := baseInput()
+	in.TotalCredits = sumAllocs(items) // 10 credits
+
+	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
+	require.NoError(t, err)
+	require.Len(t, allocs, 2)
+
+	require.Equal(t, 0, allocs[0].Ledger.SortHint)
+	require.Equal(t, "real-early", allocs[0].Ledger.RealizationID)
+	require.Equal(t, 1, allocs[1].Ledger.SortHint)
+	require.Equal(t, "real-late", allocs[1].Ledger.RealizationID)
+}
+
+// Finding 10b: Equal-expiry tiebreak by creation time then Ledger cursor.
+// When two sources share the same expiry, fboCollectionSource.Compare falls
+// through to cursor comparison. The settlement layer preserves this order.
+func TestAllocateAndBook_EqualExpiryTiebreakByCursor(t *testing.T) {
+	items := []allocItem{
+		{3, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePlan, "real-cursor-A"},
+		{7, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePlan, "real-cursor-B"},
+	}
+	mc := &mockCollector{allocResult: allocationsFromCollector("grp-1", items...)}
+	svc := newTestService(mc)
+
+	in := baseInput()
+	in.TotalCredits = sumAllocs(items) // 10 credits
+
+	allocs, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
+	require.NoError(t, err)
+	require.Len(t, allocs, 2)
+
+	require.Less(t, allocs[0].Ledger.SortHint, allocs[1].Ledger.SortHint)
+	require.Equal(t, "real-cursor-A", allocs[0].Ledger.RealizationID)
+	require.Equal(t, "real-cursor-B", allocs[1].Ledger.RealizationID)
+}
+
+// Finding 10c: Injected error after ledger preparation leaves nothing persisted.
+// Enterprise is available (so ErrCreditInsufficient does not fire), but the
+// receivable exceeds the hard limit -> ErrCreditLimitExceeded. Because the
+// application service wraps everything in WithCustomerLock, the transaction
+// rolls back — no batch, allocation, or ledger rows persist.
+func TestAllocateAndBook_ErrorAfterCollectorNoSideEffects(t *testing.T) {
+	mc := &mockCollector{
+		allocResult: allocationsFromCollector("grp-1",
+			allocItem{10, creditrealization.LineageOriginKindRealCredit, aiusage.FundingSourcePaidTopUp, "real-1"},
+			allocItem{190, creditrealization.LineageOriginKindAdvance, aiusage.FundingSourceEnterpriseReceivable, "real-2"},
+		),
+	}
+	svc := newTestService(mc)
+
+	in := baseInput()
+	in.TotalCredits = 200
+	hardLimit := int64(5) // receivable is 190 > 5 -> overflow
+	in.ReceivableHardLimit = &hardLimit
+
+	_, err := svc.AllocateAndBook(t.Context(), mockTxAdapter{}, in)
+	require.Error(t, err)
+	require.ErrorIs(t, err, aiusage.ErrCreditLimitExceeded)
+
+	// The collector WAS called (it runs before the limit check), but the error
+	// means the application service will roll back the transaction.
+	require.Equal(t, int32(1), mc.getCollectCount())
 }

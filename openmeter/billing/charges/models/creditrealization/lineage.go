@@ -9,6 +9,13 @@ import (
 
 const AnnotationLineageOriginKind = "billing.credit_realization.lineage_origin_kind"
 
+// AnnotationFundingSource carries the AI-usage funding-source category
+// (plan, promotional, paid_top_up, enterprise_receivable) on allocations
+// returned by the collector. The settlement layer reads this to map
+// collector allocations into typed FundingSource values without scanning
+// grant balances.
+const AnnotationFundingSource = "ai_usage.funding_source"
+
 type LineageOriginKind string
 
 const (
@@ -35,6 +42,22 @@ func LineageAnnotations(originKind LineageOriginKind) models.Annotations {
 	return models.Annotations{
 		AnnotationLineageOriginKind: string(originKind),
 	}
+}
+
+// FundingSourceAnnotations builds annotations carrying both the lineage
+// origin kind and the AI-usage funding-source category, so the settlement
+// layer can map allocations to the correct FundingSource without ambiguity.
+func FundingSourceAnnotations(originKind LineageOriginKind, fundingSource string) models.Annotations {
+	return models.Annotations{
+		AnnotationLineageOriginKind: string(originKind),
+		AnnotationFundingSource:     fundingSource,
+	}
+}
+
+// FundingSourceFromAnnotations extracts the AI-usage funding-source category
+// from annotations. Returns empty string and false when absent.
+func FundingSourceFromAnnotations(annotations models.Annotations) (string, bool) {
+	return annotations.GetString(AnnotationFundingSource)
 }
 
 func LineageOriginKindFromAnnotations(annotations models.Annotations) (LineageOriginKind, error) {
