@@ -5,61 +5,100 @@
 **Contract version:** `weknora-billing-p1-v1`
 **Migration version:** `20260803000100`
 
-## Summary
+## Certification status: PENDING
 
-Phase 1 provider release evidence for the WeKnora AI Billing integration. The
-acceptance gate `make weknora-ai-billing-p1-acceptance` is the single entry
-point; it runs the API spec suite, the v3 Go SDK module, root build/vet, the
-AI Usage integration tests, and the live v3 E2E suite.
+This report documents what was verified, what was not, and what must happen
+before the Phase 1 provider artifact can be written to the Release Manifest.
 
-## Verification results
+The acceptance gate (`make weknora-ai-billing-p1-acceptance`) is the single
+entry point. It was **not fully executed** in this environment because no live
+server stack (PostgreSQL + Kafka + ClickHouse with `ai_usage.enabled=true`)
+was available.
 
-### Build and vet (all three Go modules)
+### What was verified
 
-| Module | `go build` | `go vet` | Duration |
-|---|---|---|---|
-| Root (`github.com/openmeterio/openmeter`) | PASS | PASS | 18s / 24s |
-| SDK (`api/v3/client`) | PASS | PASS + test PASS | <1s |
-| E2E (`e2e`) | PASS | PASS | <1s |
-
-### Integration tests (PostgreSQL-backed, `dynamic` tag)
-
-| Package | Result | Notes |
+| Gate | Result | Notes |
 |---|---|---|
-| `openmeter/aiusage` | PASS | Core domain logic (ceil, ratecard, creditcalc, types) |
-| `openmeter/aiusage/meterregistry` | PASS | Meter/resource registry |
-| `openmeter/aiusage/pricing` | PASS | Pricing service + property tests |
-| `openmeter/aiusage/runtimeauthorization` | PASS | Authorization assembly + signing |
-| `openmeter/aiusage/service` | PASS | Service orchestration |
-| `openmeter/aiusage/settlement` | PASS | Grant burn-down, correction, enterprise cap |
-| `openmeter/aiusage/signing` | PASS | Ed25519 sign/verify, canonical form, rotation |
-| `openmeter/aiusage/worker` | PASS | Outbox relay, lease recovery, dead-letter |
-| `openmeter/aiusage/adapter` | SKIPPED (no PostgreSQL) | Requires live PG; passes in CI with `POSTGRES_HOST=127.0.0.1` |
+| Root `go build ./...` | PASS | |
+| Root `go vet ./...` | PASS | |
+| SDK `go build ./... && go vet ./... && go test ./...` | PASS | `api/v3/client` module |
+| E2E `go build ./... && go vet ./...` | PASS | `e2e` module compiles and vets clean |
+| E2E skip behavior (`OPENMETER_ADDRESS=""`) | PASS | Suite skips gracefully |
+| `openmeter/aiusage` (non-DB packages) | PASS | 8/9 packages; adapter needs live PG |
 | `api/v3/handlers/aiusage` | PASS | HTTP handler integration |
+| `git diff --check` | PASS | No whitespace errors |
+| `go mod tidy` (root, SDK, e2e) | PASS | No drift |
+| `gofmt` | PASS | |
 
-### Live E2E (`e2e/aiusage_v3_test.go`)
+### What was NOT verified
 
-| Test | Result | Notes |
+| Gate | Why | Impact |
 |---|---|---|
-| `TestV3AIUsageClosedLoop` | SKIP | Requires `OPENMETER_ADDRESS` + `ai_usage.enabled=true` |
-| `TestV3AIUsageServerRestart` | SKIP | Requires `OPENMETER_E2E_SERVER_RESTART=1` |
-| `TestV3AIUsageProjectionConvergence` | SKIP | Requires `OPENMETER_E2E_INFRA_INTERRUPTION=1` |
+| Live E2E (`TestV3AIUsageClosedLoop` + subtests) | No PostgreSQL/Kafka/ClickHouse stack available in this environment | Contract assertions (balance deduction, watermark values, replay semantics) are unverified against a real server |
+| Adapter integration tests | No PostgreSQL connection (`POSTGRES_HOST`) | These tests require live PG; they pass in CI |
+| Artifact builder (`build-phase1-artifact.sh`) | No Docker daemon in this environment | Script is verified for bash syntax and shellcheck; not executed |
 
-The E2E suite skips gracefully when infrastructure is unavailable. It is
-designed to pass against a live server with PostgreSQL, Kafka, and ClickHouse
-running and `ai_usage.enabled=true`.
+### No-op DI wiring (important caveat)
 
-### Code quality
+The current DI wiring (`app/common/aiusage.go`) uses **placeholder no-op
+implementations** for the settlement engine, rate-card resolver, and cost
+resolver:
 
-| Check | Result |
-|---|---|
-| `git diff --check` | PASS (no whitespace errors) |
-| `go mod tidy` (root, SDK, e2e) | PASS (no drift) |
-| `gofmt` | PASS |
+- `noopSettlementEngine` — settles batches without recording grant deductions
+  or ledger entries.
+- `noopRateCardResolver` — returns a fixed 1-credit-per-unit rate for all
+  resources.
+- `noopCostResolver` — returns zero cost for all resources.
+
+The **real** settlement engine exists in `openmeter/aiusage/settlement/service.go`
+and the real pricing service in `openmeter/aiusage/pricing/`, but they are not
+wired into the DI graph yet.
+
+The E2E tests assert the **Phase 1 contract** (what the spec requires), not
+the current no-op behavior. Specifically:
+
+- The balance-deduction assertion (`settled == "991"` after a 9-credit charge)
+  will fail against today's no-op settlement engine because no grants are
+  actually burned.
+- The BYOK-zero-credit assertion will pass by coincidence (the no-op cost
+  resolver also returns zero), but not for the right reason.
+- The watermark convergence assertions depend on the adapter implementation,
+  which is real (ent-backed) and should pass.
+
+Until the real settlement/pricing engines replace the no-ops, the live E2E
+**cannot** pass. This is expected for a Phase 1 incremental release: the
+no-ops let the process start successfully while the full DI graph is assembled.
+
+### What must happen before certification
+
+1. **Wire the real settlement engine** into the DI graph, replacing
+   `noopSettlementEngine` with the `settlement.Engine` backed by the
+   `ledger.Ledger` collector and `GrantBalanceReader`.
+2. **Wire the real pricing/cost resolvers** from `openmeter/aiusage/pricing`
+   and `openmeter/llmcost`.
+3. **Deploy the full stack** — PostgreSQL, Kafka, ClickHouse — with
+   `ai_usage.enabled=true` and a valid Ed25519 signing key.
+4. **Run the acceptance gate** against that stack:
+
+   ```bash
+   make weknora-ai-billing-p1-acceptance
+   ```
+
+5. **Run the artifact builder** to produce the immutable OpenAPI checksum,
+   SBOM, and image digest:
+
+   ```bash
+   tools/weknora/build-phase1-artifact.sh
+   ```
+
+6. **Verify no CRITICAL vulnerabilities** in the grype scan.
+
+Only after all of the above pass can the commit SHA and image digest be
+written to the Release Manifest.
 
 ## E2E scenario coverage
 
-The `TestV3AIUsageClosedLoop` test covers all brief-mandated scenarios:
+`TestV3AIUsageClosedLoop` covers all brief-mandated scenarios as subtests:
 
 1. **Happy-path closed loop** — fund WKC, submit batch, assert 201 + TotalCredits=9
 2. **Balance deduction** — assert settled balance = 991 after 9-credit charge
@@ -68,38 +107,35 @@ The `TestV3AIUsageClosedLoop` test covers all brief-mandated scenarios:
 5. **BYOK model lines at zero** — provider_managed=false lines have zero credits, platform RAG charged
 6. **Watermark convergence (seq 1,3,2)** — out-of-order arrival catches up to covered_seq=3
 7. **Idempotent replay** — same key+hash returns 200, single ledger effect; different hash returns 409
-8. **Linked correction** — credit adjustment reverses the batch charge
+8. **Linked correction** — credit adjustment reverses the batch charge (Phase 1 uses the existing Credit Adjustments API; the batch ID in the adjustment name/description forms the foreign-key link. A domain-native correction endpoint is deferred to Phase 2.)
 9. **Enterprise receivable overflow** — prepaid exhausted, receivable covers remainder
 10. **Runtime authorization contract** — returns frozen contract version string
 
-Infrastructure-gated scenarios (separate tests):
-- **Server restart** — batch survives server restart (durably persisted to PostgreSQL)
-- **Kafka/ClickHouse interruption** — batch accepted synchronously; projection converges after recovery
+Infrastructure-gated scenarios (separate tests, opt-in env vars):
+- **Server restart** (`TestV3AIUsageServerRestart`) — batch survives server restart
+- **Kafka/ClickHouse interruption** (`TestV3AIUsageProjectionConvergence`) — batch accepted synchronously; projection converges after recovery
 
-## Artifact build
+## Artifact builder
 
-The artifact builder (`tools/weknora/build-phase1-artifact.sh`) produces:
+The artifact builder (`tools/weknora/build-phase1-artifact.sh`) produces
+immutable artifacts in `build/phase1-artifact/`:
 
-| Artifact | Location in image |
+| Artifact | Description |
 |---|---|
-| OpenAPI spec | `/contract/openapi.yaml` |
-| Contract manifest (version, checksums, commit, digest) | Generated at build time |
-| SBOM (CycloneDX) | Generated at build time |
-| Vulnerability scan | grype (CRITICAL blocks release) |
+| `openapi.json` | v3 OpenAPI spec (extracted from image `/contract/openapi.json`) |
+| `manifest.json` | Contract version, OpenAPI + SDK checksums, migration version, upstream commit, image digest |
+| `sbom.json` | CycloneDX SBOM (generated by syft) |
+| `grype.json` | Vulnerability scan results |
 
-Run: `tools/weknora/build-phase1-artifact.sh`
+The script enforces:
+- Clean git working tree (no uncommitted changes)
+- `openapi.json` read only from the image (no source-tree fallback)
+- SDK checksum over all `.go` files in `api/v3/client/`
+- SBOM generation (syft is required)
+- Vulnerability scan (grype is required; CRITICAL vulns block)
+- Backup-restore smoke for PostgreSQL and ClickHouse (when connection URLs are set)
 
-The script enforces: clean commit, contract checksum recording, upstream commit
-pinning, SBOM generation, vulnerability gate, and backup-restore smoke. Results
-are appended to this report.
-
-## Open items
-
-- **Live E2E execution**: requires a running server stack (PostgreSQL + Kafka +
-  ClickHouse with `ai_usage.enabled=true`). The E2E suite is verified to compile,
-  vet, format, and skip cleanly without infrastructure.
-- **Adapter integration tests**: require PostgreSQL (`POSTGRES_HOST=127.0.0.1`).
-  All non-DB tests pass; adapter tests pass in CI.
+Results are appended to this report under "Artifact build record".
 
 ## Commands
 

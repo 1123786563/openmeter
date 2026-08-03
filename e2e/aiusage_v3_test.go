@@ -373,7 +373,12 @@ func TestV3AIUsageClosedLoop(t *testing.T) {
 		settled, err := c.AIUsage.CreateBatch(t.Context(), batch)
 		c.requireStatus(http.StatusCreated, err)
 
-		// A correction is recorded as a credit adjustment linked to the batch.
+		// Phase 1 does not define a dedicated AI-Usage-domain correction
+		// resource. Instead, the correction is recorded via the existing Credit
+		// Adjustments API. The batch ID embedded in the adjustment name and
+		// description forms the foreign-key link. This is an explicit Phase 1
+		// assumption, not a gap — a domain-native correction endpoint is
+		// deferred to Phase 2.
 		_, err = c.Customers.Credits.Adjustments.Create(t.Context(), customer.ID, v3sdk.CreateCreditAdjustmentRequest{
 			Name:        "AI usage correction for batch " + settled.ID,
 			Description: ptrTo("Reverses the 9-credit charge from batch " + settled.ID),

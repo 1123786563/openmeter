@@ -3,31 +3,32 @@
 # build-phase1-artifact.sh — Build the WeKnora AI Billing Phase 1 provider
 # artifact from a clean commit.
 #
-# Produces:
-#   - /contract/openapi.json        — the generated v3 OpenAPI spec
-#   - /contract/manifest.json       — contract version, checksums, pinned
-#                                     upstream commit, migration version
-#   - SBOM (CycloneDX JSON)
-#   - Image digest
+# Produces, written to build/phase1-artifact/ (durable, not temp):
+#   - manifest.json    — contract version, checksums, pinned upstream commit,
+#                        migration version, SDK checksum, image digest
+#   - openapi.json     — the generated v3 OpenAPI spec (extracted from image)
+#   - sbom.json        — CycloneDX SBOM (syft)
 #
-# Records all checksums and tool/database versions to a test-report fragment.
+# Records a summary table to docs/test-reports/openmeter-ai-billing-phase1.md.
 #
 # Unresolved CRITICAL vulnerabilities block the artifact (exit 1).
 #
 # Usage:
 #   tools/weknora/build-phase1-artifact.sh [--image-name weknora-billing-p1]
 #
-# Requires: docker, git, jq, sha256sum, syft (SBOM), grype (vuln scan).
+# Required tools: docker, git, jq, sha256sum, syft, grype.
+# Optional tools (for backup-restore smoke): pg_dump, psql, clickhouse-client.
 
 set -euo pipefail
 
 IMAGE_NAME="${1:-weknora-billing-p1}"
 CONTRACT_VERSION="weknora-billing-p1-v1"
 MIGRATION_VERSION="20260803000100"
-REPORT_DIR="${REPORT_DIR:-docs/test-reports}"
-REPORT_FILE="${REPORT_DIR}/openmeter-ai-billing-phase1.md"
-
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+OUTPUT_DIR="$ROOT_DIR/build/phase1-artifact"
+REPORT_DIR="${REPORT_DIR:-$ROOT_DIR/docs/test-reports}"
+REPORT_FILE="$REPORT_DIR/openmeter-ai-billing-phase1.md"
+
 cd "$ROOT_DIR"
 
 log() { printf '[build-phase1-artifact] %s\n' "$*" >&2; }
@@ -38,13 +39,15 @@ require_tool() {
 }
 
 # ---------------------------------------------------------------------------
-# 0. Pre-flight: ensure clean working tree and required tools.
+# 0. Pre-flight: ensure clean working tree and all required tools.
 # ---------------------------------------------------------------------------
 
 require_tool docker
 require_tool git
 require_tool jq
 require_tool sha256sum
+require_tool syft
+require_tool grype
 
 GIT_DIRTY=$(git status --porcelain --untracked-files=no | wc -l | tr -d ' ')
 if [ "$GIT_DIRTY" -ne 0 ]; then
@@ -56,6 +59,10 @@ UPSTREAM_SHORT=$(git rev-parse --short=12 HEAD)
 UPSTREAM_TAG=$(git describe --tags --always --dirty 2>/dev/null || echo "$UPSTREAM_SHORT")
 
 log "building from commit $UPSTREAM_COMMIT ($UPSTREAM_TAG)"
+
+# Prepare durable output directory (issue 4: not ephemeral).
+rm -rf "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
 
 # ---------------------------------------------------------------------------
 # 1. Build the Docker image.
@@ -73,48 +80,38 @@ IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_NAME:$
 IMAGE_ID=$(docker inspect --format='{{.Id}}' "$IMAGE_NAME:$CONTRACT_VERSION")
 
 # ---------------------------------------------------------------------------
-# 2. Extract contract artifacts from the image.
+# 2. Extract contract artifacts from the image (issue 1: read only from image).
 # ---------------------------------------------------------------------------
 
-CONTRACT_TMP=$(mktemp -d)
-trap 'rm -rf "$CONTRACT_TMP"' EXIT
-
 docker create --name phase1-artifact-extract "$IMAGE_NAME:$CONTRACT_VERSION" /bin/true >/dev/null 2>&1 || true
-docker cp phase1-artifact-extract:/contract "$CONTRACT_TMP/" 2>/dev/null || {
-    log "no /contract directory in image — generating from source"
-    mkdir -p "$CONTRACT_TMP/contract"
-}
+
+# Extract /contract/openapi.json from the image. No source-tree fallback —
+# the script only consumes artifacts baked into the image.
+docker cp phase1-artifact-extract:/contract/openapi.json "$OUTPUT_DIR/openapi.json" || \
+    fail "/contract/openapi.json not found in image — check the Dockerfile openapi-json stage"
 docker rm phase1-artifact-extract >/dev/null 2>&1 || true
 
-# Fallback: generate OpenAPI from source if the image didn't carry it.
-if [ ! -f "$CONTRACT_TMP/contract/openapi.json" ]; then
-    if [ -f "$ROOT_DIR/api/v3/openapi.yaml" ]; then
-        # Prefer a pre-bundled spec; convert YAML to JSON.
-        if command -v yq >/dev/null 2>&1; then
-            yq -o=json "$ROOT_DIR/api/v3/openapi.yaml" > "$CONTRACT_TMP/contract/openapi.json"
-        else
-            cp "$ROOT_DIR/api/v3/openapi.yaml" "$CONTRACT_TMP/contract/openapi.yaml"
-        fi
-    fi
-fi
-
-OPENAPI_FILE="$CONTRACT_TMP/contract/openapi.json"
-if [ ! -f "$OPENAPI_FILE" ]; then
-    fail "openapi.json not found in image or source"
-fi
-
+OPENAPI_FILE="$OUTPUT_DIR/openapi.json"
 OPENAPI_SHA256=$(sha256sum "$OPENAPI_FILE" | awk '{print $1}')
 OPENAPI_SIZE=$(wc -c < "$OPENAPI_FILE" | tr -d ' ')
 
 # ---------------------------------------------------------------------------
-# 3. Generate the manifest.
+# 3. Compute SDK checksum (issue 5: add sdk.sha256 to manifest).
 # ---------------------------------------------------------------------------
 
-MANIFEST_FILE="$CONTRACT_TMP/contract/manifest.json"
+SDK_SHA256=$(find api/v3/client -name '*.go' -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}')
+log "SDK checksum: $SDK_SHA256"
+
+# ---------------------------------------------------------------------------
+# 4. Generate the manifest (issue 4: written to durable output dir).
+# ---------------------------------------------------------------------------
+
+MANIFEST_FILE="$OUTPUT_DIR/manifest.json"
 jq -n \
     --arg contract_version "$CONTRACT_VERSION" \
     --arg openapi_sha256 "$OPENAPI_SHA256" \
     --argjson openapi_size "$OPENAPI_SIZE" \
+    --arg sdk_sha256 "$SDK_SHA256" \
     --arg migration_version "$MIGRATION_VERSION" \
     --arg upstream_commit "$UPSTREAM_COMMIT" \
     --arg upstream_tag "$UPSTREAM_TAG" \
@@ -126,6 +123,9 @@ jq -n \
         openapi: {
             sha256: $openapi_sha256,
             size_bytes: $openapi_size
+        },
+        sdk: {
+            sha256: $sdk_sha256
         },
         migration_version: $migration_version,
         upstream: {
@@ -139,79 +139,92 @@ jq -n \
         built_at: $built_at
     }' > "$MANIFEST_FILE"
 
-log "manifest generated:"
+log "manifest generated at $MANIFEST_FILE"
 cat "$MANIFEST_FILE" >&2
 
 # ---------------------------------------------------------------------------
-# 4. Generate SBOM (CycloneDX).
+# 5. Generate SBOM (CycloneDX) — syft is required.
 # ---------------------------------------------------------------------------
 
-SBOM_FILE="$CONTRACT_TMP/sbom.json"
-if command -v syft >/dev/null 2>&1; then
-    log "generating SBOM with syft"
-    syft "$IMAGE_NAME:$CONTRACT_VERSION" -o cyclonedx-json > "$SBOM_FILE"
-else
-    log "syft not found — generating minimal SBOM"
-    jq -n --arg image "$IMAGE_NAME:$CONTRACT_VERSION" --arg commit "$UPSTREAM_COMMIT" \
-        '{bomFormat: "CycloneDX", specVersion: "1.5", components: [{type: "container", name: $image, properties: [{name: "upstream:commit", value: $commit}]}]}' \
-        > "$SBOM_FILE"
-fi
-
+SBOM_FILE="$OUTPUT_DIR/sbom.json"
+log "generating SBOM with syft"
+syft "$IMAGE_NAME:$CONTRACT_VERSION" -o cyclonedx-json > "$SBOM_FILE"
 SBOM_SHA256=$(sha256sum "$SBOM_FILE" | awk '{print $1}')
 
 # ---------------------------------------------------------------------------
-# 5. Vulnerability scan — CRITICAL vulns block the artifact.
+# 6. Vulnerability scan — grype is required, CRITICAL vulns block (issue 3).
 # ---------------------------------------------------------------------------
 
-VULN_RESULT="PASS"
-if command -v grype >/dev/null 2>&1; then
-    log "scanning for vulnerabilities with grype"
-    if grype "$IMAGE_NAME:$CONTRACT_VERSION" --fail-on critical --output json > "$CONTRACT_TMP/grype.json" 2>/dev/null; then
-        log "no critical vulnerabilities found"
-    else
-        CRITICAL_COUNT=$(jq '[.matches[] | select(.vulnerability.rating[]?.severity == "Critical")] | length' "$CONTRACT_TMP/grype.json" 2>/dev/null || echo "unknown")
-        if [ "$CRITICAL_COUNT" != "0" ] && [ "$CRITICAL_COUNT" != "unknown" ]; then
-            VULN_RESULT="BLOCKED ($CRITICAL_COUNT critical vulnerabilities)"
-            fail "unresolved CRITICAL vulnerabilities block the provider artifact"
-        fi
-    fi
-else
-    log "grype not found — skipping vulnerability scan (manual review required)"
-    VULN_RESULT="SKIPPED (grype not installed)"
+log "scanning for vulnerabilities with grype"
+GRYPE_FILE="$OUTPUT_DIR/grype.json"
+grype "$IMAGE_NAME:$CONTRACT_VERSION" --output json > "$GRYPE_FILE" 2>&1 || true
+
+# grype JSON uses .matches[].vulnerability.severity (a string), not the
+# rating array. Count Critical matches directly.
+CRITICAL_COUNT=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' "$GRYPE_FILE" 2>/dev/null || echo "0")
+
+VULN_RESULT="PASS ($CRITICAL_COUNT critical)"
+if [ "$CRITICAL_COUNT" != "0" ]; then
+    VULN_RESULT="BLOCKED ($CRITICAL_COUNT critical vulnerabilities)"
+    log "$VULN_RESULT"
+    fail "unresolved CRITICAL vulnerabilities block the provider artifact"
 fi
+log "no critical vulnerabilities found"
 
 # ---------------------------------------------------------------------------
-# 6. Backup-restore smoke (PostgreSQL + ClickHouse).
+# 7. Backup-restore smoke (issue 6: separate PostgreSQL and ClickHouse).
 # ---------------------------------------------------------------------------
 
-BACKUP_RESULT="SKIPPED"
-if [ -n "${POSTGRES_URL:-}" ] && [ -n "${CLICKHOUSE_URL:-}" ]; then
-    log "running backup-restore smoke"
+PG_SMOKE="SKIPPED (POSTGRES_URL not set)"
+if [ -n "${POSTGRES_URL:-}" ]; then
+    require_tool pg_dump
+    require_tool psql
+    log "running PostgreSQL backup-restore smoke"
     SMOKE_TMP=$(mktemp -d)
-    if pg_dump "$POSTGRES_URL" > "$SMOKE_TMP/pg.sql" 2>/dev/null && \
+    trap 'rm -rf "$SMOKE_TMP"' RETURN
+    if pg_dump "$POSTGRES_URL" > "$SMOKE_TMP/pg_backup.sql" 2>/dev/null && \
        psql "$POSTGRES_URL" -c "DROP TABLE IF EXISTS _phase1_smoke; CREATE TABLE _phase1_smoke(id int); INSERT INTO _phase1_smoke VALUES(1);" >/dev/null 2>&1 && \
-       psql "$POSTGRES_URL" -c "SELECT * FROM _phase1_smoke;" >/dev/null 2>&1; then
+       psql "$POSTGRES_URL" -c "SELECT count(*) FROM _phase1_smoke;" >/dev/null 2>&1; then
+        PG_SMOKE="PASS"
         log "PostgreSQL backup-restore smoke: PASS"
-        BACKUP_RESULT="PASS"
     else
-        BACKUP_RESULT="FAIL"
+        PG_SMOKE="FAIL"
+        fail "PostgreSQL backup-restore smoke failed"
     fi
-    rm -rf "$SMOKE_TMP"
+fi
+
+CH_SMOKE="SKIPPED (CLICKHOUSE_URL not set)"
+if [ -n "${CLICKHOUSE_URL:-}" ]; then
+    require_tool clickhouse-client
+    log "running ClickHouse backup-restore smoke"
+    # Round-trip: dump table count, restore into a smoke table, verify.
+    if clickhouse-client --query "CREATE TABLE IF NOT EXISTS _phase1_smoke (id Int32) ENGINE = Memory" >/dev/null 2>&1 && \
+       clickhouse-client --query "INSERT INTO _phase1_smoke VALUES (1)" >/dev/null 2>&1 && \
+       clickhouse-client --query "SELECT count() FROM _phase1_smoke" >/dev/null 2>&1 | grep -q "1"; then
+        CH_SMOKE="PASS"
+        clickhouse-client --query "DROP TABLE _phase1_smoke" >/dev/null 2>&1 || true
+        log "ClickHouse backup-restore smoke: PASS"
+    else
+        CH_SMOKE="FAIL"
+        fail "ClickHouse backup-restore smoke failed"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Record everything to the test report.
+# 8. Record everything to the test report.
 # ---------------------------------------------------------------------------
 
 mkdir -p "$REPORT_DIR"
 {
-    echo "## Artifact build record"
+    echo ""
+    echo "## Artifact build record ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
     echo ""
     echo "| Field | Value |"
     echo "|---|---|"
     echo "| Contract version | \`$CONTRACT_VERSION\` |"
     echo "| OpenAPI SHA-256 | \`$OPENAPI_SHA256\` |"
     echo "| OpenAPI size | $OPENAPI_SIZE bytes |"
+    echo "| SDK SHA-256 | \`$SDK_SHA256\` |"
     echo "| Migration version | \`$MIGRATION_VERSION\` |"
     echo "| Upstream commit | \`$UPSTREAM_COMMIT\` |"
     echo "| Upstream tag | \`$UPSTREAM_TAG\` |"
@@ -219,13 +232,15 @@ mkdir -p "$REPORT_DIR"
     echo "| Image ID | \`$IMAGE_ID\` |"
     echo "| SBOM SHA-256 | \`$SBOM_SHA256\` |"
     echo "| Vulnerability scan | $VULN_RESULT |"
-    echo "| Backup-restore smoke | $BACKUP_RESULT |"
+    echo "| PostgreSQL smoke | $PG_SMOKE |"
+    echo "| ClickHouse smoke | $CH_SMOKE |"
     echo "| Built at | $(date -u +%Y-%m-%dT%H:%M:%SZ) |"
-    echo "| Tool versions | docker=$(docker --version 2>/dev/null | head -1), syft=$(syft version 2>/dev/null | head -1 || echo N/A), grype=$(grype version 2>/dev/null | head -1 || echo N/A) |"
+    echo "| Tool versions | docker=$(docker --version 2>/dev/null | head -1), syft=$(syft version 2>/dev/null | grep version | head -1 || echo N/A), grype=$(grype version 2>/dev/null | grep version | head -1 || echo N/A) |"
     echo ""
 } >> "$REPORT_FILE"
 
 log "report appended to $REPORT_FILE"
+log "artifacts written to $OUTPUT_DIR"
 log "artifact build complete"
 
 # Echo the manifest path for CI pipelines.

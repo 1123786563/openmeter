@@ -75,6 +75,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 RUN xx-verify /usr/local/bin/openmeter-jobs
 
+# Phase 1 contract artifact: convert the v3 OpenAPI spec from YAML to JSON
+# so the artifact builder (tools/weknora/build-phase1-artifact.sh) can checksum
+# a canonical JSON form.
+FROM mikefarah/yq:4 AS openapi-json
+COPY --link api/v3/openapi.yaml /openapi.yaml
+RUN yq -o=json /openapi.yaml > /openapi.json
+
 FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 RUN apk add --update --no-cache ca-certificates tzdata bash
@@ -90,9 +97,8 @@ COPY --link --from=builder /usr/local/bin/openmeter-jobs /usr/local/bin/
 COPY --link --from=builder /src/go.* /usr/local/src/openmeter/
 COPY --link --from=builder /src/entrypoint.sh /entrypoint.sh
 
-# Phase 1 contract artifacts: generated v3 OpenAPI spec and manifest.
-# The build-phase1-artifact.sh script reads these from /contract in the image.
 COPY --link api/v3/openapi.yaml /contract/openapi.yaml
+COPY --link --from=openapi-json /openapi.json /contract/openapi.json
 
 ENTRYPOINT ["/entrypoint.sh"]
 
