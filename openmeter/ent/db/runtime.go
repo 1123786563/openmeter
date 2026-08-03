@@ -11,6 +11,10 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/models/creditsapplied"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addonratecard"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratecardentry"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 	dbapp "github.com/openmeterio/openmeter/openmeter/ent/db/app"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustomer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustominvoicing"
@@ -111,6 +115,198 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	aiusagebatchMixin := schema.AIUsageBatch{}.Mixin()
+	aiusagebatchMixinFields0 := aiusagebatchMixin[0].Fields()
+	_ = aiusagebatchMixinFields0
+	aiusagebatchMixinFields1 := aiusagebatchMixin[1].Fields()
+	_ = aiusagebatchMixinFields1
+	aiusagebatchMixinFields3 := aiusagebatchMixin[3].Fields()
+	_ = aiusagebatchMixinFields3
+	aiusagebatchFields := schema.AIUsageBatch{}.Fields()
+	_ = aiusagebatchFields
+	// aiusagebatchDescNamespace is the schema descriptor for namespace field.
+	aiusagebatchDescNamespace := aiusagebatchMixinFields1[0].Descriptor()
+	// aiusagebatch.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	aiusagebatch.NamespaceValidator = aiusagebatchDescNamespace.Validators[0].(func(string) error)
+	// aiusagebatchDescCreatedAt is the schema descriptor for created_at field.
+	aiusagebatchDescCreatedAt := aiusagebatchMixinFields3[0].Descriptor()
+	// aiusagebatch.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aiusagebatch.DefaultCreatedAt = aiusagebatchDescCreatedAt.Default.(func() time.Time)
+	// aiusagebatchDescUpdatedAt is the schema descriptor for updated_at field.
+	aiusagebatchDescUpdatedAt := aiusagebatchMixinFields3[1].Descriptor()
+	// aiusagebatch.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aiusagebatch.DefaultUpdatedAt = aiusagebatchDescUpdatedAt.Default.(func() time.Time)
+	// aiusagebatch.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aiusagebatch.UpdateDefaultUpdatedAt = aiusagebatchDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// aiusagebatchDescCustomerID is the schema descriptor for customer_id field.
+	aiusagebatchDescCustomerID := aiusagebatchFields[0].Descriptor()
+	// aiusagebatch.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
+	aiusagebatch.CustomerIDValidator = aiusagebatchDescCustomerID.Validators[0].(func(string) error)
+	// aiusagebatchDescSubjectID is the schema descriptor for subject_id field.
+	aiusagebatchDescSubjectID := aiusagebatchFields[1].Descriptor()
+	// aiusagebatch.SubjectIDValidator is a validator for the "subject_id" field. It is called by the builders before save.
+	aiusagebatch.SubjectIDValidator = aiusagebatchDescSubjectID.Validators[0].(func(string) error)
+	// aiusagebatchDescUsageBatchID is the schema descriptor for usage_batch_id field.
+	aiusagebatchDescUsageBatchID := aiusagebatchFields[2].Descriptor()
+	// aiusagebatch.UsageBatchIDValidator is a validator for the "usage_batch_id" field. It is called by the builders before save.
+	aiusagebatch.UsageBatchIDValidator = aiusagebatchDescUsageBatchID.Validators[0].(func(string) error)
+	// aiusagebatchDescRateVersion is the schema descriptor for rate_version field.
+	aiusagebatchDescRateVersion := aiusagebatchFields[7].Descriptor()
+	// aiusagebatch.DefaultRateVersion holds the default value on creation for the rate_version field.
+	aiusagebatch.DefaultRateVersion = aiusagebatchDescRateVersion.Default.(string)
+	// aiusagebatchDescBillingMode is the schema descriptor for billing_mode field.
+	aiusagebatchDescBillingMode := aiusagebatchFields[8].Descriptor()
+	// aiusagebatch.BillingModeValidator is a validator for the "billing_mode" field. It is called by the builders before save.
+	aiusagebatch.BillingModeValidator = aiusagebatchDescBillingMode.Validators[0].(func(string) error)
+	// aiusagebatchDescPayloadHash is the schema descriptor for payload_hash field.
+	aiusagebatchDescPayloadHash := aiusagebatchFields[9].Descriptor()
+	// aiusagebatch.PayloadHashValidator is a validator for the "payload_hash" field. It is called by the builders before save.
+	aiusagebatch.PayloadHashValidator = aiusagebatchDescPayloadHash.Validators[0].(func(string) error)
+	// aiusagebatchDescStatus is the schema descriptor for status field.
+	aiusagebatchDescStatus := aiusagebatchFields[10].Descriptor()
+	// aiusagebatch.DefaultStatus holds the default value on creation for the status field.
+	aiusagebatch.DefaultStatus = aiusagebatchDescStatus.Default.(string)
+	// aiusagebatchDescTotalCredits is the schema descriptor for total_credits field.
+	aiusagebatchDescTotalCredits := aiusagebatchFields[11].Descriptor()
+	// aiusagebatch.DefaultTotalCredits holds the default value on creation for the total_credits field.
+	aiusagebatch.DefaultTotalCredits = aiusagebatchDescTotalCredits.Default.(int64)
+	// aiusagebatchDescCoveredTenantSeq is the schema descriptor for covered_tenant_seq field.
+	aiusagebatchDescCoveredTenantSeq := aiusagebatchFields[12].Descriptor()
+	// aiusagebatch.DefaultCoveredTenantSeq holds the default value on creation for the covered_tenant_seq field.
+	aiusagebatch.DefaultCoveredTenantSeq = aiusagebatchDescCoveredTenantSeq.Default.(int64)
+	// aiusagebatchDescID is the schema descriptor for id field.
+	aiusagebatchDescID := aiusagebatchMixinFields0[0].Descriptor()
+	// aiusagebatch.DefaultID holds the default value on creation for the id field.
+	aiusagebatch.DefaultID = aiusagebatchDescID.Default.(func() string)
+	aiusagelineitemMixin := schema.AIUsageLineItem{}.Mixin()
+	aiusagelineitemMixinFields0 := aiusagelineitemMixin[0].Fields()
+	_ = aiusagelineitemMixinFields0
+	aiusagelineitemMixinFields1 := aiusagelineitemMixin[1].Fields()
+	_ = aiusagelineitemMixinFields1
+	aiusagelineitemMixinFields3 := aiusagelineitemMixin[3].Fields()
+	_ = aiusagelineitemMixinFields3
+	aiusagelineitemFields := schema.AIUsageLineItem{}.Fields()
+	_ = aiusagelineitemFields
+	// aiusagelineitemDescNamespace is the schema descriptor for namespace field.
+	aiusagelineitemDescNamespace := aiusagelineitemMixinFields1[0].Descriptor()
+	// aiusagelineitem.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	aiusagelineitem.NamespaceValidator = aiusagelineitemDescNamespace.Validators[0].(func(string) error)
+	// aiusagelineitemDescCreatedAt is the schema descriptor for created_at field.
+	aiusagelineitemDescCreatedAt := aiusagelineitemMixinFields3[0].Descriptor()
+	// aiusagelineitem.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aiusagelineitem.DefaultCreatedAt = aiusagelineitemDescCreatedAt.Default.(func() time.Time)
+	// aiusagelineitemDescUpdatedAt is the schema descriptor for updated_at field.
+	aiusagelineitemDescUpdatedAt := aiusagelineitemMixinFields3[1].Descriptor()
+	// aiusagelineitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aiusagelineitem.DefaultUpdatedAt = aiusagelineitemDescUpdatedAt.Default.(func() time.Time)
+	// aiusagelineitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aiusagelineitem.UpdateDefaultUpdatedAt = aiusagelineitemDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// aiusagelineitemDescResourceCode is the schema descriptor for resource_code field.
+	aiusagelineitemDescResourceCode := aiusagelineitemFields[0].Descriptor()
+	// aiusagelineitem.ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.
+	aiusagelineitem.ResourceCodeValidator = aiusagelineitemDescResourceCode.Validators[0].(func(string) error)
+	// aiusagelineitemDescProvider is the schema descriptor for provider field.
+	aiusagelineitemDescProvider := aiusagelineitemFields[2].Descriptor()
+	// aiusagelineitem.DefaultProvider holds the default value on creation for the provider field.
+	aiusagelineitem.DefaultProvider = aiusagelineitemDescProvider.Default.(string)
+	// aiusagelineitemDescModel is the schema descriptor for model field.
+	aiusagelineitemDescModel := aiusagelineitemFields[3].Descriptor()
+	// aiusagelineitem.DefaultModel holds the default value on creation for the model field.
+	aiusagelineitem.DefaultModel = aiusagelineitemDescModel.Default.(string)
+	// aiusagelineitemDescProviderManaged is the schema descriptor for provider_managed field.
+	aiusagelineitemDescProviderManaged := aiusagelineitemFields[4].Descriptor()
+	// aiusagelineitem.DefaultProviderManaged holds the default value on creation for the provider_managed field.
+	aiusagelineitem.DefaultProviderManaged = aiusagelineitemDescProviderManaged.Default.(bool)
+	// aiusagelineitemDescID is the schema descriptor for id field.
+	aiusagelineitemDescID := aiusagelineitemMixinFields0[0].Descriptor()
+	// aiusagelineitem.DefaultID holds the default value on creation for the id field.
+	aiusagelineitem.DefaultID = aiusagelineitemDescID.Default.(func() string)
+	aiusageratecardentryMixin := schema.AIUsageRatecardEntry{}.Mixin()
+	aiusageratecardentryMixinFields0 := aiusageratecardentryMixin[0].Fields()
+	_ = aiusageratecardentryMixinFields0
+	aiusageratecardentryMixinFields1 := aiusageratecardentryMixin[1].Fields()
+	_ = aiusageratecardentryMixinFields1
+	aiusageratecardentryMixinFields3 := aiusageratecardentryMixin[3].Fields()
+	_ = aiusageratecardentryMixinFields3
+	aiusageratecardentryFields := schema.AIUsageRatecardEntry{}.Fields()
+	_ = aiusageratecardentryFields
+	// aiusageratecardentryDescNamespace is the schema descriptor for namespace field.
+	aiusageratecardentryDescNamespace := aiusageratecardentryMixinFields1[0].Descriptor()
+	// aiusageratecardentry.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	aiusageratecardentry.NamespaceValidator = aiusageratecardentryDescNamespace.Validators[0].(func(string) error)
+	// aiusageratecardentryDescCreatedAt is the schema descriptor for created_at field.
+	aiusageratecardentryDescCreatedAt := aiusageratecardentryMixinFields3[0].Descriptor()
+	// aiusageratecardentry.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aiusageratecardentry.DefaultCreatedAt = aiusageratecardentryDescCreatedAt.Default.(func() time.Time)
+	// aiusageratecardentryDescUpdatedAt is the schema descriptor for updated_at field.
+	aiusageratecardentryDescUpdatedAt := aiusageratecardentryMixinFields3[1].Descriptor()
+	// aiusageratecardentry.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aiusageratecardentry.DefaultUpdatedAt = aiusageratecardentryDescUpdatedAt.Default.(func() time.Time)
+	// aiusageratecardentry.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aiusageratecardentry.UpdateDefaultUpdatedAt = aiusageratecardentryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// aiusageratecardentryDescResourceCode is the schema descriptor for resource_code field.
+	aiusageratecardentryDescResourceCode := aiusageratecardentryFields[1].Descriptor()
+	// aiusageratecardentry.ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.
+	aiusageratecardentry.ResourceCodeValidator = aiusageratecardentryDescResourceCode.Validators[0].(func(string) error)
+	// aiusageratecardentryDescCreditRate is the schema descriptor for credit_rate field.
+	aiusageratecardentryDescCreditRate := aiusageratecardentryFields[5].Descriptor()
+	// aiusageratecardentry.DefaultCreditRate holds the default value on creation for the credit_rate field.
+	aiusageratecardentry.DefaultCreditRate = aiusageratecardentryDescCreditRate.Default.(int64)
+	// aiusageratecardentryDescID is the schema descriptor for id field.
+	aiusageratecardentryDescID := aiusageratecardentryMixinFields0[0].Descriptor()
+	// aiusageratecardentry.DefaultID holds the default value on creation for the id field.
+	aiusageratecardentry.DefaultID = aiusageratecardentryDescID.Default.(func() string)
+	aiusageratingsnapshotMixin := schema.AIUsageRatingSnapshot{}.Mixin()
+	aiusageratingsnapshotMixinFields0 := aiusageratingsnapshotMixin[0].Fields()
+	_ = aiusageratingsnapshotMixinFields0
+	aiusageratingsnapshotMixinFields1 := aiusageratingsnapshotMixin[1].Fields()
+	_ = aiusageratingsnapshotMixinFields1
+	aiusageratingsnapshotMixinFields3 := aiusageratingsnapshotMixin[3].Fields()
+	_ = aiusageratingsnapshotMixinFields3
+	aiusageratingsnapshotFields := schema.AIUsageRatingSnapshot{}.Fields()
+	_ = aiusageratingsnapshotFields
+	// aiusageratingsnapshotDescNamespace is the schema descriptor for namespace field.
+	aiusageratingsnapshotDescNamespace := aiusageratingsnapshotMixinFields1[0].Descriptor()
+	// aiusageratingsnapshot.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	aiusageratingsnapshot.NamespaceValidator = aiusageratingsnapshotDescNamespace.Validators[0].(func(string) error)
+	// aiusageratingsnapshotDescCreatedAt is the schema descriptor for created_at field.
+	aiusageratingsnapshotDescCreatedAt := aiusageratingsnapshotMixinFields3[0].Descriptor()
+	// aiusageratingsnapshot.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aiusageratingsnapshot.DefaultCreatedAt = aiusageratingsnapshotDescCreatedAt.Default.(func() time.Time)
+	// aiusageratingsnapshotDescUpdatedAt is the schema descriptor for updated_at field.
+	aiusageratingsnapshotDescUpdatedAt := aiusageratingsnapshotMixinFields3[1].Descriptor()
+	// aiusageratingsnapshot.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aiusageratingsnapshot.DefaultUpdatedAt = aiusageratingsnapshotDescUpdatedAt.Default.(func() time.Time)
+	// aiusageratingsnapshot.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aiusageratingsnapshot.UpdateDefaultUpdatedAt = aiusageratingsnapshotDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// aiusageratingsnapshotDescResourceCode is the schema descriptor for resource_code field.
+	aiusageratingsnapshotDescResourceCode := aiusageratingsnapshotFields[0].Descriptor()
+	// aiusageratingsnapshot.ResourceCodeValidator is a validator for the "resource_code" field. It is called by the builders before save.
+	aiusageratingsnapshot.ResourceCodeValidator = aiusageratingsnapshotDescResourceCode.Validators[0].(func(string) error)
+	// aiusageratingsnapshotDescCostCurrency is the schema descriptor for cost_currency field.
+	aiusageratingsnapshotDescCostCurrency := aiusageratingsnapshotFields[1].Descriptor()
+	// aiusageratingsnapshot.DefaultCostCurrency holds the default value on creation for the cost_currency field.
+	aiusageratingsnapshot.DefaultCostCurrency = aiusageratingsnapshotDescCostCurrency.Default.(string)
+	// aiusageratingsnapshotDescCostSource is the schema descriptor for cost_source field.
+	aiusageratingsnapshotDescCostSource := aiusageratingsnapshotFields[3].Descriptor()
+	// aiusageratingsnapshot.DefaultCostSource holds the default value on creation for the cost_source field.
+	aiusageratingsnapshot.DefaultCostSource = aiusageratingsnapshotDescCostSource.Default.(string)
+	// aiusageratingsnapshotDescSalesCurrency is the schema descriptor for sales_currency field.
+	aiusageratingsnapshotDescSalesCurrency := aiusageratingsnapshotFields[4].Descriptor()
+	// aiusageratingsnapshot.DefaultSalesCurrency holds the default value on creation for the sales_currency field.
+	aiusageratingsnapshot.DefaultSalesCurrency = aiusageratingsnapshotDescSalesCurrency.Default.(string)
+	// aiusageratingsnapshotDescRateCardVersion is the schema descriptor for rate_card_version field.
+	aiusageratingsnapshotDescRateCardVersion := aiusageratingsnapshotFields[6].Descriptor()
+	// aiusageratingsnapshot.DefaultRateCardVersion holds the default value on creation for the rate_card_version field.
+	aiusageratingsnapshot.DefaultRateCardVersion = aiusageratingsnapshotDescRateCardVersion.Default.(string)
+	// aiusageratingsnapshotDescCredits is the schema descriptor for credits field.
+	aiusageratingsnapshotDescCredits := aiusageratingsnapshotFields[7].Descriptor()
+	// aiusageratingsnapshot.DefaultCredits holds the default value on creation for the credits field.
+	aiusageratingsnapshot.DefaultCredits = aiusageratingsnapshotDescCredits.Default.(int64)
+	// aiusageratingsnapshotDescID is the schema descriptor for id field.
+	aiusageratingsnapshotDescID := aiusageratingsnapshotMixinFields0[0].Descriptor()
+	// aiusageratingsnapshot.DefaultID holds the default value on creation for the id field.
+	aiusageratingsnapshot.DefaultID = aiusageratingsnapshotDescID.Default.(func() string)
 	addonMixin := schema.Addon{}.Mixin()
 	addonMixinFields0 := addonMixin[0].Fields()
 	_ = addonMixinFields0

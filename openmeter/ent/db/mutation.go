@@ -28,6 +28,10 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/credit/grant"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addonratecard"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratecardentry"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 	dbapp "github.com/openmeterio/openmeter/openmeter/ent/db/app"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustomer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustominvoicing"
@@ -135,6 +139,10 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeAIUsageBatch                                     = "AIUsageBatch"
+	TypeAIUsageLineItem                                  = "AIUsageLineItem"
+	TypeAIUsageRatecardEntry                             = "AIUsageRatecardEntry"
+	TypeAIUsageRatingSnapshot                            = "AIUsageRatingSnapshot"
 	TypeAddon                                            = "Addon"
 	TypeAddonRateCard                                    = "AddonRateCard"
 	TypeApp                                              = "App"
@@ -223,6 +231,4939 @@ const (
 	TypeTaxCode                                          = "TaxCode"
 	TypeUsageReset                                       = "UsageReset"
 )
+
+// AIUsageBatchMutation represents an operation that mutates the AIUsageBatch nodes in the graph.
+type AIUsageBatchMutation struct {
+	config
+	op                      Op
+	typ                     string
+	id                      *string
+	namespace               *string
+	annotations             *models.Annotations
+	created_at              *time.Time
+	updated_at              *time.Time
+	deleted_at              *time.Time
+	customer_id             *string
+	subject_id              *string
+	usage_batch_id          *string
+	tenant_seq              *int64
+	addtenant_seq           *int64
+	occurred_at             *time.Time
+	reservation_id          *string
+	ceiling_credits         *int64
+	addceiling_credits      *int64
+	rate_version            *string
+	billing_mode            *string
+	payload_hash            *string
+	status                  *string
+	total_credits           *int64
+	addtotal_credits        *int64
+	covered_tenant_seq      *int64
+	addcovered_tenant_seq   *int64
+	clearedFields           map[string]struct{}
+	line_items              map[string]struct{}
+	removedline_items       map[string]struct{}
+	clearedline_items       bool
+	rating_snapshots        map[string]struct{}
+	removedrating_snapshots map[string]struct{}
+	clearedrating_snapshots bool
+	done                    bool
+	oldValue                func(context.Context) (*AIUsageBatch, error)
+	predicates              []predicate.AIUsageBatch
+}
+
+var _ ent.Mutation = (*AIUsageBatchMutation)(nil)
+
+// aiusagebatchOption allows management of the mutation configuration using functional options.
+type aiusagebatchOption func(*AIUsageBatchMutation)
+
+// newAIUsageBatchMutation creates new mutation for the AIUsageBatch entity.
+func newAIUsageBatchMutation(c config, op Op, opts ...aiusagebatchOption) *AIUsageBatchMutation {
+	m := &AIUsageBatchMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAIUsageBatch,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAIUsageBatchID sets the ID field of the mutation.
+func withAIUsageBatchID(id string) aiusagebatchOption {
+	return func(m *AIUsageBatchMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AIUsageBatch
+		)
+		m.oldValue = func(ctx context.Context) (*AIUsageBatch, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AIUsageBatch.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAIUsageBatch sets the old AIUsageBatch of the mutation.
+func withAIUsageBatch(node *AIUsageBatch) aiusagebatchOption {
+	return func(m *AIUsageBatchMutation) {
+		m.oldValue = func(context.Context) (*AIUsageBatch, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AIUsageBatchMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AIUsageBatchMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AIUsageBatch entities.
+func (m *AIUsageBatchMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AIUsageBatchMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AIUsageBatchMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AIUsageBatch.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *AIUsageBatchMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *AIUsageBatchMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *AIUsageBatchMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetAnnotations sets the "annotations" field.
+func (m *AIUsageBatchMutation) SetAnnotations(value models.Annotations) {
+	m.annotations = &value
+}
+
+// Annotations returns the value of the "annotations" field in the mutation.
+func (m *AIUsageBatchMutation) Annotations() (r models.Annotations, exists bool) {
+	v := m.annotations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAnnotations returns the old "annotations" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldAnnotations(ctx context.Context) (v models.Annotations, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAnnotations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAnnotations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAnnotations: %w", err)
+	}
+	return oldValue.Annotations, nil
+}
+
+// ClearAnnotations clears the value of the "annotations" field.
+func (m *AIUsageBatchMutation) ClearAnnotations() {
+	m.annotations = nil
+	m.clearedFields[aiusagebatch.FieldAnnotations] = struct{}{}
+}
+
+// AnnotationsCleared returns if the "annotations" field was cleared in this mutation.
+func (m *AIUsageBatchMutation) AnnotationsCleared() bool {
+	_, ok := m.clearedFields[aiusagebatch.FieldAnnotations]
+	return ok
+}
+
+// ResetAnnotations resets all changes to the "annotations" field.
+func (m *AIUsageBatchMutation) ResetAnnotations() {
+	m.annotations = nil
+	delete(m.clearedFields, aiusagebatch.FieldAnnotations)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AIUsageBatchMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AIUsageBatchMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AIUsageBatchMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AIUsageBatchMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AIUsageBatchMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AIUsageBatchMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *AIUsageBatchMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *AIUsageBatchMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *AIUsageBatchMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[aiusagebatch.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *AIUsageBatchMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[aiusagebatch.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *AIUsageBatchMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, aiusagebatch.FieldDeletedAt)
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *AIUsageBatchMutation) SetCustomerID(s string) {
+	m.customer_id = &s
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *AIUsageBatchMutation) CustomerID() (r string, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldCustomerID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *AIUsageBatchMutation) ResetCustomerID() {
+	m.customer_id = nil
+}
+
+// SetSubjectID sets the "subject_id" field.
+func (m *AIUsageBatchMutation) SetSubjectID(s string) {
+	m.subject_id = &s
+}
+
+// SubjectID returns the value of the "subject_id" field in the mutation.
+func (m *AIUsageBatchMutation) SubjectID() (r string, exists bool) {
+	v := m.subject_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubjectID returns the old "subject_id" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldSubjectID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubjectID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubjectID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubjectID: %w", err)
+	}
+	return oldValue.SubjectID, nil
+}
+
+// ResetSubjectID resets all changes to the "subject_id" field.
+func (m *AIUsageBatchMutation) ResetSubjectID() {
+	m.subject_id = nil
+}
+
+// SetUsageBatchID sets the "usage_batch_id" field.
+func (m *AIUsageBatchMutation) SetUsageBatchID(s string) {
+	m.usage_batch_id = &s
+}
+
+// UsageBatchID returns the value of the "usage_batch_id" field in the mutation.
+func (m *AIUsageBatchMutation) UsageBatchID() (r string, exists bool) {
+	v := m.usage_batch_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsageBatchID returns the old "usage_batch_id" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldUsageBatchID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsageBatchID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsageBatchID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsageBatchID: %w", err)
+	}
+	return oldValue.UsageBatchID, nil
+}
+
+// ResetUsageBatchID resets all changes to the "usage_batch_id" field.
+func (m *AIUsageBatchMutation) ResetUsageBatchID() {
+	m.usage_batch_id = nil
+}
+
+// SetTenantSeq sets the "tenant_seq" field.
+func (m *AIUsageBatchMutation) SetTenantSeq(i int64) {
+	m.tenant_seq = &i
+	m.addtenant_seq = nil
+}
+
+// TenantSeq returns the value of the "tenant_seq" field in the mutation.
+func (m *AIUsageBatchMutation) TenantSeq() (r int64, exists bool) {
+	v := m.tenant_seq
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTenantSeq returns the old "tenant_seq" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldTenantSeq(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTenantSeq is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTenantSeq requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTenantSeq: %w", err)
+	}
+	return oldValue.TenantSeq, nil
+}
+
+// AddTenantSeq adds i to the "tenant_seq" field.
+func (m *AIUsageBatchMutation) AddTenantSeq(i int64) {
+	if m.addtenant_seq != nil {
+		*m.addtenant_seq += i
+	} else {
+		m.addtenant_seq = &i
+	}
+}
+
+// AddedTenantSeq returns the value that was added to the "tenant_seq" field in this mutation.
+func (m *AIUsageBatchMutation) AddedTenantSeq() (r int64, exists bool) {
+	v := m.addtenant_seq
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTenantSeq resets all changes to the "tenant_seq" field.
+func (m *AIUsageBatchMutation) ResetTenantSeq() {
+	m.tenant_seq = nil
+	m.addtenant_seq = nil
+}
+
+// SetOccurredAt sets the "occurred_at" field.
+func (m *AIUsageBatchMutation) SetOccurredAt(t time.Time) {
+	m.occurred_at = &t
+}
+
+// OccurredAt returns the value of the "occurred_at" field in the mutation.
+func (m *AIUsageBatchMutation) OccurredAt() (r time.Time, exists bool) {
+	v := m.occurred_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOccurredAt returns the old "occurred_at" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldOccurredAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOccurredAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOccurredAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOccurredAt: %w", err)
+	}
+	return oldValue.OccurredAt, nil
+}
+
+// ResetOccurredAt resets all changes to the "occurred_at" field.
+func (m *AIUsageBatchMutation) ResetOccurredAt() {
+	m.occurred_at = nil
+}
+
+// SetReservationID sets the "reservation_id" field.
+func (m *AIUsageBatchMutation) SetReservationID(s string) {
+	m.reservation_id = &s
+}
+
+// ReservationID returns the value of the "reservation_id" field in the mutation.
+func (m *AIUsageBatchMutation) ReservationID() (r string, exists bool) {
+	v := m.reservation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservationID returns the old "reservation_id" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldReservationID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservationID: %w", err)
+	}
+	return oldValue.ReservationID, nil
+}
+
+// ClearReservationID clears the value of the "reservation_id" field.
+func (m *AIUsageBatchMutation) ClearReservationID() {
+	m.reservation_id = nil
+	m.clearedFields[aiusagebatch.FieldReservationID] = struct{}{}
+}
+
+// ReservationIDCleared returns if the "reservation_id" field was cleared in this mutation.
+func (m *AIUsageBatchMutation) ReservationIDCleared() bool {
+	_, ok := m.clearedFields[aiusagebatch.FieldReservationID]
+	return ok
+}
+
+// ResetReservationID resets all changes to the "reservation_id" field.
+func (m *AIUsageBatchMutation) ResetReservationID() {
+	m.reservation_id = nil
+	delete(m.clearedFields, aiusagebatch.FieldReservationID)
+}
+
+// SetCeilingCredits sets the "ceiling_credits" field.
+func (m *AIUsageBatchMutation) SetCeilingCredits(i int64) {
+	m.ceiling_credits = &i
+	m.addceiling_credits = nil
+}
+
+// CeilingCredits returns the value of the "ceiling_credits" field in the mutation.
+func (m *AIUsageBatchMutation) CeilingCredits() (r int64, exists bool) {
+	v := m.ceiling_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCeilingCredits returns the old "ceiling_credits" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldCeilingCredits(ctx context.Context) (v *int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCeilingCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCeilingCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCeilingCredits: %w", err)
+	}
+	return oldValue.CeilingCredits, nil
+}
+
+// AddCeilingCredits adds i to the "ceiling_credits" field.
+func (m *AIUsageBatchMutation) AddCeilingCredits(i int64) {
+	if m.addceiling_credits != nil {
+		*m.addceiling_credits += i
+	} else {
+		m.addceiling_credits = &i
+	}
+}
+
+// AddedCeilingCredits returns the value that was added to the "ceiling_credits" field in this mutation.
+func (m *AIUsageBatchMutation) AddedCeilingCredits() (r int64, exists bool) {
+	v := m.addceiling_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCeilingCredits clears the value of the "ceiling_credits" field.
+func (m *AIUsageBatchMutation) ClearCeilingCredits() {
+	m.ceiling_credits = nil
+	m.addceiling_credits = nil
+	m.clearedFields[aiusagebatch.FieldCeilingCredits] = struct{}{}
+}
+
+// CeilingCreditsCleared returns if the "ceiling_credits" field was cleared in this mutation.
+func (m *AIUsageBatchMutation) CeilingCreditsCleared() bool {
+	_, ok := m.clearedFields[aiusagebatch.FieldCeilingCredits]
+	return ok
+}
+
+// ResetCeilingCredits resets all changes to the "ceiling_credits" field.
+func (m *AIUsageBatchMutation) ResetCeilingCredits() {
+	m.ceiling_credits = nil
+	m.addceiling_credits = nil
+	delete(m.clearedFields, aiusagebatch.FieldCeilingCredits)
+}
+
+// SetRateVersion sets the "rate_version" field.
+func (m *AIUsageBatchMutation) SetRateVersion(s string) {
+	m.rate_version = &s
+}
+
+// RateVersion returns the value of the "rate_version" field in the mutation.
+func (m *AIUsageBatchMutation) RateVersion() (r string, exists bool) {
+	v := m.rate_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateVersion returns the old "rate_version" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldRateVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateVersion: %w", err)
+	}
+	return oldValue.RateVersion, nil
+}
+
+// ResetRateVersion resets all changes to the "rate_version" field.
+func (m *AIUsageBatchMutation) ResetRateVersion() {
+	m.rate_version = nil
+}
+
+// SetBillingMode sets the "billing_mode" field.
+func (m *AIUsageBatchMutation) SetBillingMode(s string) {
+	m.billing_mode = &s
+}
+
+// BillingMode returns the value of the "billing_mode" field in the mutation.
+func (m *AIUsageBatchMutation) BillingMode() (r string, exists bool) {
+	v := m.billing_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillingMode returns the old "billing_mode" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldBillingMode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillingMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillingMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingMode: %w", err)
+	}
+	return oldValue.BillingMode, nil
+}
+
+// ResetBillingMode resets all changes to the "billing_mode" field.
+func (m *AIUsageBatchMutation) ResetBillingMode() {
+	m.billing_mode = nil
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (m *AIUsageBatchMutation) SetPayloadHash(s string) {
+	m.payload_hash = &s
+}
+
+// PayloadHash returns the value of the "payload_hash" field in the mutation.
+func (m *AIUsageBatchMutation) PayloadHash() (r string, exists bool) {
+	v := m.payload_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayloadHash returns the old "payload_hash" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldPayloadHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayloadHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayloadHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayloadHash: %w", err)
+	}
+	return oldValue.PayloadHash, nil
+}
+
+// ResetPayloadHash resets all changes to the "payload_hash" field.
+func (m *AIUsageBatchMutation) ResetPayloadHash() {
+	m.payload_hash = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *AIUsageBatchMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *AIUsageBatchMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *AIUsageBatchMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetTotalCredits sets the "total_credits" field.
+func (m *AIUsageBatchMutation) SetTotalCredits(i int64) {
+	m.total_credits = &i
+	m.addtotal_credits = nil
+}
+
+// TotalCredits returns the value of the "total_credits" field in the mutation.
+func (m *AIUsageBatchMutation) TotalCredits() (r int64, exists bool) {
+	v := m.total_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTotalCredits returns the old "total_credits" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldTotalCredits(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalCredits: %w", err)
+	}
+	return oldValue.TotalCredits, nil
+}
+
+// AddTotalCredits adds i to the "total_credits" field.
+func (m *AIUsageBatchMutation) AddTotalCredits(i int64) {
+	if m.addtotal_credits != nil {
+		*m.addtotal_credits += i
+	} else {
+		m.addtotal_credits = &i
+	}
+}
+
+// AddedTotalCredits returns the value that was added to the "total_credits" field in this mutation.
+func (m *AIUsageBatchMutation) AddedTotalCredits() (r int64, exists bool) {
+	v := m.addtotal_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTotalCredits resets all changes to the "total_credits" field.
+func (m *AIUsageBatchMutation) ResetTotalCredits() {
+	m.total_credits = nil
+	m.addtotal_credits = nil
+}
+
+// SetCoveredTenantSeq sets the "covered_tenant_seq" field.
+func (m *AIUsageBatchMutation) SetCoveredTenantSeq(i int64) {
+	m.covered_tenant_seq = &i
+	m.addcovered_tenant_seq = nil
+}
+
+// CoveredTenantSeq returns the value of the "covered_tenant_seq" field in the mutation.
+func (m *AIUsageBatchMutation) CoveredTenantSeq() (r int64, exists bool) {
+	v := m.covered_tenant_seq
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCoveredTenantSeq returns the old "covered_tenant_seq" field's value of the AIUsageBatch entity.
+// If the AIUsageBatch object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageBatchMutation) OldCoveredTenantSeq(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCoveredTenantSeq is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCoveredTenantSeq requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCoveredTenantSeq: %w", err)
+	}
+	return oldValue.CoveredTenantSeq, nil
+}
+
+// AddCoveredTenantSeq adds i to the "covered_tenant_seq" field.
+func (m *AIUsageBatchMutation) AddCoveredTenantSeq(i int64) {
+	if m.addcovered_tenant_seq != nil {
+		*m.addcovered_tenant_seq += i
+	} else {
+		m.addcovered_tenant_seq = &i
+	}
+}
+
+// AddedCoveredTenantSeq returns the value that was added to the "covered_tenant_seq" field in this mutation.
+func (m *AIUsageBatchMutation) AddedCoveredTenantSeq() (r int64, exists bool) {
+	v := m.addcovered_tenant_seq
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCoveredTenantSeq resets all changes to the "covered_tenant_seq" field.
+func (m *AIUsageBatchMutation) ResetCoveredTenantSeq() {
+	m.covered_tenant_seq = nil
+	m.addcovered_tenant_seq = nil
+}
+
+// AddLineItemIDs adds the "line_items" edge to the AIUsageLineItem entity by ids.
+func (m *AIUsageBatchMutation) AddLineItemIDs(ids ...string) {
+	if m.line_items == nil {
+		m.line_items = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.line_items[ids[i]] = struct{}{}
+	}
+}
+
+// ClearLineItems clears the "line_items" edge to the AIUsageLineItem entity.
+func (m *AIUsageBatchMutation) ClearLineItems() {
+	m.clearedline_items = true
+}
+
+// LineItemsCleared reports if the "line_items" edge to the AIUsageLineItem entity was cleared.
+func (m *AIUsageBatchMutation) LineItemsCleared() bool {
+	return m.clearedline_items
+}
+
+// RemoveLineItemIDs removes the "line_items" edge to the AIUsageLineItem entity by IDs.
+func (m *AIUsageBatchMutation) RemoveLineItemIDs(ids ...string) {
+	if m.removedline_items == nil {
+		m.removedline_items = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.line_items, ids[i])
+		m.removedline_items[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedLineItems returns the removed IDs of the "line_items" edge to the AIUsageLineItem entity.
+func (m *AIUsageBatchMutation) RemovedLineItemsIDs() (ids []string) {
+	for id := range m.removedline_items {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// LineItemsIDs returns the "line_items" edge IDs in the mutation.
+func (m *AIUsageBatchMutation) LineItemsIDs() (ids []string) {
+	for id := range m.line_items {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetLineItems resets all changes to the "line_items" edge.
+func (m *AIUsageBatchMutation) ResetLineItems() {
+	m.line_items = nil
+	m.clearedline_items = false
+	m.removedline_items = nil
+}
+
+// AddRatingSnapshotIDs adds the "rating_snapshots" edge to the AIUsageRatingSnapshot entity by ids.
+func (m *AIUsageBatchMutation) AddRatingSnapshotIDs(ids ...string) {
+	if m.rating_snapshots == nil {
+		m.rating_snapshots = make(map[string]struct{})
+	}
+	for i := range ids {
+		m.rating_snapshots[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRatingSnapshots clears the "rating_snapshots" edge to the AIUsageRatingSnapshot entity.
+func (m *AIUsageBatchMutation) ClearRatingSnapshots() {
+	m.clearedrating_snapshots = true
+}
+
+// RatingSnapshotsCleared reports if the "rating_snapshots" edge to the AIUsageRatingSnapshot entity was cleared.
+func (m *AIUsageBatchMutation) RatingSnapshotsCleared() bool {
+	return m.clearedrating_snapshots
+}
+
+// RemoveRatingSnapshotIDs removes the "rating_snapshots" edge to the AIUsageRatingSnapshot entity by IDs.
+func (m *AIUsageBatchMutation) RemoveRatingSnapshotIDs(ids ...string) {
+	if m.removedrating_snapshots == nil {
+		m.removedrating_snapshots = make(map[string]struct{})
+	}
+	for i := range ids {
+		delete(m.rating_snapshots, ids[i])
+		m.removedrating_snapshots[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRatingSnapshots returns the removed IDs of the "rating_snapshots" edge to the AIUsageRatingSnapshot entity.
+func (m *AIUsageBatchMutation) RemovedRatingSnapshotsIDs() (ids []string) {
+	for id := range m.removedrating_snapshots {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RatingSnapshotsIDs returns the "rating_snapshots" edge IDs in the mutation.
+func (m *AIUsageBatchMutation) RatingSnapshotsIDs() (ids []string) {
+	for id := range m.rating_snapshots {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRatingSnapshots resets all changes to the "rating_snapshots" edge.
+func (m *AIUsageBatchMutation) ResetRatingSnapshots() {
+	m.rating_snapshots = nil
+	m.clearedrating_snapshots = false
+	m.removedrating_snapshots = nil
+}
+
+// Where appends a list predicates to the AIUsageBatchMutation builder.
+func (m *AIUsageBatchMutation) Where(ps ...predicate.AIUsageBatch) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AIUsageBatchMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AIUsageBatchMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AIUsageBatch, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AIUsageBatchMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AIUsageBatchMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AIUsageBatch).
+func (m *AIUsageBatchMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AIUsageBatchMutation) Fields() []string {
+	fields := make([]string, 0, 18)
+	if m.namespace != nil {
+		fields = append(fields, aiusagebatch.FieldNamespace)
+	}
+	if m.annotations != nil {
+		fields = append(fields, aiusagebatch.FieldAnnotations)
+	}
+	if m.created_at != nil {
+		fields = append(fields, aiusagebatch.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, aiusagebatch.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, aiusagebatch.FieldDeletedAt)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, aiusagebatch.FieldCustomerID)
+	}
+	if m.subject_id != nil {
+		fields = append(fields, aiusagebatch.FieldSubjectID)
+	}
+	if m.usage_batch_id != nil {
+		fields = append(fields, aiusagebatch.FieldUsageBatchID)
+	}
+	if m.tenant_seq != nil {
+		fields = append(fields, aiusagebatch.FieldTenantSeq)
+	}
+	if m.occurred_at != nil {
+		fields = append(fields, aiusagebatch.FieldOccurredAt)
+	}
+	if m.reservation_id != nil {
+		fields = append(fields, aiusagebatch.FieldReservationID)
+	}
+	if m.ceiling_credits != nil {
+		fields = append(fields, aiusagebatch.FieldCeilingCredits)
+	}
+	if m.rate_version != nil {
+		fields = append(fields, aiusagebatch.FieldRateVersion)
+	}
+	if m.billing_mode != nil {
+		fields = append(fields, aiusagebatch.FieldBillingMode)
+	}
+	if m.payload_hash != nil {
+		fields = append(fields, aiusagebatch.FieldPayloadHash)
+	}
+	if m.status != nil {
+		fields = append(fields, aiusagebatch.FieldStatus)
+	}
+	if m.total_credits != nil {
+		fields = append(fields, aiusagebatch.FieldTotalCredits)
+	}
+	if m.covered_tenant_seq != nil {
+		fields = append(fields, aiusagebatch.FieldCoveredTenantSeq)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AIUsageBatchMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case aiusagebatch.FieldNamespace:
+		return m.Namespace()
+	case aiusagebatch.FieldAnnotations:
+		return m.Annotations()
+	case aiusagebatch.FieldCreatedAt:
+		return m.CreatedAt()
+	case aiusagebatch.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case aiusagebatch.FieldDeletedAt:
+		return m.DeletedAt()
+	case aiusagebatch.FieldCustomerID:
+		return m.CustomerID()
+	case aiusagebatch.FieldSubjectID:
+		return m.SubjectID()
+	case aiusagebatch.FieldUsageBatchID:
+		return m.UsageBatchID()
+	case aiusagebatch.FieldTenantSeq:
+		return m.TenantSeq()
+	case aiusagebatch.FieldOccurredAt:
+		return m.OccurredAt()
+	case aiusagebatch.FieldReservationID:
+		return m.ReservationID()
+	case aiusagebatch.FieldCeilingCredits:
+		return m.CeilingCredits()
+	case aiusagebatch.FieldRateVersion:
+		return m.RateVersion()
+	case aiusagebatch.FieldBillingMode:
+		return m.BillingMode()
+	case aiusagebatch.FieldPayloadHash:
+		return m.PayloadHash()
+	case aiusagebatch.FieldStatus:
+		return m.Status()
+	case aiusagebatch.FieldTotalCredits:
+		return m.TotalCredits()
+	case aiusagebatch.FieldCoveredTenantSeq:
+		return m.CoveredTenantSeq()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AIUsageBatchMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case aiusagebatch.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case aiusagebatch.FieldAnnotations:
+		return m.OldAnnotations(ctx)
+	case aiusagebatch.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case aiusagebatch.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case aiusagebatch.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case aiusagebatch.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case aiusagebatch.FieldSubjectID:
+		return m.OldSubjectID(ctx)
+	case aiusagebatch.FieldUsageBatchID:
+		return m.OldUsageBatchID(ctx)
+	case aiusagebatch.FieldTenantSeq:
+		return m.OldTenantSeq(ctx)
+	case aiusagebatch.FieldOccurredAt:
+		return m.OldOccurredAt(ctx)
+	case aiusagebatch.FieldReservationID:
+		return m.OldReservationID(ctx)
+	case aiusagebatch.FieldCeilingCredits:
+		return m.OldCeilingCredits(ctx)
+	case aiusagebatch.FieldRateVersion:
+		return m.OldRateVersion(ctx)
+	case aiusagebatch.FieldBillingMode:
+		return m.OldBillingMode(ctx)
+	case aiusagebatch.FieldPayloadHash:
+		return m.OldPayloadHash(ctx)
+	case aiusagebatch.FieldStatus:
+		return m.OldStatus(ctx)
+	case aiusagebatch.FieldTotalCredits:
+		return m.OldTotalCredits(ctx)
+	case aiusagebatch.FieldCoveredTenantSeq:
+		return m.OldCoveredTenantSeq(ctx)
+	}
+	return nil, fmt.Errorf("unknown AIUsageBatch field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageBatchMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case aiusagebatch.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case aiusagebatch.FieldAnnotations:
+		v, ok := value.(models.Annotations)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAnnotations(v)
+		return nil
+	case aiusagebatch.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case aiusagebatch.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case aiusagebatch.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case aiusagebatch.FieldCustomerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case aiusagebatch.FieldSubjectID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubjectID(v)
+		return nil
+	case aiusagebatch.FieldUsageBatchID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsageBatchID(v)
+		return nil
+	case aiusagebatch.FieldTenantSeq:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTenantSeq(v)
+		return nil
+	case aiusagebatch.FieldOccurredAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOccurredAt(v)
+		return nil
+	case aiusagebatch.FieldReservationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservationID(v)
+		return nil
+	case aiusagebatch.FieldCeilingCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCeilingCredits(v)
+		return nil
+	case aiusagebatch.FieldRateVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateVersion(v)
+		return nil
+	case aiusagebatch.FieldBillingMode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillingMode(v)
+		return nil
+	case aiusagebatch.FieldPayloadHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayloadHash(v)
+		return nil
+	case aiusagebatch.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case aiusagebatch.FieldTotalCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTotalCredits(v)
+		return nil
+	case aiusagebatch.FieldCoveredTenantSeq:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCoveredTenantSeq(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageBatch field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AIUsageBatchMutation) AddedFields() []string {
+	var fields []string
+	if m.addtenant_seq != nil {
+		fields = append(fields, aiusagebatch.FieldTenantSeq)
+	}
+	if m.addceiling_credits != nil {
+		fields = append(fields, aiusagebatch.FieldCeilingCredits)
+	}
+	if m.addtotal_credits != nil {
+		fields = append(fields, aiusagebatch.FieldTotalCredits)
+	}
+	if m.addcovered_tenant_seq != nil {
+		fields = append(fields, aiusagebatch.FieldCoveredTenantSeq)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AIUsageBatchMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aiusagebatch.FieldTenantSeq:
+		return m.AddedTenantSeq()
+	case aiusagebatch.FieldCeilingCredits:
+		return m.AddedCeilingCredits()
+	case aiusagebatch.FieldTotalCredits:
+		return m.AddedTotalCredits()
+	case aiusagebatch.FieldCoveredTenantSeq:
+		return m.AddedCoveredTenantSeq()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageBatchMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case aiusagebatch.FieldTenantSeq:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTenantSeq(v)
+		return nil
+	case aiusagebatch.FieldCeilingCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCeilingCredits(v)
+		return nil
+	case aiusagebatch.FieldTotalCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTotalCredits(v)
+		return nil
+	case aiusagebatch.FieldCoveredTenantSeq:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCoveredTenantSeq(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageBatch numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AIUsageBatchMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(aiusagebatch.FieldAnnotations) {
+		fields = append(fields, aiusagebatch.FieldAnnotations)
+	}
+	if m.FieldCleared(aiusagebatch.FieldDeletedAt) {
+		fields = append(fields, aiusagebatch.FieldDeletedAt)
+	}
+	if m.FieldCleared(aiusagebatch.FieldReservationID) {
+		fields = append(fields, aiusagebatch.FieldReservationID)
+	}
+	if m.FieldCleared(aiusagebatch.FieldCeilingCredits) {
+		fields = append(fields, aiusagebatch.FieldCeilingCredits)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AIUsageBatchMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AIUsageBatchMutation) ClearField(name string) error {
+	switch name {
+	case aiusagebatch.FieldAnnotations:
+		m.ClearAnnotations()
+		return nil
+	case aiusagebatch.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case aiusagebatch.FieldReservationID:
+		m.ClearReservationID()
+		return nil
+	case aiusagebatch.FieldCeilingCredits:
+		m.ClearCeilingCredits()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageBatch nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AIUsageBatchMutation) ResetField(name string) error {
+	switch name {
+	case aiusagebatch.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case aiusagebatch.FieldAnnotations:
+		m.ResetAnnotations()
+		return nil
+	case aiusagebatch.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case aiusagebatch.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case aiusagebatch.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case aiusagebatch.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case aiusagebatch.FieldSubjectID:
+		m.ResetSubjectID()
+		return nil
+	case aiusagebatch.FieldUsageBatchID:
+		m.ResetUsageBatchID()
+		return nil
+	case aiusagebatch.FieldTenantSeq:
+		m.ResetTenantSeq()
+		return nil
+	case aiusagebatch.FieldOccurredAt:
+		m.ResetOccurredAt()
+		return nil
+	case aiusagebatch.FieldReservationID:
+		m.ResetReservationID()
+		return nil
+	case aiusagebatch.FieldCeilingCredits:
+		m.ResetCeilingCredits()
+		return nil
+	case aiusagebatch.FieldRateVersion:
+		m.ResetRateVersion()
+		return nil
+	case aiusagebatch.FieldBillingMode:
+		m.ResetBillingMode()
+		return nil
+	case aiusagebatch.FieldPayloadHash:
+		m.ResetPayloadHash()
+		return nil
+	case aiusagebatch.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case aiusagebatch.FieldTotalCredits:
+		m.ResetTotalCredits()
+		return nil
+	case aiusagebatch.FieldCoveredTenantSeq:
+		m.ResetCoveredTenantSeq()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageBatch field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AIUsageBatchMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.line_items != nil {
+		edges = append(edges, aiusagebatch.EdgeLineItems)
+	}
+	if m.rating_snapshots != nil {
+		edges = append(edges, aiusagebatch.EdgeRatingSnapshots)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AIUsageBatchMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case aiusagebatch.EdgeLineItems:
+		ids := make([]ent.Value, 0, len(m.line_items))
+		for id := range m.line_items {
+			ids = append(ids, id)
+		}
+		return ids
+	case aiusagebatch.EdgeRatingSnapshots:
+		ids := make([]ent.Value, 0, len(m.rating_snapshots))
+		for id := range m.rating_snapshots {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AIUsageBatchMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedline_items != nil {
+		edges = append(edges, aiusagebatch.EdgeLineItems)
+	}
+	if m.removedrating_snapshots != nil {
+		edges = append(edges, aiusagebatch.EdgeRatingSnapshots)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AIUsageBatchMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case aiusagebatch.EdgeLineItems:
+		ids := make([]ent.Value, 0, len(m.removedline_items))
+		for id := range m.removedline_items {
+			ids = append(ids, id)
+		}
+		return ids
+	case aiusagebatch.EdgeRatingSnapshots:
+		ids := make([]ent.Value, 0, len(m.removedrating_snapshots))
+		for id := range m.removedrating_snapshots {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AIUsageBatchMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedline_items {
+		edges = append(edges, aiusagebatch.EdgeLineItems)
+	}
+	if m.clearedrating_snapshots {
+		edges = append(edges, aiusagebatch.EdgeRatingSnapshots)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AIUsageBatchMutation) EdgeCleared(name string) bool {
+	switch name {
+	case aiusagebatch.EdgeLineItems:
+		return m.clearedline_items
+	case aiusagebatch.EdgeRatingSnapshots:
+		return m.clearedrating_snapshots
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AIUsageBatchMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AIUsageBatch unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AIUsageBatchMutation) ResetEdge(name string) error {
+	switch name {
+	case aiusagebatch.EdgeLineItems:
+		m.ResetLineItems()
+		return nil
+	case aiusagebatch.EdgeRatingSnapshots:
+		m.ResetRatingSnapshots()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageBatch edge %s", name)
+}
+
+// AIUsageLineItemMutation represents an operation that mutates the AIUsageLineItem nodes in the graph.
+type AIUsageLineItemMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *string
+	namespace        *string
+	annotations      *models.Annotations
+	created_at       *time.Time
+	updated_at       *time.Time
+	deleted_at       *time.Time
+	resource_code    *string
+	quantity         *int64
+	addquantity      *int64
+	provider         *string
+	model            *string
+	provider_managed *bool
+	dimensions       *map[string]string
+	clearedFields    map[string]struct{}
+	batch            *string
+	clearedbatch     bool
+	done             bool
+	oldValue         func(context.Context) (*AIUsageLineItem, error)
+	predicates       []predicate.AIUsageLineItem
+}
+
+var _ ent.Mutation = (*AIUsageLineItemMutation)(nil)
+
+// aiusagelineitemOption allows management of the mutation configuration using functional options.
+type aiusagelineitemOption func(*AIUsageLineItemMutation)
+
+// newAIUsageLineItemMutation creates new mutation for the AIUsageLineItem entity.
+func newAIUsageLineItemMutation(c config, op Op, opts ...aiusagelineitemOption) *AIUsageLineItemMutation {
+	m := &AIUsageLineItemMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAIUsageLineItem,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAIUsageLineItemID sets the ID field of the mutation.
+func withAIUsageLineItemID(id string) aiusagelineitemOption {
+	return func(m *AIUsageLineItemMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AIUsageLineItem
+		)
+		m.oldValue = func(ctx context.Context) (*AIUsageLineItem, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AIUsageLineItem.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAIUsageLineItem sets the old AIUsageLineItem of the mutation.
+func withAIUsageLineItem(node *AIUsageLineItem) aiusagelineitemOption {
+	return func(m *AIUsageLineItemMutation) {
+		m.oldValue = func(context.Context) (*AIUsageLineItem, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AIUsageLineItemMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AIUsageLineItemMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AIUsageLineItem entities.
+func (m *AIUsageLineItemMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AIUsageLineItemMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AIUsageLineItemMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AIUsageLineItem.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *AIUsageLineItemMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *AIUsageLineItemMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *AIUsageLineItemMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetAnnotations sets the "annotations" field.
+func (m *AIUsageLineItemMutation) SetAnnotations(value models.Annotations) {
+	m.annotations = &value
+}
+
+// Annotations returns the value of the "annotations" field in the mutation.
+func (m *AIUsageLineItemMutation) Annotations() (r models.Annotations, exists bool) {
+	v := m.annotations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAnnotations returns the old "annotations" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldAnnotations(ctx context.Context) (v models.Annotations, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAnnotations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAnnotations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAnnotations: %w", err)
+	}
+	return oldValue.Annotations, nil
+}
+
+// ClearAnnotations clears the value of the "annotations" field.
+func (m *AIUsageLineItemMutation) ClearAnnotations() {
+	m.annotations = nil
+	m.clearedFields[aiusagelineitem.FieldAnnotations] = struct{}{}
+}
+
+// AnnotationsCleared returns if the "annotations" field was cleared in this mutation.
+func (m *AIUsageLineItemMutation) AnnotationsCleared() bool {
+	_, ok := m.clearedFields[aiusagelineitem.FieldAnnotations]
+	return ok
+}
+
+// ResetAnnotations resets all changes to the "annotations" field.
+func (m *AIUsageLineItemMutation) ResetAnnotations() {
+	m.annotations = nil
+	delete(m.clearedFields, aiusagelineitem.FieldAnnotations)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AIUsageLineItemMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AIUsageLineItemMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AIUsageLineItemMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AIUsageLineItemMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AIUsageLineItemMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AIUsageLineItemMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *AIUsageLineItemMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *AIUsageLineItemMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *AIUsageLineItemMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[aiusagelineitem.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *AIUsageLineItemMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[aiusagelineitem.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *AIUsageLineItemMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, aiusagelineitem.FieldDeletedAt)
+}
+
+// SetResourceCode sets the "resource_code" field.
+func (m *AIUsageLineItemMutation) SetResourceCode(s string) {
+	m.resource_code = &s
+}
+
+// ResourceCode returns the value of the "resource_code" field in the mutation.
+func (m *AIUsageLineItemMutation) ResourceCode() (r string, exists bool) {
+	v := m.resource_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceCode returns the old "resource_code" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldResourceCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceCode: %w", err)
+	}
+	return oldValue.ResourceCode, nil
+}
+
+// ResetResourceCode resets all changes to the "resource_code" field.
+func (m *AIUsageLineItemMutation) ResetResourceCode() {
+	m.resource_code = nil
+}
+
+// SetQuantity sets the "quantity" field.
+func (m *AIUsageLineItemMutation) SetQuantity(i int64) {
+	m.quantity = &i
+	m.addquantity = nil
+}
+
+// Quantity returns the value of the "quantity" field in the mutation.
+func (m *AIUsageLineItemMutation) Quantity() (r int64, exists bool) {
+	v := m.quantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuantity returns the old "quantity" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldQuantity(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuantity requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
+	}
+	return oldValue.Quantity, nil
+}
+
+// AddQuantity adds i to the "quantity" field.
+func (m *AIUsageLineItemMutation) AddQuantity(i int64) {
+	if m.addquantity != nil {
+		*m.addquantity += i
+	} else {
+		m.addquantity = &i
+	}
+}
+
+// AddedQuantity returns the value that was added to the "quantity" field in this mutation.
+func (m *AIUsageLineItemMutation) AddedQuantity() (r int64, exists bool) {
+	v := m.addquantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetQuantity resets all changes to the "quantity" field.
+func (m *AIUsageLineItemMutation) ResetQuantity() {
+	m.quantity = nil
+	m.addquantity = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *AIUsageLineItemMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *AIUsageLineItemMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldProvider(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *AIUsageLineItemMutation) ResetProvider() {
+	m.provider = nil
+}
+
+// SetModel sets the "model" field.
+func (m *AIUsageLineItemMutation) SetModel(s string) {
+	m.model = &s
+}
+
+// Model returns the value of the "model" field in the mutation.
+func (m *AIUsageLineItemMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModel returns the old "model" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+	}
+	return oldValue.Model, nil
+}
+
+// ResetModel resets all changes to the "model" field.
+func (m *AIUsageLineItemMutation) ResetModel() {
+	m.model = nil
+}
+
+// SetProviderManaged sets the "provider_managed" field.
+func (m *AIUsageLineItemMutation) SetProviderManaged(b bool) {
+	m.provider_managed = &b
+}
+
+// ProviderManaged returns the value of the "provider_managed" field in the mutation.
+func (m *AIUsageLineItemMutation) ProviderManaged() (r bool, exists bool) {
+	v := m.provider_managed
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderManaged returns the old "provider_managed" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldProviderManaged(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderManaged is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderManaged requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderManaged: %w", err)
+	}
+	return oldValue.ProviderManaged, nil
+}
+
+// ResetProviderManaged resets all changes to the "provider_managed" field.
+func (m *AIUsageLineItemMutation) ResetProviderManaged() {
+	m.provider_managed = nil
+}
+
+// SetDimensions sets the "dimensions" field.
+func (m *AIUsageLineItemMutation) SetDimensions(value map[string]string) {
+	m.dimensions = &value
+}
+
+// Dimensions returns the value of the "dimensions" field in the mutation.
+func (m *AIUsageLineItemMutation) Dimensions() (r map[string]string, exists bool) {
+	v := m.dimensions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDimensions returns the old "dimensions" field's value of the AIUsageLineItem entity.
+// If the AIUsageLineItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageLineItemMutation) OldDimensions(ctx context.Context) (v map[string]string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDimensions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDimensions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDimensions: %w", err)
+	}
+	return oldValue.Dimensions, nil
+}
+
+// ClearDimensions clears the value of the "dimensions" field.
+func (m *AIUsageLineItemMutation) ClearDimensions() {
+	m.dimensions = nil
+	m.clearedFields[aiusagelineitem.FieldDimensions] = struct{}{}
+}
+
+// DimensionsCleared returns if the "dimensions" field was cleared in this mutation.
+func (m *AIUsageLineItemMutation) DimensionsCleared() bool {
+	_, ok := m.clearedFields[aiusagelineitem.FieldDimensions]
+	return ok
+}
+
+// ResetDimensions resets all changes to the "dimensions" field.
+func (m *AIUsageLineItemMutation) ResetDimensions() {
+	m.dimensions = nil
+	delete(m.clearedFields, aiusagelineitem.FieldDimensions)
+}
+
+// SetBatchID sets the "batch" edge to the AIUsageBatch entity by id.
+func (m *AIUsageLineItemMutation) SetBatchID(id string) {
+	m.batch = &id
+}
+
+// ClearBatch clears the "batch" edge to the AIUsageBatch entity.
+func (m *AIUsageLineItemMutation) ClearBatch() {
+	m.clearedbatch = true
+}
+
+// BatchCleared reports if the "batch" edge to the AIUsageBatch entity was cleared.
+func (m *AIUsageLineItemMutation) BatchCleared() bool {
+	return m.clearedbatch
+}
+
+// BatchID returns the "batch" edge ID in the mutation.
+func (m *AIUsageLineItemMutation) BatchID() (id string, exists bool) {
+	if m.batch != nil {
+		return *m.batch, true
+	}
+	return
+}
+
+// BatchIDs returns the "batch" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BatchID instead. It exists only for internal usage by the builders.
+func (m *AIUsageLineItemMutation) BatchIDs() (ids []string) {
+	if id := m.batch; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBatch resets all changes to the "batch" edge.
+func (m *AIUsageLineItemMutation) ResetBatch() {
+	m.batch = nil
+	m.clearedbatch = false
+}
+
+// Where appends a list predicates to the AIUsageLineItemMutation builder.
+func (m *AIUsageLineItemMutation) Where(ps ...predicate.AIUsageLineItem) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AIUsageLineItemMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AIUsageLineItemMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AIUsageLineItem, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AIUsageLineItemMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AIUsageLineItemMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AIUsageLineItem).
+func (m *AIUsageLineItemMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AIUsageLineItemMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.namespace != nil {
+		fields = append(fields, aiusagelineitem.FieldNamespace)
+	}
+	if m.annotations != nil {
+		fields = append(fields, aiusagelineitem.FieldAnnotations)
+	}
+	if m.created_at != nil {
+		fields = append(fields, aiusagelineitem.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, aiusagelineitem.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, aiusagelineitem.FieldDeletedAt)
+	}
+	if m.resource_code != nil {
+		fields = append(fields, aiusagelineitem.FieldResourceCode)
+	}
+	if m.quantity != nil {
+		fields = append(fields, aiusagelineitem.FieldQuantity)
+	}
+	if m.provider != nil {
+		fields = append(fields, aiusagelineitem.FieldProvider)
+	}
+	if m.model != nil {
+		fields = append(fields, aiusagelineitem.FieldModel)
+	}
+	if m.provider_managed != nil {
+		fields = append(fields, aiusagelineitem.FieldProviderManaged)
+	}
+	if m.dimensions != nil {
+		fields = append(fields, aiusagelineitem.FieldDimensions)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AIUsageLineItemMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case aiusagelineitem.FieldNamespace:
+		return m.Namespace()
+	case aiusagelineitem.FieldAnnotations:
+		return m.Annotations()
+	case aiusagelineitem.FieldCreatedAt:
+		return m.CreatedAt()
+	case aiusagelineitem.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case aiusagelineitem.FieldDeletedAt:
+		return m.DeletedAt()
+	case aiusagelineitem.FieldResourceCode:
+		return m.ResourceCode()
+	case aiusagelineitem.FieldQuantity:
+		return m.Quantity()
+	case aiusagelineitem.FieldProvider:
+		return m.Provider()
+	case aiusagelineitem.FieldModel:
+		return m.Model()
+	case aiusagelineitem.FieldProviderManaged:
+		return m.ProviderManaged()
+	case aiusagelineitem.FieldDimensions:
+		return m.Dimensions()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AIUsageLineItemMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case aiusagelineitem.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case aiusagelineitem.FieldAnnotations:
+		return m.OldAnnotations(ctx)
+	case aiusagelineitem.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case aiusagelineitem.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case aiusagelineitem.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case aiusagelineitem.FieldResourceCode:
+		return m.OldResourceCode(ctx)
+	case aiusagelineitem.FieldQuantity:
+		return m.OldQuantity(ctx)
+	case aiusagelineitem.FieldProvider:
+		return m.OldProvider(ctx)
+	case aiusagelineitem.FieldModel:
+		return m.OldModel(ctx)
+	case aiusagelineitem.FieldProviderManaged:
+		return m.OldProviderManaged(ctx)
+	case aiusagelineitem.FieldDimensions:
+		return m.OldDimensions(ctx)
+	}
+	return nil, fmt.Errorf("unknown AIUsageLineItem field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageLineItemMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case aiusagelineitem.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case aiusagelineitem.FieldAnnotations:
+		v, ok := value.(models.Annotations)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAnnotations(v)
+		return nil
+	case aiusagelineitem.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case aiusagelineitem.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case aiusagelineitem.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case aiusagelineitem.FieldResourceCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceCode(v)
+		return nil
+	case aiusagelineitem.FieldQuantity:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuantity(v)
+		return nil
+	case aiusagelineitem.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case aiusagelineitem.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModel(v)
+		return nil
+	case aiusagelineitem.FieldProviderManaged:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderManaged(v)
+		return nil
+	case aiusagelineitem.FieldDimensions:
+		v, ok := value.(map[string]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDimensions(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AIUsageLineItemMutation) AddedFields() []string {
+	var fields []string
+	if m.addquantity != nil {
+		fields = append(fields, aiusagelineitem.FieldQuantity)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AIUsageLineItemMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aiusagelineitem.FieldQuantity:
+		return m.AddedQuantity()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageLineItemMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case aiusagelineitem.FieldQuantity:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuantity(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AIUsageLineItemMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(aiusagelineitem.FieldAnnotations) {
+		fields = append(fields, aiusagelineitem.FieldAnnotations)
+	}
+	if m.FieldCleared(aiusagelineitem.FieldDeletedAt) {
+		fields = append(fields, aiusagelineitem.FieldDeletedAt)
+	}
+	if m.FieldCleared(aiusagelineitem.FieldDimensions) {
+		fields = append(fields, aiusagelineitem.FieldDimensions)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AIUsageLineItemMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AIUsageLineItemMutation) ClearField(name string) error {
+	switch name {
+	case aiusagelineitem.FieldAnnotations:
+		m.ClearAnnotations()
+		return nil
+	case aiusagelineitem.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case aiusagelineitem.FieldDimensions:
+		m.ClearDimensions()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AIUsageLineItemMutation) ResetField(name string) error {
+	switch name {
+	case aiusagelineitem.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case aiusagelineitem.FieldAnnotations:
+		m.ResetAnnotations()
+		return nil
+	case aiusagelineitem.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case aiusagelineitem.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case aiusagelineitem.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case aiusagelineitem.FieldResourceCode:
+		m.ResetResourceCode()
+		return nil
+	case aiusagelineitem.FieldQuantity:
+		m.ResetQuantity()
+		return nil
+	case aiusagelineitem.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case aiusagelineitem.FieldModel:
+		m.ResetModel()
+		return nil
+	case aiusagelineitem.FieldProviderManaged:
+		m.ResetProviderManaged()
+		return nil
+	case aiusagelineitem.FieldDimensions:
+		m.ResetDimensions()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AIUsageLineItemMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.batch != nil {
+		edges = append(edges, aiusagelineitem.EdgeBatch)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AIUsageLineItemMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case aiusagelineitem.EdgeBatch:
+		if id := m.batch; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AIUsageLineItemMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AIUsageLineItemMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AIUsageLineItemMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedbatch {
+		edges = append(edges, aiusagelineitem.EdgeBatch)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AIUsageLineItemMutation) EdgeCleared(name string) bool {
+	switch name {
+	case aiusagelineitem.EdgeBatch:
+		return m.clearedbatch
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AIUsageLineItemMutation) ClearEdge(name string) error {
+	switch name {
+	case aiusagelineitem.EdgeBatch:
+		m.ClearBatch()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AIUsageLineItemMutation) ResetEdge(name string) error {
+	switch name {
+	case aiusagelineitem.EdgeBatch:
+		m.ResetBatch()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageLineItem edge %s", name)
+}
+
+// AIUsageRatecardEntryMutation represents an operation that mutates the AIUsageRatecardEntry nodes in the graph.
+type AIUsageRatecardEntryMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *string
+	namespace          *string
+	annotations        *models.Annotations
+	created_at         *time.Time
+	updated_at         *time.Time
+	deleted_at         *time.Time
+	customer_id        *string
+	resource_code      *string
+	provider           *string
+	model              *string
+	price_per_unit_cny *alpacadecimal.Decimal
+	credit_rate        *int64
+	addcredit_rate     *int64
+	effective_from     *time.Time
+	effective_to       *time.Time
+	clearedFields      map[string]struct{}
+	done               bool
+	oldValue           func(context.Context) (*AIUsageRatecardEntry, error)
+	predicates         []predicate.AIUsageRatecardEntry
+}
+
+var _ ent.Mutation = (*AIUsageRatecardEntryMutation)(nil)
+
+// aiusageratecardentryOption allows management of the mutation configuration using functional options.
+type aiusageratecardentryOption func(*AIUsageRatecardEntryMutation)
+
+// newAIUsageRatecardEntryMutation creates new mutation for the AIUsageRatecardEntry entity.
+func newAIUsageRatecardEntryMutation(c config, op Op, opts ...aiusageratecardentryOption) *AIUsageRatecardEntryMutation {
+	m := &AIUsageRatecardEntryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAIUsageRatecardEntry,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAIUsageRatecardEntryID sets the ID field of the mutation.
+func withAIUsageRatecardEntryID(id string) aiusageratecardentryOption {
+	return func(m *AIUsageRatecardEntryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AIUsageRatecardEntry
+		)
+		m.oldValue = func(ctx context.Context) (*AIUsageRatecardEntry, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AIUsageRatecardEntry.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAIUsageRatecardEntry sets the old AIUsageRatecardEntry of the mutation.
+func withAIUsageRatecardEntry(node *AIUsageRatecardEntry) aiusageratecardentryOption {
+	return func(m *AIUsageRatecardEntryMutation) {
+		m.oldValue = func(context.Context) (*AIUsageRatecardEntry, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AIUsageRatecardEntryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AIUsageRatecardEntryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AIUsageRatecardEntry entities.
+func (m *AIUsageRatecardEntryMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AIUsageRatecardEntryMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AIUsageRatecardEntryMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AIUsageRatecardEntry.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *AIUsageRatecardEntryMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *AIUsageRatecardEntryMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetAnnotations sets the "annotations" field.
+func (m *AIUsageRatecardEntryMutation) SetAnnotations(value models.Annotations) {
+	m.annotations = &value
+}
+
+// Annotations returns the value of the "annotations" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) Annotations() (r models.Annotations, exists bool) {
+	v := m.annotations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAnnotations returns the old "annotations" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldAnnotations(ctx context.Context) (v models.Annotations, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAnnotations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAnnotations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAnnotations: %w", err)
+	}
+	return oldValue.Annotations, nil
+}
+
+// ClearAnnotations clears the value of the "annotations" field.
+func (m *AIUsageRatecardEntryMutation) ClearAnnotations() {
+	m.annotations = nil
+	m.clearedFields[aiusageratecardentry.FieldAnnotations] = struct{}{}
+}
+
+// AnnotationsCleared returns if the "annotations" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) AnnotationsCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldAnnotations]
+	return ok
+}
+
+// ResetAnnotations resets all changes to the "annotations" field.
+func (m *AIUsageRatecardEntryMutation) ResetAnnotations() {
+	m.annotations = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldAnnotations)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AIUsageRatecardEntryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AIUsageRatecardEntryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AIUsageRatecardEntryMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AIUsageRatecardEntryMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *AIUsageRatecardEntryMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *AIUsageRatecardEntryMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[aiusageratecardentry.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *AIUsageRatecardEntryMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldDeletedAt)
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *AIUsageRatecardEntryMutation) SetCustomerID(s string) {
+	m.customer_id = &s
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) CustomerID() (r string, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldCustomerID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (m *AIUsageRatecardEntryMutation) ClearCustomerID() {
+	m.customer_id = nil
+	m.clearedFields[aiusageratecardentry.FieldCustomerID] = struct{}{}
+}
+
+// CustomerIDCleared returns if the "customer_id" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) CustomerIDCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldCustomerID]
+	return ok
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *AIUsageRatecardEntryMutation) ResetCustomerID() {
+	m.customer_id = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldCustomerID)
+}
+
+// SetResourceCode sets the "resource_code" field.
+func (m *AIUsageRatecardEntryMutation) SetResourceCode(s string) {
+	m.resource_code = &s
+}
+
+// ResourceCode returns the value of the "resource_code" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) ResourceCode() (r string, exists bool) {
+	v := m.resource_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceCode returns the old "resource_code" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldResourceCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceCode: %w", err)
+	}
+	return oldValue.ResourceCode, nil
+}
+
+// ResetResourceCode resets all changes to the "resource_code" field.
+func (m *AIUsageRatecardEntryMutation) ResetResourceCode() {
+	m.resource_code = nil
+}
+
+// SetProvider sets the "provider" field.
+func (m *AIUsageRatecardEntryMutation) SetProvider(s string) {
+	m.provider = &s
+}
+
+// Provider returns the value of the "provider" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) Provider() (r string, exists bool) {
+	v := m.provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProvider returns the old "provider" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldProvider(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProvider: %w", err)
+	}
+	return oldValue.Provider, nil
+}
+
+// ClearProvider clears the value of the "provider" field.
+func (m *AIUsageRatecardEntryMutation) ClearProvider() {
+	m.provider = nil
+	m.clearedFields[aiusageratecardentry.FieldProvider] = struct{}{}
+}
+
+// ProviderCleared returns if the "provider" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) ProviderCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldProvider]
+	return ok
+}
+
+// ResetProvider resets all changes to the "provider" field.
+func (m *AIUsageRatecardEntryMutation) ResetProvider() {
+	m.provider = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldProvider)
+}
+
+// SetModel sets the "model" field.
+func (m *AIUsageRatecardEntryMutation) SetModel(s string) {
+	m.model = &s
+}
+
+// Model returns the value of the "model" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModel returns the old "model" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldModel(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+	}
+	return oldValue.Model, nil
+}
+
+// ClearModel clears the value of the "model" field.
+func (m *AIUsageRatecardEntryMutation) ClearModel() {
+	m.model = nil
+	m.clearedFields[aiusageratecardentry.FieldModel] = struct{}{}
+}
+
+// ModelCleared returns if the "model" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) ModelCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldModel]
+	return ok
+}
+
+// ResetModel resets all changes to the "model" field.
+func (m *AIUsageRatecardEntryMutation) ResetModel() {
+	m.model = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldModel)
+}
+
+// SetPricePerUnitCny sets the "price_per_unit_cny" field.
+func (m *AIUsageRatecardEntryMutation) SetPricePerUnitCny(a alpacadecimal.Decimal) {
+	m.price_per_unit_cny = &a
+}
+
+// PricePerUnitCny returns the value of the "price_per_unit_cny" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) PricePerUnitCny() (r alpacadecimal.Decimal, exists bool) {
+	v := m.price_per_unit_cny
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPricePerUnitCny returns the old "price_per_unit_cny" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldPricePerUnitCny(ctx context.Context) (v alpacadecimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPricePerUnitCny is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPricePerUnitCny requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPricePerUnitCny: %w", err)
+	}
+	return oldValue.PricePerUnitCny, nil
+}
+
+// ResetPricePerUnitCny resets all changes to the "price_per_unit_cny" field.
+func (m *AIUsageRatecardEntryMutation) ResetPricePerUnitCny() {
+	m.price_per_unit_cny = nil
+}
+
+// SetCreditRate sets the "credit_rate" field.
+func (m *AIUsageRatecardEntryMutation) SetCreditRate(i int64) {
+	m.credit_rate = &i
+	m.addcredit_rate = nil
+}
+
+// CreditRate returns the value of the "credit_rate" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) CreditRate() (r int64, exists bool) {
+	v := m.credit_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreditRate returns the old "credit_rate" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldCreditRate(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreditRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreditRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreditRate: %w", err)
+	}
+	return oldValue.CreditRate, nil
+}
+
+// AddCreditRate adds i to the "credit_rate" field.
+func (m *AIUsageRatecardEntryMutation) AddCreditRate(i int64) {
+	if m.addcredit_rate != nil {
+		*m.addcredit_rate += i
+	} else {
+		m.addcredit_rate = &i
+	}
+}
+
+// AddedCreditRate returns the value that was added to the "credit_rate" field in this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedCreditRate() (r int64, exists bool) {
+	v := m.addcredit_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreditRate resets all changes to the "credit_rate" field.
+func (m *AIUsageRatecardEntryMutation) ResetCreditRate() {
+	m.credit_rate = nil
+	m.addcredit_rate = nil
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (m *AIUsageRatecardEntryMutation) SetEffectiveFrom(t time.Time) {
+	m.effective_from = &t
+}
+
+// EffectiveFrom returns the value of the "effective_from" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) EffectiveFrom() (r time.Time, exists bool) {
+	v := m.effective_from
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveFrom returns the old "effective_from" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldEffectiveFrom(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveFrom is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveFrom requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveFrom: %w", err)
+	}
+	return oldValue.EffectiveFrom, nil
+}
+
+// ResetEffectiveFrom resets all changes to the "effective_from" field.
+func (m *AIUsageRatecardEntryMutation) ResetEffectiveFrom() {
+	m.effective_from = nil
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (m *AIUsageRatecardEntryMutation) SetEffectiveTo(t time.Time) {
+	m.effective_to = &t
+}
+
+// EffectiveTo returns the value of the "effective_to" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) EffectiveTo() (r time.Time, exists bool) {
+	v := m.effective_to
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveTo returns the old "effective_to" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldEffectiveTo(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveTo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveTo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveTo: %w", err)
+	}
+	return oldValue.EffectiveTo, nil
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (m *AIUsageRatecardEntryMutation) ClearEffectiveTo() {
+	m.effective_to = nil
+	m.clearedFields[aiusageratecardentry.FieldEffectiveTo] = struct{}{}
+}
+
+// EffectiveToCleared returns if the "effective_to" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) EffectiveToCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldEffectiveTo]
+	return ok
+}
+
+// ResetEffectiveTo resets all changes to the "effective_to" field.
+func (m *AIUsageRatecardEntryMutation) ResetEffectiveTo() {
+	m.effective_to = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldEffectiveTo)
+}
+
+// Where appends a list predicates to the AIUsageRatecardEntryMutation builder.
+func (m *AIUsageRatecardEntryMutation) Where(ps ...predicate.AIUsageRatecardEntry) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AIUsageRatecardEntryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AIUsageRatecardEntryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AIUsageRatecardEntry, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AIUsageRatecardEntryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AIUsageRatecardEntryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AIUsageRatecardEntry).
+func (m *AIUsageRatecardEntryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AIUsageRatecardEntryMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.namespace != nil {
+		fields = append(fields, aiusageratecardentry.FieldNamespace)
+	}
+	if m.annotations != nil {
+		fields = append(fields, aiusageratecardentry.FieldAnnotations)
+	}
+	if m.created_at != nil {
+		fields = append(fields, aiusageratecardentry.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, aiusageratecardentry.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, aiusageratecardentry.FieldDeletedAt)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, aiusageratecardentry.FieldCustomerID)
+	}
+	if m.resource_code != nil {
+		fields = append(fields, aiusageratecardentry.FieldResourceCode)
+	}
+	if m.provider != nil {
+		fields = append(fields, aiusageratecardentry.FieldProvider)
+	}
+	if m.model != nil {
+		fields = append(fields, aiusageratecardentry.FieldModel)
+	}
+	if m.price_per_unit_cny != nil {
+		fields = append(fields, aiusageratecardentry.FieldPricePerUnitCny)
+	}
+	if m.credit_rate != nil {
+		fields = append(fields, aiusageratecardentry.FieldCreditRate)
+	}
+	if m.effective_from != nil {
+		fields = append(fields, aiusageratecardentry.FieldEffectiveFrom)
+	}
+	if m.effective_to != nil {
+		fields = append(fields, aiusageratecardentry.FieldEffectiveTo)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AIUsageRatecardEntryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case aiusageratecardentry.FieldNamespace:
+		return m.Namespace()
+	case aiusageratecardentry.FieldAnnotations:
+		return m.Annotations()
+	case aiusageratecardentry.FieldCreatedAt:
+		return m.CreatedAt()
+	case aiusageratecardentry.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case aiusageratecardentry.FieldDeletedAt:
+		return m.DeletedAt()
+	case aiusageratecardentry.FieldCustomerID:
+		return m.CustomerID()
+	case aiusageratecardentry.FieldResourceCode:
+		return m.ResourceCode()
+	case aiusageratecardentry.FieldProvider:
+		return m.Provider()
+	case aiusageratecardentry.FieldModel:
+		return m.Model()
+	case aiusageratecardentry.FieldPricePerUnitCny:
+		return m.PricePerUnitCny()
+	case aiusageratecardentry.FieldCreditRate:
+		return m.CreditRate()
+	case aiusageratecardentry.FieldEffectiveFrom:
+		return m.EffectiveFrom()
+	case aiusageratecardentry.FieldEffectiveTo:
+		return m.EffectiveTo()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AIUsageRatecardEntryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case aiusageratecardentry.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case aiusageratecardentry.FieldAnnotations:
+		return m.OldAnnotations(ctx)
+	case aiusageratecardentry.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case aiusageratecardentry.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case aiusageratecardentry.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case aiusageratecardentry.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case aiusageratecardentry.FieldResourceCode:
+		return m.OldResourceCode(ctx)
+	case aiusageratecardentry.FieldProvider:
+		return m.OldProvider(ctx)
+	case aiusageratecardentry.FieldModel:
+		return m.OldModel(ctx)
+	case aiusageratecardentry.FieldPricePerUnitCny:
+		return m.OldPricePerUnitCny(ctx)
+	case aiusageratecardentry.FieldCreditRate:
+		return m.OldCreditRate(ctx)
+	case aiusageratecardentry.FieldEffectiveFrom:
+		return m.OldEffectiveFrom(ctx)
+	case aiusageratecardentry.FieldEffectiveTo:
+		return m.OldEffectiveTo(ctx)
+	}
+	return nil, fmt.Errorf("unknown AIUsageRatecardEntry field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageRatecardEntryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case aiusageratecardentry.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case aiusageratecardentry.FieldAnnotations:
+		v, ok := value.(models.Annotations)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAnnotations(v)
+		return nil
+	case aiusageratecardentry.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case aiusageratecardentry.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case aiusageratecardentry.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case aiusageratecardentry.FieldCustomerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case aiusageratecardentry.FieldResourceCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceCode(v)
+		return nil
+	case aiusageratecardentry.FieldProvider:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProvider(v)
+		return nil
+	case aiusageratecardentry.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModel(v)
+		return nil
+	case aiusageratecardentry.FieldPricePerUnitCny:
+		v, ok := value.(alpacadecimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPricePerUnitCny(v)
+		return nil
+	case aiusageratecardentry.FieldCreditRate:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreditRate(v)
+		return nil
+	case aiusageratecardentry.FieldEffectiveFrom:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveFrom(v)
+		return nil
+	case aiusageratecardentry.FieldEffectiveTo:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveTo(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatecardEntry field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedFields() []string {
+	var fields []string
+	if m.addcredit_rate != nil {
+		fields = append(fields, aiusageratecardentry.FieldCreditRate)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AIUsageRatecardEntryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aiusageratecardentry.FieldCreditRate:
+		return m.AddedCreditRate()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageRatecardEntryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case aiusageratecardentry.FieldCreditRate:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreditRate(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatecardEntry numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AIUsageRatecardEntryMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(aiusageratecardentry.FieldAnnotations) {
+		fields = append(fields, aiusageratecardentry.FieldAnnotations)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldDeletedAt) {
+		fields = append(fields, aiusageratecardentry.FieldDeletedAt)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldCustomerID) {
+		fields = append(fields, aiusageratecardentry.FieldCustomerID)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldProvider) {
+		fields = append(fields, aiusageratecardentry.FieldProvider)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldModel) {
+		fields = append(fields, aiusageratecardentry.FieldModel)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldEffectiveTo) {
+		fields = append(fields, aiusageratecardentry.FieldEffectiveTo)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AIUsageRatecardEntryMutation) ClearField(name string) error {
+	switch name {
+	case aiusageratecardentry.FieldAnnotations:
+		m.ClearAnnotations()
+		return nil
+	case aiusageratecardentry.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case aiusageratecardentry.FieldCustomerID:
+		m.ClearCustomerID()
+		return nil
+	case aiusageratecardentry.FieldProvider:
+		m.ClearProvider()
+		return nil
+	case aiusageratecardentry.FieldModel:
+		m.ClearModel()
+		return nil
+	case aiusageratecardentry.FieldEffectiveTo:
+		m.ClearEffectiveTo()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatecardEntry nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AIUsageRatecardEntryMutation) ResetField(name string) error {
+	switch name {
+	case aiusageratecardentry.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case aiusageratecardentry.FieldAnnotations:
+		m.ResetAnnotations()
+		return nil
+	case aiusageratecardentry.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case aiusageratecardentry.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case aiusageratecardentry.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case aiusageratecardentry.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case aiusageratecardentry.FieldResourceCode:
+		m.ResetResourceCode()
+		return nil
+	case aiusageratecardentry.FieldProvider:
+		m.ResetProvider()
+		return nil
+	case aiusageratecardentry.FieldModel:
+		m.ResetModel()
+		return nil
+	case aiusageratecardentry.FieldPricePerUnitCny:
+		m.ResetPricePerUnitCny()
+		return nil
+	case aiusageratecardentry.FieldCreditRate:
+		m.ResetCreditRate()
+		return nil
+	case aiusageratecardentry.FieldEffectiveFrom:
+		m.ResetEffectiveFrom()
+		return nil
+	case aiusageratecardentry.FieldEffectiveTo:
+		m.ResetEffectiveTo()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatecardEntry field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AIUsageRatecardEntryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AIUsageRatecardEntryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AIUsageRatecardEntryMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown AIUsageRatecardEntry unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AIUsageRatecardEntryMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown AIUsageRatecardEntry edge %s", name)
+}
+
+// AIUsageRatingSnapshotMutation represents an operation that mutates the AIUsageRatingSnapshot nodes in the graph.
+type AIUsageRatingSnapshotMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *string
+	namespace         *string
+	annotations       *models.Annotations
+	created_at        *time.Time
+	updated_at        *time.Time
+	deleted_at        *time.Time
+	resource_code     *string
+	cost_currency     *string
+	cost_amount       *alpacadecimal.Decimal
+	cost_source       *string
+	sales_currency    *string
+	sales_amount      *alpacadecimal.Decimal
+	rate_card_version *string
+	credits           *int64
+	addcredits        *int64
+	clearedFields     map[string]struct{}
+	batch             *string
+	clearedbatch      bool
+	done              bool
+	oldValue          func(context.Context) (*AIUsageRatingSnapshot, error)
+	predicates        []predicate.AIUsageRatingSnapshot
+}
+
+var _ ent.Mutation = (*AIUsageRatingSnapshotMutation)(nil)
+
+// aiusageratingsnapshotOption allows management of the mutation configuration using functional options.
+type aiusageratingsnapshotOption func(*AIUsageRatingSnapshotMutation)
+
+// newAIUsageRatingSnapshotMutation creates new mutation for the AIUsageRatingSnapshot entity.
+func newAIUsageRatingSnapshotMutation(c config, op Op, opts ...aiusageratingsnapshotOption) *AIUsageRatingSnapshotMutation {
+	m := &AIUsageRatingSnapshotMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAIUsageRatingSnapshot,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAIUsageRatingSnapshotID sets the ID field of the mutation.
+func withAIUsageRatingSnapshotID(id string) aiusageratingsnapshotOption {
+	return func(m *AIUsageRatingSnapshotMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AIUsageRatingSnapshot
+		)
+		m.oldValue = func(ctx context.Context) (*AIUsageRatingSnapshot, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AIUsageRatingSnapshot.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAIUsageRatingSnapshot sets the old AIUsageRatingSnapshot of the mutation.
+func withAIUsageRatingSnapshot(node *AIUsageRatingSnapshot) aiusageratingsnapshotOption {
+	return func(m *AIUsageRatingSnapshotMutation) {
+		m.oldValue = func(context.Context) (*AIUsageRatingSnapshot, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AIUsageRatingSnapshotMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AIUsageRatingSnapshotMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AIUsageRatingSnapshot entities.
+func (m *AIUsageRatingSnapshotMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AIUsageRatingSnapshotMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AIUsageRatingSnapshotMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AIUsageRatingSnapshot.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *AIUsageRatingSnapshotMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *AIUsageRatingSnapshotMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetAnnotations sets the "annotations" field.
+func (m *AIUsageRatingSnapshotMutation) SetAnnotations(value models.Annotations) {
+	m.annotations = &value
+}
+
+// Annotations returns the value of the "annotations" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) Annotations() (r models.Annotations, exists bool) {
+	v := m.annotations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAnnotations returns the old "annotations" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldAnnotations(ctx context.Context) (v models.Annotations, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAnnotations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAnnotations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAnnotations: %w", err)
+	}
+	return oldValue.Annotations, nil
+}
+
+// ClearAnnotations clears the value of the "annotations" field.
+func (m *AIUsageRatingSnapshotMutation) ClearAnnotations() {
+	m.annotations = nil
+	m.clearedFields[aiusageratingsnapshot.FieldAnnotations] = struct{}{}
+}
+
+// AnnotationsCleared returns if the "annotations" field was cleared in this mutation.
+func (m *AIUsageRatingSnapshotMutation) AnnotationsCleared() bool {
+	_, ok := m.clearedFields[aiusageratingsnapshot.FieldAnnotations]
+	return ok
+}
+
+// ResetAnnotations resets all changes to the "annotations" field.
+func (m *AIUsageRatingSnapshotMutation) ResetAnnotations() {
+	m.annotations = nil
+	delete(m.clearedFields, aiusageratingsnapshot.FieldAnnotations)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AIUsageRatingSnapshotMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AIUsageRatingSnapshotMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AIUsageRatingSnapshotMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AIUsageRatingSnapshotMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *AIUsageRatingSnapshotMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *AIUsageRatingSnapshotMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[aiusageratingsnapshot.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *AIUsageRatingSnapshotMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[aiusageratingsnapshot.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *AIUsageRatingSnapshotMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, aiusageratingsnapshot.FieldDeletedAt)
+}
+
+// SetResourceCode sets the "resource_code" field.
+func (m *AIUsageRatingSnapshotMutation) SetResourceCode(s string) {
+	m.resource_code = &s
+}
+
+// ResourceCode returns the value of the "resource_code" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) ResourceCode() (r string, exists bool) {
+	v := m.resource_code
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceCode returns the old "resource_code" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldResourceCode(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceCode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceCode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceCode: %w", err)
+	}
+	return oldValue.ResourceCode, nil
+}
+
+// ResetResourceCode resets all changes to the "resource_code" field.
+func (m *AIUsageRatingSnapshotMutation) ResetResourceCode() {
+	m.resource_code = nil
+}
+
+// SetCostCurrency sets the "cost_currency" field.
+func (m *AIUsageRatingSnapshotMutation) SetCostCurrency(s string) {
+	m.cost_currency = &s
+}
+
+// CostCurrency returns the value of the "cost_currency" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) CostCurrency() (r string, exists bool) {
+	v := m.cost_currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostCurrency returns the old "cost_currency" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldCostCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostCurrency: %w", err)
+	}
+	return oldValue.CostCurrency, nil
+}
+
+// ResetCostCurrency resets all changes to the "cost_currency" field.
+func (m *AIUsageRatingSnapshotMutation) ResetCostCurrency() {
+	m.cost_currency = nil
+}
+
+// SetCostAmount sets the "cost_amount" field.
+func (m *AIUsageRatingSnapshotMutation) SetCostAmount(a alpacadecimal.Decimal) {
+	m.cost_amount = &a
+}
+
+// CostAmount returns the value of the "cost_amount" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) CostAmount() (r alpacadecimal.Decimal, exists bool) {
+	v := m.cost_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostAmount returns the old "cost_amount" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldCostAmount(ctx context.Context) (v alpacadecimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostAmount: %w", err)
+	}
+	return oldValue.CostAmount, nil
+}
+
+// ResetCostAmount resets all changes to the "cost_amount" field.
+func (m *AIUsageRatingSnapshotMutation) ResetCostAmount() {
+	m.cost_amount = nil
+}
+
+// SetCostSource sets the "cost_source" field.
+func (m *AIUsageRatingSnapshotMutation) SetCostSource(s string) {
+	m.cost_source = &s
+}
+
+// CostSource returns the value of the "cost_source" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) CostSource() (r string, exists bool) {
+	v := m.cost_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostSource returns the old "cost_source" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldCostSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostSource: %w", err)
+	}
+	return oldValue.CostSource, nil
+}
+
+// ResetCostSource resets all changes to the "cost_source" field.
+func (m *AIUsageRatingSnapshotMutation) ResetCostSource() {
+	m.cost_source = nil
+}
+
+// SetSalesCurrency sets the "sales_currency" field.
+func (m *AIUsageRatingSnapshotMutation) SetSalesCurrency(s string) {
+	m.sales_currency = &s
+}
+
+// SalesCurrency returns the value of the "sales_currency" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) SalesCurrency() (r string, exists bool) {
+	v := m.sales_currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalesCurrency returns the old "sales_currency" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldSalesCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalesCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalesCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalesCurrency: %w", err)
+	}
+	return oldValue.SalesCurrency, nil
+}
+
+// ResetSalesCurrency resets all changes to the "sales_currency" field.
+func (m *AIUsageRatingSnapshotMutation) ResetSalesCurrency() {
+	m.sales_currency = nil
+}
+
+// SetSalesAmount sets the "sales_amount" field.
+func (m *AIUsageRatingSnapshotMutation) SetSalesAmount(a alpacadecimal.Decimal) {
+	m.sales_amount = &a
+}
+
+// SalesAmount returns the value of the "sales_amount" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) SalesAmount() (r alpacadecimal.Decimal, exists bool) {
+	v := m.sales_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalesAmount returns the old "sales_amount" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldSalesAmount(ctx context.Context) (v alpacadecimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalesAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalesAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalesAmount: %w", err)
+	}
+	return oldValue.SalesAmount, nil
+}
+
+// ResetSalesAmount resets all changes to the "sales_amount" field.
+func (m *AIUsageRatingSnapshotMutation) ResetSalesAmount() {
+	m.sales_amount = nil
+}
+
+// SetRateCardVersion sets the "rate_card_version" field.
+func (m *AIUsageRatingSnapshotMutation) SetRateCardVersion(s string) {
+	m.rate_card_version = &s
+}
+
+// RateCardVersion returns the value of the "rate_card_version" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) RateCardVersion() (r string, exists bool) {
+	v := m.rate_card_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateCardVersion returns the old "rate_card_version" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldRateCardVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateCardVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateCardVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateCardVersion: %w", err)
+	}
+	return oldValue.RateCardVersion, nil
+}
+
+// ResetRateCardVersion resets all changes to the "rate_card_version" field.
+func (m *AIUsageRatingSnapshotMutation) ResetRateCardVersion() {
+	m.rate_card_version = nil
+}
+
+// SetCredits sets the "credits" field.
+func (m *AIUsageRatingSnapshotMutation) SetCredits(i int64) {
+	m.credits = &i
+	m.addcredits = nil
+}
+
+// Credits returns the value of the "credits" field in the mutation.
+func (m *AIUsageRatingSnapshotMutation) Credits() (r int64, exists bool) {
+	v := m.credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredits returns the old "credits" field's value of the AIUsageRatingSnapshot entity.
+// If the AIUsageRatingSnapshot object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatingSnapshotMutation) OldCredits(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredits: %w", err)
+	}
+	return oldValue.Credits, nil
+}
+
+// AddCredits adds i to the "credits" field.
+func (m *AIUsageRatingSnapshotMutation) AddCredits(i int64) {
+	if m.addcredits != nil {
+		*m.addcredits += i
+	} else {
+		m.addcredits = &i
+	}
+}
+
+// AddedCredits returns the value that was added to the "credits" field in this mutation.
+func (m *AIUsageRatingSnapshotMutation) AddedCredits() (r int64, exists bool) {
+	v := m.addcredits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCredits resets all changes to the "credits" field.
+func (m *AIUsageRatingSnapshotMutation) ResetCredits() {
+	m.credits = nil
+	m.addcredits = nil
+}
+
+// SetBatchID sets the "batch" edge to the AIUsageBatch entity by id.
+func (m *AIUsageRatingSnapshotMutation) SetBatchID(id string) {
+	m.batch = &id
+}
+
+// ClearBatch clears the "batch" edge to the AIUsageBatch entity.
+func (m *AIUsageRatingSnapshotMutation) ClearBatch() {
+	m.clearedbatch = true
+}
+
+// BatchCleared reports if the "batch" edge to the AIUsageBatch entity was cleared.
+func (m *AIUsageRatingSnapshotMutation) BatchCleared() bool {
+	return m.clearedbatch
+}
+
+// BatchID returns the "batch" edge ID in the mutation.
+func (m *AIUsageRatingSnapshotMutation) BatchID() (id string, exists bool) {
+	if m.batch != nil {
+		return *m.batch, true
+	}
+	return
+}
+
+// BatchIDs returns the "batch" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BatchID instead. It exists only for internal usage by the builders.
+func (m *AIUsageRatingSnapshotMutation) BatchIDs() (ids []string) {
+	if id := m.batch; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBatch resets all changes to the "batch" edge.
+func (m *AIUsageRatingSnapshotMutation) ResetBatch() {
+	m.batch = nil
+	m.clearedbatch = false
+}
+
+// Where appends a list predicates to the AIUsageRatingSnapshotMutation builder.
+func (m *AIUsageRatingSnapshotMutation) Where(ps ...predicate.AIUsageRatingSnapshot) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AIUsageRatingSnapshotMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AIUsageRatingSnapshotMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AIUsageRatingSnapshot, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AIUsageRatingSnapshotMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AIUsageRatingSnapshotMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AIUsageRatingSnapshot).
+func (m *AIUsageRatingSnapshotMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AIUsageRatingSnapshotMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.namespace != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldNamespace)
+	}
+	if m.annotations != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldAnnotations)
+	}
+	if m.created_at != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldDeletedAt)
+	}
+	if m.resource_code != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldResourceCode)
+	}
+	if m.cost_currency != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCostCurrency)
+	}
+	if m.cost_amount != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCostAmount)
+	}
+	if m.cost_source != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCostSource)
+	}
+	if m.sales_currency != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldSalesCurrency)
+	}
+	if m.sales_amount != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldSalesAmount)
+	}
+	if m.rate_card_version != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldRateCardVersion)
+	}
+	if m.credits != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCredits)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AIUsageRatingSnapshotMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case aiusageratingsnapshot.FieldNamespace:
+		return m.Namespace()
+	case aiusageratingsnapshot.FieldAnnotations:
+		return m.Annotations()
+	case aiusageratingsnapshot.FieldCreatedAt:
+		return m.CreatedAt()
+	case aiusageratingsnapshot.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case aiusageratingsnapshot.FieldDeletedAt:
+		return m.DeletedAt()
+	case aiusageratingsnapshot.FieldResourceCode:
+		return m.ResourceCode()
+	case aiusageratingsnapshot.FieldCostCurrency:
+		return m.CostCurrency()
+	case aiusageratingsnapshot.FieldCostAmount:
+		return m.CostAmount()
+	case aiusageratingsnapshot.FieldCostSource:
+		return m.CostSource()
+	case aiusageratingsnapshot.FieldSalesCurrency:
+		return m.SalesCurrency()
+	case aiusageratingsnapshot.FieldSalesAmount:
+		return m.SalesAmount()
+	case aiusageratingsnapshot.FieldRateCardVersion:
+		return m.RateCardVersion()
+	case aiusageratingsnapshot.FieldCredits:
+		return m.Credits()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AIUsageRatingSnapshotMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case aiusageratingsnapshot.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case aiusageratingsnapshot.FieldAnnotations:
+		return m.OldAnnotations(ctx)
+	case aiusageratingsnapshot.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case aiusageratingsnapshot.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case aiusageratingsnapshot.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case aiusageratingsnapshot.FieldResourceCode:
+		return m.OldResourceCode(ctx)
+	case aiusageratingsnapshot.FieldCostCurrency:
+		return m.OldCostCurrency(ctx)
+	case aiusageratingsnapshot.FieldCostAmount:
+		return m.OldCostAmount(ctx)
+	case aiusageratingsnapshot.FieldCostSource:
+		return m.OldCostSource(ctx)
+	case aiusageratingsnapshot.FieldSalesCurrency:
+		return m.OldSalesCurrency(ctx)
+	case aiusageratingsnapshot.FieldSalesAmount:
+		return m.OldSalesAmount(ctx)
+	case aiusageratingsnapshot.FieldRateCardVersion:
+		return m.OldRateCardVersion(ctx)
+	case aiusageratingsnapshot.FieldCredits:
+		return m.OldCredits(ctx)
+	}
+	return nil, fmt.Errorf("unknown AIUsageRatingSnapshot field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageRatingSnapshotMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case aiusageratingsnapshot.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case aiusageratingsnapshot.FieldAnnotations:
+		v, ok := value.(models.Annotations)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAnnotations(v)
+		return nil
+	case aiusageratingsnapshot.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case aiusageratingsnapshot.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case aiusageratingsnapshot.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case aiusageratingsnapshot.FieldResourceCode:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceCode(v)
+		return nil
+	case aiusageratingsnapshot.FieldCostCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostCurrency(v)
+		return nil
+	case aiusageratingsnapshot.FieldCostAmount:
+		v, ok := value.(alpacadecimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostAmount(v)
+		return nil
+	case aiusageratingsnapshot.FieldCostSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostSource(v)
+		return nil
+	case aiusageratingsnapshot.FieldSalesCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalesCurrency(v)
+		return nil
+	case aiusageratingsnapshot.FieldSalesAmount:
+		v, ok := value.(alpacadecimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalesAmount(v)
+		return nil
+	case aiusageratingsnapshot.FieldRateCardVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateCardVersion(v)
+		return nil
+	case aiusageratingsnapshot.FieldCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredits(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AIUsageRatingSnapshotMutation) AddedFields() []string {
+	var fields []string
+	if m.addcredits != nil {
+		fields = append(fields, aiusageratingsnapshot.FieldCredits)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AIUsageRatingSnapshotMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aiusageratingsnapshot.FieldCredits:
+		return m.AddedCredits()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AIUsageRatingSnapshotMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case aiusageratingsnapshot.FieldCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCredits(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AIUsageRatingSnapshotMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(aiusageratingsnapshot.FieldAnnotations) {
+		fields = append(fields, aiusageratingsnapshot.FieldAnnotations)
+	}
+	if m.FieldCleared(aiusageratingsnapshot.FieldDeletedAt) {
+		fields = append(fields, aiusageratingsnapshot.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AIUsageRatingSnapshotMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AIUsageRatingSnapshotMutation) ClearField(name string) error {
+	switch name {
+	case aiusageratingsnapshot.FieldAnnotations:
+		m.ClearAnnotations()
+		return nil
+	case aiusageratingsnapshot.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AIUsageRatingSnapshotMutation) ResetField(name string) error {
+	switch name {
+	case aiusageratingsnapshot.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case aiusageratingsnapshot.FieldAnnotations:
+		m.ResetAnnotations()
+		return nil
+	case aiusageratingsnapshot.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case aiusageratingsnapshot.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case aiusageratingsnapshot.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case aiusageratingsnapshot.FieldResourceCode:
+		m.ResetResourceCode()
+		return nil
+	case aiusageratingsnapshot.FieldCostCurrency:
+		m.ResetCostCurrency()
+		return nil
+	case aiusageratingsnapshot.FieldCostAmount:
+		m.ResetCostAmount()
+		return nil
+	case aiusageratingsnapshot.FieldCostSource:
+		m.ResetCostSource()
+		return nil
+	case aiusageratingsnapshot.FieldSalesCurrency:
+		m.ResetSalesCurrency()
+		return nil
+	case aiusageratingsnapshot.FieldSalesAmount:
+		m.ResetSalesAmount()
+		return nil
+	case aiusageratingsnapshot.FieldRateCardVersion:
+		m.ResetRateCardVersion()
+		return nil
+	case aiusageratingsnapshot.FieldCredits:
+		m.ResetCredits()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AIUsageRatingSnapshotMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.batch != nil {
+		edges = append(edges, aiusageratingsnapshot.EdgeBatch)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AIUsageRatingSnapshotMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case aiusageratingsnapshot.EdgeBatch:
+		if id := m.batch; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AIUsageRatingSnapshotMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AIUsageRatingSnapshotMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AIUsageRatingSnapshotMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedbatch {
+		edges = append(edges, aiusageratingsnapshot.EdgeBatch)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AIUsageRatingSnapshotMutation) EdgeCleared(name string) bool {
+	switch name {
+	case aiusageratingsnapshot.EdgeBatch:
+		return m.clearedbatch
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AIUsageRatingSnapshotMutation) ClearEdge(name string) error {
+	switch name {
+	case aiusageratingsnapshot.EdgeBatch:
+		m.ClearBatch()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AIUsageRatingSnapshotMutation) ResetEdge(name string) error {
+	switch name {
+	case aiusageratingsnapshot.EdgeBatch:
+		m.ResetBatch()
+		return nil
+	}
+	return fmt.Errorf("unknown AIUsageRatingSnapshot edge %s", name)
+}
 
 // AddonMutation represents an operation that mutates the Addon nodes in the graph.
 type AddonMutation struct {

@@ -20,6 +20,216 @@ import (
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
+func (u *AIUsageBatchUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageBatchUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageBatchUpdateOne) SetOrClearAnnotations(value *models.Annotations) *AIUsageBatchUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageBatchUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageBatchUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageBatchUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageBatchUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageBatchUpdate) SetOrClearReservationID(value *string) *AIUsageBatchUpdate {
+	if value == nil {
+		return u.ClearReservationID()
+	}
+	return u.SetReservationID(*value)
+}
+
+func (u *AIUsageBatchUpdateOne) SetOrClearReservationID(value *string) *AIUsageBatchUpdateOne {
+	if value == nil {
+		return u.ClearReservationID()
+	}
+	return u.SetReservationID(*value)
+}
+
+func (u *AIUsageBatchUpdate) SetOrClearCeilingCredits(value *int64) *AIUsageBatchUpdate {
+	if value == nil {
+		return u.ClearCeilingCredits()
+	}
+	return u.SetCeilingCredits(*value)
+}
+
+func (u *AIUsageBatchUpdateOne) SetOrClearCeilingCredits(value *int64) *AIUsageBatchUpdateOne {
+	if value == nil {
+		return u.ClearCeilingCredits()
+	}
+	return u.SetCeilingCredits(*value)
+}
+
+func (u *AIUsageLineItemUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageLineItemUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageLineItemUpdateOne) SetOrClearAnnotations(value *models.Annotations) *AIUsageLineItemUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageLineItemUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageLineItemUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageLineItemUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageLineItemUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageLineItemUpdate) SetOrClearDimensions(value *map[string]string) *AIUsageLineItemUpdate {
+	if value == nil {
+		return u.ClearDimensions()
+	}
+	return u.SetDimensions(*value)
+}
+
+func (u *AIUsageLineItemUpdateOne) SetOrClearDimensions(value *map[string]string) *AIUsageLineItemUpdateOne {
+	if value == nil {
+		return u.ClearDimensions()
+	}
+	return u.SetDimensions(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearCustomerID(value *string) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearCustomerID()
+	}
+	return u.SetCustomerID(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearCustomerID(value *string) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearCustomerID()
+	}
+	return u.SetCustomerID(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearProvider(value *string) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearProvider()
+	}
+	return u.SetProvider(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearProvider(value *string) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearProvider()
+	}
+	return u.SetProvider(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearModel(value *string) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearModel()
+	}
+	return u.SetModel(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearModel(value *string) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearModel()
+	}
+	return u.SetModel(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearEffectiveTo(value *time.Time) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearEffectiveTo(value *time.Time) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *AIUsageRatingSnapshotUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatingSnapshotUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageRatingSnapshotUpdateOne) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatingSnapshotUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *AIUsageRatingSnapshotUpdate) SetOrClearDeletedAt(value *time.Time) *AIUsageRatingSnapshotUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *AIUsageRatingSnapshotUpdateOne) SetOrClearDeletedAt(value *time.Time) *AIUsageRatingSnapshotUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
 func (u *AddonUpdate) SetOrClearMetadata(value *map[string]string) *AddonUpdate {
 	if value == nil {
 		return u.ClearMetadata()

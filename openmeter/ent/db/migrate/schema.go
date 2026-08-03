@@ -9,6 +9,247 @@ import (
 )
 
 var (
+	// AiUsageBatchesColumns holds the columns for the "ai_usage_batches" table.
+	AiUsageBatchesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "usage_batch_id", Type: field.TypeString},
+		{Name: "tenant_seq", Type: field.TypeInt64},
+		{Name: "occurred_at", Type: field.TypeTime},
+		{Name: "reservation_id", Type: field.TypeString, Nullable: true},
+		{Name: "ceiling_credits", Type: field.TypeInt64, Nullable: true},
+		{Name: "rate_version", Type: field.TypeString, Default: ""},
+		{Name: "billing_mode", Type: field.TypeString},
+		{Name: "payload_hash", Type: field.TypeString},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "total_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "covered_tenant_seq", Type: field.TypeInt64, Default: 0},
+	}
+	// AiUsageBatchesTable holds the schema information for the "ai_usage_batches" table.
+	AiUsageBatchesTable = &schema.Table{
+		Name:       "ai_usage_batches",
+		Columns:    AiUsageBatchesColumns,
+		PrimaryKey: []*schema.Column{AiUsageBatchesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusagebatch_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageBatchesColumns[0]},
+			},
+			{
+				Name:    "aiusagebatch_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageBatchesColumns[1]},
+			},
+			{
+				Name:    "aiusagebatch_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageBatchesColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "aiusagebatch_namespace_usage_batch_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "aiusagebatch_namespace_customer_id_tenant_seq",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[6], AiUsageBatchesColumns[9]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "aiusagebatch_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[6], AiUsageBatchesColumns[16]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
+	}
+	// AiUsageLineItemsColumns holds the columns for the "ai_usage_line_items" table.
+	AiUsageLineItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "resource_code", Type: field.TypeString},
+		{Name: "quantity", Type: field.TypeInt64},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "model", Type: field.TypeString, Default: ""},
+		{Name: "provider_managed", Type: field.TypeBool, Default: true},
+		{Name: "dimensions", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "ai_usage_batch_line_items", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// AiUsageLineItemsTable holds the schema information for the "ai_usage_line_items" table.
+	AiUsageLineItemsTable = &schema.Table{
+		Name:       "ai_usage_line_items",
+		Columns:    AiUsageLineItemsColumns,
+		PrimaryKey: []*schema.Column{AiUsageLineItemsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ai_usage_line_items_ai_usage_batches_line_items",
+				Columns:    []*schema.Column{AiUsageLineItemsColumns[12]},
+				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusagelineitem_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageLineItemsColumns[0]},
+			},
+			{
+				Name:    "aiusagelineitem_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageLineItemsColumns[1]},
+			},
+			{
+				Name:    "aiusagelineitem_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageLineItemsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+		},
+	}
+	// AiUsageRatecardEntriesColumns holds the columns for the "ai_usage_ratecard_entries" table.
+	AiUsageRatecardEntriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString, Nullable: true},
+		{Name: "resource_code", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString, Nullable: true},
+		{Name: "model", Type: field.TypeString, Nullable: true},
+		{Name: "price_per_unit_cny", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "credit_rate", Type: field.TypeInt64, Default: 1000},
+		{Name: "effective_from", Type: field.TypeTime},
+		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
+	}
+	// AiUsageRatecardEntriesTable holds the schema information for the "ai_usage_ratecard_entries" table.
+	AiUsageRatecardEntriesTable = &schema.Table{
+		Name:       "ai_usage_ratecard_entries",
+		Columns:    AiUsageRatecardEntriesColumns,
+		PrimaryKey: []*schema.Column{AiUsageRatecardEntriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusageratecardentry_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[0]},
+			},
+			{
+				Name:    "aiusageratecardentry_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[1]},
+			},
+			{
+				Name:    "aiusageratecardentry_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "aiusageratecardentry_namespace_customer_id_resource_code_provider_model_effective_from",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[1], AiUsageRatecardEntriesColumns[6], AiUsageRatecardEntriesColumns[7], AiUsageRatecardEntriesColumns[8], AiUsageRatecardEntriesColumns[9], AiUsageRatecardEntriesColumns[12]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "aiusageratecardentry_namespace_resource_code",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[1], AiUsageRatecardEntriesColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
+	}
+	// AiUsageRatingSnapshotsColumns holds the columns for the "ai_usage_rating_snapshots" table.
+	AiUsageRatingSnapshotsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "resource_code", Type: field.TypeString},
+		{Name: "cost_currency", Type: field.TypeString, Default: "USD"},
+		{Name: "cost_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "cost_source", Type: field.TypeString, Default: ""},
+		{Name: "sales_currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "sales_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "rate_card_version", Type: field.TypeString, Default: ""},
+		{Name: "credits", Type: field.TypeInt64, Default: 0},
+		{Name: "ai_usage_batch_rating_snapshots", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// AiUsageRatingSnapshotsTable holds the schema information for the "ai_usage_rating_snapshots" table.
+	AiUsageRatingSnapshotsTable = &schema.Table{
+		Name:       "ai_usage_rating_snapshots",
+		Columns:    AiUsageRatingSnapshotsColumns,
+		PrimaryKey: []*schema.Column{AiUsageRatingSnapshotsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ai_usage_rating_snapshots_ai_usage_batches_rating_snapshots",
+				Columns:    []*schema.Column{AiUsageRatingSnapshotsColumns[14]},
+				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusageratingsnapshot_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageRatingSnapshotsColumns[0]},
+			},
+			{
+				Name:    "aiusageratingsnapshot_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageRatingSnapshotsColumns[1]},
+			},
+			{
+				Name:    "aiusageratingsnapshot_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageRatingSnapshotsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+		},
+	}
 	// AddonsColumns holds the columns for the "addons" table.
 	AddonsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -5884,6 +6125,10 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AiUsageBatchesTable,
+		AiUsageLineItemsTable,
+		AiUsageRatecardEntriesTable,
+		AiUsageRatingSnapshotsTable,
 		AddonsTable,
 		AddonRateCardsTable,
 		AppsTable,
@@ -5976,6 +6221,8 @@ var (
 )
 
 func init() {
+	AiUsageLineItemsTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
+	AiUsageRatingSnapshotsTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
 	AddonsTable.ForeignKeys[0].RefTable = CustomCurrenciesTable
 	AddonsTable.Annotation = &entsql.Annotation{}
 	AddonsTable.Annotation.Checks = map[string]string{

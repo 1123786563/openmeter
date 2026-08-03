@@ -89,6 +89,14 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 		config: config,
 		// Clients templated from defined schemas
 
+		AIUsageBatch: NewAIUsageBatchClient(config),
+
+		AIUsageLineItem: NewAIUsageLineItemClient(config),
+
+		AIUsageRatecardEntry: NewAIUsageRatecardEntryClient(config),
+
+		AIUsageRatingSnapshot: NewAIUsageRatingSnapshotClient(config),
+
 		Addon: NewAddonClient(config),
 
 		AddonRateCard: NewAddonRateCardClient(config),

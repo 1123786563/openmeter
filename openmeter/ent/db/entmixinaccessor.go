@@ -19,6 +19,102 @@ import (
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
+func (e *AIUsageBatch) GetID() string {
+	return e.ID
+}
+
+func (e *AIUsageBatch) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *AIUsageBatch) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *AIUsageBatch) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *AIUsageBatch) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *AIUsageBatch) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *AIUsageLineItem) GetID() string {
+	return e.ID
+}
+
+func (e *AIUsageLineItem) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *AIUsageLineItem) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *AIUsageLineItem) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *AIUsageLineItem) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *AIUsageLineItem) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *AIUsageRatecardEntry) GetID() string {
+	return e.ID
+}
+
+func (e *AIUsageRatecardEntry) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *AIUsageRatecardEntry) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *AIUsageRatecardEntry) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *AIUsageRatecardEntry) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *AIUsageRatecardEntry) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *AIUsageRatingSnapshot) GetID() string {
+	return e.ID
+}
+
+func (e *AIUsageRatingSnapshot) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *AIUsageRatingSnapshot) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *AIUsageRatingSnapshot) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *AIUsageRatingSnapshot) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *AIUsageRatingSnapshot) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
 func (e *Addon) GetID() string {
 	return e.ID
 }

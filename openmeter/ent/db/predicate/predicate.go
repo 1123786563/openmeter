@@ -6,6 +6,18 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AIUsageBatch is the predicate function for aiusagebatch builders.
+type AIUsageBatch func(*sql.Selector)
+
+// AIUsageLineItem is the predicate function for aiusagelineitem builders.
+type AIUsageLineItem func(*sql.Selector)
+
+// AIUsageRatecardEntry is the predicate function for aiusageratecardentry builders.
+type AIUsageRatecardEntry func(*sql.Selector)
+
+// AIUsageRatingSnapshot is the predicate function for aiusageratingsnapshot builders.
+type AIUsageRatingSnapshot func(*sql.Selector)
+
 // Addon is the predicate function for addon builders.
 type Addon func(*sql.Selector)
 

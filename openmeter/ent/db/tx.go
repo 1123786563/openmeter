@@ -14,6 +14,14 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AIUsageBatch is the client for interacting with the AIUsageBatch builders.
+	AIUsageBatch *AIUsageBatchClient
+	// AIUsageLineItem is the client for interacting with the AIUsageLineItem builders.
+	AIUsageLineItem *AIUsageLineItemClient
+	// AIUsageRatecardEntry is the client for interacting with the AIUsageRatecardEntry builders.
+	AIUsageRatecardEntry *AIUsageRatecardEntryClient
+	// AIUsageRatingSnapshot is the client for interacting with the AIUsageRatingSnapshot builders.
+	AIUsageRatingSnapshot *AIUsageRatingSnapshotClient
 	// Addon is the client for interacting with the Addon builders.
 	Addon *AddonClient
 	// AddonRateCard is the client for interacting with the AddonRateCard builders.
@@ -319,6 +327,10 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AIUsageBatch = NewAIUsageBatchClient(tx.config)
+	tx.AIUsageLineItem = NewAIUsageLineItemClient(tx.config)
+	tx.AIUsageRatecardEntry = NewAIUsageRatecardEntryClient(tx.config)
+	tx.AIUsageRatingSnapshot = NewAIUsageRatingSnapshotClient(tx.config)
 	tx.Addon = NewAddonClient(tx.config)
 	tx.AddonRateCard = NewAddonRateCardClient(tx.config)
 	tx.App = NewAppClient(tx.config)
@@ -415,7 +427,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Addon.QueryXXX(), the query will be executed
+// applies a query, for example: AIUsageBatch.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

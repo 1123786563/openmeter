@@ -14,6 +14,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addonratecard"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratecardentry"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 
 	dbapp "github.com/openmeterio/openmeter/openmeter/ent/db/app"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustomer"
@@ -164,6 +168,10 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			aiusagebatch.Table:                                     aiusagebatch.ValidColumn,
+			aiusagelineitem.Table:                                  aiusagelineitem.ValidColumn,
+			aiusageratecardentry.Table:                             aiusageratecardentry.ValidColumn,
+			aiusageratingsnapshot.Table:                            aiusageratingsnapshot.ValidColumn,
 			addon.Table:                                            addon.ValidColumn,
 			addonratecard.Table:                                    addonratecard.ValidColumn,
 			dbapp.Table:                                            dbapp.ValidColumn,

@@ -9,6 +9,54 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 )
 
+// The AIUsageBatchFunc type is an adapter to allow the use of ordinary
+// function as AIUsageBatch mutator.
+type AIUsageBatchFunc func(context.Context, *db.AIUsageBatchMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageBatchFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageBatchMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageBatchMutation", m)
+}
+
+// The AIUsageLineItemFunc type is an adapter to allow the use of ordinary
+// function as AIUsageLineItem mutator.
+type AIUsageLineItemFunc func(context.Context, *db.AIUsageLineItemMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageLineItemFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageLineItemMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageLineItemMutation", m)
+}
+
+// The AIUsageRatecardEntryFunc type is an adapter to allow the use of ordinary
+// function as AIUsageRatecardEntry mutator.
+type AIUsageRatecardEntryFunc func(context.Context, *db.AIUsageRatecardEntryMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageRatecardEntryFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageRatecardEntryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageRatecardEntryMutation", m)
+}
+
+// The AIUsageRatingSnapshotFunc type is an adapter to allow the use of ordinary
+// function as AIUsageRatingSnapshot mutator.
+type AIUsageRatingSnapshotFunc func(context.Context, *db.AIUsageRatingSnapshotMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageRatingSnapshotFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageRatingSnapshotMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageRatingSnapshotMutation", m)
+}
+
 // The AddonFunc type is an adapter to allow the use of ordinary
 // function as Addon mutator.
 type AddonFunc func(context.Context, *db.AddonMutation) (db.Value, error)
