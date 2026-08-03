@@ -12,7 +12,7 @@ import (
 // This is a read-model projection of the credit system's grant.
 type SettlementGrant struct {
 	GrantID   string  `json:"grant_id"`
-	Amount    float64 `json:"amount"`    // remaining balance
+	Amount    int64   `json:"amount"`    // remaining balance
 	Priority  uint8   `json:"priority"`  // lower = consumed first
 	Source    string  `json:"source"`    // "plan", "gift", "recharge", "receivable"
 }
@@ -173,7 +173,7 @@ func burnGrants(grants []SettlementGrant, amount int64) ([]LedgerEntryRef, int64
 	}
 
 	deductions := make([]LedgerEntryRef, 0)
-	remaining := float64(amount)
+	remaining := amount
 
 	for _, grant := range sorted {
 		if remaining <= 0 {
@@ -184,7 +184,7 @@ func burnGrants(grants []SettlementGrant, amount int64) ([]LedgerEntryRef, int64
 			continue
 		}
 
-		var burned float64
+		var burned int64
 		if grant.Source == "receivable" {
 			// Enterprise receivable: always covers the remainder (can go negative).
 			burned = remaining

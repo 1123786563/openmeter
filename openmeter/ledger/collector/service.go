@@ -25,6 +25,24 @@ type Service interface {
 	CorrectCollectedAccrued(ctx context.Context, input CorrectCollectedAccruedInput) (creditrealization.CreateCorrectionInputs, error)
 }
 
+// Funding-Source Priority Routing
+//
+// The collector selects credit sources via fboCollectionSource.Compare (see
+// types.go), which orders sources by:
+//
+//  1. Credit priority (lower number = higher priority): plan credits (0) are
+//     consumed before promotional (10) before paid top-ups (20).
+//  2. Feature restriction: feature-restricted sources burn before unrestricted.
+//  3. Expiry: earliest-expiring credit burns first within the same priority.
+//  4. Stable ledger cursor: deterministic tie-break on sub-account + source
+//     charge ID for reproducible ordering across retries.
+//
+// This ordering satisfies the AI usage settlement burn-order contract:
+// plan -> promotional -> paid_top_up -> enterprise_receivable.
+//
+// The aiusage/settlement package delegates all source selection to the
+// collector and does not scan grant balances independently.
+
 type Config struct {
 	Ledger        ledger.Ledger
 	Dependencies  transactions.ResolverDependencies

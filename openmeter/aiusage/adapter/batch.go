@@ -135,7 +135,7 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 			SetCustomerID(in.CustomerID).
 			SetSubjectID(in.SubjectID).
 			SetGrantID(alloc.GrantID).
-			SetAmount(alpacadecimal.NewFromFloat(alloc.Amount)).
+			SetAmount(alpacadecimal.NewFromInt(alloc.Amount)).
 			SetPriority(alloc.Priority).
 			SetFundingSource(string(alloc.FundingSource)).
 			SetBatchID(ent.ID).

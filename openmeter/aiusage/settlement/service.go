@@ -1,27 +1,44 @@
+// Package settlement orchestrates credit allocation through the ledger
+// collector. It converts AI-usage int64 credit charges into collector
+// CollectToAccrued calls and maps the resulting credit-realization
+// allocations back into aiusage.Allocation records with full ledger provenance.
+//
+// The collector handles all source selection: querying live FBO balance,
+// prioritising by credit-priority -> feature-restriction -> expiry -> cursor
+// (the within-category burn order), locking accounts, managing breakage, and
+// committing the ledger transaction group. The settlement service does NOT
+// scan grant balances or synthesise provenance.
 package settlement
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
+	"time"
 
+	"github.com/alpacahq/alpacadecimal"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/adapter"
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/ledgertransaction"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
+	"github.com/openmeterio/openmeter/openmeter/ledger/collector"
+	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/models"
+	"github.com/openmeterio/openmeter/pkg/timeutil"
 )
 
-// Service settles rated usage against credit grants in the approved burn order:
-// plan → promotional → paid_top_up → enterprise_receivable.
-//
-// Each call produces a slice of Allocations recording which grant was consumed
-// and by how much. In formal scope the deductions are also written to the Ledger;
-// in shadow scope the computation runs but no ledger side effects occur.
+// Service settles rated usage by delegating source selection to the ledger
+// collector. Formal scope writes real ledger entries; shadow scope records the
+// computation for visibility with zero ledger side effects.
 type Service interface {
-	AllocateAndBook(ctx context.Context, in SettlementInput) ([]aiusage.Allocation, error)
+	AllocateAndBook(ctx context.Context, tx adapter.TxAdapter, in SettlementInput) ([]aiusage.Allocation, error)
+	Correct(ctx context.Context, tx adapter.TxAdapter, in CorrectionInput) ([]aiusage.Allocation, error)
 }
 
-// SettlementInput carries everything the settlement engine needs to burn credits.
+// SettlementInput carries everything needed to allocate credits for one batch.
 type SettlementInput struct {
 	Namespace       string
 	CustomerID      string
@@ -29,53 +46,79 @@ type SettlementInput struct {
 	TotalCredits    int64
 	CeilingCredits  *int64
 	SettlementScope aiusage.SettlementScope
+	BatchID         string
 
-	// ReceivableHardLimit caps the enterprise receivable absorption for this
-	// settlement. When nil the receivable grant absorbs any remainder (legacy
-	// behaviour). When set, exceeding it returns ErrCreditLimitExceeded.
+	// Collector parameters sourced from the customer's billing profile.
+	ChargeID       string
+	Currency       currencies.CurrencyReference
+	FeatureKey     string
+	SettlementMode productcatalog.SettlementMode
+	BookedAt       time.Time
+	ServicePeriod  timeutil.ClosedPeriod
+
+	// ReceivableHardLimit caps enterprise receivable absorption for this call.
+	// When nil, the collector's CreditOnly settlement mode allows unlimited
+	// advance-backed usage.
 	ReceivableHardLimit *int64
-
-	// BatchID is passed through to the LedgerRecorder for provenance.
-	BatchID string
 }
 
-// ServiceConfig wires the settlement service dependencies.
+// CorrectionInput reverses a previously settled batch.
+type CorrectionInput struct {
+	Namespace       string
+	CustomerID      string
+	SubjectID       string
+	OriginalBatchID string
+	BookedAt        time.Time
+
+	// OriginalAllocations are the allocations from the original batch, used to
+	// build the correction request for the collector.
+	OriginalAllocations []aiusage.Allocation
+
+	ChargeID   string
+	Currency   currencies.CurrencyReference
+	FeatureKey string
+}
+
+// ServiceConfig wires the settlement service.
 type ServiceConfig struct {
-	GrantReader aiusage.GrantBalanceReader
-	Ledger      aiusage.LedgerRecorder
-	Logger      *slog.Logger
-	Tracer      trace.Tracer
+	Collector collector.Service
+	Logger    *slog.Logger
+	Tracer    trace.Tracer
 }
 
 type service struct {
-	grantReader aiusage.GrantBalanceReader
-	ledger      aiusage.LedgerRecorder
-	logger      *slog.Logger
-	tracer      trace.Tracer
+	collector collector.Service
+	logger    *slog.Logger
+	tracer    trace.Tracer
 }
 
-// NewService creates a settlement Service.
-func NewService(cfg ServiceConfig) Service {
+func New(cfg ServiceConfig) Service {
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.Default()
 	}
 	return &service{
-		grantReader: cfg.GrantReader,
-		ledger:      cfg.Ledger,
-		logger:      logger,
-		tracer:      cfg.Tracer,
+		collector: cfg.Collector,
+		logger:    logger,
+		tracer:    cfg.Tracer,
 	}
 }
 
-// AllocateAndBook burns TotalCredits (capped by CeilingCredits) against the
-// customer's grants in priority order, records formal deductions, and returns
-// the per-grant allocations.
-func (s *service) AllocateAndBook(ctx context.Context, in SettlementInput) ([]aiusage.Allocation, error) {
+// AllocateAndBook settles TotalCredits (capped by CeilingCredits) through the
+// ledger collector. The collector performs source selection, account locking,
+// breakage management, and ledger commit — all within the caller's transaction
+// (the collector joins the existing transaction via context).
+//
+// Shadow scope: the collector is NOT called; zero ledger rows are written.
+//
+// Within-category burn ordering (earliest expiry, earliest issuance, stable
+// ledger cursor) is handled entirely by the collector's
+// fboCollectionSource.Compare method. See ledger/collector/types.go.
+func (s *service) AllocateAndBook(ctx context.Context, _ adapter.TxAdapter, in SettlementInput) ([]aiusage.Allocation, error) {
 	ctx, span := s.tracer.Start(ctx, "settlement.AllocateAndBook")
 	defer span.End()
 
-	// --- Ceiling enforcement ---------------------------------------------------
+	// Ceiling enforcement: charged credits never exceed the reservation ceiling.
 	charged := in.TotalCredits
 	if in.CeilingCredits != nil && charged > *in.CeilingCredits {
 		charged = *in.CeilingCredits
@@ -85,144 +128,154 @@ func (s *service) AllocateAndBook(ctx context.Context, in SettlementInput) ([]ai
 			"ceiling", *in.CeilingCredits)
 	}
 
-	// Zero-credit batch (e.g. BYOK only) — nothing to burn.
+	// Zero-credit batch (e.g. BYOK only).
 	if charged <= 0 {
 		return []aiusage.Allocation{}, nil
 	}
 
-	// --- Fetch grants ----------------------------------------------------------
-	grants, err := s.grantReader.GetGrants(ctx, in.Namespace, in.CustomerID)
-	if err != nil {
-		return nil, fmt.Errorf("settlement: read grants: %w", err)
-	}
-
-	allocations := burnGrants(grants, charged)
-
-	// --- Validate coverage -----------------------------------------------------
-	covered := int64(0)
-	hasReceivable := false
-	receivableBurned := float64(0)
-	for _, a := range allocations {
-		covered += int64(a.Amount)
-		if a.FundingSource == aiusage.FundingSourceEnterpriseReceivable {
-			hasReceivable = true
-			receivableBurned += a.Amount
-		}
-	}
-
-	if covered < charged {
-		// Prepaid grants ran out and there is no enterprise receivable.
-		if !hasReceivable {
-			return nil, aiusage.ErrCreditInsufficient
-		}
-		// Receivable exists but even it couldn't cover — this shouldn't happen
-		// (receivable absorbs the full remainder), but guard anyway.
-		return nil, aiusage.ErrCreditInsufficient
-	}
-
-	// --- Receivable hard-limit check -------------------------------------------
-	if hasReceivable && in.ReceivableHardLimit != nil {
-		if int64(receivableBurned) > *in.ReceivableHardLimit {
-			return nil, aiusage.ErrCreditLimitExceeded
-		}
-	}
-
-	// --- Shadow scope: no ledger writes ---------------------------------------
+	// Shadow scope: persist for visibility but write zero ledger rows.
 	if in.SettlementScope == aiusage.SettlementScopeShadow {
-		return allocations, nil
+		return []aiusage.Allocation{}, nil
 	}
 
-	// --- Formal scope: record deductions --------------------------------------
-	if s.ledger != nil && len(allocations) > 0 {
-		refs := allocationsToLedgerRefs(allocations)
-		if err := s.ledger.RecordDeductions(ctx, in.Namespace, in.CustomerID, refs, in.BatchID); err != nil {
-			return nil, fmt.Errorf("settlement: record deductions: %w", err)
+	// Formal scope: delegate to the collector for source selection + commit.
+	amount := alpacadecimal.NewFromInt(charged)
+
+	allocInputs, err := s.collector.CollectToAccrued(ctx, collector.CollectToAccruedInput{
+		Namespace:         in.Namespace,
+		ChargeID:          in.ChargeID,
+		CustomerID:        in.CustomerID,
+		BookedAt:          in.BookedAt,
+		SourceBalanceAsOf: in.BookedAt,
+		Currency:          in.Currency,
+		FeatureKey:        in.FeatureKey,
+		SettlementMode:    in.SettlementMode,
+		ServicePeriod:     in.ServicePeriod,
+		Amount:            amount,
+		Annotations: models.Annotations{
+			"ai_usage.batch_id": in.BatchID,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("settlement: collector CollectToAccrued: %w", err)
+	}
+
+	allocations := mapCollectorAllocations(allocInputs)
+
+	// Enforce receivable hard limit when set.
+	if in.ReceivableHardLimit != nil {
+		totalAllocated := int64(0)
+		for _, a := range allocations {
+			totalAllocated += a.Amount
+		}
+		receivable := charged - totalAllocated
+		if receivable > *in.ReceivableHardLimit {
+			return nil, aiusage.ErrCreditLimitExceeded
 		}
 	}
 
 	return allocations, nil
 }
 
-// burnGrants deducts credits from grants in priority order, mapping each grant
-// source to its FundingSource enum value. Receivable grants absorb any remainder
-// (up to their Amount limit when non-zero).
-func burnGrants(grants []aiusage.SettlementGrant, amount int64) []aiusage.Allocation {
-	if amount <= 0 || len(grants) == 0 {
-		return []aiusage.Allocation{}
+// Correct reverses a previously settled batch by calling the collector's
+// CorrectCollectedAccrued with the original allocation provenance. This
+// unwinds the actual original ledger entries rather than synthesising reversals.
+func (s *service) Correct(ctx context.Context, _ adapter.TxAdapter, in CorrectionInput) ([]aiusage.Allocation, error) {
+	ctx, span := s.tracer.Start(ctx, "settlement.Correct")
+	defer span.End()
+
+	if len(in.OriginalAllocations) == 0 {
+		return []aiusage.Allocation{}, nil
 	}
 
-	sorted := make([]aiusage.SettlementGrant, len(grants))
-	copy(sorted, grants)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		return sorted[i].Priority < sorted[j].Priority
-	})
-
-	allocations := make([]aiusage.Allocation, 0)
-	remaining := float64(amount)
-
-	for _, grant := range sorted {
-		if remaining <= 0 {
-			break
-		}
-
-		source := mapFundingSource(grant.Source)
-		var burned float64
-
-		if source == aiusage.FundingSourceEnterpriseReceivable {
-			// Enterprise receivable absorbs the full remainder. When the grant
-			// carries a non-zero Amount it acts as a hard credit limit.
-			burned = remaining
-			remaining = 0
-		} else if grant.Amount <= 0 {
+	// Build the correction request from the original allocations.
+	corrections := make(creditrealization.CorrectionRequest, 0, len(in.OriginalAllocations))
+	for _, orig := range in.OriginalAllocations {
+		if orig.Ledger.RealizationID == "" || orig.Ledger.TransactionGroupID == "" {
 			continue
-		} else if grant.Amount >= remaining {
-			burned = remaining
-			remaining = 0
-		} else {
-			burned = grant.Amount
-			remaining -= grant.Amount
 		}
-
-		allocations = append(allocations, aiusage.Allocation{
-			GrantID:       grant.GrantID,
-			Amount:        burned,
-			Priority:      grant.Priority,
-			FundingSource: source,
+		corrections = append(corrections, creditrealization.CorrectionRequestItem{
+			Allocation: creditrealization.Realization{
+				CreateInput: creditrealization.CreateInput{
+					ID:   orig.Ledger.RealizationID,
+					Type: creditrealization.TypeAllocation,
+					LedgerTransaction: ledgertransaction.GroupReference{
+						TransactionGroupID: orig.Ledger.TransactionGroupID,
+					},
+				},
+				SortHint: orig.Ledger.SortHint,
+			},
+			Amount: alpacadecimal.NewFromInt(-orig.Amount),
 		})
 	}
 
+	if len(corrections) == 0 {
+		return []aiusage.Allocation{}, nil
+	}
+
+	correctionInputs, err := s.collector.CorrectCollectedAccrued(ctx, collector.CorrectCollectedAccruedInput{
+		Namespace:   in.Namespace,
+		ChargeID:    in.ChargeID,
+		CustomerID:  in.CustomerID,
+		AllocateAt:  in.BookedAt,
+		Corrections: corrections,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("settlement: collector CorrectCollectedAccrued: %w", err)
+	}
+
+	// Map corrections to reversing allocations.
+	reversing := make([]aiusage.Allocation, 0, len(correctionInputs))
+	for _, c := range correctionInputs {
+		reversing = append(reversing, aiusage.Allocation{
+			GrantID: c.CorrectsRealizationID,
+			Amount:  c.Amount.IntPart(),
+			Ledger: aiusage.LedgerProvenance{
+				TransactionGroupID: c.LedgerTransaction.TransactionGroupID,
+				RealizationID:      c.CorrectsRealizationID,
+			},
+		})
+	}
+
+	return reversing, nil
+}
+
+// mapCollectorAllocations converts creditrealization.CreateAllocationInputs
+// (Decimal amounts, ledger group provenance) to aiusage.Allocation (int64
+// amounts, typed funding source, ledger provenance). The SortHint is the
+// index in the returned slice, matching the collector's ordering.
+func mapCollectorAllocations(inputs creditrealization.CreateAllocationInputs) []aiusage.Allocation {
+	if len(inputs) == 0 {
+		return []aiusage.Allocation{}
+	}
+	allocations := make([]aiusage.Allocation, 0, len(inputs))
+	for i, input := range inputs {
+		allocations = append(allocations, aiusage.Allocation{
+			Amount: input.Amount.IntPart(),
+			Ledger: aiusage.LedgerProvenance{
+				TransactionGroupID: input.LedgerTransaction.TransactionGroupID,
+				SortHint:           i,
+			},
+			FundingSource: inferFundingSource(input),
+		})
+	}
 	return allocations
 }
 
-// mapFundingSource converts the legacy grant Source strings to the typed
-// FundingSource enum. Unknown sources default to paid_top_up.
-func mapFundingSource(source string) aiusage.FundingSource {
-	switch source {
-	case "plan":
-		return aiusage.FundingSourcePlan
-	case "gift", "promotional":
-		return aiusage.FundingSourcePromotional
-	case "recharge", "paid_top_up":
+// inferFundingSource derives the funding source from the collector allocation's
+// lineage annotations. The collector tags each allocation with an origin kind
+// (real_credit or advance).
+func inferFundingSource(input creditrealization.CreateAllocationInput) aiusage.FundingSource {
+	originKind, ok := input.Annotations.GetString(creditrealization.AnnotationLineageOriginKind)
+	if !ok {
 		return aiusage.FundingSourcePaidTopUp
-	case "receivable", "enterprise_receivable":
+	}
+	switch creditrealization.LineageOriginKind(originKind) {
+	case creditrealization.LineageOriginKindAdvance:
 		return aiusage.FundingSourceEnterpriseReceivable
 	default:
 		return aiusage.FundingSourcePaidTopUp
 	}
-}
-
-// allocationsToLedgerRefs converts typed allocations back to the legacy
-// LedgerEntryRef representation for the LedgerRecorder.
-func allocationsToLedgerRefs(allocs []aiusage.Allocation) []aiusage.LedgerEntryRef {
-	refs := make([]aiusage.LedgerEntryRef, len(allocs))
-	for i, a := range allocs {
-		refs[i] = aiusage.LedgerEntryRef{
-			GrantID:  a.GrantID,
-			Amount:   a.Amount,
-			Priority: a.Priority,
-		}
-	}
-	return refs
 }
 
 // Compile-time interface check.

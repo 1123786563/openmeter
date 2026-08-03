@@ -1,21 +1,26 @@
+// Package service is the application-level orchestration for AI usage
+// settlement. It coordinates validate -> price -> settle -> persist in one
+// atomic customer-locked transaction.
 package service
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/adapter"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/pricing"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/settlement"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
+	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/timeutil"
 )
 
 // Service is the application-level orchestration for AI usage settlement.
-// It coordinates validate -> price -> settle -> persist in a single logical
-// unit, returning a BatchSettlementResult that includes the funding-source
-// allocations.
 type Service interface {
 	Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage.BatchSettlementResult, error)
 	Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage.BatchSettlementResult, error)
@@ -26,33 +31,53 @@ type PricingResolver interface {
 	Resolve(ctx context.Context, in pricing.ResolveInput) (pricing.ResolvedBatch, error)
 }
 
-// BatchStore persists a fully settled batch atomically (batch row, line items,
-// rating snapshots, allocations, outbox events, watermark advance).
-type BatchStore interface {
-	Store(ctx context.Context, in aiusage.SettledBatch) (*aiusage.BatchSettlementResult, error)
+// ScopeResolver determines whether a customer's batches are settled formally
+// or in shadow mode. When nil, all batches default to formal.
+type ScopeResolver interface {
+	ResolveScope(ctx context.Context, namespace, customerID string) (aiusage.SettlementScope, error)
 }
 
-// SettlementScopeResolver determines whether a customer's batches are settled
-// formally or in shadow mode. When nil, all batches default to formal.
-type SettlementScopeResolver interface {
-	ResolveScope(ctx context.Context, namespace, customerID string) (aiusage.SettlementScope, error)
+// CustomerProfileResolver provides billing profile data (charge ID, currency,
+// settlement mode, feature key) needed for collector integration.
+type CustomerProfileResolver interface {
+	Resolve(ctx context.Context, namespace, customerID string) (CustomerProfile, error)
+}
+
+// CustomerProfile carries billing configuration for collector integration.
+type CustomerProfile struct {
+	ChargeID       string
+	Currency       currencies.CurrencyReference
+	FeatureKey     string
+	SettlementMode productcatalog.SettlementMode
 }
 
 // Config wires the application service.
 type Config struct {
-	Pricing    PricingResolver
-	Settlement settlement.Service
-	Store      BatchStore
-	Logger     *slog.Logger
-	Tracer     trace.Tracer
+	Adapter            adapter.Adapter
+	Pricing            PricingResolver
+	Settlement         settlement.Service
+	ProfileResolver    CustomerProfileResolver
+	ScopeResolver      ScopeResolver
+	AllocationFetcher  AllocationFetcher
+	Logger             *slog.Logger
+	Tracer             trace.Tracer
+}
+
+// AllocationFetcher reads persisted allocations for a batch (used by Correct
+// to build the reversal request).
+type AllocationFetcher interface {
+	GetAllocations(ctx context.Context, namespace, customerID, batchID string) ([]aiusage.Allocation, error)
 }
 
 type svc struct {
-	pricing    PricingResolver
-	settlement settlement.Service
-	store      BatchStore
-	logger     *slog.Logger
-	tracer     trace.Tracer
+	adp             adapter.Adapter
+	pricing         PricingResolver
+	settlement      settlement.Service
+	profileResolver CustomerProfileResolver
+	scopeResolver   ScopeResolver
+	allocFetcher    AllocationFetcher
+	logger          *slog.Logger
+	tracer          trace.Tracer
 }
 
 func New(cfg Config) Service {
@@ -61,26 +86,43 @@ func New(cfg Config) Service {
 		logger = slog.Default()
 	}
 	return &svc{
-		pricing:    cfg.Pricing,
-		settlement: cfg.Settlement,
-		store:      cfg.Store,
-		logger:     logger,
-		tracer:     cfg.Tracer,
+		adp:             cfg.Adapter,
+		pricing:         cfg.Pricing,
+		settlement:      cfg.Settlement,
+		profileResolver: cfg.ProfileResolver,
+		scopeResolver:   cfg.ScopeResolver,
+		allocFetcher:    cfg.AllocationFetcher,
+		logger:          logger,
+		tracer:          cfg.Tracer,
 	}
 }
 
-// Settle validates the input, resolves pricing, settles credits against grants,
-// and persists the result in one atomic unit.
+// Settle validates the input, resolves pricing, settles credits through the
+// collector, and persists the result in one atomic customer-locked transaction.
 func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage.BatchSettlementResult, error) {
 	ctx, span := s.tracer.Start(ctx, "aiusage.service.Settle")
 	defer span.End()
 
-	// 1. Validate
 	if err := in.Validate(); err != nil {
 		return nil, err
 	}
 
-	// 2. Price / rate
+	// Resolve customer billing profile.
+	profile, err := s.profileResolver.Resolve(ctx, in.Namespace, in.CustomerID)
+	if err != nil {
+		return nil, fmt.Errorf("service: resolve customer profile: %w", err)
+	}
+
+	// Resolve settlement scope.
+	scope := aiusage.SettlementScopeFormal
+	if s.scopeResolver != nil {
+		scope, err = s.scopeResolver.ResolveScope(ctx, in.Namespace, in.CustomerID)
+		if err != nil {
+			return nil, fmt.Errorf("service: resolve scope: %w", err)
+		}
+	}
+
+	// Price / rate.
 	lines := make([]aiusage.UsageLineInput, len(in.LineItems))
 	for i, item := range in.LineItems {
 		lines[i] = aiusage.UsageLineInput{
@@ -109,59 +151,93 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 		totalCredits = *in.CeilingCredits
 	}
 
-	// 3. Settle
-	allocations, err := s.settlement.AllocateAndBook(ctx, settlement.SettlementInput{
-		Namespace:       in.Namespace,
-		CustomerID:      in.CustomerID,
-		SubjectID:       in.SubjectID,
-		TotalCredits:    totalCredits,
-		CeilingCredits:  in.CeilingCredits,
-		SettlementScope: aiusage.SettlementScopeFormal,
-		BatchID:         in.UsageBatchID,
+	servicePeriod := timeutil.ClosedPeriod{
+		From: in.OccurredAt,
+		To:   in.OccurredAt,
+	}
+
+	var result *aiusage.BatchSettlementResult
+
+	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(tx adapter.TxAdapter) error {
+		// Settle through the collector inside the locked transaction.
+		allocations, err := s.settlement.AllocateAndBook(ctx, tx, settlement.SettlementInput{
+			Namespace:       in.Namespace,
+			CustomerID:      in.CustomerID,
+			SubjectID:       in.SubjectID,
+			TotalCredits:    totalCredits,
+			CeilingCredits:  in.CeilingCredits,
+			SettlementScope: scope,
+			BatchID:         in.UsageBatchID,
+			ChargeID:        profile.ChargeID,
+			Currency:        profile.Currency,
+			FeatureKey:      profile.FeatureKey,
+			SettlementMode:  profile.SettlementMode,
+			BookedAt:        in.OccurredAt,
+			ServicePeriod:   servicePeriod,
+		})
+		if err != nil {
+			return err
+		}
+
+		// Persist atomically within the same transaction.
+		settled := aiusage.SettledBatch{
+			Namespace:       in.Namespace,
+			CustomerID:      in.CustomerID,
+			SubjectID:       in.SubjectID,
+			UsageBatchID:    in.UsageBatchID,
+			TenantSeq:       in.TenantSeq,
+			OccurredAt:      in.OccurredAt,
+			ReservationID:   in.ReservationID,
+			CeilingCredits:  in.CeilingCredits,
+			RateVersion:     in.RateVersion,
+			BillingMode:     in.BillingMode,
+			PayloadHash:     in.PayloadHash,
+			SettlementScope: scope,
+			Status:          aiusage.BatchStatusSettled,
+			TotalCredits:    totalCredits,
+			LineItems:       in.LineItems,
+			Allocations:     allocations,
+			OutboxEvents: []aiusage.OutboxEvent{
+				{
+					EventType: "ai_usage.batch.settled",
+					Payload:   map[string]any{"usage_batch_id": in.UsageBatchID},
+				},
+			},
+		}
+		settled.RatingSnapshots = resolvedLinesToSnapshots(resolved.Lines)
+
+		batch, created, err := tx.CreateSettledBatch(ctx, settled)
+		if err != nil {
+			return fmt.Errorf("persist batch: %w", err)
+		}
+		if !created {
+			// Idempotent re-submission.
+			result = &aiusage.BatchSettlementResult{
+				BatchID:          batch.UsageBatchID,
+				Status:           batch.Status,
+				CoveredTenantSeq: batch.TenantSeq,
+			}
+			return nil
+		}
+
+		result = &aiusage.BatchSettlementResult{
+			BatchID:          batch.UsageBatchID,
+			Status:           aiusage.BatchStatusSettled,
+			TotalCredits:     totalCredits,
+			CoveredTenantSeq: batch.TenantSeq,
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("service: settlement failed: %w", err)
-	}
-
-	// 4. Persist
-	settled := aiusage.SettledBatch{
-		Namespace:       in.Namespace,
-		CustomerID:      in.CustomerID,
-		SubjectID:       in.SubjectID,
-		UsageBatchID:    in.UsageBatchID,
-		TenantSeq:       in.TenantSeq,
-		OccurredAt:      in.OccurredAt,
-		ReservationID:   in.ReservationID,
-		CeilingCredits:  in.CeilingCredits,
-		RateVersion:     in.RateVersion,
-		BillingMode:     in.BillingMode,
-		PayloadHash:     in.PayloadHash,
-		SettlementScope: aiusage.SettlementScopeFormal,
-		Status:          aiusage.BatchStatusSettled,
-		TotalCredits:    totalCredits,
-		LineItems:       in.LineItems,
-		Allocations:     allocations,
-		OutboxEvents: []aiusage.OutboxEvent{
-			{
-				EventType: "ai_usage.batch.settled",
-				Payload:   map[string]any{"usage_batch_id": in.UsageBatchID},
-			},
-		},
-	}
-
-	// Attach rating snapshots from the resolved lines.
-	settled.RatingSnapshots = resolvedLinesToSnapshots(resolved.Lines)
-
-	result, err := s.store.Store(ctx, settled)
-	if err != nil {
-		return nil, fmt.Errorf("service: persist failed: %w", err)
+		return nil, err
 	}
 
 	return result, nil
 }
 
-// Correct reverses a previously settled batch by creating linked negative
-// allocations and a compensated batch entry.
+// Correct reverses a previously settled batch by fetching the original
+// allocations, calling the collector's CorrectCollectedAccrued, and persisting
+// the corrected batch — all within one customer-locked transaction.
 func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage.BatchSettlementResult, error) {
 	ctx, span := s.tracer.Start(ctx, "aiusage.service.Correct")
 	defer span.End()
@@ -170,39 +246,80 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 		return nil, err
 	}
 
-	correctionBatchID := "corr-" + in.OriginalBatchID
-
-	settled := aiusage.SettledBatch{
-		Namespace:       in.Namespace,
-		CustomerID:      in.CustomerID,
-		SubjectID:       in.SubjectID,
-		UsageBatchID:    correctionBatchID,
-		TenantSeq:       in.TenantSeq,
-		PayloadHash:     in.PayloadHash,
-		BillingMode:     aiusage.BillingModeComponent,
-		SettlementScope: aiusage.SettlementScopeFormal,
-		Status:          aiusage.BatchStatusCompensated,
-		TotalCredits:    0,
-		OutboxEvents: []aiusage.OutboxEvent{
-			{
-				EventType: "ai_usage.batch.corrected",
-				Payload: map[string]any{
-					"original_batch_id": in.OriginalBatchID,
-					"reason":            in.Reason,
-				},
-			},
-		},
+	profile, err := s.profileResolver.Resolve(ctx, in.Namespace, in.CustomerID)
+	if err != nil {
+		return nil, fmt.Errorf("service: resolve customer profile: %w", err)
 	}
 
-	result, err := s.store.Store(ctx, settled)
+	var result *aiusage.BatchSettlementResult
+
+	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(tx adapter.TxAdapter) error {
+		// Fetch original allocations.
+		originalAllocs, err := s.allocFetcher.GetAllocations(ctx, in.Namespace, in.CustomerID, in.OriginalBatchID)
+		if err != nil {
+			return fmt.Errorf("fetch original allocations: %w", err)
+		}
+
+		// Reverse through the collector.
+		reversing, err := s.settlement.Correct(ctx, tx, settlement.CorrectionInput{
+			Namespace:           in.Namespace,
+			CustomerID:          in.CustomerID,
+			SubjectID:           in.SubjectID,
+			OriginalBatchID:     in.OriginalBatchID,
+			BookedAt:             time.Now().UTC(),
+			OriginalAllocations: originalAllocs,
+			ChargeID:            profile.ChargeID,
+			Currency:            profile.Currency,
+			FeatureKey:          profile.FeatureKey,
+		})
+		if err != nil {
+			return err
+		}
+
+		correctionBatchID := "corr-" + in.OriginalBatchID
+
+		settled := aiusage.SettledBatch{
+			Namespace:       in.Namespace,
+			CustomerID:      in.CustomerID,
+			SubjectID:       in.SubjectID,
+			UsageBatchID:    correctionBatchID,
+			TenantSeq:       in.TenantSeq,
+			PayloadHash:     in.PayloadHash,
+			BillingMode:     aiusage.BillingModeComponent,
+			SettlementScope: aiusage.SettlementScopeFormal,
+			Status:          aiusage.BatchStatusCompensated,
+			TotalCredits:    0,
+			Allocations:     reversing,
+			OutboxEvents: []aiusage.OutboxEvent{
+				{
+					EventType: "ai_usage.batch.corrected",
+					Payload: map[string]any{
+						"original_batch_id": in.OriginalBatchID,
+						"reason":            in.Reason,
+					},
+				},
+			},
+		}
+
+		batch, _, err := tx.CreateSettledBatch(ctx, settled)
+		if err != nil {
+			return fmt.Errorf("persist correction batch: %w", err)
+		}
+
+		result = &aiusage.BatchSettlementResult{
+			BatchID:          batch.UsageBatchID,
+			Status:           aiusage.BatchStatusCompensated,
+			CoveredTenantSeq: batch.TenantSeq,
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("service: correction persist failed: %w", err)
+		return nil, err
 	}
 
 	return result, nil
 }
 
-// resolvedLinesToSnapshots converts pricing.ResolvedLine to RatingSnapshot.
 func resolvedLinesToSnapshots(lines []pricing.ResolvedLine) []aiusage.RatingSnapshot {
 	snapshots := make([]aiusage.RatingSnapshot, 0, len(lines))
 	for _, l := range lines {
@@ -219,5 +336,4 @@ func resolvedLinesToSnapshots(lines []pricing.ResolvedLine) []aiusage.RatingSnap
 	return snapshots
 }
 
-// Compile-time interface check.
 var _ Service = (*svc)(nil)

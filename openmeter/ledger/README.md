@@ -119,3 +119,27 @@ balance result is not necessarily the set of sources allocable to every charge.
 - `historical.Ledger` enforces transaction invariance, not post-transaction
   account-balance constraints. Product-specific bounds, including when a
   balance may go negative, belong to higher-level flows and collectors.
+
+## AI Usage Settlement Integration
+
+The `aiusage/settlement` package consumes `collector.Service` for credit
+allocation when settling AI usage batches. The flow is:
+
+1. The application service (`aiusage/service`) wraps the entire settle
+   operation in `adapter.WithCustomerLock`, acquiring a per-customer advisory
+   lock.
+2. Inside that transaction, `settlement.Service.AllocateAndBook` calls
+   `collector.CollectToAccrued`, which performs source selection against live
+   FBO balance, within-category burn ordering (credit-priority,
+   feature-restriction, expiry, stable ledger cursor), account locking,
+   breakage management, and ledger transaction group commit.
+3. The returned `creditrealization.CreateAllocationInputs` carry the ledger
+   transaction group ID as provenance. The settlement service maps these to
+   `aiusage.Allocation` records with `LedgerProvenance`.
+4. Batch persistence, watermark advancement, and outbox append share the same
+   transaction as the collector call.
+
+Shadow scope batches skip the collector entirely; zero ledger, receivable, or
+invoice rows are written. Corrections call `collector.CorrectCollectedAccrued`
+with the original allocation provenance, which unwinds the actual original
+ledger entries rather than synthesising reversals.

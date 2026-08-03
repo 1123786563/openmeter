@@ -247,8 +247,17 @@ type RatingSnapshot struct {
 // LedgerEntryRef references a grant that was burned during settlement.
 type LedgerEntryRef struct {
 	GrantID  string  `json:"grant_id"`
-	Amount   float64 `json:"amount"`
+	Amount   int64   `json:"amount"`
 	Priority uint8   `json:"priority"`
+}
+
+// LedgerProvenance links an allocation back to the original ledger transaction
+// group that was committed by the collector. This lets corrections unwind the
+// exact entries rather than synthesizing reversals.
+type LedgerProvenance struct {
+	TransactionGroupID string `json:"transaction_group_id"`
+	RealizationID      string `json:"realization_id,omitempty"`
+	SortHint           int    `json:"sort_hint,omitempty"`
 }
 
 // FundingSource identifies the origin of credits consumed during settlement.
@@ -295,9 +304,10 @@ func (s SettlementScope) Validate() error {
 // Allocation records the Credit deduction from a single funding source (grant).
 type Allocation struct {
 	GrantID       string        `json:"grant_id"`
-	Amount        float64       `json:"amount"`
+	Amount        int64         `json:"amount"`
 	Priority      uint8         `json:"priority"`
 	FundingSource FundingSource `json:"funding_source"`
+	Ledger        LedgerProvenance `json:"ledger,omitempty"`
 }
 
 // OutboxEvent is a transactional outbox record published after commit.
