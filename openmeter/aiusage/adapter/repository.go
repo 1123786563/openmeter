@@ -8,6 +8,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/predicate"
 )
 
 type repository struct {
@@ -107,12 +108,18 @@ func (r *repository) CreateBatch(ctx context.Context, batch aiusage.AIUsageBatch
 }
 
 func (r *repository) GetBatchByBatchID(ctx context.Context, namespace, customerID, usageBatchID string) (*aiusage.AIUsageBatch, error) {
+	predicates := []predicate.AIUsageBatch{
+		aiusagebatch.Namespace(namespace),
+		aiusagebatch.UsageBatchID(usageBatchID),
+	}
+	// When customerID is empty (route has no customer scope), look up by
+	// namespace + batch_id only — the usage_batch_id is globally unique.
+	if customerID != "" {
+		predicates = append(predicates, aiusagebatch.CustomerIDEQ(customerID))
+	}
+
 	ent, err := r.db.AIUsageBatch.Query().
-		Where(
-			aiusagebatch.Namespace(namespace),
-			aiusagebatch.CustomerIDEQ(customerID),
-			aiusagebatch.UsageBatchID(usageBatchID),
-		).
+		Where(predicates...).
 		WithLineItems().
 		WithRatingSnapshots().
 		Only(ctx)

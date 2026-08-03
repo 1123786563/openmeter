@@ -39,7 +39,6 @@ func (h *handler) GetAiUsageBatch() GetAiUsageBatchHandler {
 			if err != nil {
 				return GetAiUsageBatchRequest{}, err
 			}
-			return GetAiUsageBatchRequest{Namespace: ns, BatchID: params.BatchID}, nil
 			return GetAiUsageBatchRequest{Namespace: ns, CustomerID: params.CustomerID, BatchID: params.BatchID}, nil
 		},
 		func(ctx context.Context, req GetAiUsageBatchRequest) (GetAiUsageBatchResponse, error) {

@@ -174,8 +174,8 @@ func (r *entOutboxRepository) Claim(ctx context.Context, ownerID string, batchSi
 	now := time.Now().UTC()
 	leaseExpiry := now.Add(leaseDuration)
 
-	// Select unpublished, non-dead-lettered rows whose lease has expired.
-	rows, err := r.db.AIUsageOutbox.Query().
+	// Step 1: Select candidate IDs (unpublished, non-dead-lettered, lease expired).
+	ids, err := r.db.AIUsageOutbox.Query().
 		Where(
 			aiusageoutbox.Published(false),
 			aiusageoutbox.DeadLettered(false),
@@ -186,23 +186,50 @@ func (r *entOutboxRepository) Claim(ctx context.Context, ownerID string, batchSi
 		).
 		Order(entdb.Asc(aiusageoutbox.FieldCreatedAt)).
 		Limit(batchSize).
+		IDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("outbox claim: select candidates: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	// Step 2: Atomically claim via conditional bulk UPDATE. The WHERE clause
+	// re-checks the same guard predicates, so if another worker claimed a row
+	// between Step 1 and Step 2, the UPDATE affects 0 rows for that ID.
+	_, err = r.db.AIUsageOutbox.Update().
+		Where(
+			aiusageoutbox.IDIn(ids...),
+			aiusageoutbox.Published(false),
+			aiusageoutbox.DeadLettered(false),
+			aiusageoutbox.Or(
+				aiusageoutbox.LeasedUntilIsNil(),
+				aiusageoutbox.LeasedUntilLTE(now),
+			),
+		).
+		SetOwner(ownerID).
+		AddClaimCount(1).
+		SetLeasedUntil(leaseExpiry).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("outbox claim: atomic update: %w", err)
+	}
+
+	// Step 3: Read back the rows this worker now owns with this lease.
+	rows, err := r.db.AIUsageOutbox.Query().
+		Where(
+			aiusageoutbox.OwnerEQ(ownerID),
+			aiusageoutbox.LeasedUntilEQ(leaseExpiry),
+			aiusageoutbox.Published(false),
+		).
+		Order(entdb.Asc(aiusageoutbox.FieldCreatedAt)).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("outbox claim: query: %w", err)
+		return nil, fmt.Errorf("outbox claim: read claimed: %w", err)
 	}
 
 	result := make([]worker.OutboxRow, 0, len(rows))
 	for _, row := range rows {
-		newClaimCount := row.ClaimCount + 1
-		_, err := row.Update().
-			SetOwner(ownerID).
-			SetClaimCount(newClaimCount).
-			SetLeasedUntil(leaseExpiry).
-			Save(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("outbox claim: update row %s: %w", row.ID, err)
-		}
-
 		result = append(result, worker.OutboxRow{
 			ID:          row.ID,
 			Namespace:   row.Namespace,
@@ -211,7 +238,7 @@ func (r *entOutboxRepository) Claim(ctx context.Context, ownerID string, batchSi
 			EventType:   row.EventType,
 			Payload:     row.Payload,
 			Owner:       ownerID,
-			ClaimCount:  newClaimCount,
+			ClaimCount:  row.ClaimCount,
 			LeasedUntil: leaseExpiry,
 			CreatedAt:   row.CreatedAt,
 		})
@@ -220,13 +247,16 @@ func (r *entOutboxRepository) Claim(ctx context.Context, ownerID string, batchSi
 	return result, nil
 }
 
-func (r *entOutboxRepository) MarkPublished(ctx context.Context, ids []string) error {
+func (r *entOutboxRepository) MarkPublished(ctx context.Context, ownerID string, ids []string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 	now := time.Now().UTC()
 	_, err := r.db.AIUsageOutbox.Update().
-		Where(aiusageoutbox.IDIn(ids...)).
+		Where(
+			aiusageoutbox.IDIn(ids...),
+			aiusageoutbox.OwnerEQ(ownerID),
+		).
 		SetPublished(true).
 		SetPublishedAt(now).
 		SetOwner("").

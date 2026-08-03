@@ -67,11 +67,15 @@ func (r *memRepo) Claim(_ context.Context, ownerID string, batchSize int, leaseD
 	return claimed, nil
 }
 
-func (r *memRepo) MarkPublished(_ context.Context, ids []string) error {
+func (r *memRepo) MarkPublished(_ context.Context, ownerID string, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for _, id := range ids {
 		if entry, ok := r.rows[id]; ok {
+			// Guard: only mark rows owned by the requesting worker.
+			if entry.row.Owner != ownerID {
+				continue
+			}
 			entry.published = true
 		}
 	}

@@ -60,7 +60,7 @@ type OutboxRepository interface {
 	Claim(ctx context.Context, ownerID string, batchSize int, leaseDuration time.Duration) ([]OutboxRow, error)
 
 	// MarkPublished marks the given row IDs as successfully published.
-	MarkPublished(ctx context.Context, ids []string) error
+	MarkPublished(ctx context.Context, ownerID string, ids []string) error
 
 	// ReleaseLease clears the lease on the given row IDs, returning them to the
 	// claimable pool. Only rows owned by ownerID are released, preventing
@@ -344,7 +344,7 @@ func (w *Worker) processBatch(ctx context.Context) error {
 	for i, row := range publishable {
 		publishedIDs[i] = row.ID
 	}
-	if err := w.repo.MarkPublished(ctx, publishedIDs); err != nil {
+	if err := w.repo.MarkPublished(ctx, w.ownerID, publishedIDs); err != nil {
 		return fmt.Errorf("worker: mark published: %w", err)
 	}
 
