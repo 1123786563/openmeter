@@ -225,6 +225,8 @@ type BatchSettlementResult struct {
 
 // IngestBatchInput is the API input for submitting a Canonical Usage Batch.
 type IngestBatchInput struct {
+	ProviderManaged bool `json:"provider_managed"`
+
 	Namespace      string           `json:"namespace"`
 	CustomerID     string           `json:"customer_id"`
 	SubjectID      string           `json:"subject_id"`
@@ -237,6 +239,31 @@ type IngestBatchInput struct {
 	BillingMode    BillingMode      `json:"billing_mode"`
 	PayloadHash    string           `json:"payload_hash"`
 	LineItems      []UsageLineItem  `json:"line_items"`
+}
+
+// UsageLineInput is a normalized usage line for pricing resolution.
+// Unlike UsageLineItem, this is the input to the pricing service before
+// merging and rating. It carries a CanonicalLineIndex for stable ceiling
+// allocation when the total exceeds the reservation ceiling.
+type UsageLineInput struct {
+	// ResourceCode identifies the billable resource type.
+	ResourceCode ResourceCode `json:"resource_code"`
+
+	// Quantity is the raw consumption amount (tokens, calls, seconds, etc.).
+	Quantity int64 `json:"quantity"`
+
+	// Provider is the LLM vendor (e.g., "openai", "anthropic").
+	Provider string `json:"provider"`
+
+	// Model is the canonical model identifier.
+	Model string `json:"model"`
+
+	// Dimensions carries optional resource-specific attributes.
+	Dimensions map[string]string `json:"dimensions,omitempty"`
+
+	// CanonicalLineIndex is the stable position used for deterministic
+	// ceiling allocation when the total exceeds the reservation.
+	CanonicalLineIndex int `json:"canonical_line_index"`
 }
 
 func (i IngestBatchInput) Validate() error {
