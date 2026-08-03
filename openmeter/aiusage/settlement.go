@@ -66,13 +66,17 @@ func (e *settlementEngine) Settle(ctx context.Context, batch AIUsageBatch, snaps
 	ctx, span := e.Tracer.Start(ctx, "aiusage.Settle")
 	defer span.End()
 
-	// Step 1: Calculate total credits from rating snapshots.
+	// Step 1: Calculate total credits from rating snapshots or ceiling (bundle mode).
 	totalCredits := int64(0)
 	for _, s := range snapshots {
 		totalCredits += s.Credits
 	}
+	// Bundle mode: ceiling IS the total charge.
+	if batch.BillingMode == BillingModeBundle && ceiling != nil {
+		totalCredits = *ceiling
+	}
 
-	// Step 2: Apply ceiling if set.
+	// Step 2: Apply ceiling if set (component mode).
 	ceilingApplied := false
 	if ceiling != nil && totalCredits > *ceiling {
 		totalCredits = *ceiling
