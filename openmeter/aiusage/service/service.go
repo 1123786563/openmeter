@@ -53,14 +53,14 @@ type CustomerProfile struct {
 
 // Config wires the application service.
 type Config struct {
-	Adapter            adapter.Adapter
-	Pricing            PricingResolver
-	Settlement         settlement.Service
-	ProfileResolver    CustomerProfileResolver
-	ScopeResolver      ScopeResolver
-	AllocationFetcher  AllocationFetcher
-	Logger             *slog.Logger
-	Tracer             trace.Tracer
+	Adapter           adapter.Adapter
+	Pricing           PricingResolver
+	Settlement        settlement.Service
+	ProfileResolver   CustomerProfileResolver
+	ScopeResolver     ScopeResolver
+	AllocationFetcher AllocationFetcher
+	Logger            *slog.Logger
+	Tracer            trace.Tracer
 }
 
 // AllocationFetcher reads persisted allocations for a batch (used by Correct
@@ -199,7 +199,7 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 			Allocations:     allocations,
 			OutboxEvents: []aiusage.OutboxEvent{
 				{
-					EventType: "ai_usage.batch.settled",
+					EventType: aiusage.EventBatchSettled,
 					Payload:   map[string]any{"usage_batch_id": in.UsageBatchID},
 				},
 			},
@@ -266,7 +266,7 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 			CustomerID:          in.CustomerID,
 			SubjectID:           in.SubjectID,
 			OriginalBatchID:     in.OriginalBatchID,
-			BookedAt:             time.Now().UTC(),
+			BookedAt:            time.Now().UTC(),
 			OriginalAllocations: originalAllocs,
 			ChargeID:            profile.ChargeID,
 			Currency:            profile.Currency,
@@ -292,7 +292,7 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 			Allocations:     reversing,
 			OutboxEvents: []aiusage.OutboxEvent{
 				{
-					EventType: "ai_usage.batch.corrected",
+					EventType: aiusage.EventBatchCorrected,
 					Payload: map[string]any{
 						"original_batch_id": in.OriginalBatchID,
 						"reason":            in.Reason,

@@ -58,6 +58,10 @@ delivery or leaves delivery status unreconcilable.
 | `entitlements.reset` | entitlement reset snapshot | optional feature scope |
 | `invoice.created` | billing standard-invoice created event | every active rule of the type |
 | `invoice.updated` | billing standard-invoice updated event | every active rule of the type |
+| `ai_usage.batch.settled` | AI usage batch settled in the outbox | emitted when a usage batch is formally settled; payload includes `usage_batch_id` |
+| `ai_usage.batch.corrected` | AI usage batch correction in the outbox | emitted when a settled batch is reversed; payload includes `original_batch_id` and `reason` |
+| `credit.balance.changed` | credit grant burn, top-up, or expiry | emitted when a customer's prepaid or enterprise credit balance changes |
+| `runtime_authorization.updated` | signed runtime authorization package regenerated | emitted when a new signed authorization package is issued; signals consumers to refresh cached authorization |
 
 No active matching rule means no notification event is persisted. Invoice and
 balance-threshold rules are evaluated independently, so matching rules can
