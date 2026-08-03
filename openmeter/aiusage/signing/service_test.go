@@ -162,3 +162,38 @@ func TestGenerateKeyPair(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.Verify(signed))
 }
+
+func TestVerifyRejectsExpiredPackage(t *testing.T) {
+	signer := newTestSigner(t, "key-expiry")
+
+	pkg := validAuthorizationPackage()
+	// Set ExpiresAt to the past.
+	pkg.ExpiresAt = time.Now().Add(-1 * time.Minute)
+	signed, err := signer.Sign(pkg)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, signer.Verify(signed), signing.ErrPackageExpired)
+}
+
+func TestNegativeTTLFails(t *testing.T) {
+	kp, err := deterministicKeyPair("neg-ttl")
+	require.NoError(t, err)
+
+	_, err = signing.New(signing.Config{
+		CurrentKey: kp,
+		TTL:        -1 * time.Minute,
+	})
+	require.Error(t, err, "negative TTL must fail validation")
+}
+
+func TestVerifyUnknownKeyIDReturnsNoMatchingKey(t *testing.T) {
+	signer := newTestSigner(t, "key-known")
+
+	pkg := validAuthorizationPackage()
+	signed, err := signer.Sign(pkg)
+	require.NoError(t, err)
+
+	// Tamper the key_id to one the signer does not hold.
+	signed.KeyID = "key-nonexistent"
+	require.ErrorIs(t, signer.Verify(signed), signing.ErrNoMatchingKey)
+}

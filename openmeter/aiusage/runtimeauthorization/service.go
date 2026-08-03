@@ -16,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/signing"
 )
 
@@ -68,6 +69,13 @@ type SnapshotVersionProvider interface {
 	Next(ctx context.Context) (int64, error)
 }
 
+// OutboxWriter appends transactional outbox events atomically. When non-nil,
+// the authorization service emits a runtime_authorization.updated event after
+// each successful signing.
+type OutboxWriter interface {
+	Append(ctx context.Context, events []aiusage.OutboxEvent) error
+}
+
 // Clock abstracts time.Now for testability.
 type Clock interface {
 	Now() time.Time
@@ -81,6 +89,7 @@ type Config struct {
 	CoveredSeq      CoveredSeqReader
 	SnapshotVersion SnapshotVersionProvider
 	Signer          signing.Signer
+	Outbox          OutboxWriter
 	Clock           Clock
 	Namespace       string
 	Logger          *slog.Logger
@@ -121,6 +130,7 @@ type service struct {
 	coveredSeq   CoveredSeqReader
 	snapshotVer  SnapshotVersionProvider
 	signer       signing.Signer
+	outbox       OutboxWriter
 	clock        Clock
 	namespace    string
 	logger       *slog.Logger
@@ -147,6 +157,7 @@ func New(cfg Config) (Service, error) {
 		coveredSeq:   cfg.CoveredSeq,
 		snapshotVer:  cfg.SnapshotVersion,
 		signer:       cfg.Signer,
+		outbox:       cfg.Outbox,
 		clock:        clk,
 		namespace:    cfg.Namespace,
 		logger:       logger,
@@ -217,6 +228,23 @@ func (s *service) Get(ctx context.Context, customerID string, subjectKeys []stri
 		return signing.AuthorizationPackage{}, fmt.Errorf("runtimeauthorization: sign package: %w", err)
 	}
 
+	// Emit a runtime_authorization.updated outbox event so downstream consumers
+	// can refresh their cached authorization snapshot.
+	if s.outbox != nil {
+		if err := s.outbox.Append(ctx, []aiusage.OutboxEvent{
+			{
+				EventType: aiusage.EventRuntimeAuthorizationUpdated,
+				Payload: map[string]any{
+					"billing_customer_id": customerID,
+					"snapshot_version":    signed.SnapshotVersion,
+					"expires_at":          signed.ExpiresAt,
+				},
+			},
+		}); err != nil {
+			return signing.AuthorizationPackage{}, fmt.Errorf("runtimeauthorization: append outbox event: %w", err)
+		}
+	}
+
 	return signed, nil
 }
 
@@ -233,3 +261,94 @@ type systemClock struct{}
 func (systemClock) Now() time.Time { return time.Now().UTC() }
 
 var _ Service = (*service)(nil)
+
+// SubjectKeyResolver resolves the subject keys for a billing customer. When a
+// consumed event triggers authorization regeneration, this resolves which
+// subjects the new package must cover.
+type SubjectKeyResolver interface {
+	ResolveSubjectKeys(ctx context.Context, namespace, customerID string) ([]string, error)
+}
+
+// EventHandler consumes domain events (credit.grant.expired,
+// subscription.updated) and triggers regeneration of the signed runtime
+// authorization package. This is the consumption path: when credit or
+// subscription state changes, a fresh package must be issued.
+type EventHandler struct {
+	svc         Service
+	subjectKeys SubjectKeyResolver
+	namespace   string
+	logger      *slog.Logger
+}
+
+// EventHandlerConfig wires the event handler.
+type EventHandlerConfig struct {
+	Service     Service
+	SubjectKeys SubjectKeyResolver
+	Namespace   string
+	Logger      *slog.Logger
+}
+
+// NewEventHandler creates an EventHandler that listens for consumed events
+// and triggers authorization regeneration.
+func NewEventHandler(cfg EventHandlerConfig) (*EventHandler, error) {
+	if cfg.Service == nil {
+		return nil, fmt.Errorf("runtimeauthorization: service is required for event handler")
+	}
+	if cfg.SubjectKeys == nil {
+		return nil, fmt.Errorf("runtimeauthorization: subject key resolver is required for event handler")
+	}
+	logger := cfg.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &EventHandler{
+		svc:         cfg.Service,
+		subjectKeys: cfg.SubjectKeys,
+		namespace:   cfg.Namespace,
+		logger:      logger,
+	}, nil
+}
+
+// Handle processes a single consumed event. It extracts the customer_id from
+// the payload, resolves subject keys, and calls Service.Get to produce a fresh
+// signed authorization package. Unknown event types are ignored.
+func (h *EventHandler) Handle(ctx context.Context, eventType string, payload map[string]any) error {
+	ctx, span := h.startSpan(ctx, "runtimeauthorization.EventHandler.Handle")
+	defer span.End()
+
+	switch eventType {
+	case aiusage.EventConsumedCreditGrantExpired, aiusage.EventConsumedSubscriptionUpdated:
+		// continue
+	default:
+		h.logger.DebugContext(ctx, "runtimeauthorization: ignoring non-trigger event", "event_type", eventType)
+		return nil
+	}
+
+	customerID, _ := payload["customer_id"].(string)
+	if customerID == "" {
+		return fmt.Errorf("runtimeauthorization: event handler: payload missing customer_id")
+	}
+
+	subjectKeys, err := h.subjectKeys.ResolveSubjectKeys(ctx, h.namespace, customerID)
+	if err != nil {
+		return fmt.Errorf("runtimeauthorization: event handler: resolve subject keys: %w", err)
+	}
+
+	pkg, err := h.svc.Get(ctx, customerID, subjectKeys)
+	if err != nil {
+		return fmt.Errorf("runtimeauthorization: event handler: regenerate package: %w", err)
+	}
+
+	h.logger.InfoContext(ctx, "runtimeauthorization: regenerated package from consumed event",
+		"event_type", eventType,
+		"customer_id", customerID,
+		"snapshot_version", pkg.SnapshotVersion)
+
+	return nil
+}
+
+func (h *EventHandler) startSpan(ctx context.Context, name string) (context.Context, trace.Span) {
+	return ctx, trace.SpanFromContext(ctx)
+}
+
+var _ *EventHandler // unused; EventHandler is constructed via NewEventHandler

@@ -34,6 +34,7 @@ type OutboxRow struct {
 	SubjectID   string
 	EventType   string
 	Payload     map[string]any
+	Owner       string    // worker instance ID that holds the current lease
 	ClaimCount  int       // number of times this row has been claimed
 	LeasedUntil time.Time // expiry of the current lease
 	CreatedAt   time.Time
@@ -54,15 +55,17 @@ type PublishEvent struct {
 // (row-level lock or conditional update).
 type OutboxRepository interface {
 	// Claim atomically leases up to batchSize unpublished (or lease-expired)
-	// rows, setting owner and leased_until. Returns the claimed rows.
-	Claim(ctx context.Context, batchSize int, leaseDuration time.Duration) ([]OutboxRow, error)
+	// rows, setting owner=ownerID and leased_until=now+leaseDuration. Returns
+	// the claimed rows with Owner populated.
+	Claim(ctx context.Context, ownerID string, batchSize int, leaseDuration time.Duration) ([]OutboxRow, error)
 
 	// MarkPublished marks the given row IDs as successfully published.
 	MarkPublished(ctx context.Context, ids []string) error
 
 	// ReleaseLease clears the lease on the given row IDs, returning them to the
-	// claimable pool. Called when publishing fails so the row can be retried.
-	ReleaseLease(ctx context.Context, ids []string) error
+	// claimable pool. Only rows owned by ownerID are released, preventing
+	// cross-worker lease clobbering.
+	ReleaseLease(ctx context.Context, ownerID string, ids []string) error
 
 	// MarkDeadLetter marks a row as permanently failed after the maximum claim
 	// count is exceeded.
@@ -95,6 +98,7 @@ type Config struct {
 	Repo          OutboxRepository
 	Projections   []Projection
 	DeadLetter    DeadLetterHandler
+	OwnerID       string // unique worker instance ID for lease ownership
 	BatchSize     int
 	LeaseDuration time.Duration
 	MaxClaimCount int
@@ -110,6 +114,11 @@ const (
 	defaultPollInterval  = 5 * time.Second
 )
 
+// generateOwnerID returns a unique worker instance ID for lease ownership.
+func generateOwnerID() string {
+	return fmt.Sprintf("worker-%d", time.Now().UnixNano())
+}
+
 func (c Config) withDefaults() Config {
 	out := c
 	if out.BatchSize <= 0 {
@@ -123,6 +132,9 @@ func (c Config) withDefaults() Config {
 	}
 	if out.PollInterval <= 0 {
 		out.PollInterval = defaultPollInterval
+	}
+	if out.OwnerID == "" {
+		out.OwnerID = generateOwnerID()
 	}
 	if out.Logger == nil {
 		out.Logger = slog.Default()
@@ -145,6 +157,7 @@ type Worker struct {
 	repo          OutboxRepository
 	projections   []Projection
 	deadLetter    DeadLetterHandler
+	ownerID       string
 	batchSize     int
 	leaseDuration time.Duration
 	maxClaimCount int
@@ -168,6 +181,7 @@ func New(cfg Config) (*Worker, error) {
 		repo:          cfg.Repo,
 		projections:   cfg.Projections,
 		deadLetter:    cfg.DeadLetter,
+		ownerID:       cfg.OwnerID,
 		batchSize:     cfg.BatchSize,
 		leaseDuration: cfg.LeaseDuration,
 		maxClaimCount: cfg.MaxClaimCount,
@@ -178,6 +192,9 @@ func New(cfg Config) (*Worker, error) {
 		doneCh:        make(chan struct{}),
 	}, nil
 }
+
+// OwnerID returns the worker's unique instance ID used for lease ownership.
+func (w *Worker) OwnerID() string { return w.ownerID }
 
 // Start launches the poll loop in a background goroutine. It returns immediately.
 // Call Stop to shut down.
@@ -245,7 +262,7 @@ func (w *Worker) processBatch(ctx context.Context) error {
 	ctx, span := w.startSpan(ctx, "worker.processBatch")
 	defer span.End()
 
-	rows, err := w.repo.Claim(ctx, w.batchSize, w.leaseDuration)
+	rows, err := w.repo.Claim(ctx, w.ownerID, w.batchSize, w.leaseDuration)
 	if err != nil {
 		return fmt.Errorf("worker: claim rows: %w", err)
 	}
@@ -315,7 +332,7 @@ func (w *Worker) processBatch(ctx context.Context) error {
 		for _, row := range publishable {
 			failedIDs = append(failedIDs, row.ID)
 		}
-		if err := w.repo.ReleaseLease(ctx, failedIDs); err != nil {
+		if err := w.repo.ReleaseLease(ctx, w.ownerID, failedIDs); err != nil {
 			w.logger.ErrorContext(ctx, "worker: release lease after publish failure",
 				"err", err)
 		}

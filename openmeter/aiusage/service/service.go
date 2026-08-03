@@ -202,6 +202,14 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 					EventType: aiusage.EventBatchSettled,
 					Payload:   map[string]any{"usage_batch_id": in.UsageBatchID},
 				},
+				{
+					EventType: aiusage.EventCreditBalanceChanged,
+					Payload: map[string]any{
+						"usage_batch_id": in.UsageBatchID,
+						"customer_id":    in.CustomerID,
+						"credits_burned": totalCredits,
+					},
+				},
 			},
 		}
 		settled.RatingSnapshots = resolvedLinesToSnapshots(resolved.Lines)

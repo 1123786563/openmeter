@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/signing"
 )
@@ -62,9 +64,38 @@ func (m *mockSnapshotVersion) Next(_ context.Context) (int64, error) {
 	return m.next, nil
 }
 
+type mockSubjectKeyResolver struct {
+	keys []string
+	err  error
+}
+
+func (m *mockSubjectKeyResolver) ResolveSubjectKeys(_ context.Context, _, _ string) ([]string, error) {
+	return m.keys, m.err
+}
+
 type mockClock struct{ t time.Time }
 
 func (m *mockClock) Now() time.Time { return m.t }
+
+type mockOutboxWriter struct {
+	mu     sync.Mutex
+	events []aiusage.OutboxEvent
+}
+
+func (m *mockOutboxWriter) Append(_ context.Context, events []aiusage.OutboxEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.events = append(m.events, events...)
+	return nil
+}
+
+func (m *mockOutboxWriter) Events() []aiusage.OutboxEvent {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := make([]aiusage.OutboxEvent, len(m.events))
+	copy(cp, m.events)
+	return cp
+}
 
 // deterministicSigner builds a reproducible signer for tests.
 func deterministicSigner(t *testing.T, keyID string) signing.Signer {
@@ -213,5 +244,174 @@ func TestEmptyCustomerIDRejected(t *testing.T) {
 	svc, _ := newTestService(t)
 
 	_, err := svc.Get(t.Context(), "", []string{"subj-1"})
+	require.Error(t, err)
+}
+
+func TestGetEmitsRuntimeAuthorizationUpdated(t *testing.T) {
+	clk := &mockClock{t: time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)}
+	outbox := &mockOutboxWriter{}
+	snapVer := &mockSnapshotVersion{}
+
+	svc, err := runtimeauthorization.New(runtimeauthorization.Config{
+		BalanceReader: &mockBalanceReader{
+			balance: runtimeauthorization.CreditBalance{
+				SpendableCredits:           5000,
+				EnterpriseAvailableCredits: 10000,
+			},
+		},
+		Subscription: &mockSubscriptionReader{
+			info: runtimeauthorization.SubscriptionInfo{
+				PlanCode:           "enterprise",
+				SubscriptionCode:   "sub-001",
+				SubscriptionStatus: "active",
+				EntitlementCodes:   []string{"ent-x"},
+			},
+		},
+		RatePackage:     &mockRatePackageReader{},
+		CoveredSeq:      &mockCoveredSeqReader{seq: 1},
+		SnapshotVersion: snapVer,
+		Signer:          deterministicSigner(t, "key-outbox"),
+		Outbox:          outbox,
+		Clock:           clk,
+		Namespace:       "ns",
+	})
+	require.NoError(t, err)
+
+	pkg, err := svc.Get(t.Context(), "cust-outbox", []string{"subj-1"})
+	require.NoError(t, err)
+
+	events := outbox.Events()
+	require.Len(t, events, 1)
+	require.Equal(t, aiusage.EventRuntimeAuthorizationUpdated, events[0].EventType)
+	require.Equal(t, "cust-outbox", events[0].Payload["billing_customer_id"])
+	require.Equal(t, pkg.SnapshotVersion, events[0].Payload["snapshot_version"])
+}
+
+func newHandlerTestService(t *testing.T, snapVer *mockSnapshotVersion) (runtimeauthorization.Service, *mockOutboxWriter) {
+	t.Helper()
+	outbox := &mockOutboxWriter{}
+	svc, err := runtimeauthorization.New(runtimeauthorization.Config{
+		BalanceReader: &mockBalanceReader{
+			balance: runtimeauthorization.CreditBalance{
+				SpendableCredits:           5000,
+				EnterpriseAvailableCredits: 10000,
+			},
+		},
+		Subscription: &mockSubscriptionReader{
+			info: runtimeauthorization.SubscriptionInfo{
+				PlanCode:         "enterprise",
+				SubscriptionCode: "sub-001",
+				EntitlementCodes: []string{"ent-x"},
+			},
+		},
+		RatePackage:     &mockRatePackageReader{},
+		CoveredSeq:      &mockCoveredSeqReader{seq: 1},
+		SnapshotVersion: snapVer,
+		Signer:          deterministicSigner(t, "key-handler"),
+		Outbox:          outbox,
+		Clock:           &mockClock{t: time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)},
+		Namespace:       "ns",
+	})
+	require.NoError(t, err)
+	return svc, outbox
+}
+
+func TestEventHandlerCreditGrantExpired(t *testing.T) {
+	snapVer := &mockSnapshotVersion{}
+	svc, outbox := newHandlerTestService(t, snapVer)
+
+	handler, err := runtimeauthorization.NewEventHandler(runtimeauthorization.EventHandlerConfig{
+		Service:     svc,
+		SubjectKeys: &mockSubjectKeyResolver{keys: []string{"subj-1", "subj-2"}},
+		Namespace:   "ns",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, handler.Handle(t.Context(), aiusage.EventConsumedCreditGrantExpired, map[string]any{
+		"customer_id": "cust-handler",
+	}))
+
+	// A new signed package was generated and an outbox event emitted.
+	require.Equal(t, 1, snapVer.calls, "snapshot version provider called once")
+	events := outbox.Events()
+	require.Len(t, events, 1)
+	require.Equal(t, aiusage.EventRuntimeAuthorizationUpdated, events[0].EventType)
+}
+
+func TestEventHandlerSubscriptionUpdated(t *testing.T) {
+	snapVer := &mockSnapshotVersion{}
+	svc, outbox := newHandlerTestService(t, snapVer)
+
+	handler, err := runtimeauthorization.NewEventHandler(runtimeauthorization.EventHandlerConfig{
+		Service:     svc,
+		SubjectKeys: &mockSubjectKeyResolver{keys: []string{"subj-3"}},
+		Namespace:   "ns",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, handler.Handle(t.Context(), aiusage.EventConsumedSubscriptionUpdated, map[string]any{
+		"customer_id": "cust-sub-update",
+	}))
+
+	events := outbox.Events()
+	require.Len(t, events, 1)
+	require.Equal(t, aiusage.EventRuntimeAuthorizationUpdated, events[0].EventType)
+	require.Equal(t, "cust-sub-update", events[0].Payload["billing_customer_id"])
+}
+
+func TestEventHandlerIncrementsSnapshotVersion(t *testing.T) {
+	snapVer := &mockSnapshotVersion{}
+	svc, _ := newHandlerTestService(t, snapVer)
+
+	handler, err := runtimeauthorization.NewEventHandler(runtimeauthorization.EventHandlerConfig{
+		Service:     svc,
+		SubjectKeys: &mockSubjectKeyResolver{keys: []string{"subj-1"}},
+		Namespace:   "ns",
+	})
+	require.NoError(t, err)
+
+	// First event generates version 1.
+	require.NoError(t, handler.Handle(t.Context(), aiusage.EventConsumedCreditGrantExpired, map[string]any{
+		"customer_id": "cust-inc",
+	}))
+
+	// Second event generates version 2 (strictly increasing).
+	require.NoError(t, handler.Handle(t.Context(), aiusage.EventConsumedSubscriptionUpdated, map[string]any{
+		"customer_id": "cust-inc",
+	}))
+
+	require.Equal(t, 2, snapVer.calls)
+}
+
+func TestEventHandlerIgnoresUnknownEventTypes(t *testing.T) {
+	snapVer := &mockSnapshotVersion{}
+	svc, outbox := newHandlerTestService(t, snapVer)
+
+	handler, err := runtimeauthorization.NewEventHandler(runtimeauthorization.EventHandlerConfig{
+		Service:     svc,
+		SubjectKeys: &mockSubjectKeyResolver{keys: []string{"subj-1"}},
+		Namespace:   "ns",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, handler.Handle(t.Context(), "some.other.event", map[string]any{
+		"customer_id": "cust-ignore",
+	}))
+
+	require.Zero(t, snapVer.calls, "unknown events must not trigger regeneration")
+	require.Empty(t, outbox.Events())
+}
+
+func TestEventHandlerMissingCustomerID(t *testing.T) {
+	svc, _ := newHandlerTestService(t, &mockSnapshotVersion{})
+
+	handler, err := runtimeauthorization.NewEventHandler(runtimeauthorization.EventHandlerConfig{
+		Service:     svc,
+		SubjectKeys: &mockSubjectKeyResolver{keys: []string{"subj-1"}},
+		Namespace:   "ns",
+	})
+	require.NoError(t, err)
+
+	err = handler.Handle(t.Context(), aiusage.EventConsumedCreditGrantExpired, map[string]any{})
 	require.Error(t, err)
 }

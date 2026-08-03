@@ -50,6 +50,10 @@ type SignedRateEntry struct {
 // ErrInvalidSignature is returned when signature verification fails.
 var ErrInvalidSignature = errors.New("signing: invalid signature")
 
+// ErrPackageExpired is returned when the authorization package's ExpiresAt is
+// in the past.
+var ErrPackageExpired = errors.New("signing: authorization package expired")
+
 // ErrNoMatchingKey is returned when no key matches the package's key_id during
 // verification.
 var ErrNoMatchingKey = errors.New("signing: no matching key for verification")

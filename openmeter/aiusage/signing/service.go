@@ -59,6 +59,9 @@ func (c Config) validate() error {
 	if ttl == 0 {
 		ttl = DefaultTTL
 	}
+	if ttl < 0 {
+		return fmt.Errorf("signing: TTL must not be negative, got %s", c.TTL)
+	}
 	if ttl > MaxTTL {
 		return fmt.Errorf("signing: TTL %s exceeds maximum %s", c.TTL, MaxTTL)
 	}
@@ -127,8 +130,14 @@ func (s *signer) Sign(pkg AuthorizationPackage) (AuthorizationPackage, error) {
 }
 
 // Verify checks the Ed25519 signature. During a rotation overlap the previous
-// key also verifies successfully.
+// key also verifies successfully. Returns ErrPackageExpired when ExpiresAt is
+// in the past.
 func (s *signer) Verify(pkg AuthorizationPackage) error {
+	// Enforce TTL expiry.
+	if !pkg.ExpiresAt.IsZero() && s.now().After(pkg.ExpiresAt) {
+		return ErrPackageExpired
+	}
+
 	sigBytes, err := hex.DecodeString(pkg.Signature)
 	if err != nil {
 		return fmt.Errorf("%w: decode signature: %v", ErrInvalidSignature, err)
@@ -143,14 +152,22 @@ func (s *signer) Verify(pkg AuthorizationPackage) error {
 	}
 
 	// Try the key matching the package's key_id first.
+	keyFound := false
 	for _, kp := range s.verifiableKeys() {
+		// If the package carries a key_id, only the matching key can verify.
 		if pkg.KeyID != "" && kp.KeyID != pkg.KeyID {
 			continue
 		}
+		keyFound = true
 		pub := ed25519.NewKeyFromSeed(kp.Seed).Public()
 		if ed25519.Verify(pub.(ed25519.PublicKey), canonical, sigBytes) {
 			return nil
 		}
+	}
+
+	// The key_id was not found among the verifiable keys.
+	if pkg.KeyID != "" && !keyFound {
+		return fmt.Errorf("%w: key_id %s", ErrNoMatchingKey, pkg.KeyID)
 	}
 
 	return ErrInvalidSignature

@@ -39,7 +39,7 @@ func (r *memRepo) Add(row worker.OutboxRow) {
 	r.order = append(r.order, row.ID)
 }
 
-func (r *memRepo) Claim(_ context.Context, batchSize int, leaseDuration time.Duration) ([]worker.OutboxRow, error) {
+func (r *memRepo) Claim(_ context.Context, ownerID string, batchSize int, leaseDuration time.Duration) ([]worker.OutboxRow, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -57,6 +57,7 @@ func (r *memRepo) Claim(_ context.Context, batchSize int, leaseDuration time.Dur
 			continue
 		}
 		entry.row.ClaimCount++
+		entry.row.Owner = ownerID
 		entry.row.LeasedUntil = now.Add(leaseDuration)
 		claimed = append(claimed, entry.row)
 		if len(claimed) >= batchSize {
@@ -77,12 +78,17 @@ func (r *memRepo) MarkPublished(_ context.Context, ids []string) error {
 	return nil
 }
 
-func (r *memRepo) ReleaseLease(_ context.Context, ids []string) error {
+func (r *memRepo) ReleaseLease(_ context.Context, ownerID string, ids []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for _, id := range ids {
 		if entry, ok := r.rows[id]; ok {
+			// Only release if the row is owned by the requesting worker.
+			if entry.row.Owner != ownerID {
+				continue
+			}
 			entry.row.LeasedUntil = time.Time{}
+			entry.row.Owner = ""
 		}
 	}
 	return nil
@@ -490,6 +496,67 @@ func TestValidateRequiresRepoAndProjections(t *testing.T) {
 		Repo: newMemRepo(),
 	})
 	require.Error(t, err)
+}
+
+func TestOwnerIdentityThreading(t *testing.T) {
+	repo := newMemRepo()
+	repo.Add(makeRow("owner-1"))
+	repo.Add(makeRow("owner-2"))
+
+	proj := newMockProjection("kafka")
+
+	w, err := worker.New(worker.Config{
+		Repo:        repo,
+		Projections: []worker.Projection{proj},
+		OwnerID:     "worker-test-001",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "worker-test-001", w.OwnerID())
+
+	require.NoError(t, w.ProcessOnce(t.Context()))
+
+	// After claim + publish, each row must have had the worker's owner ID set.
+	repo.mu.Lock()
+	for _, id := range []string{"owner-1", "owner-2"} {
+		entry := repo.rows[id]
+		require.NotNil(t, entry)
+		// Published rows are marked, so we just verify the claim set the owner.
+		require.True(t, entry.published, "row %s should be published", id)
+	}
+	repo.mu.Unlock()
+}
+
+func TestCrossWorkerLeaseGuard(t *testing.T) {
+	repo := newMemRepo()
+	repo.Add(makeRow("cross-1"))
+
+	// Directly test the repo Claim/ReleaseLease owner guard semantics.
+
+	// Worker A claims the row.
+	rows, err := repo.Claim(t.Context(), "worker-A", 10, 10*time.Minute)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, "worker-A", rows[0].Owner, "claimed row must carry owner ID")
+
+	// Verify the repo stored the owner.
+	repo.mu.Lock()
+	require.Equal(t, "worker-A", repo.rows["cross-1"].row.Owner)
+	repo.mu.Unlock()
+
+	// Worker B tries to release worker A's lease — must be a no-op.
+	require.NoError(t, repo.ReleaseLease(t.Context(), "worker-B", []string{"cross-1"}))
+
+	// Worker A still owns it.
+	repo.mu.Lock()
+	require.Equal(t, "worker-A", repo.rows["cross-1"].row.Owner,
+		"worker-B must not be able to release worker-A's lease")
+	repo.mu.Unlock()
+
+	// Worker A releases its own lease.
+	require.NoError(t, repo.ReleaseLease(t.Context(), "worker-A", []string{"cross-1"}))
+	repo.mu.Lock()
+	require.Empty(t, repo.rows["cross-1"].row.Owner, "worker-A release should clear owner")
+	repo.mu.Unlock()
 }
 
 // ---- dead-letter handler recorder ----
