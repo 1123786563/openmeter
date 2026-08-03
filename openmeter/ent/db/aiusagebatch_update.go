@@ -11,8 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/predicate"
 	"github.com/openmeterio/openmeter/pkg/models"
@@ -321,6 +323,36 @@ func (_u *AIUsageBatchUpdate) AddRatingSnapshots(v ...*AIUsageRatingSnapshot) *A
 	return _u.AddRatingSnapshotIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the AIUsageAllocation entity by IDs.
+func (_u *AIUsageBatchUpdate) AddAllocationIDs(ids ...string) *AIUsageBatchUpdate {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the AIUsageAllocation entity.
+func (_u *AIUsageBatchUpdate) AddAllocations(v ...*AIUsageAllocation) *AIUsageBatchUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
+// AddOutboxEventIDs adds the "outbox_events" edge to the AIUsageOutbox entity by IDs.
+func (_u *AIUsageBatchUpdate) AddOutboxEventIDs(ids ...string) *AIUsageBatchUpdate {
+	_u.mutation.AddOutboxEventIDs(ids...)
+	return _u
+}
+
+// AddOutboxEvents adds the "outbox_events" edges to the AIUsageOutbox entity.
+func (_u *AIUsageBatchUpdate) AddOutboxEvents(v ...*AIUsageOutbox) *AIUsageBatchUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOutboxEventIDs(ids...)
+}
+
 // Mutation returns the AIUsageBatchMutation object of the builder.
 func (_u *AIUsageBatchUpdate) Mutation() *AIUsageBatchMutation {
 	return _u.mutation
@@ -366,6 +398,48 @@ func (_u *AIUsageBatchUpdate) RemoveRatingSnapshots(v ...*AIUsageRatingSnapshot)
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveRatingSnapshotIDs(ids...)
+}
+
+// ClearAllocations clears all "allocations" edges to the AIUsageAllocation entity.
+func (_u *AIUsageBatchUpdate) ClearAllocations() *AIUsageBatchUpdate {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to AIUsageAllocation entities by IDs.
+func (_u *AIUsageBatchUpdate) RemoveAllocationIDs(ids ...string) *AIUsageBatchUpdate {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to AIUsageAllocation entities.
+func (_u *AIUsageBatchUpdate) RemoveAllocations(v ...*AIUsageAllocation) *AIUsageBatchUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearOutboxEvents clears all "outbox_events" edges to the AIUsageOutbox entity.
+func (_u *AIUsageBatchUpdate) ClearOutboxEvents() *AIUsageBatchUpdate {
+	_u.mutation.ClearOutboxEvents()
+	return _u
+}
+
+// RemoveOutboxEventIDs removes the "outbox_events" edge to AIUsageOutbox entities by IDs.
+func (_u *AIUsageBatchUpdate) RemoveOutboxEventIDs(ids ...string) *AIUsageBatchUpdate {
+	_u.mutation.RemoveOutboxEventIDs(ids...)
+	return _u
+}
+
+// RemoveOutboxEvents removes "outbox_events" edges to AIUsageOutbox entities.
+func (_u *AIUsageBatchUpdate) RemoveOutboxEvents(v ...*AIUsageOutbox) *AIUsageBatchUpdate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOutboxEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -601,6 +675,96 @@ func (_u *AIUsageBatchUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(aiusageratingsnapshot.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutboxEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOutboxEventsIDs(); len(nodes) > 0 && !_u.mutation.OutboxEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutboxEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -918,6 +1082,36 @@ func (_u *AIUsageBatchUpdateOne) AddRatingSnapshots(v ...*AIUsageRatingSnapshot)
 	return _u.AddRatingSnapshotIDs(ids...)
 }
 
+// AddAllocationIDs adds the "allocations" edge to the AIUsageAllocation entity by IDs.
+func (_u *AIUsageBatchUpdateOne) AddAllocationIDs(ids ...string) *AIUsageBatchUpdateOne {
+	_u.mutation.AddAllocationIDs(ids...)
+	return _u
+}
+
+// AddAllocations adds the "allocations" edges to the AIUsageAllocation entity.
+func (_u *AIUsageBatchUpdateOne) AddAllocations(v ...*AIUsageAllocation) *AIUsageBatchUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAllocationIDs(ids...)
+}
+
+// AddOutboxEventIDs adds the "outbox_events" edge to the AIUsageOutbox entity by IDs.
+func (_u *AIUsageBatchUpdateOne) AddOutboxEventIDs(ids ...string) *AIUsageBatchUpdateOne {
+	_u.mutation.AddOutboxEventIDs(ids...)
+	return _u
+}
+
+// AddOutboxEvents adds the "outbox_events" edges to the AIUsageOutbox entity.
+func (_u *AIUsageBatchUpdateOne) AddOutboxEvents(v ...*AIUsageOutbox) *AIUsageBatchUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOutboxEventIDs(ids...)
+}
+
 // Mutation returns the AIUsageBatchMutation object of the builder.
 func (_u *AIUsageBatchUpdateOne) Mutation() *AIUsageBatchMutation {
 	return _u.mutation
@@ -963,6 +1157,48 @@ func (_u *AIUsageBatchUpdateOne) RemoveRatingSnapshots(v ...*AIUsageRatingSnapsh
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveRatingSnapshotIDs(ids...)
+}
+
+// ClearAllocations clears all "allocations" edges to the AIUsageAllocation entity.
+func (_u *AIUsageBatchUpdateOne) ClearAllocations() *AIUsageBatchUpdateOne {
+	_u.mutation.ClearAllocations()
+	return _u
+}
+
+// RemoveAllocationIDs removes the "allocations" edge to AIUsageAllocation entities by IDs.
+func (_u *AIUsageBatchUpdateOne) RemoveAllocationIDs(ids ...string) *AIUsageBatchUpdateOne {
+	_u.mutation.RemoveAllocationIDs(ids...)
+	return _u
+}
+
+// RemoveAllocations removes "allocations" edges to AIUsageAllocation entities.
+func (_u *AIUsageBatchUpdateOne) RemoveAllocations(v ...*AIUsageAllocation) *AIUsageBatchUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAllocationIDs(ids...)
+}
+
+// ClearOutboxEvents clears all "outbox_events" edges to the AIUsageOutbox entity.
+func (_u *AIUsageBatchUpdateOne) ClearOutboxEvents() *AIUsageBatchUpdateOne {
+	_u.mutation.ClearOutboxEvents()
+	return _u
+}
+
+// RemoveOutboxEventIDs removes the "outbox_events" edge to AIUsageOutbox entities by IDs.
+func (_u *AIUsageBatchUpdateOne) RemoveOutboxEventIDs(ids ...string) *AIUsageBatchUpdateOne {
+	_u.mutation.RemoveOutboxEventIDs(ids...)
+	return _u
+}
+
+// RemoveOutboxEvents removes "outbox_events" edges to AIUsageOutbox entities.
+func (_u *AIUsageBatchUpdateOne) RemoveOutboxEvents(v ...*AIUsageOutbox) *AIUsageBatchUpdateOne {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOutboxEventIDs(ids...)
 }
 
 // Where appends a list predicates to the AIUsageBatchUpdate builder.
@@ -1228,6 +1464,96 @@ func (_u *AIUsageBatchUpdateOne) sqlSave(ctx context.Context) (_node *AIUsageBat
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(aiusageratingsnapshot.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAllocationsIDs(); len(nodes) > 0 && !_u.mutation.AllocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutboxEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOutboxEventsIDs(); len(nodes) > 0 && !_u.mutation.OutboxEventsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutboxEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {

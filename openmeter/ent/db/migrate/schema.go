@@ -9,6 +9,53 @@ import (
 )
 
 var (
+	// AiUsageAllocationsColumns holds the columns for the "ai_usage_allocations" table.
+	AiUsageAllocationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "grant_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "priority", Type: field.TypeUint8, Default: 0},
+		{Name: "funding_source", Type: field.TypeString, Default: ""},
+		{Name: "ai_usage_batch_allocations", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// AiUsageAllocationsTable holds the schema information for the "ai_usage_allocations" table.
+	AiUsageAllocationsTable = &schema.Table{
+		Name:       "ai_usage_allocations",
+		Columns:    AiUsageAllocationsColumns,
+		PrimaryKey: []*schema.Column{AiUsageAllocationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ai_usage_allocations_ai_usage_batches_allocations",
+				Columns:    []*schema.Column{AiUsageAllocationsColumns[9]},
+				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusageallocation_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageAllocationsColumns[0]},
+			},
+			{
+				Name:    "aiusageallocation_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageAllocationsColumns[1]},
+			},
+			{
+				Name:    "aiusageallocation_namespace_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageAllocationsColumns[1], AiUsageAllocationsColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
+	}
 	// AiUsageBatchesColumns holds the columns for the "ai_usage_batches" table.
 	AiUsageBatchesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -30,6 +77,7 @@ var (
 		{Name: "status", Type: field.TypeString, Default: "pending"},
 		{Name: "total_credits", Type: field.TypeInt64, Default: 0},
 		{Name: "covered_tenant_seq", Type: field.TypeInt64, Default: 0},
+		{Name: "settlement_scope", Type: field.TypeEnum, Enums: []string{"shadow", "formal"}, Default: "formal"},
 	}
 	// AiUsageBatchesTable holds the schema information for the "ai_usage_batches" table.
 	AiUsageBatchesTable = &schema.Table{
@@ -61,6 +109,14 @@ var (
 				Name:    "aiusagebatch_namespace_usage_batch_id",
 				Unique:  true,
 				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "aiusagebatch_namespace_subject_id_tenant_seq",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageBatchesColumns[1], AiUsageBatchesColumns[7], AiUsageBatchesColumns[9]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},
@@ -132,6 +188,55 @@ var (
 						"postgres": "GIN",
 					},
 				},
+			},
+		},
+	}
+	// AiUsageOutboxesColumns holds the columns for the "ai_usage_outboxes" table.
+	AiUsageOutboxesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "published", Type: field.TypeBool, Default: false},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+		{Name: "ai_usage_batch_outbox_events", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// AiUsageOutboxesTable holds the schema information for the "ai_usage_outboxes" table.
+	AiUsageOutboxesTable = &schema.Table{
+		Name:       "ai_usage_outboxes",
+		Columns:    AiUsageOutboxesColumns,
+		PrimaryKey: []*schema.Column{AiUsageOutboxesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ai_usage_outboxes_ai_usage_batches_outbox_events",
+				Columns:    []*schema.Column{AiUsageOutboxesColumns[9]},
+				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusageoutbox_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageOutboxesColumns[0]},
+			},
+			{
+				Name:    "aiusageoutbox_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageOutboxesColumns[1]},
+			},
+			{
+				Name:    "aiusageoutbox_namespace_published",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageOutboxesColumns[1], AiUsageOutboxesColumns[7]},
+			},
+			{
+				Name:    "aiusageoutbox_namespace_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageOutboxesColumns[1], AiUsageOutboxesColumns[3]},
 			},
 		},
 	}
@@ -247,6 +352,44 @@ var (
 						"postgres": "GIN",
 					},
 				},
+			},
+		},
+	}
+	// AiUsageWatermarksColumns holds the columns for the "ai_usage_watermarks" table.
+	AiUsageWatermarksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "covered_seq", Type: field.TypeInt64, Default: 0},
+	}
+	// AiUsageWatermarksTable holds the schema information for the "ai_usage_watermarks" table.
+	AiUsageWatermarksTable = &schema.Table{
+		Name:       "ai_usage_watermarks",
+		Columns:    AiUsageWatermarksColumns,
+		PrimaryKey: []*schema.Column{AiUsageWatermarksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiusagewatermark_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageWatermarksColumns[0]},
+			},
+			{
+				Name:    "aiusagewatermark_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageWatermarksColumns[1]},
+			},
+			{
+				Name:    "aiusagewatermark_namespace_subject_id",
+				Unique:  true,
+				Columns: []*schema.Column{AiUsageWatermarksColumns[1], AiUsageWatermarksColumns[4]},
+			},
+			{
+				Name:    "aiusagewatermark_namespace_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageWatermarksColumns[1], AiUsageWatermarksColumns[5]},
 			},
 		},
 	}
@@ -3935,6 +4078,66 @@ var (
 			},
 		},
 	}
+	// CustomerAiRatePackagesColumns holds the columns for the "customer_ai_rate_packages" table.
+	CustomerAiRatePackagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "package_code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "active", "archived"}, Default: "draft"},
+		{Name: "effective_from", Type: field.TypeTime},
+		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
+	}
+	// CustomerAiRatePackagesTable holds the schema information for the "customer_ai_rate_packages" table.
+	CustomerAiRatePackagesTable = &schema.Table{
+		Name:       "customer_ai_rate_packages",
+		Columns:    CustomerAiRatePackagesColumns,
+		PrimaryKey: []*schema.Column{CustomerAiRatePackagesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "customerairatepackage_id",
+				Unique:  true,
+				Columns: []*schema.Column{CustomerAiRatePackagesColumns[0]},
+			},
+			{
+				Name:    "customerairatepackage_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerAiRatePackagesColumns[1]},
+			},
+			{
+				Name:    "customerairatepackage_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerAiRatePackagesColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "customerairatepackage_namespace_customer_id_package_code",
+				Unique:  true,
+				Columns: []*schema.Column{CustomerAiRatePackagesColumns[1], CustomerAiRatePackagesColumns[6], CustomerAiRatePackagesColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "customerairatepackage_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerAiRatePackagesColumns[1], CustomerAiRatePackagesColumns[6], CustomerAiRatePackagesColumns[10]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
+	}
 	// CustomerSubjectsColumns holds the columns for the "customer_subjects" table.
 	CustomerSubjectsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -4894,6 +5097,67 @@ var (
 				Name:    "ledgertransactiongroup_namespace_id",
 				Unique:  true,
 				Columns: []*schema.Column{LedgerTransactionGroupsColumns[1], LedgerTransactionGroupsColumns[0]},
+			},
+		},
+	}
+	// ManualResourceCostsColumns holds the columns for the "manual_resource_costs" table.
+	ManualResourceCostsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "resource_code", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString, Nullable: true},
+		{Name: "model", Type: field.TypeString, Nullable: true},
+		{Name: "cost_currency", Type: field.TypeString, Default: "USD"},
+		{Name: "cost_amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "source", Type: field.TypeString, Default: "manual"},
+		{Name: "effective_from", Type: field.TypeTime},
+		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
+	}
+	// ManualResourceCostsTable holds the schema information for the "manual_resource_costs" table.
+	ManualResourceCostsTable = &schema.Table{
+		Name:       "manual_resource_costs",
+		Columns:    ManualResourceCostsColumns,
+		PrimaryKey: []*schema.Column{ManualResourceCostsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "manualresourcecost_id",
+				Unique:  true,
+				Columns: []*schema.Column{ManualResourceCostsColumns[0]},
+			},
+			{
+				Name:    "manualresourcecost_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{ManualResourceCostsColumns[1]},
+			},
+			{
+				Name:    "manualresourcecost_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{ManualResourceCostsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "manualresourcecost_namespace_resource_code_provider_model_effective_from",
+				Unique:  true,
+				Columns: []*schema.Column{ManualResourceCostsColumns[1], ManualResourceCostsColumns[6], ManualResourceCostsColumns[7], ManualResourceCostsColumns[8], ManualResourceCostsColumns[12]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "manualresourcecost_namespace_resource_code",
+				Unique:  false,
+				Columns: []*schema.Column{ManualResourceCostsColumns[1], ManualResourceCostsColumns[6]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 		},
 	}
@@ -6125,10 +6389,13 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AiUsageAllocationsTable,
 		AiUsageBatchesTable,
 		AiUsageLineItemsTable,
+		AiUsageOutboxesTable,
 		AiUsageRatecardEntriesTable,
 		AiUsageRatingSnapshotsTable,
+		AiUsageWatermarksTable,
 		AddonsTable,
 		AddonRateCardsTable,
 		AppsTable,
@@ -6182,6 +6449,7 @@ var (
 		CurrencyCostBasesTable,
 		CustomCurrenciesTable,
 		CustomersTable,
+		CustomerAiRatePackagesTable,
 		CustomerSubjectsTable,
 		EntitlementsTable,
 		FeaturesTable,
@@ -6196,6 +6464,7 @@ var (
 		LedgerSubAccountRoutesTable,
 		LedgerTransactionsTable,
 		LedgerTransactionGroupsTable,
+		ManualResourceCostsTable,
 		MetersTable,
 		NotificationChannelsTable,
 		NotificationEventsTable,
@@ -6221,7 +6490,9 @@ var (
 )
 
 func init() {
+	AiUsageAllocationsTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
 	AiUsageLineItemsTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
+	AiUsageOutboxesTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
 	AiUsageRatingSnapshotsTable.ForeignKeys[0].RefTable = AiUsageBatchesTable
 	AddonsTable.ForeignKeys[0].RefTable = CustomCurrenciesTable
 	AddonsTable.Annotation = &entsql.Annotation{}

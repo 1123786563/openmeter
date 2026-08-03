@@ -118,6 +118,20 @@ func (u *AIUsageLineItemUpdateOne) SetOrClearDimensions(value *map[string]string
 	return u.SetDimensions(*value)
 }
 
+func (u *AIUsageOutboxUpdate) SetOrClearPublishedAt(value *time.Time) *AIUsageOutboxUpdate {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *AIUsageOutboxUpdateOne) SetOrClearPublishedAt(value *time.Time) *AIUsageOutboxUpdateOne {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
 func (u *AIUsageRatecardEntryUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatecardEntryUpdate {
 	if value == nil {
 		return u.ClearAnnotations()
@@ -4626,6 +4640,62 @@ func (u *CustomerUpdateOne) SetOrClearCurrency(value *currencyx.Code) *CustomerU
 	return u.SetCurrency(*value)
 }
 
+func (u *CustomerAIRatePackageUpdate) SetOrClearAnnotations(value *models.Annotations) *CustomerAIRatePackageUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *CustomerAIRatePackageUpdateOne) SetOrClearAnnotations(value *models.Annotations) *CustomerAIRatePackageUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *CustomerAIRatePackageUpdate) SetOrClearDeletedAt(value *time.Time) *CustomerAIRatePackageUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CustomerAIRatePackageUpdateOne) SetOrClearDeletedAt(value *time.Time) *CustomerAIRatePackageUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CustomerAIRatePackageUpdate) SetOrClearDescription(value *string) *CustomerAIRatePackageUpdate {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CustomerAIRatePackageUpdateOne) SetOrClearDescription(value *string) *CustomerAIRatePackageUpdateOne {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CustomerAIRatePackageUpdate) SetOrClearEffectiveTo(value *time.Time) *CustomerAIRatePackageUpdate {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *CustomerAIRatePackageUpdateOne) SetOrClearEffectiveTo(value *time.Time) *CustomerAIRatePackageUpdateOne {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
 func (u *CustomerSubjectsUpdate) SetOrClearDeletedAt(value *time.Time) *CustomerSubjectsUpdate {
 	if value == nil {
 		return u.ClearDeletedAt()
@@ -5296,6 +5366,76 @@ func (u *LedgerTransactionGroupUpdateOne) SetOrClearDeletedAt(value *time.Time) 
 		return u.ClearDeletedAt()
 	}
 	return u.SetDeletedAt(*value)
+}
+
+func (u *ManualResourceCostUpdate) SetOrClearAnnotations(value *models.Annotations) *ManualResourceCostUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *ManualResourceCostUpdateOne) SetOrClearAnnotations(value *models.Annotations) *ManualResourceCostUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *ManualResourceCostUpdate) SetOrClearDeletedAt(value *time.Time) *ManualResourceCostUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ManualResourceCostUpdateOne) SetOrClearDeletedAt(value *time.Time) *ManualResourceCostUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ManualResourceCostUpdate) SetOrClearProvider(value *string) *ManualResourceCostUpdate {
+	if value == nil {
+		return u.ClearProvider()
+	}
+	return u.SetProvider(*value)
+}
+
+func (u *ManualResourceCostUpdateOne) SetOrClearProvider(value *string) *ManualResourceCostUpdateOne {
+	if value == nil {
+		return u.ClearProvider()
+	}
+	return u.SetProvider(*value)
+}
+
+func (u *ManualResourceCostUpdate) SetOrClearModel(value *string) *ManualResourceCostUpdate {
+	if value == nil {
+		return u.ClearModel()
+	}
+	return u.SetModel(*value)
+}
+
+func (u *ManualResourceCostUpdateOne) SetOrClearModel(value *string) *ManualResourceCostUpdateOne {
+	if value == nil {
+		return u.ClearModel()
+	}
+	return u.SetModel(*value)
+}
+
+func (u *ManualResourceCostUpdate) SetOrClearEffectiveTo(value *time.Time) *ManualResourceCostUpdate {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *ManualResourceCostUpdateOne) SetOrClearEffectiveTo(value *time.Time) *ManualResourceCostUpdateOne {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
 }
 
 func (u *MeterUpdate) SetOrClearMetadata(value *map[string]string) *MeterUpdate {

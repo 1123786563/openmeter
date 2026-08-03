@@ -223,6 +223,120 @@ type BatchSettlementResult struct {
 	CoveredTenantSeq int64            `json:"covered_tenant_seq"`
 }
 
+// SettlementScope controls whether a batch affects the formal ledger.
+type SettlementScope string
+
+const (
+	// SettlementScopeShadow persists the batch for visibility without deducting grants.
+	SettlementScopeShadow SettlementScope = "shadow"
+
+	// SettlementScopeFormal deducts grants and emits ledger/outbox events.
+	SettlementScopeFormal SettlementScope = "formal"
+)
+
+func (s SettlementScope) Validate() error {
+	switch s {
+	case SettlementScopeShadow, SettlementScopeFormal:
+		return nil
+	default:
+		return fmt.Errorf("invalid settlement scope: %s", s)
+	}
+}
+
+// Allocation records the Credit deduction from a single funding source (grant).
+type Allocation struct {
+	GrantID       string  `json:"grant_id"`
+	Amount        float64 `json:"amount"`
+	Priority      uint8   `json:"priority"`
+	FundingSource string  `json:"funding_source"`
+}
+
+// OutboxEvent is a transactional outbox record published after commit.
+type OutboxEvent struct {
+	EventType string                 `json:"event_type"`
+	Payload   map[string]interface{} `json:"payload"`
+}
+
+// SettledBatch is the input to the persistence adapter: a fully rated and
+// settled batch ready for atomic storage with its line items, rating
+// snapshots, credit allocations, and outbox events.
+type SettledBatch struct {
+	Namespace       string          `json:"namespace"`
+	CustomerID      string          `json:"customer_id"`
+	SubjectID       string          `json:"subject_id"`
+	UsageBatchID    string          `json:"usage_batch_id"`
+	TenantSeq       int64           `json:"tenant_seq"`
+	OccurredAt      time.Time       `json:"occurred_at"`
+	ReservationID   *string         `json:"reservation_id,omitempty"`
+	CeilingCredits  *int64          `json:"ceiling_credits,omitempty"`
+	RateVersion     string          `json:"rate_version"`
+	BillingMode     BillingMode     `json:"billing_mode"`
+	PayloadHash     string          `json:"payload_hash"`
+	SettlementScope SettlementScope `json:"settlement_scope"`
+	Status          BatchStatus     `json:"status"`
+	TotalCredits    int64           `json:"total_credits"`
+
+	LineItems       []UsageLineItem  `json:"line_items"`
+	RatingSnapshots []RatingSnapshot `json:"rating_snapshots"`
+	Allocations     []Allocation     `json:"allocations"`
+	OutboxEvents    []OutboxEvent    `json:"outbox_events"`
+}
+
+func (b SettledBatch) Validate() error {
+	var errs []error
+
+	if b.Namespace == "" {
+		errs = append(errs, fmt.Errorf("namespace must not be empty"))
+	}
+	if b.CustomerID == "" {
+		errs = append(errs, fmt.Errorf("customer_id must not be empty"))
+	}
+	if b.SubjectID == "" {
+		errs = append(errs, fmt.Errorf("subject_id must not be empty"))
+	}
+	if b.UsageBatchID == "" {
+		errs = append(errs, fmt.Errorf("usage_batch_id must not be empty"))
+	}
+	if b.TenantSeq <= 0 {
+		errs = append(errs, fmt.Errorf("tenant_seq must be positive"))
+	}
+	if b.PayloadHash == "" {
+		errs = append(errs, fmt.Errorf("payload_hash must not be empty"))
+	}
+
+	if err := b.BillingMode.Validate(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := b.SettlementScope.Validate(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := b.Status.Validate(); err != nil {
+		errs = append(errs, err)
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+// Batch is the domain entity returned by the persistence adapter.
+type Batch struct {
+	models.ManagedModelWithID `json:",inline"`
+
+	Namespace       string          `json:"namespace"`
+	CustomerID      string          `json:"customer_id"`
+	SubjectID       string          `json:"subject_id"`
+	UsageBatchID    string          `json:"usage_batch_id"`
+	TenantSeq       int64           `json:"tenant_seq"`
+	OccurredAt      time.Time       `json:"occurred_at"`
+	ReservationID   *string         `json:"reservation_id,omitempty"`
+	CeilingCredits  *int64          `json:"ceiling_credits,omitempty"`
+	RateVersion     string          `json:"rate_version"`
+	BillingMode     BillingMode     `json:"billing_mode"`
+	PayloadHash     string          `json:"payload_hash"`
+	SettlementScope SettlementScope `json:"settlement_scope"`
+	Status          BatchStatus     `json:"status"`
+	TotalCredits    int64           `json:"total_credits"`
+}
+
 // IngestBatchInput is the API input for submitting a Canonical Usage Batch.
 type IngestBatchInput struct {
 	ProviderManaged bool `json:"provider_managed"`

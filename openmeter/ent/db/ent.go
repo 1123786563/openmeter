@@ -14,10 +14,13 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addonratecard"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratecardentry"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagewatermark"
 
 	dbapp "github.com/openmeterio/openmeter/openmeter/ent/db/app"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustomer"
@@ -71,6 +74,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 
@@ -87,6 +91,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgertransaction"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgertransactiongroup"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/llmcostprice"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/manualresourcecost"
 
 	dbmeter "github.com/openmeterio/openmeter/openmeter/ent/db/meter"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationchannel"
@@ -168,10 +173,13 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			aiusageallocation.Table:                                aiusageallocation.ValidColumn,
 			aiusagebatch.Table:                                     aiusagebatch.ValidColumn,
 			aiusagelineitem.Table:                                  aiusagelineitem.ValidColumn,
+			aiusageoutbox.Table:                                    aiusageoutbox.ValidColumn,
 			aiusageratecardentry.Table:                             aiusageratecardentry.ValidColumn,
 			aiusageratingsnapshot.Table:                            aiusageratingsnapshot.ValidColumn,
+			aiusagewatermark.Table:                                 aiusagewatermark.ValidColumn,
 			addon.Table:                                            addon.ValidColumn,
 			addonratecard.Table:                                    addonratecard.ValidColumn,
 			dbapp.Table:                                            dbapp.ValidColumn,
@@ -226,6 +234,7 @@ func checkColumn(t, c string) error {
 			currencycostbasis.Table:                                currencycostbasis.ValidColumn,
 			customcurrency.Table:                                   customcurrency.ValidColumn,
 			customer.Table:                                         customer.ValidColumn,
+			customerairatepackage.Table:                            customerairatepackage.ValidColumn,
 			customersubjects.Table:                                 customersubjects.ValidColumn,
 			entitlement.Table:                                      entitlement.ValidColumn,
 			dbfeature.Table:                                        dbfeature.ValidColumn,
@@ -240,6 +249,7 @@ func checkColumn(t, c string) error {
 			ledgersubaccountroute.Table:                            ledgersubaccountroute.ValidColumn,
 			ledgertransaction.Table:                                ledgertransaction.ValidColumn,
 			ledgertransactiongroup.Table:                           ledgertransactiongroup.ValidColumn,
+			manualresourcecost.Table:                               manualresourcecost.ValidColumn,
 			dbmeter.Table:                                          dbmeter.ValidColumn,
 			notificationchannel.Table:                              notificationchannel.ValidColumn,
 			notificationevent.Table:                                notificationevent.ValidColumn,

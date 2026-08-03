@@ -6,17 +6,26 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AIUsageAllocation is the predicate function for aiusageallocation builders.
+type AIUsageAllocation func(*sql.Selector)
+
 // AIUsageBatch is the predicate function for aiusagebatch builders.
 type AIUsageBatch func(*sql.Selector)
 
 // AIUsageLineItem is the predicate function for aiusagelineitem builders.
 type AIUsageLineItem func(*sql.Selector)
 
+// AIUsageOutbox is the predicate function for aiusageoutbox builders.
+type AIUsageOutbox func(*sql.Selector)
+
 // AIUsageRatecardEntry is the predicate function for aiusageratecardentry builders.
 type AIUsageRatecardEntry func(*sql.Selector)
 
 // AIUsageRatingSnapshot is the predicate function for aiusageratingsnapshot builders.
 type AIUsageRatingSnapshot func(*sql.Selector)
+
+// AIUsageWatermark is the predicate function for aiusagewatermark builders.
+type AIUsageWatermark func(*sql.Selector)
 
 // Addon is the predicate function for addon builders.
 type Addon func(*sql.Selector)
@@ -345,6 +354,9 @@ type CustomCurrency func(*sql.Selector)
 // Customer is the predicate function for customer builders.
 type Customer func(*sql.Selector)
 
+// CustomerAIRatePackage is the predicate function for customerairatepackage builders.
+type CustomerAIRatePackage func(*sql.Selector)
+
 // CustomerSubjects is the predicate function for customersubjects builders.
 type CustomerSubjects func(*sql.Selector)
 
@@ -408,6 +420,9 @@ type LedgerTransaction func(*sql.Selector)
 
 // LedgerTransactionGroup is the predicate function for ledgertransactiongroup builders.
 type LedgerTransactionGroup func(*sql.Selector)
+
+// ManualResourceCost is the predicate function for manualresourcecost builders.
+type ManualResourceCost func(*sql.Selector)
 
 // Meter is the predicate function for dbmeter builders.
 type Meter func(*sql.Selector)

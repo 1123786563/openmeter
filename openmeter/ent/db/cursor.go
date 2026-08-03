@@ -13,6 +13,57 @@ import (
 
 // Cursor runs the query and returns a cursor-paginated response.
 // Ordering is always by created_at asc, id asc.
+func (_m *AIUsageAllocationQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*AIUsageAllocation], error) {
+	if cursor != nil {
+		if err := cursor.Validate(); err != nil {
+			return pagination.Result[*AIUsageAllocation]{}, fmt.Errorf("invalid cursor: %w", err)
+		}
+
+		_m.Where(func(s *sql.Selector) {
+			s.Where(
+				sql.Or(
+					sql.GT(s.C("created_at"), cursor.Time),
+					sql.And(
+						sql.EQ(s.C("created_at"), cursor.Time),
+						sql.P(func(b *sql.Builder) {
+							b.WriteString("CAST(")
+							b.WriteString(s.C("id"))
+							b.WriteString(" AS TEXT) > ")
+							b.Args(cursor.ID)
+						}),
+					),
+				),
+			)
+		})
+	}
+
+	_m.Order(func(s *sql.Selector) {
+		s.OrderBy(sql.Asc(s.C("created_at")), sql.Asc(s.C("id")))
+	})
+
+	items, err := _m.All(ctx)
+	if err != nil {
+		return pagination.Result[*AIUsageAllocation]{}, err
+	}
+
+	if items == nil {
+		items = make([]*AIUsageAllocation, 0)
+	}
+
+	result := pagination.Result[*AIUsageAllocation]{
+		Items: items,
+	}
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		result.NextCursor = lo.ToPtr(pagination.NewCursor(last.CreatedAt, fmt.Sprint(last.ID)))
+	}
+
+	return result, nil
+}
+
+// Cursor runs the query and returns a cursor-paginated response.
+// Ordering is always by created_at asc, id asc.
 func (_m *AIUsageBatchQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*AIUsageBatch], error) {
 	if cursor != nil {
 		if err := cursor.Validate(); err != nil {
@@ -115,6 +166,57 @@ func (_m *AIUsageLineItemQuery) Cursor(ctx context.Context, cursor *pagination.C
 
 // Cursor runs the query and returns a cursor-paginated response.
 // Ordering is always by created_at asc, id asc.
+func (_m *AIUsageOutboxQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*AIUsageOutbox], error) {
+	if cursor != nil {
+		if err := cursor.Validate(); err != nil {
+			return pagination.Result[*AIUsageOutbox]{}, fmt.Errorf("invalid cursor: %w", err)
+		}
+
+		_m.Where(func(s *sql.Selector) {
+			s.Where(
+				sql.Or(
+					sql.GT(s.C("created_at"), cursor.Time),
+					sql.And(
+						sql.EQ(s.C("created_at"), cursor.Time),
+						sql.P(func(b *sql.Builder) {
+							b.WriteString("CAST(")
+							b.WriteString(s.C("id"))
+							b.WriteString(" AS TEXT) > ")
+							b.Args(cursor.ID)
+						}),
+					),
+				),
+			)
+		})
+	}
+
+	_m.Order(func(s *sql.Selector) {
+		s.OrderBy(sql.Asc(s.C("created_at")), sql.Asc(s.C("id")))
+	})
+
+	items, err := _m.All(ctx)
+	if err != nil {
+		return pagination.Result[*AIUsageOutbox]{}, err
+	}
+
+	if items == nil {
+		items = make([]*AIUsageOutbox, 0)
+	}
+
+	result := pagination.Result[*AIUsageOutbox]{
+		Items: items,
+	}
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		result.NextCursor = lo.ToPtr(pagination.NewCursor(last.CreatedAt, fmt.Sprint(last.ID)))
+	}
+
+	return result, nil
+}
+
+// Cursor runs the query and returns a cursor-paginated response.
+// Ordering is always by created_at asc, id asc.
 func (_m *AIUsageRatecardEntryQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*AIUsageRatecardEntry], error) {
 	if cursor != nil {
 		if err := cursor.Validate(); err != nil {
@@ -204,6 +306,57 @@ func (_m *AIUsageRatingSnapshotQuery) Cursor(ctx context.Context, cursor *pagina
 	}
 
 	result := pagination.Result[*AIUsageRatingSnapshot]{
+		Items: items,
+	}
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		result.NextCursor = lo.ToPtr(pagination.NewCursor(last.CreatedAt, fmt.Sprint(last.ID)))
+	}
+
+	return result, nil
+}
+
+// Cursor runs the query and returns a cursor-paginated response.
+// Ordering is always by created_at asc, id asc.
+func (_m *AIUsageWatermarkQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*AIUsageWatermark], error) {
+	if cursor != nil {
+		if err := cursor.Validate(); err != nil {
+			return pagination.Result[*AIUsageWatermark]{}, fmt.Errorf("invalid cursor: %w", err)
+		}
+
+		_m.Where(func(s *sql.Selector) {
+			s.Where(
+				sql.Or(
+					sql.GT(s.C("created_at"), cursor.Time),
+					sql.And(
+						sql.EQ(s.C("created_at"), cursor.Time),
+						sql.P(func(b *sql.Builder) {
+							b.WriteString("CAST(")
+							b.WriteString(s.C("id"))
+							b.WriteString(" AS TEXT) > ")
+							b.Args(cursor.ID)
+						}),
+					),
+				),
+			)
+		})
+	}
+
+	_m.Order(func(s *sql.Selector) {
+		s.OrderBy(sql.Asc(s.C("created_at")), sql.Asc(s.C("id")))
+	})
+
+	items, err := _m.All(ctx)
+	if err != nil {
+		return pagination.Result[*AIUsageWatermark]{}, err
+	}
+
+	if items == nil {
+		items = make([]*AIUsageWatermark, 0)
+	}
+
+	result := pagination.Result[*AIUsageWatermark]{
 		Items: items,
 	}
 
@@ -2614,6 +2767,57 @@ func (_m *CustomerQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) 
 
 // Cursor runs the query and returns a cursor-paginated response.
 // Ordering is always by created_at asc, id asc.
+func (_m *CustomerAIRatePackageQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*CustomerAIRatePackage], error) {
+	if cursor != nil {
+		if err := cursor.Validate(); err != nil {
+			return pagination.Result[*CustomerAIRatePackage]{}, fmt.Errorf("invalid cursor: %w", err)
+		}
+
+		_m.Where(func(s *sql.Selector) {
+			s.Where(
+				sql.Or(
+					sql.GT(s.C("created_at"), cursor.Time),
+					sql.And(
+						sql.EQ(s.C("created_at"), cursor.Time),
+						sql.P(func(b *sql.Builder) {
+							b.WriteString("CAST(")
+							b.WriteString(s.C("id"))
+							b.WriteString(" AS TEXT) > ")
+							b.Args(cursor.ID)
+						}),
+					),
+				),
+			)
+		})
+	}
+
+	_m.Order(func(s *sql.Selector) {
+		s.OrderBy(sql.Asc(s.C("created_at")), sql.Asc(s.C("id")))
+	})
+
+	items, err := _m.All(ctx)
+	if err != nil {
+		return pagination.Result[*CustomerAIRatePackage]{}, err
+	}
+
+	if items == nil {
+		items = make([]*CustomerAIRatePackage, 0)
+	}
+
+	result := pagination.Result[*CustomerAIRatePackage]{
+		Items: items,
+	}
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		result.NextCursor = lo.ToPtr(pagination.NewCursor(last.CreatedAt, fmt.Sprint(last.ID)))
+	}
+
+	return result, nil
+}
+
+// Cursor runs the query and returns a cursor-paginated response.
+// Ordering is always by created_at asc, id asc.
 func (_m *CustomerSubjectsQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*CustomerSubjects], error) {
 	if cursor != nil {
 		if err := cursor.Validate(); err != nil {
@@ -3315,6 +3519,57 @@ func (_m *LedgerTransactionGroupQuery) Cursor(ctx context.Context, cursor *pagin
 	}
 
 	result := pagination.Result[*LedgerTransactionGroup]{
+		Items: items,
+	}
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		result.NextCursor = lo.ToPtr(pagination.NewCursor(last.CreatedAt, fmt.Sprint(last.ID)))
+	}
+
+	return result, nil
+}
+
+// Cursor runs the query and returns a cursor-paginated response.
+// Ordering is always by created_at asc, id asc.
+func (_m *ManualResourceCostQuery) Cursor(ctx context.Context, cursor *pagination.Cursor) (pagination.Result[*ManualResourceCost], error) {
+	if cursor != nil {
+		if err := cursor.Validate(); err != nil {
+			return pagination.Result[*ManualResourceCost]{}, fmt.Errorf("invalid cursor: %w", err)
+		}
+
+		_m.Where(func(s *sql.Selector) {
+			s.Where(
+				sql.Or(
+					sql.GT(s.C("created_at"), cursor.Time),
+					sql.And(
+						sql.EQ(s.C("created_at"), cursor.Time),
+						sql.P(func(b *sql.Builder) {
+							b.WriteString("CAST(")
+							b.WriteString(s.C("id"))
+							b.WriteString(" AS TEXT) > ")
+							b.Args(cursor.ID)
+						}),
+					),
+				),
+			)
+		})
+	}
+
+	_m.Order(func(s *sql.Selector) {
+		s.OrderBy(sql.Asc(s.C("created_at")), sql.Asc(s.C("id")))
+	})
+
+	items, err := _m.All(ctx)
+	if err != nil {
+		return pagination.Result[*ManualResourceCost]{}, err
+	}
+
+	if items == nil {
+		items = make([]*ManualResourceCost, 0)
+	}
+
+	result := pagination.Result[*ManualResourceCost]{
 		Items: items,
 	}
 

@@ -1095,6 +1095,26 @@ func CoveredTenantSeqLTE(v int64) predicate.AIUsageBatch {
 	return predicate.AIUsageBatch(sql.FieldLTE(FieldCoveredTenantSeq, v))
 }
 
+// SettlementScopeEQ applies the EQ predicate on the "settlement_scope" field.
+func SettlementScopeEQ(v SettlementScope) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(sql.FieldEQ(FieldSettlementScope, v))
+}
+
+// SettlementScopeNEQ applies the NEQ predicate on the "settlement_scope" field.
+func SettlementScopeNEQ(v SettlementScope) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(sql.FieldNEQ(FieldSettlementScope, v))
+}
+
+// SettlementScopeIn applies the In predicate on the "settlement_scope" field.
+func SettlementScopeIn(vs ...SettlementScope) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(sql.FieldIn(FieldSettlementScope, vs...))
+}
+
+// SettlementScopeNotIn applies the NotIn predicate on the "settlement_scope" field.
+func SettlementScopeNotIn(vs ...SettlementScope) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(sql.FieldNotIn(FieldSettlementScope, vs...))
+}
+
 // HasLineItems applies the HasEdge predicate on the "line_items" edge.
 func HasLineItems() predicate.AIUsageBatch {
 	return predicate.AIUsageBatch(func(s *sql.Selector) {
@@ -1133,6 +1153,52 @@ func HasRatingSnapshots() predicate.AIUsageBatch {
 func HasRatingSnapshotsWith(preds ...predicate.AIUsageRatingSnapshot) predicate.AIUsageBatch {
 	return predicate.AIUsageBatch(func(s *sql.Selector) {
 		step := newRatingSnapshotsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAllocations applies the HasEdge predicate on the "allocations" edge.
+func HasAllocations() predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAllocationsWith applies the HasEdge predicate on the "allocations" edge with a given conditions (other predicates).
+func HasAllocationsWith(preds ...predicate.AIUsageAllocation) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(func(s *sql.Selector) {
+		step := newAllocationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOutboxEvents applies the HasEdge predicate on the "outbox_events" edge.
+func HasOutboxEvents() predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OutboxEventsTable, OutboxEventsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOutboxEventsWith applies the HasEdge predicate on the "outbox_events" edge with a given conditions (other predicates).
+func HasOutboxEventsWith(preds ...predicate.AIUsageOutbox) predicate.AIUsageBatch {
+	return predicate.AIUsageBatch(func(s *sql.Selector) {
+		step := newOutboxEventsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

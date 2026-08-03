@@ -9,6 +9,18 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 )
 
+// The AIUsageAllocationFunc type is an adapter to allow the use of ordinary
+// function as AIUsageAllocation mutator.
+type AIUsageAllocationFunc func(context.Context, *db.AIUsageAllocationMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageAllocationFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageAllocationMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageAllocationMutation", m)
+}
+
 // The AIUsageBatchFunc type is an adapter to allow the use of ordinary
 // function as AIUsageBatch mutator.
 type AIUsageBatchFunc func(context.Context, *db.AIUsageBatchMutation) (db.Value, error)
@@ -33,6 +45,18 @@ func (f AIUsageLineItemFunc) Mutate(ctx context.Context, m db.Mutation) (db.Valu
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageLineItemMutation", m)
 }
 
+// The AIUsageOutboxFunc type is an adapter to allow the use of ordinary
+// function as AIUsageOutbox mutator.
+type AIUsageOutboxFunc func(context.Context, *db.AIUsageOutboxMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageOutboxFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageOutboxMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageOutboxMutation", m)
+}
+
 // The AIUsageRatecardEntryFunc type is an adapter to allow the use of ordinary
 // function as AIUsageRatecardEntry mutator.
 type AIUsageRatecardEntryFunc func(context.Context, *db.AIUsageRatecardEntryMutation) (db.Value, error)
@@ -55,6 +79,18 @@ func (f AIUsageRatingSnapshotFunc) Mutate(ctx context.Context, m db.Mutation) (d
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageRatingSnapshotMutation", m)
+}
+
+// The AIUsageWatermarkFunc type is an adapter to allow the use of ordinary
+// function as AIUsageWatermark mutator.
+type AIUsageWatermarkFunc func(context.Context, *db.AIUsageWatermarkMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIUsageWatermarkFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.AIUsageWatermarkMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.AIUsageWatermarkMutation", m)
 }
 
 // The AddonFunc type is an adapter to allow the use of ordinary
@@ -693,6 +729,18 @@ func (f CustomerFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CustomerMutation", m)
 }
 
+// The CustomerAIRatePackageFunc type is an adapter to allow the use of ordinary
+// function as CustomerAIRatePackage mutator.
+type CustomerAIRatePackageFunc func(context.Context, *db.CustomerAIRatePackageMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CustomerAIRatePackageFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.CustomerAIRatePackageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CustomerAIRatePackageMutation", m)
+}
+
 // The CustomerSubjectsFunc type is an adapter to allow the use of ordinary
 // function as CustomerSubjects mutator.
 type CustomerSubjectsFunc func(context.Context, *db.CustomerSubjectsMutation) (db.Value, error)
@@ -859,6 +907,18 @@ func (f LedgerTransactionGroupFunc) Mutate(ctx context.Context, m db.Mutation) (
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.LedgerTransactionGroupMutation", m)
+}
+
+// The ManualResourceCostFunc type is an adapter to allow the use of ordinary
+// function as ManualResourceCost mutator.
+type ManualResourceCostFunc func(context.Context, *db.ManualResourceCostMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ManualResourceCostFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.ManualResourceCostMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.ManualResourceCostMutation", m)
 }
 
 // The MeterFunc type is an adapter to allow the use of ordinary

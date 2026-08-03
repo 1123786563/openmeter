@@ -89,13 +89,19 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 		config: config,
 		// Clients templated from defined schemas
 
+		AIUsageAllocation: NewAIUsageAllocationClient(config),
+
 		AIUsageBatch: NewAIUsageBatchClient(config),
 
 		AIUsageLineItem: NewAIUsageLineItemClient(config),
 
+		AIUsageOutbox: NewAIUsageOutboxClient(config),
+
 		AIUsageRatecardEntry: NewAIUsageRatecardEntryClient(config),
 
 		AIUsageRatingSnapshot: NewAIUsageRatingSnapshotClient(config),
+
+		AIUsageWatermark: NewAIUsageWatermarkClient(config),
 
 		Addon: NewAddonClient(config),
 
@@ -205,6 +211,8 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		Customer: NewCustomerClient(config),
 
+		CustomerAIRatePackage: NewCustomerAIRatePackageClient(config),
+
 		CustomerSubjects: NewCustomerSubjectsClient(config),
 
 		Entitlement: NewEntitlementClient(config),
@@ -232,6 +240,8 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 		LedgerTransaction: NewLedgerTransactionClient(config),
 
 		LedgerTransactionGroup: NewLedgerTransactionGroupClient(config),
+
+		ManualResourceCost: NewManualResourceCostClient(config),
 
 		Meter: NewMeterClient(config),
 

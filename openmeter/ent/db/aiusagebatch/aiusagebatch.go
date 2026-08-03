@@ -3,6 +3,7 @@
 package aiusagebatch
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -50,10 +51,16 @@ const (
 	FieldTotalCredits = "total_credits"
 	// FieldCoveredTenantSeq holds the string denoting the covered_tenant_seq field in the database.
 	FieldCoveredTenantSeq = "covered_tenant_seq"
+	// FieldSettlementScope holds the string denoting the settlement_scope field in the database.
+	FieldSettlementScope = "settlement_scope"
 	// EdgeLineItems holds the string denoting the line_items edge name in mutations.
 	EdgeLineItems = "line_items"
 	// EdgeRatingSnapshots holds the string denoting the rating_snapshots edge name in mutations.
 	EdgeRatingSnapshots = "rating_snapshots"
+	// EdgeAllocations holds the string denoting the allocations edge name in mutations.
+	EdgeAllocations = "allocations"
+	// EdgeOutboxEvents holds the string denoting the outbox_events edge name in mutations.
+	EdgeOutboxEvents = "outbox_events"
 	// Table holds the table name of the aiusagebatch in the database.
 	Table = "ai_usage_batches"
 	// LineItemsTable is the table that holds the line_items relation/edge.
@@ -70,6 +77,20 @@ const (
 	RatingSnapshotsInverseTable = "ai_usage_rating_snapshots"
 	// RatingSnapshotsColumn is the table column denoting the rating_snapshots relation/edge.
 	RatingSnapshotsColumn = "ai_usage_batch_rating_snapshots"
+	// AllocationsTable is the table that holds the allocations relation/edge.
+	AllocationsTable = "ai_usage_allocations"
+	// AllocationsInverseTable is the table name for the AIUsageAllocation entity.
+	// It exists in this package in order to avoid circular dependency with the "aiusageallocation" package.
+	AllocationsInverseTable = "ai_usage_allocations"
+	// AllocationsColumn is the table column denoting the allocations relation/edge.
+	AllocationsColumn = "ai_usage_batch_allocations"
+	// OutboxEventsTable is the table that holds the outbox_events relation/edge.
+	OutboxEventsTable = "ai_usage_outboxes"
+	// OutboxEventsInverseTable is the table name for the AIUsageOutbox entity.
+	// It exists in this package in order to avoid circular dependency with the "aiusageoutbox" package.
+	OutboxEventsInverseTable = "ai_usage_outboxes"
+	// OutboxEventsColumn is the table column denoting the outbox_events relation/edge.
+	OutboxEventsColumn = "ai_usage_batch_outbox_events"
 )
 
 // Columns holds all SQL columns for aiusagebatch fields.
@@ -93,6 +114,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldTotalCredits,
 	FieldCoveredTenantSeq,
+	FieldSettlementScope,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -135,6 +157,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
+
+// SettlementScope defines the type for the "settlement_scope" enum field.
+type SettlementScope string
+
+// SettlementScopeFormal is the default value of the SettlementScope enum.
+const DefaultSettlementScope = SettlementScopeFormal
+
+// SettlementScope values.
+const (
+	SettlementScopeShadow SettlementScope = "shadow"
+	SettlementScopeFormal SettlementScope = "formal"
+)
+
+func (ss SettlementScope) String() string {
+	return string(ss)
+}
+
+// SettlementScopeValidator is a validator for the "settlement_scope" field enum values. It is called by the builders before save.
+func SettlementScopeValidator(ss SettlementScope) error {
+	switch ss {
+	case SettlementScopeShadow, SettlementScopeFormal:
+		return nil
+	default:
+		return fmt.Errorf("aiusagebatch: invalid enum value for settlement_scope field: %q", ss)
+	}
+}
 
 // OrderOption defines the ordering options for the AIUsageBatch queries.
 type OrderOption func(*sql.Selector)
@@ -229,6 +277,11 @@ func ByCoveredTenantSeq(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCoveredTenantSeq, opts...).ToFunc()
 }
 
+// BySettlementScope orders the results by the settlement_scope field.
+func BySettlementScope(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementScope, opts...).ToFunc()
+}
+
 // ByLineItemsCount orders the results by line_items count.
 func ByLineItemsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -256,6 +309,34 @@ func ByRatingSnapshots(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newRatingSnapshotsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAllocationsCount orders the results by allocations count.
+func ByAllocationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAllocationsStep(), opts...)
+	}
+}
+
+// ByAllocations orders the results by allocations terms.
+func ByAllocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAllocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOutboxEventsCount orders the results by outbox_events count.
+func ByOutboxEventsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOutboxEventsStep(), opts...)
+	}
+}
+
+// ByOutboxEvents orders the results by outbox_events terms.
+func ByOutboxEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOutboxEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newLineItemsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -268,5 +349,19 @@ func newRatingSnapshotsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(RatingSnapshotsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, RatingSnapshotsTable, RatingSnapshotsColumn),
+	)
+}
+func newAllocationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AllocationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AllocationsTable, AllocationsColumn),
+	)
+}
+func newOutboxEventsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OutboxEventsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OutboxEventsTable, OutboxEventsColumn),
 	)
 }

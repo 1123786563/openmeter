@@ -89,3 +89,25 @@ var ErrCeilingExceeded = models.NewValidationIssue(
 	models.WithCriticalSeverity(),
 	commonhttp.WithHTTPStatusCodeAttribute(http.StatusBadRequest),
 )
+
+// Idempotency errors
+const ErrCodeIdempotencyConflict models.ErrorCode = "aiusage_idempotency_conflict"
+
+var ErrIdempotencyConflict = models.NewValidationIssue(
+	ErrCodeIdempotencyConflict,
+	"batch with the same idempotency key but a different payload hash already exists",
+	models.WithFieldString("usage_batch_id"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusConflict),
+)
+
+// Watermark errors
+const ErrCodeWatermarkGap models.ErrorCode = "aiusage_watermark_gap"
+
+var ErrWatermarkGap = models.NewValidationIssue(
+	ErrCodeWatermarkGap,
+	"tenant_seq is ahead of the continuous watermark; a gap exists below",
+	models.WithFieldString("tenant_seq"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusConflict),
+)

@@ -39,6 +39,11 @@ func (AIUsageBatch) Fields() []ent.Field {
 		field.String("status").Default("pending"),
 		field.Int64("total_credits").Default(0),
 		field.Int64("covered_tenant_seq").Default(0),
+		// SettlementScope controls shadow (visibility only) vs formal (deduct grants) persistence.
+		field.Enum("settlement_scope").
+			Values("shadow", "formal").
+			Default("formal").
+			Immutable(),
 	}
 }
 
@@ -46,6 +51,8 @@ func (AIUsageBatch) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("line_items", AIUsageLineItem.Type),
 		edge.To("rating_snapshots", AIUsageRatingSnapshot.Type),
+		edge.To("allocations", AIUsageAllocation.Type),
+		edge.To("outbox_events", AIUsageOutbox.Type),
 	}
 }
 
@@ -53,6 +60,10 @@ func (AIUsageBatch) Indexes() []ent.Index {
 	return []ent.Index{
 		// Idempotency key: one batch per usage_batch_id per namespace.
 		index.Fields("namespace", "usage_batch_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")).
+			Unique(),
+		// Subject monotonic seq: one batch per subject per tenant_seq.
+		index.Fields("namespace", "subject_id", "tenant_seq").
 			Annotations(entsql.IndexWhere("deleted_at IS NULL")).
 			Unique(),
 		// Watermark lookup: find highest settled tenant_seq.

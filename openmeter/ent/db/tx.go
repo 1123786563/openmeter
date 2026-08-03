@@ -14,14 +14,20 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AIUsageAllocation is the client for interacting with the AIUsageAllocation builders.
+	AIUsageAllocation *AIUsageAllocationClient
 	// AIUsageBatch is the client for interacting with the AIUsageBatch builders.
 	AIUsageBatch *AIUsageBatchClient
 	// AIUsageLineItem is the client for interacting with the AIUsageLineItem builders.
 	AIUsageLineItem *AIUsageLineItemClient
+	// AIUsageOutbox is the client for interacting with the AIUsageOutbox builders.
+	AIUsageOutbox *AIUsageOutboxClient
 	// AIUsageRatecardEntry is the client for interacting with the AIUsageRatecardEntry builders.
 	AIUsageRatecardEntry *AIUsageRatecardEntryClient
 	// AIUsageRatingSnapshot is the client for interacting with the AIUsageRatingSnapshot builders.
 	AIUsageRatingSnapshot *AIUsageRatingSnapshotClient
+	// AIUsageWatermark is the client for interacting with the AIUsageWatermark builders.
+	AIUsageWatermark *AIUsageWatermarkClient
 	// Addon is the client for interacting with the Addon builders.
 	Addon *AddonClient
 	// AddonRateCard is the client for interacting with the AddonRateCard builders.
@@ -130,6 +136,8 @@ type Tx struct {
 	CustomCurrency *CustomCurrencyClient
 	// Customer is the client for interacting with the Customer builders.
 	Customer *CustomerClient
+	// CustomerAIRatePackage is the client for interacting with the CustomerAIRatePackage builders.
+	CustomerAIRatePackage *CustomerAIRatePackageClient
 	// CustomerSubjects is the client for interacting with the CustomerSubjects builders.
 	CustomerSubjects *CustomerSubjectsClient
 	// Entitlement is the client for interacting with the Entitlement builders.
@@ -158,6 +166,8 @@ type Tx struct {
 	LedgerTransaction *LedgerTransactionClient
 	// LedgerTransactionGroup is the client for interacting with the LedgerTransactionGroup builders.
 	LedgerTransactionGroup *LedgerTransactionGroupClient
+	// ManualResourceCost is the client for interacting with the ManualResourceCost builders.
+	ManualResourceCost *ManualResourceCostClient
 	// Meter is the client for interacting with the Meter builders.
 	Meter *MeterClient
 	// NotificationChannel is the client for interacting with the NotificationChannel builders.
@@ -327,10 +337,13 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AIUsageAllocation = NewAIUsageAllocationClient(tx.config)
 	tx.AIUsageBatch = NewAIUsageBatchClient(tx.config)
 	tx.AIUsageLineItem = NewAIUsageLineItemClient(tx.config)
+	tx.AIUsageOutbox = NewAIUsageOutboxClient(tx.config)
 	tx.AIUsageRatecardEntry = NewAIUsageRatecardEntryClient(tx.config)
 	tx.AIUsageRatingSnapshot = NewAIUsageRatingSnapshotClient(tx.config)
+	tx.AIUsageWatermark = NewAIUsageWatermarkClient(tx.config)
 	tx.Addon = NewAddonClient(tx.config)
 	tx.AddonRateCard = NewAddonRateCardClient(tx.config)
 	tx.App = NewAppClient(tx.config)
@@ -385,6 +398,7 @@ func (tx *Tx) init() {
 	tx.CurrencyCostBasis = NewCurrencyCostBasisClient(tx.config)
 	tx.CustomCurrency = NewCustomCurrencyClient(tx.config)
 	tx.Customer = NewCustomerClient(tx.config)
+	tx.CustomerAIRatePackage = NewCustomerAIRatePackageClient(tx.config)
 	tx.CustomerSubjects = NewCustomerSubjectsClient(tx.config)
 	tx.Entitlement = NewEntitlementClient(tx.config)
 	tx.Feature = NewFeatureClient(tx.config)
@@ -399,6 +413,7 @@ func (tx *Tx) init() {
 	tx.LedgerSubAccountRoute = NewLedgerSubAccountRouteClient(tx.config)
 	tx.LedgerTransaction = NewLedgerTransactionClient(tx.config)
 	tx.LedgerTransactionGroup = NewLedgerTransactionGroupClient(tx.config)
+	tx.ManualResourceCost = NewManualResourceCostClient(tx.config)
 	tx.Meter = NewMeterClient(tx.config)
 	tx.NotificationChannel = NewNotificationChannelClient(tx.config)
 	tx.NotificationEvent = NewNotificationEventClient(tx.config)
@@ -427,7 +442,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: AIUsageBatch.QueryXXX(), the query will be executed
+// applies a query, for example: AIUsageAllocation.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

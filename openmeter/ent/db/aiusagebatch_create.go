@@ -12,8 +12,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -206,6 +208,20 @@ func (_c *AIUsageBatchCreate) SetNillableCoveredTenantSeq(v *int64) *AIUsageBatc
 	return _c
 }
 
+// SetSettlementScope sets the "settlement_scope" field.
+func (_c *AIUsageBatchCreate) SetSettlementScope(v aiusagebatch.SettlementScope) *AIUsageBatchCreate {
+	_c.mutation.SetSettlementScope(v)
+	return _c
+}
+
+// SetNillableSettlementScope sets the "settlement_scope" field if the given value is not nil.
+func (_c *AIUsageBatchCreate) SetNillableSettlementScope(v *aiusagebatch.SettlementScope) *AIUsageBatchCreate {
+	if v != nil {
+		_c.SetSettlementScope(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AIUsageBatchCreate) SetID(v string) *AIUsageBatchCreate {
 	_c.mutation.SetID(v)
@@ -248,6 +264,36 @@ func (_c *AIUsageBatchCreate) AddRatingSnapshots(v ...*AIUsageRatingSnapshot) *A
 		ids[i] = v[i].ID
 	}
 	return _c.AddRatingSnapshotIDs(ids...)
+}
+
+// AddAllocationIDs adds the "allocations" edge to the AIUsageAllocation entity by IDs.
+func (_c *AIUsageBatchCreate) AddAllocationIDs(ids ...string) *AIUsageBatchCreate {
+	_c.mutation.AddAllocationIDs(ids...)
+	return _c
+}
+
+// AddAllocations adds the "allocations" edges to the AIUsageAllocation entity.
+func (_c *AIUsageBatchCreate) AddAllocations(v ...*AIUsageAllocation) *AIUsageBatchCreate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAllocationIDs(ids...)
+}
+
+// AddOutboxEventIDs adds the "outbox_events" edge to the AIUsageOutbox entity by IDs.
+func (_c *AIUsageBatchCreate) AddOutboxEventIDs(ids ...string) *AIUsageBatchCreate {
+	_c.mutation.AddOutboxEventIDs(ids...)
+	return _c
+}
+
+// AddOutboxEvents adds the "outbox_events" edges to the AIUsageOutbox entity.
+func (_c *AIUsageBatchCreate) AddOutboxEvents(v ...*AIUsageOutbox) *AIUsageBatchCreate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOutboxEventIDs(ids...)
 }
 
 // Mutation returns the AIUsageBatchMutation object of the builder.
@@ -308,6 +354,10 @@ func (_c *AIUsageBatchCreate) defaults() {
 	if _, ok := _c.mutation.CoveredTenantSeq(); !ok {
 		v := aiusagebatch.DefaultCoveredTenantSeq
 		_c.mutation.SetCoveredTenantSeq(v)
+	}
+	if _, ok := _c.mutation.SettlementScope(); !ok {
+		v := aiusagebatch.DefaultSettlementScope
+		_c.mutation.SetSettlementScope(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := aiusagebatch.DefaultID()
@@ -388,6 +438,14 @@ func (_c *AIUsageBatchCreate) check() error {
 	}
 	if _, ok := _c.mutation.CoveredTenantSeq(); !ok {
 		return &ValidationError{Name: "covered_tenant_seq", err: errors.New(`db: missing required field "AIUsageBatch.covered_tenant_seq"`)}
+	}
+	if _, ok := _c.mutation.SettlementScope(); !ok {
+		return &ValidationError{Name: "settlement_scope", err: errors.New(`db: missing required field "AIUsageBatch.settlement_scope"`)}
+	}
+	if v, ok := _c.mutation.SettlementScope(); ok {
+		if err := aiusagebatch.SettlementScopeValidator(v); err != nil {
+			return &ValidationError{Name: "settlement_scope", err: fmt.Errorf(`db: validator failed for field "AIUsageBatch.settlement_scope": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -497,6 +555,10 @@ func (_c *AIUsageBatchCreate) createSpec() (*AIUsageBatch, *sqlgraph.CreateSpec)
 		_spec.SetField(aiusagebatch.FieldCoveredTenantSeq, field.TypeInt64, value)
 		_node.CoveredTenantSeq = value
 	}
+	if value, ok := _c.mutation.SettlementScope(); ok {
+		_spec.SetField(aiusagebatch.FieldSettlementScope, field.TypeEnum, value)
+		_node.SettlementScope = value
+	}
 	if nodes := _c.mutation.LineItemsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -522,6 +584,38 @@ func (_c *AIUsageBatchCreate) createSpec() (*AIUsageBatch, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(aiusageratingsnapshot.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AllocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.AllocationsTable,
+			Columns: []string{aiusagebatch.AllocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageallocation.FieldID, field.TypeString),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OutboxEventsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   aiusagebatch.OutboxEventsTable,
+			Columns: []string{aiusagebatch.OutboxEventsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(aiusageoutbox.FieldID, field.TypeString),
 			},
 		}
 		for _, k := range nodes {
@@ -843,6 +937,9 @@ func (u *AIUsageBatchUpsertOne) UpdateNewValues() *AIUsageBatchUpsertOne {
 		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(aiusagebatch.FieldCreatedAt)
+		}
+		if _, exists := u.create.mutation.SettlementScope(); exists {
+			s.SetIgnore(aiusagebatch.FieldSettlementScope)
 		}
 	}))
 	return u
@@ -1343,6 +1440,9 @@ func (u *AIUsageBatchUpsertBulk) UpdateNewValues() *AIUsageBatchUpsertBulk {
 			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(aiusagebatch.FieldCreatedAt)
+			}
+			if _, exists := b.mutation.SettlementScope(); exists {
+				s.SetIgnore(aiusagebatch.FieldSettlementScope)
 			}
 		}
 	}))

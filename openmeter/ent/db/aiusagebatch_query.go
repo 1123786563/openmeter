@@ -13,8 +13,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/predicate"
 )
@@ -28,6 +30,8 @@ type AIUsageBatchQuery struct {
 	predicates          []predicate.AIUsageBatch
 	withLineItems       *AIUsageLineItemQuery
 	withRatingSnapshots *AIUsageRatingSnapshotQuery
+	withAllocations     *AIUsageAllocationQuery
+	withOutboxEvents    *AIUsageOutboxQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -102,6 +106,50 @@ func (_q *AIUsageBatchQuery) QueryRatingSnapshots() *AIUsageRatingSnapshotQuery 
 			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, selector),
 			sqlgraph.To(aiusageratingsnapshot.Table, aiusageratingsnapshot.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.RatingSnapshotsTable, aiusagebatch.RatingSnapshotsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAllocations chains the current query on the "allocations" edge.
+func (_q *AIUsageBatchQuery) QueryAllocations() *AIUsageAllocationQuery {
+	query := (&AIUsageAllocationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, selector),
+			sqlgraph.To(aiusageallocation.Table, aiusageallocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.AllocationsTable, aiusagebatch.AllocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOutboxEvents chains the current query on the "outbox_events" edge.
+func (_q *AIUsageBatchQuery) QueryOutboxEvents() *AIUsageOutboxQuery {
+	query := (&AIUsageOutboxClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, selector),
+			sqlgraph.To(aiusageoutbox.Table, aiusageoutbox.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.OutboxEventsTable, aiusagebatch.OutboxEventsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -303,6 +351,8 @@ func (_q *AIUsageBatchQuery) Clone() *AIUsageBatchQuery {
 		predicates:          append([]predicate.AIUsageBatch{}, _q.predicates...),
 		withLineItems:       _q.withLineItems.Clone(),
 		withRatingSnapshots: _q.withRatingSnapshots.Clone(),
+		withAllocations:     _q.withAllocations.Clone(),
+		withOutboxEvents:    _q.withOutboxEvents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -328,6 +378,28 @@ func (_q *AIUsageBatchQuery) WithRatingSnapshots(opts ...func(*AIUsageRatingSnap
 		opt(query)
 	}
 	_q.withRatingSnapshots = query
+	return _q
+}
+
+// WithAllocations tells the query-builder to eager-load the nodes that are connected to
+// the "allocations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AIUsageBatchQuery) WithAllocations(opts ...func(*AIUsageAllocationQuery)) *AIUsageBatchQuery {
+	query := (&AIUsageAllocationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAllocations = query
+	return _q
+}
+
+// WithOutboxEvents tells the query-builder to eager-load the nodes that are connected to
+// the "outbox_events" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AIUsageBatchQuery) WithOutboxEvents(opts ...func(*AIUsageOutboxQuery)) *AIUsageBatchQuery {
+	query := (&AIUsageOutboxClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOutboxEvents = query
 	return _q
 }
 
@@ -409,9 +481,11 @@ func (_q *AIUsageBatchQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	var (
 		nodes       = []*AIUsageBatch{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [4]bool{
 			_q.withLineItems != nil,
 			_q.withRatingSnapshots != nil,
+			_q.withAllocations != nil,
+			_q.withOutboxEvents != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -448,6 +522,20 @@ func (_q *AIUsageBatchQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 			func(n *AIUsageBatch, e *AIUsageRatingSnapshot) {
 				n.Edges.RatingSnapshots = append(n.Edges.RatingSnapshots, e)
 			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAllocations; query != nil {
+		if err := _q.loadAllocations(ctx, query, nodes,
+			func(n *AIUsageBatch) { n.Edges.Allocations = []*AIUsageAllocation{} },
+			func(n *AIUsageBatch, e *AIUsageAllocation) { n.Edges.Allocations = append(n.Edges.Allocations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOutboxEvents; query != nil {
+		if err := _q.loadOutboxEvents(ctx, query, nodes,
+			func(n *AIUsageBatch) { n.Edges.OutboxEvents = []*AIUsageOutbox{} },
+			func(n *AIUsageBatch, e *AIUsageOutbox) { n.Edges.OutboxEvents = append(n.Edges.OutboxEvents, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -511,6 +599,68 @@ func (_q *AIUsageBatchQuery) loadRatingSnapshots(ctx context.Context, query *AIU
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "ai_usage_batch_rating_snapshots" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AIUsageBatchQuery) loadAllocations(ctx context.Context, query *AIUsageAllocationQuery, nodes []*AIUsageBatch, init func(*AIUsageBatch), assign func(*AIUsageBatch, *AIUsageAllocation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*AIUsageBatch)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.AIUsageAllocation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(aiusagebatch.AllocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ai_usage_batch_allocations
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "ai_usage_batch_allocations" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "ai_usage_batch_allocations" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AIUsageBatchQuery) loadOutboxEvents(ctx context.Context, query *AIUsageOutboxQuery, nodes []*AIUsageBatch, init func(*AIUsageBatch), assign func(*AIUsageBatch, *AIUsageOutbox)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*AIUsageBatch)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.AIUsageOutbox(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(aiusagebatch.OutboxEventsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ai_usage_batch_outbox_events
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "ai_usage_batch_outbox_events" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "ai_usage_batch_outbox_events" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

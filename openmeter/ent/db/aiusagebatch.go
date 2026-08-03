@@ -55,6 +55,8 @@ type AIUsageBatch struct {
 	TotalCredits int64 `json:"total_credits,omitempty"`
 	// CoveredTenantSeq holds the value of the "covered_tenant_seq" field.
 	CoveredTenantSeq int64 `json:"covered_tenant_seq,omitempty"`
+	// SettlementScope holds the value of the "settlement_scope" field.
+	SettlementScope aiusagebatch.SettlementScope `json:"settlement_scope,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AIUsageBatchQuery when eager-loading is set.
 	Edges        AIUsageBatchEdges `json:"edges"`
@@ -67,9 +69,13 @@ type AIUsageBatchEdges struct {
 	LineItems []*AIUsageLineItem `json:"line_items,omitempty"`
 	// RatingSnapshots holds the value of the rating_snapshots edge.
 	RatingSnapshots []*AIUsageRatingSnapshot `json:"rating_snapshots,omitempty"`
+	// Allocations holds the value of the allocations edge.
+	Allocations []*AIUsageAllocation `json:"allocations,omitempty"`
+	// OutboxEvents holds the value of the outbox_events edge.
+	OutboxEvents []*AIUsageOutbox `json:"outbox_events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [4]bool
 }
 
 // LineItemsOrErr returns the LineItems value or an error if the edge
@@ -90,6 +96,24 @@ func (e AIUsageBatchEdges) RatingSnapshotsOrErr() ([]*AIUsageRatingSnapshot, err
 	return nil, &NotLoadedError{edge: "rating_snapshots"}
 }
 
+// AllocationsOrErr returns the Allocations value or an error if the edge
+// was not loaded in eager-loading.
+func (e AIUsageBatchEdges) AllocationsOrErr() ([]*AIUsageAllocation, error) {
+	if e.loadedTypes[2] {
+		return e.Allocations, nil
+	}
+	return nil, &NotLoadedError{edge: "allocations"}
+}
+
+// OutboxEventsOrErr returns the OutboxEvents value or an error if the edge
+// was not loaded in eager-loading.
+func (e AIUsageBatchEdges) OutboxEventsOrErr() ([]*AIUsageOutbox, error) {
+	if e.loadedTypes[3] {
+		return e.OutboxEvents, nil
+	}
+	return nil, &NotLoadedError{edge: "outbox_events"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*AIUsageBatch) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -99,7 +123,7 @@ func (*AIUsageBatch) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case aiusagebatch.FieldTenantSeq, aiusagebatch.FieldCeilingCredits, aiusagebatch.FieldTotalCredits, aiusagebatch.FieldCoveredTenantSeq:
 			values[i] = new(sql.NullInt64)
-		case aiusagebatch.FieldID, aiusagebatch.FieldNamespace, aiusagebatch.FieldCustomerID, aiusagebatch.FieldSubjectID, aiusagebatch.FieldUsageBatchID, aiusagebatch.FieldReservationID, aiusagebatch.FieldRateVersion, aiusagebatch.FieldBillingMode, aiusagebatch.FieldPayloadHash, aiusagebatch.FieldStatus:
+		case aiusagebatch.FieldID, aiusagebatch.FieldNamespace, aiusagebatch.FieldCustomerID, aiusagebatch.FieldSubjectID, aiusagebatch.FieldUsageBatchID, aiusagebatch.FieldReservationID, aiusagebatch.FieldRateVersion, aiusagebatch.FieldBillingMode, aiusagebatch.FieldPayloadHash, aiusagebatch.FieldStatus, aiusagebatch.FieldSettlementScope:
 			values[i] = new(sql.NullString)
 		case aiusagebatch.FieldCreatedAt, aiusagebatch.FieldUpdatedAt, aiusagebatch.FieldDeletedAt, aiusagebatch.FieldOccurredAt:
 			values[i] = new(sql.NullTime)
@@ -237,6 +261,12 @@ func (_m *AIUsageBatch) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CoveredTenantSeq = value.Int64
 			}
+		case aiusagebatch.FieldSettlementScope:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_scope", values[i])
+			} else if value.Valid {
+				_m.SettlementScope = aiusagebatch.SettlementScope(value.String)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -258,6 +288,16 @@ func (_m *AIUsageBatch) QueryLineItems() *AIUsageLineItemQuery {
 // QueryRatingSnapshots queries the "rating_snapshots" edge of the AIUsageBatch entity.
 func (_m *AIUsageBatch) QueryRatingSnapshots() *AIUsageRatingSnapshotQuery {
 	return NewAIUsageBatchClient(_m.config).QueryRatingSnapshots(_m)
+}
+
+// QueryAllocations queries the "allocations" edge of the AIUsageBatch entity.
+func (_m *AIUsageBatch) QueryAllocations() *AIUsageAllocationQuery {
+	return NewAIUsageBatchClient(_m.config).QueryAllocations(_m)
+}
+
+// QueryOutboxEvents queries the "outbox_events" edge of the AIUsageBatch entity.
+func (_m *AIUsageBatch) QueryOutboxEvents() *AIUsageOutboxQuery {
+	return NewAIUsageBatchClient(_m.config).QueryOutboxEvents(_m)
 }
 
 // Update returns a builder for updating this AIUsageBatch.
@@ -342,6 +382,9 @@ func (_m *AIUsageBatch) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("covered_tenant_seq=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CoveredTenantSeq))
+	builder.WriteString(", ")
+	builder.WriteString("settlement_scope=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SettlementScope))
 	builder.WriteByte(')')
 	return builder.String()
 }
