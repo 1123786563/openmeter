@@ -80,6 +80,26 @@ var ErrInsufficientCredits = models.NewValidationIssue(
 	commonhttp.WithHTTPStatusCodeAttribute(http.StatusPaymentRequired),
 )
 
+const ErrCodeCreditInsufficient models.ErrorCode = "aiusage_credit_insufficient"
+
+var ErrCreditInsufficient = models.NewValidationIssue(
+	ErrCodeCreditInsufficient,
+	"prepaid credits insufficient and no enterprise receivable available",
+	models.WithFieldString("credits"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusPaymentRequired),
+)
+
+const ErrCodeCreditLimitExceeded models.ErrorCode = "aiusage_credit_limit_exceeded"
+
+var ErrCreditLimitExceeded = models.NewValidationIssue(
+	ErrCodeCreditLimitExceeded,
+	"enterprise receivable credit limit exceeded",
+	models.WithFieldString("receivable"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusPaymentRequired),
+)
+
 const ErrCodeCeilingExceeded models.ErrorCode = "aiusage_ceiling_exceeded"
 
 var ErrCeilingExceeded = models.NewValidationIssue(

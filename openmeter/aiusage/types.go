@@ -93,6 +93,44 @@ func (i UsageLineItem) Validate() error {
 	return models.NewNillableGenericValidationError(errors.Join(errs...))
 }
 
+// CorrectionInput reverses a previously settled batch by creating linked
+// reversing allocations. The correction is itself a batch that offsets the
+// original — useful for refunds, billing errors, or tenant-driven disputes.
+type CorrectionInput struct {
+	Namespace       string `json:"namespace"`
+	CustomerID      string `json:"customer_id"`
+	SubjectID       string `json:"subject_id"`
+	OriginalBatchID string `json:"original_batch_id"`
+	TenantSeq       int64  `json:"tenant_seq"`
+	PayloadHash     string `json:"payload_hash"`
+	Reason          string `json:"reason"`
+}
+
+func (i CorrectionInput) Validate() error {
+	var errs []error
+
+	if i.Namespace == "" {
+		errs = append(errs, fmt.Errorf("namespace must not be empty"))
+	}
+	if i.CustomerID == "" {
+		errs = append(errs, fmt.Errorf("customer_id must not be empty"))
+	}
+	if i.SubjectID == "" {
+		errs = append(errs, fmt.Errorf("subject_id must not be empty"))
+	}
+	if i.OriginalBatchID == "" {
+		errs = append(errs, fmt.Errorf("original_batch_id must not be empty"))
+	}
+	if i.TenantSeq <= 0 {
+		errs = append(errs, fmt.Errorf("tenant_seq must be positive"))
+	}
+	if i.PayloadHash == "" {
+		errs = append(errs, fmt.Errorf("payload_hash must not be empty"))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
 // AIUsageBatch is the canonical unit of AI billing — one business action produces one batch.
 type AIUsageBatch struct {
 	models.ManagedModel `json:",inline"`
@@ -213,6 +251,17 @@ type LedgerEntryRef struct {
 	Priority uint8   `json:"priority"`
 }
 
+// FundingSource identifies the origin of credits consumed during settlement.
+// The burn order is: plan → promotional → paid_top_up → enterprise_receivable.
+type FundingSource string
+
+const (
+	FundingSourcePlan                 FundingSource = "plan"
+	FundingSourcePromotional          FundingSource = "promotional"
+	FundingSourcePaidTopUp            FundingSource = "paid_top_up"
+	FundingSourceEnterpriseReceivable FundingSource = "enterprise_receivable"
+)
+
 // BatchSettlementResult is returned after processing a batch.
 type BatchSettlementResult struct {
 	BatchID          string           `json:"batch_id"`
@@ -245,10 +294,10 @@ func (s SettlementScope) Validate() error {
 
 // Allocation records the Credit deduction from a single funding source (grant).
 type Allocation struct {
-	GrantID       string  `json:"grant_id"`
-	Amount        float64 `json:"amount"`
-	Priority      uint8   `json:"priority"`
-	FundingSource string  `json:"funding_source"`
+	GrantID       string        `json:"grant_id"`
+	Amount        float64       `json:"amount"`
+	Priority      uint8         `json:"priority"`
+	FundingSource FundingSource `json:"funding_source"`
 }
 
 // OutboxEvent is a transactional outbox record published after commit.

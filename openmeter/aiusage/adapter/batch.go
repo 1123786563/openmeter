@@ -137,7 +137,7 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 			SetGrantID(alloc.GrantID).
 			SetAmount(alpacadecimal.NewFromFloat(alloc.Amount)).
 			SetPriority(alloc.Priority).
-			SetFundingSource(alloc.FundingSource).
+			SetFundingSource(string(alloc.FundingSource)).
 			SetBatchID(ent.ID).
 			Save(ctx); err != nil {
 			return nil, false, fmt.Errorf("create allocation: %w", err)
