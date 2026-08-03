@@ -90,6 +90,10 @@ COPY --link --from=builder /usr/local/bin/openmeter-jobs /usr/local/bin/
 COPY --link --from=builder /src/go.* /usr/local/src/openmeter/
 COPY --link --from=builder /src/entrypoint.sh /entrypoint.sh
 
+# Phase 1 contract artifacts: generated v3 OpenAPI spec and manifest.
+# The build-phase1-artifact.sh script reads these from /contract in the image.
+COPY --link api/v3/openapi.yaml /contract/openapi.yaml
+
 ENTRYPOINT ["/entrypoint.sh"]
 
 CMD openmeter
