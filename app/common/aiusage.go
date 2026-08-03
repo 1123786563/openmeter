@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/google/wire"
 
 	"github.com/openmeterio/openmeter/app/config"
@@ -64,12 +66,17 @@ func NewAIUsageService(
 	aiUsageConfig config.AIUsageConfiguration,
 	repo aiusage.Repository,
 	logger *slog.Logger,
+	tracer trace.Tracer,
+	ledgerSvc ledger.Ledger,
 ) (aiusage.Service, error) {
 	if !aiUsageConfig.Enabled {
 		return nil, nil
 	}
 	if repo == nil {
 		return nil, fmt.Errorf("ai_usage: repository is required when ai_usage is enabled")
+	}
+	if ledgerSvc == nil {
+		return nil, fmt.Errorf("ai_usage: credit stack (ledger) is required when ai_usage is enabled")
 	}
 
 	// Validate that the signing key is present — the process must refuse
@@ -78,12 +85,15 @@ func NewAIUsageService(
 		return nil, fmt.Errorf("ai_usage: signing.current_key_id is required when ai_usage is enabled")
 	}
 
-	// The Credit stack (ledger) is a hard dependency for formal settlement.
-	// We validate its presence here; the actual collector wiring happens inside
-	// the settlement engine.
+	// Phase 1 uses noop rate-card, cost, and settlement implementations until
+	// the pricing, llmcost, and collector services are wired into the DI graph.
 	return aiusage.NewService(aiusage.ServiceConfig{
-		Repo:   repo,
-		Logger: logger,
+		Repo:             repo,
+		RateCardResolver: noopRateCardResolver{},
+		CostResolver:     noopCostResolver{},
+		SettlementEngine: &noopSettlementEngine{logger: logger},
+		Logger:           logger,
+		Tracer:           tracer,
 	}), nil
 }
 
@@ -124,16 +134,26 @@ func NewAIUsageSigner(
 func NewRuntimeAuthorizationService(
 	aiUsageConfig config.AIUsageConfiguration,
 	signer signing.Signer,
-	_ ledger.Ledger,
+	ledgerSvc ledger.Ledger,
 	logger *slog.Logger,
+	tracer trace.Tracer,
 ) (runtimeauthorization.Service, error) {
 	if !aiUsageConfig.Enabled || signer == nil {
 		return nil, nil
 	}
+	if ledgerSvc == nil {
+		return nil, fmt.Errorf("ai_usage: credit stack (ledger) is required when ai_usage is enabled")
+	}
 
 	return runtimeauthorization.New(runtimeauthorization.Config{
-		Signer: signer,
-		Logger: logger,
+		BalanceReader:   noopBalanceReader{},
+		Subscription:    noopSubscriptionReader{},
+		RatePackage:     noopRatePackageReader{},
+		CoveredSeq:      noopCoveredSeqReader{},
+		SnapshotVersion: &atomicSnapshotVersionProvider{},
+		Signer:          signer,
+		Logger:          logger,
+		Tracer:          tracer,
 	})
 }
 

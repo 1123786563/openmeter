@@ -3,8 +3,8 @@ package server
 import (
 	"net/http"
 
-	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
 	"github.com/openmeterio/openmeter/api/v3/apierrors"
+	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
 
 	api "github.com/openmeterio/openmeter/api/v3"
 	"github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"

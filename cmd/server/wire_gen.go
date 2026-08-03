@@ -687,7 +687,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	aiusageService, err := common.NewAIUsageService(aiUsageConfiguration, aiusageRepository, logger)
+	aiusageService, err := common.NewAIUsageService(aiUsageConfiguration, aiusageRepository, logger, tracer, ledger)
 	if err != nil {
 		cleanup8()
 		cleanup7()
@@ -711,7 +711,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, ledger, logger)
+	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, ledger, logger, tracer)
 	if err != nil {
 		cleanup8()
 		cleanup7()
