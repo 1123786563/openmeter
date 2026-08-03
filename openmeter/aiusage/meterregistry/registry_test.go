@@ -59,7 +59,7 @@ func TestLookupExistingResource(t *testing.T) {
 	err := reg.Publish(t.Context(), DefaultResourceSchemas())
 	require.NoError(t, err)
 
-	schema, err := reg.Lookup(aiusage.ResourceChatInputToken)
+	schema, err := reg.Lookup(aiusage.ResourceLLMInputTokens)
 	require.NoError(t, err)
 	assert.Equal(t, "token", schema.Unit)
 	assert.Equal(t, AggregationSum, schema.Aggregation)
@@ -85,11 +85,11 @@ func TestPlatformResourcesNotProviderManaged(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, code := range []aiusage.ResourceCode{
-		aiusage.ResourceRAGRetrieval,
-		aiusage.ResourceDocParsePage,
-		aiusage.ResourceMCPCall,
-		aiusage.ResourceWebSearch,
-		aiusage.ResourceAgentRun,
+		aiusage.ResourceRAGQueries,
+		aiusage.ResourceDocParsePages,
+		aiusage.ResourceMCPToolCalls,
+		aiusage.ResourceWebSearches,
+		aiusage.ResourceAgentRuns,
 	} {
 		schema, err := reg.Lookup(code)
 		require.NoError(t, err)
@@ -105,17 +105,17 @@ func TestModelTokenResourcesAreProviderManaged(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, code := range []aiusage.ResourceCode{
-		aiusage.ResourceChatInputToken,
-		aiusage.ResourceChatOutputToken,
-		aiusage.ResourceChatCacheReadToken,
-		aiusage.ResourceChatCacheWriteToken,
-		aiusage.ResourceChatReasoningToken,
-		aiusage.ResourceEmbeddingToken,
-		aiusage.ResourceRerankCall,
-		aiusage.ResourceVLMInputToken,
-		aiusage.ResourceVLMOutputToken,
-		aiusage.ResourceVLMImage,
-		aiusage.ResourceASRSeconds,
+		aiusage.ResourceLLMInputTokens,
+		aiusage.ResourceLLMOutputTokens,
+		aiusage.ResourceLLMCacheReadTokens,
+		aiusage.ResourceLLMCacheWriteTokens,
+		aiusage.ResourceLLMReasoningTokens,
+		aiusage.ResourceEmbeddingTokens,
+		aiusage.ResourceRerankCalls,
+		aiusage.ResourceVLMInputTokens,
+		aiusage.ResourceVLMOutputTokens,
+		aiusage.ResourceVLMImages,
+		aiusage.ResourceASRMilliseconds,
 	} {
 		schema, err := reg.Lookup(code)
 		require.NoError(t, err)
@@ -130,6 +130,41 @@ func TestMeterSlugNaming(t *testing.T) {
 	err := reg.Publish(t.Context(), DefaultResourceSchemas())
 	require.NoError(t, err)
 
-	_, ok := mgr.created["ai_chat_input_token"]
+	_, ok := mgr.created["ai_llm_input_tokens"]
 	assert.True(t, ok, "meter slug should be ai_<resource_code>")
+}
+
+// TestAll16PluralCodes verifies that every TypeSpec-contract resource code
+// (plural form) is present in the default schema set.
+func TestAll16PluralCodes(t *testing.T) {
+	set := DefaultResourceSchemas()
+	require.Len(t, set.Schemas, 16)
+
+	expectedCodes := []aiusage.ResourceCode{
+		aiusage.ResourceLLMInputTokens,
+		aiusage.ResourceLLMOutputTokens,
+		aiusage.ResourceLLMCacheReadTokens,
+		aiusage.ResourceLLMCacheWriteTokens,
+		aiusage.ResourceLLMReasoningTokens,
+		aiusage.ResourceEmbeddingTokens,
+		aiusage.ResourceRerankCalls,
+		aiusage.ResourceVLMInputTokens,
+		aiusage.ResourceVLMOutputTokens,
+		aiusage.ResourceVLMImages,
+		aiusage.ResourceASRMilliseconds,
+		aiusage.ResourceRAGQueries,
+		aiusage.ResourceDocParsePages,
+		aiusage.ResourceMCPToolCalls,
+		aiusage.ResourceWebSearches,
+		aiusage.ResourceAgentRuns,
+	}
+
+	seen := make(map[aiusage.ResourceCode]bool)
+	for _, s := range set.Schemas {
+		seen[s.Code] = true
+	}
+
+	for _, code := range expectedCodes {
+		assert.True(t, seen[code], "expected resource code %s in default schemas", code)
+	}
 }

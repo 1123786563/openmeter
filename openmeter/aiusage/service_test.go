@@ -129,7 +129,7 @@ func TestService_IngestBatch_HappyPath(t *testing.T) {
 	repo := newMockRepo()
 	resolver := &mockRateCardResolver{
 		entries: map[string]CustomerRateCardEntry{
-			"ns-1:cust-1:chat_input_token": {
+			"ns-1:cust-1:llm_input_tokens": {
 				PricePerUnitCNY: alpacadecimal.NewFromFloat(0.000002),
 				CreditRate:      1000,
 			},
@@ -148,7 +148,7 @@ func TestService_IngestBatch_HappyPath(t *testing.T) {
 		BillingMode:  BillingModeComponent,
 		PayloadHash:  "hash1",
 		LineItems: []UsageLineItem{
-			{ResourceCode: ResourceChatInputToken, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true},
+			{ResourceCode: ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true},
 		},
 	}
 
@@ -162,7 +162,7 @@ func TestService_IngestBatch_Idempotency(t *testing.T) {
 	repo := newMockRepo()
 	resolver := &mockRateCardResolver{
 		entries: map[string]CustomerRateCardEntry{
-			"ns-1:cust-1:chat_input_token": {
+			"ns-1:cust-1:llm_input_tokens": {
 				PricePerUnitCNY: alpacadecimal.NewFromFloat(0.000002),
 				CreditRate:      1000,
 			},
@@ -178,7 +178,7 @@ func TestService_IngestBatch_Idempotency(t *testing.T) {
 		TenantSeq:    1,
 		PayloadHash:  "hash1",
 		BillingMode:  BillingModeComponent,
-		LineItems:    []UsageLineItem{{ResourceCode: ResourceChatInputToken, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
+		LineItems:    []UsageLineItem{{ResourceCode: ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
 	}
 
 	// First call.
@@ -195,7 +195,7 @@ func TestService_IngestBatch_Conflict(t *testing.T) {
 	repo := newMockRepo()
 	resolver := &mockRateCardResolver{
 		entries: map[string]CustomerRateCardEntry{
-			"ns-1:cust-1:chat_input_token": {
+			"ns-1:cust-1:llm_input_tokens": {
 				PricePerUnitCNY: alpacadecimal.NewFromFloat(0.000002),
 				CreditRate:      1000,
 			},
@@ -211,7 +211,7 @@ func TestService_IngestBatch_Conflict(t *testing.T) {
 		TenantSeq:    1,
 		PayloadHash:  "hash1",
 		BillingMode:  BillingModeComponent,
-		LineItems:    []UsageLineItem{{ResourceCode: ResourceChatInputToken, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
+		LineItems:    []UsageLineItem{{ResourceCode: ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
 	}
 
 	_, err := svc.IngestBatch(t.Context(), input1)
@@ -228,7 +228,7 @@ func TestService_IngestBatch_BYOK(t *testing.T) {
 	repo := newMockRepo()
 	resolver := &mockRateCardResolver{
 		entries: map[string]CustomerRateCardEntry{
-			"ns-1:cust-1:rag_retrieval": {
+			"ns-1:cust-1:rag_queries": {
 				PricePerUnitCNY: alpacadecimal.NewFromFloat(0.01),
 				CreditRate:      1000,
 			},
@@ -245,8 +245,8 @@ func TestService_IngestBatch_BYOK(t *testing.T) {
 		PayloadHash:  "hash",
 		BillingMode:  BillingModeComponent,
 		LineItems: []UsageLineItem{
-			{ResourceCode: ResourceChatInputToken, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: false},
-			{ResourceCode: ResourceRAGRetrieval, Quantity: 5, ProviderManaged: false},
+			{ResourceCode: ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: false},
+			{ResourceCode: ResourceRAGQueries, Quantity: 5, ProviderManaged: false},
 		},
 	}
 
@@ -289,7 +289,7 @@ func TestService_IngestBatch_MissingRate(t *testing.T) {
 		TenantSeq:    1,
 		PayloadHash:  "hash",
 		BillingMode:  BillingModeComponent,
-		LineItems:    []UsageLineItem{{ResourceCode: ResourceChatInputToken, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
+		LineItems:    []UsageLineItem{{ResourceCode: ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true}},
 	}
 
 	_, err := svc.IngestBatch(t.Context(), input)

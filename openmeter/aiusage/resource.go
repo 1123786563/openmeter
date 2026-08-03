@@ -4,31 +4,31 @@ package aiusage
 type ResourceCode string
 
 const (
-	// Model tokens
-	ResourceChatInputToken      ResourceCode = "chat_input_token"
-	ResourceChatOutputToken     ResourceCode = "chat_output_token"
-	ResourceChatCacheReadToken  ResourceCode = "chat_cache_read_token"
-	ResourceChatCacheWriteToken ResourceCode = "chat_cache_write_token"
-	ResourceChatReasoningToken  ResourceCode = "chat_reasoning_token"
+	// Model tokens (provider-managed)
+	ResourceLLMInputTokens      ResourceCode = "llm_input_tokens"
+	ResourceLLMOutputTokens     ResourceCode = "llm_output_tokens"
+	ResourceLLMCacheReadTokens  ResourceCode = "llm_cache_read_tokens"
+	ResourceLLMCacheWriteTokens ResourceCode = "llm_cache_write_tokens"
+	ResourceLLMReasoningTokens  ResourceCode = "llm_reasoning_tokens"
 
 	// Embedding and rerank
-	ResourceEmbeddingToken ResourceCode = "embedding_token"
-	ResourceRerankCall     ResourceCode = "rerank_call"
+	ResourceEmbeddingTokens ResourceCode = "embedding_tokens"
+	ResourceRerankCalls     ResourceCode = "rerank_calls"
 
 	// Multimodal
-	ResourceVLMInputToken  ResourceCode = "vlm_input_token"
-	ResourceVLMOutputToken ResourceCode = "vlm_output_token"
-	ResourceVLMImage       ResourceCode = "vlm_image"
+	ResourceVLMInputTokens  ResourceCode = "vlm_input_tokens"
+	ResourceVLMOutputTokens ResourceCode = "vlm_output_tokens"
+	ResourceVLMImages       ResourceCode = "vlm_images"
 
 	// Speech
-	ResourceASRSeconds ResourceCode = "asr_seconds"
+	ResourceASRMilliseconds ResourceCode = "asr_milliseconds"
 
-	// Platform resources
-	ResourceRAGRetrieval ResourceCode = "rag_retrieval"
-	ResourceDocParsePage ResourceCode = "doc_parse_page"
-	ResourceMCPCall      ResourceCode = "mcp_call"
-	ResourceWebSearch    ResourceCode = "web_search"
-	ResourceAgentRun     ResourceCode = "agent_run"
+	// Platform resources (always billed, even under BYOK)
+	ResourceRAGQueries    ResourceCode = "rag_queries"
+	ResourceDocParsePages ResourceCode = "doc_parse_pages"
+	ResourceMCPToolCalls  ResourceCode = "mcp_tool_calls"
+	ResourceWebSearches   ResourceCode = "web_searches"
+	ResourceAgentRuns     ResourceCode = "agent_runs"
 )
 
 type resourceMetadata struct {
@@ -37,22 +37,22 @@ type resourceMetadata struct {
 }
 
 var resourceMeta = map[ResourceCode]resourceMetadata{
-	ResourceChatInputToken:      {ProviderManaged: true, Unit: "token"},
-	ResourceChatOutputToken:     {ProviderManaged: true, Unit: "token"},
-	ResourceChatCacheReadToken:  {ProviderManaged: true, Unit: "token"},
-	ResourceChatCacheWriteToken: {ProviderManaged: true, Unit: "token"},
-	ResourceChatReasoningToken:  {ProviderManaged: true, Unit: "token"},
-	ResourceEmbeddingToken:      {ProviderManaged: true, Unit: "token"},
-	ResourceRerankCall:          {ProviderManaged: true, Unit: "call"},
-	ResourceVLMInputToken:       {ProviderManaged: true, Unit: "token"},
-	ResourceVLMOutputToken:      {ProviderManaged: true, Unit: "token"},
-	ResourceVLMImage:            {ProviderManaged: true, Unit: "image"},
-	ResourceASRSeconds:          {ProviderManaged: true, Unit: "second"},
-	ResourceRAGRetrieval:        {ProviderManaged: false, Unit: "call"},
-	ResourceDocParsePage:        {ProviderManaged: false, Unit: "page"},
-	ResourceMCPCall:             {ProviderManaged: false, Unit: "call"},
-	ResourceWebSearch:           {ProviderManaged: false, Unit: "call"},
-	ResourceAgentRun:            {ProviderManaged: false, Unit: "call"},
+	ResourceLLMInputTokens:      {ProviderManaged: true, Unit: "token"},
+	ResourceLLMOutputTokens:     {ProviderManaged: true, Unit: "token"},
+	ResourceLLMCacheReadTokens:  {ProviderManaged: true, Unit: "token"},
+	ResourceLLMCacheWriteTokens: {ProviderManaged: true, Unit: "token"},
+	ResourceLLMReasoningTokens:  {ProviderManaged: true, Unit: "token"},
+	ResourceEmbeddingTokens:     {ProviderManaged: true, Unit: "token"},
+	ResourceRerankCalls:         {ProviderManaged: true, Unit: "call"},
+	ResourceVLMInputTokens:      {ProviderManaged: true, Unit: "token"},
+	ResourceVLMOutputTokens:     {ProviderManaged: true, Unit: "token"},
+	ResourceVLMImages:           {ProviderManaged: true, Unit: "image"},
+	ResourceASRMilliseconds:     {ProviderManaged: true, Unit: "millisecond"},
+	ResourceRAGQueries:          {ProviderManaged: false, Unit: "call"},
+	ResourceDocParsePages:       {ProviderManaged: false, Unit: "page"},
+	ResourceMCPToolCalls:        {ProviderManaged: false, Unit: "call"},
+	ResourceWebSearches:         {ProviderManaged: false, Unit: "call"},
+	ResourceAgentRuns:           {ProviderManaged: false, Unit: "call"},
 }
 
 // IsProviderManaged returns true for resources backed by an external model provider
@@ -73,7 +73,7 @@ func (r ResourceCode) IsPlatformResource() bool {
 	return false
 }
 
-// Unit returns the billing unit for this resource ("token", "call", "second", "page", "image").
+// Unit returns the billing unit for this resource ("token", "call", "millisecond", "page", "image").
 func (r ResourceCode) Unit() string {
 	if meta, ok := resourceMeta[r]; ok {
 		return meta.Unit

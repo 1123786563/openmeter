@@ -68,26 +68,26 @@ func DefaultResourceSchemas() ResourceSchemaSet {
 	return ResourceSchemaSet{
 		Schemas: []ResourceSchema{
 			// Model tokens (provider-managed)
-			{Code: aiusage.ResourceChatInputToken, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceChatOutputToken, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceChatCacheReadToken, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceChatCacheWriteToken, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceChatReasoningToken, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceLLMInputTokens, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceLLMOutputTokens, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceLLMCacheReadTokens, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceLLMCacheWriteTokens, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceLLMReasoningTokens, Category: "llm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
 			// Embedding and rerank
-			{Code: aiusage.ResourceEmbeddingToken, Category: "embedding", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceRerankCall, Category: "rerank", Unit: "call", Aggregation: AggregationCount, ProviderManaged: true},
+			{Code: aiusage.ResourceEmbeddingTokens, Category: "embedding", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceRerankCalls, Category: "rerank", Unit: "call", Aggregation: AggregationCount, ProviderManaged: true},
 			// Multimodal
-			{Code: aiusage.ResourceVLMInputToken, Category: "vlm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceVLMOutputToken, Category: "vlm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
-			{Code: aiusage.ResourceVLMImage, Category: "vlm", Unit: "image", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceVLMInputTokens, Category: "vlm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceVLMOutputTokens, Category: "vlm", Unit: "token", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceVLMImages, Category: "vlm", Unit: "image", Aggregation: AggregationSum, ProviderManaged: true},
 			// Speech
-			{Code: aiusage.ResourceASRSeconds, Category: "asr", Unit: "second", Aggregation: AggregationSum, ProviderManaged: true},
+			{Code: aiusage.ResourceASRMilliseconds, Category: "asr", Unit: "millisecond", Aggregation: AggregationSum, ProviderManaged: true},
 			// Platform resources (always billed)
-			{Code: aiusage.ResourceRAGRetrieval, Category: "rag", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
-			{Code: aiusage.ResourceDocParsePage, Category: "document", Unit: "page", Aggregation: AggregationSum, ProviderManaged: false},
-			{Code: aiusage.ResourceMCPCall, Category: "mcp", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
-			{Code: aiusage.ResourceWebSearch, Category: "web", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
-			{Code: aiusage.ResourceAgentRun, Category: "agent", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
+			{Code: aiusage.ResourceRAGQueries, Category: "rag", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
+			{Code: aiusage.ResourceDocParsePages, Category: "document", Unit: "page", Aggregation: AggregationSum, ProviderManaged: false},
+			{Code: aiusage.ResourceMCPToolCalls, Category: "mcp", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
+			{Code: aiusage.ResourceWebSearches, Category: "web", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
+			{Code: aiusage.ResourceAgentRuns, Category: "agent", Unit: "call", Aggregation: AggregationCount, ProviderManaged: false},
 		},
 	}
 }

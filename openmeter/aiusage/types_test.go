@@ -9,7 +9,7 @@ import (
 
 func validLineItem() UsageLineItem {
 	return UsageLineItem{
-		ResourceCode:    ResourceChatInputToken,
+		ResourceCode:    ResourceLLMInputTokens,
 		Quantity:        1000,
 		Provider:        "openai",
 		Model:           "gpt-4",
@@ -108,7 +108,7 @@ func TestUsageLineItem_Validate(t *testing.T) {
 
 	t.Run("valid platform resource item", func(t *testing.T) {
 		i := UsageLineItem{
-			ResourceCode:    ResourceRAGRetrieval,
+			ResourceCode:    ResourceRAGQueries,
 			Quantity:        5,
 			ProviderManaged: false,
 		}
@@ -151,22 +151,22 @@ func TestResourceCode_Classification(t *testing.T) {
 		platformResource bool
 		unit             string
 	}{
-		{ResourceChatInputToken, true, false, "token"},
-		{ResourceChatOutputToken, true, false, "token"},
-		{ResourceChatCacheReadToken, true, false, "token"},
-		{ResourceChatCacheWriteToken, true, false, "token"},
-		{ResourceChatReasoningToken, true, false, "token"},
-		{ResourceEmbeddingToken, true, false, "token"},
-		{ResourceRerankCall, true, false, "call"},
-		{ResourceVLMInputToken, true, false, "token"},
-		{ResourceVLMOutputToken, true, false, "token"},
-		{ResourceVLMImage, true, false, "image"},
-		{ResourceASRSeconds, true, false, "second"},
-		{ResourceRAGRetrieval, false, true, "call"},
-		{ResourceDocParsePage, false, true, "page"},
-		{ResourceMCPCall, false, true, "call"},
-		{ResourceWebSearch, false, true, "call"},
-		{ResourceAgentRun, false, true, "call"},
+		{ResourceLLMInputTokens, true, false, "token"},
+		{ResourceLLMOutputTokens, true, false, "token"},
+		{ResourceLLMCacheReadTokens, true, false, "token"},
+		{ResourceLLMCacheWriteTokens, true, false, "token"},
+		{ResourceLLMReasoningTokens, true, false, "token"},
+		{ResourceEmbeddingTokens, true, false, "token"},
+		{ResourceRerankCalls, true, false, "call"},
+		{ResourceVLMInputTokens, true, false, "token"},
+		{ResourceVLMOutputTokens, true, false, "token"},
+		{ResourceVLMImages, true, false, "image"},
+		{ResourceASRMilliseconds, true, false, "millisecond"},
+		{ResourceRAGQueries, false, true, "call"},
+		{ResourceDocParsePages, false, true, "page"},
+		{ResourceMCPToolCalls, false, true, "call"},
+		{ResourceWebSearches, false, true, "call"},
+		{ResourceAgentRuns, false, true, "call"},
 	}
 
 	for _, tc := range tests {

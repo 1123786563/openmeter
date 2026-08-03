@@ -19,7 +19,7 @@ func ptrTime(t time.Time) *time.Time {
 func validRateCardEntry() CustomerRateCardEntry {
 	return CustomerRateCardEntry{
 		Namespace:       "ns-1",
-		ResourceCode:    ResourceChatInputToken,
+		ResourceCode:    ResourceLLMInputTokens,
 		PricePerUnitCNY: alpacadecimal.NewFromFloat(0.001),
 		CreditRate:      1000,
 		EffectiveFrom:   time.Now().Add(-24 * time.Hour),
@@ -139,22 +139,22 @@ func TestCustomerRateCardEntry_Matches(t *testing.T) {
 	e := CustomerRateCardEntry{
 		Namespace:    "ns-1",
 		CustomerID:   &cust,
-		ResourceCode: ResourceChatInputToken,
+		ResourceCode: ResourceLLMInputTokens,
 		Provider:     ptrString("openai"),
 		Model:        ptrString("gpt-4"),
 	}
 
-	require.True(t, e.Matches("ns-1", "cust-1", ResourceChatInputToken, "openai", "gpt-4"))
-	require.False(t, e.Matches("ns-2", "cust-1", ResourceChatInputToken, "openai", "gpt-4"))
-	require.False(t, e.Matches("ns-1", "cust-2", ResourceChatInputToken, "openai", "gpt-4"))
-	require.False(t, e.Matches("ns-1", "cust-1", ResourceChatOutputToken, "openai", "gpt-4"))
-	require.False(t, e.Matches("ns-1", "cust-1", ResourceChatInputToken, "anthropic", "gpt-4"))
-	require.False(t, e.Matches("ns-1", "cust-1", ResourceChatInputToken, "openai", "claude-3"))
+	require.True(t, e.Matches("ns-1", "cust-1", ResourceLLMInputTokens, "openai", "gpt-4"))
+	require.False(t, e.Matches("ns-2", "cust-1", ResourceLLMInputTokens, "openai", "gpt-4"))
+	require.False(t, e.Matches("ns-1", "cust-2", ResourceLLMInputTokens, "openai", "gpt-4"))
+	require.False(t, e.Matches("ns-1", "cust-1", ResourceLLMOutputTokens, "openai", "gpt-4"))
+	require.False(t, e.Matches("ns-1", "cust-1", ResourceLLMInputTokens, "anthropic", "gpt-4"))
+	require.False(t, e.Matches("ns-1", "cust-1", ResourceLLMInputTokens, "openai", "claude-3"))
 
 	// Namespace default (no customer) should match any customer
 	nsDefault := CustomerRateCardEntry{
 		Namespace:    "ns-1",
-		ResourceCode: ResourceChatInputToken,
+		ResourceCode: ResourceLLMInputTokens,
 	}
-	require.True(t, nsDefault.Matches("ns-1", "any-customer", ResourceChatInputToken, "any", "any"))
+	require.True(t, nsDefault.Matches("ns-1", "any-customer", ResourceLLMInputTokens, "any", "any"))
 }
