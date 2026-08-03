@@ -6,6 +6,11 @@ import (
 	"github.com/alpacahq/alpacadecimal"
 )
 
+// Deprecated: CalculateCredits uses math.Ceil(float64) which can lose
+// precision for large amounts. Prefer CeilCredits (ceilcredits.go) which
+// uses exact big.Int arithmetic per the pricing design formula:
+//   line_credits = ceil(quantity * credits_per_unit / unit_size)
+//
 // CalculateCredits converts a sales amount (in CNY) to integer Credits.
 // Formula: credits = ceil(salesAmountCNY * creditRate)
 // Rounding is always up (ceil) to protect platform margin.
