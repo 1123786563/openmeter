@@ -181,6 +181,11 @@ var (
 		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "published", Type: field.TypeBool, Default: false},
 		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+		{Name: "owner", Type: field.TypeString, Default: ""},
+		{Name: "claim_count", Type: field.TypeInt, Default: 0},
+		{Name: "leased_until", Type: field.TypeTime, Nullable: true},
+		{Name: "dead_lettered", Type: field.TypeBool, Default: false},
+		{Name: "dead_letter_reason", Type: field.TypeString, Default: ""},
 		{Name: "ai_usage_batch_outbox_events", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// AiUsageOutboxesTable holds the schema information for the "ai_usage_outboxes" table.
@@ -191,7 +196,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "ai_usage_outboxes_ai_usage_batches_outbox_events",
-				Columns:    []*schema.Column{AiUsageOutboxesColumns[9]},
+				Columns:    []*schema.Column{AiUsageOutboxesColumns[14]},
 				RefColumns: []*schema.Column{AiUsageBatchesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -216,6 +221,11 @@ var (
 				Name:    "aiusageoutbox_namespace_customer_id",
 				Unique:  false,
 				Columns: []*schema.Column{AiUsageOutboxesColumns[1], AiUsageOutboxesColumns[3]},
+			},
+			{
+				Name:    "aiusageoutbox_namespace_published_dead_lettered_leased_until",
+				Unique:  false,
+				Columns: []*schema.Column{AiUsageOutboxesColumns[1], AiUsageOutboxesColumns[7], AiUsageOutboxesColumns[12], AiUsageOutboxesColumns[11]},
 			},
 		},
 	}

@@ -272,6 +272,22 @@ func init() {
 	aiusageoutboxDescPublished := aiusageoutboxFields[5].Descriptor()
 	// aiusageoutbox.DefaultPublished holds the default value on creation for the published field.
 	aiusageoutbox.DefaultPublished = aiusageoutboxDescPublished.Default.(bool)
+	// aiusageoutboxDescOwner is the schema descriptor for owner field.
+	aiusageoutboxDescOwner := aiusageoutboxFields[7].Descriptor()
+	// aiusageoutbox.DefaultOwner holds the default value on creation for the owner field.
+	aiusageoutbox.DefaultOwner = aiusageoutboxDescOwner.Default.(string)
+	// aiusageoutboxDescClaimCount is the schema descriptor for claim_count field.
+	aiusageoutboxDescClaimCount := aiusageoutboxFields[8].Descriptor()
+	// aiusageoutbox.DefaultClaimCount holds the default value on creation for the claim_count field.
+	aiusageoutbox.DefaultClaimCount = aiusageoutboxDescClaimCount.Default.(int)
+	// aiusageoutboxDescDeadLettered is the schema descriptor for dead_lettered field.
+	aiusageoutboxDescDeadLettered := aiusageoutboxFields[10].Descriptor()
+	// aiusageoutbox.DefaultDeadLettered holds the default value on creation for the dead_lettered field.
+	aiusageoutbox.DefaultDeadLettered = aiusageoutboxDescDeadLettered.Default.(bool)
+	// aiusageoutboxDescDeadLetterReason is the schema descriptor for dead_letter_reason field.
+	aiusageoutboxDescDeadLetterReason := aiusageoutboxFields[11].Descriptor()
+	// aiusageoutbox.DefaultDeadLetterReason holds the default value on creation for the dead_letter_reason field.
+	aiusageoutbox.DefaultDeadLetterReason = aiusageoutboxDescDeadLetterReason.Default.(string)
 	// aiusageoutboxDescID is the schema descriptor for id field.
 	aiusageoutboxDescID := aiusageoutboxMixinFields0[0].Descriptor()
 	// aiusageoutbox.DefaultID holds the default value on creation for the id field.

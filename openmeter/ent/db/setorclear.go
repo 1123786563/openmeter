@@ -104,6 +104,20 @@ func (u *AIUsageOutboxUpdateOne) SetOrClearPublishedAt(value *time.Time) *AIUsag
 	return u.SetPublishedAt(*value)
 }
 
+func (u *AIUsageOutboxUpdate) SetOrClearLeasedUntil(value *time.Time) *AIUsageOutboxUpdate {
+	if value == nil {
+		return u.ClearLeasedUntil()
+	}
+	return u.SetLeasedUntil(*value)
+}
+
+func (u *AIUsageOutboxUpdateOne) SetOrClearLeasedUntil(value *time.Time) *AIUsageOutboxUpdateOne {
+	if value == nil {
+		return u.ClearLeasedUntil()
+	}
+	return u.SetLeasedUntil(*value)
+}
+
 func (u *AIUsageRatecardEntryUpdate) SetOrClearAnnotations(value *models.Annotations) *AIUsageRatecardEntryUpdate {
 	if value == nil {
 		return u.ClearAnnotations()

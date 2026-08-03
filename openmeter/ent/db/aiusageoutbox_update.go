@@ -62,6 +62,89 @@ func (_u *AIUsageOutboxUpdate) ClearPublishedAt() *AIUsageOutboxUpdate {
 	return _u
 }
 
+// SetOwner sets the "owner" field.
+func (_u *AIUsageOutboxUpdate) SetOwner(v string) *AIUsageOutboxUpdate {
+	_u.mutation.SetOwner(v)
+	return _u
+}
+
+// SetNillableOwner sets the "owner" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdate) SetNillableOwner(v *string) *AIUsageOutboxUpdate {
+	if v != nil {
+		_u.SetOwner(*v)
+	}
+	return _u
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (_u *AIUsageOutboxUpdate) SetClaimCount(v int) *AIUsageOutboxUpdate {
+	_u.mutation.ResetClaimCount()
+	_u.mutation.SetClaimCount(v)
+	return _u
+}
+
+// SetNillableClaimCount sets the "claim_count" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdate) SetNillableClaimCount(v *int) *AIUsageOutboxUpdate {
+	if v != nil {
+		_u.SetClaimCount(*v)
+	}
+	return _u
+}
+
+// AddClaimCount adds value to the "claim_count" field.
+func (_u *AIUsageOutboxUpdate) AddClaimCount(v int) *AIUsageOutboxUpdate {
+	_u.mutation.AddClaimCount(v)
+	return _u
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (_u *AIUsageOutboxUpdate) SetLeasedUntil(v time.Time) *AIUsageOutboxUpdate {
+	_u.mutation.SetLeasedUntil(v)
+	return _u
+}
+
+// SetNillableLeasedUntil sets the "leased_until" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdate) SetNillableLeasedUntil(v *time.Time) *AIUsageOutboxUpdate {
+	if v != nil {
+		_u.SetLeasedUntil(*v)
+	}
+	return _u
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (_u *AIUsageOutboxUpdate) ClearLeasedUntil() *AIUsageOutboxUpdate {
+	_u.mutation.ClearLeasedUntil()
+	return _u
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (_u *AIUsageOutboxUpdate) SetDeadLettered(v bool) *AIUsageOutboxUpdate {
+	_u.mutation.SetDeadLettered(v)
+	return _u
+}
+
+// SetNillableDeadLettered sets the "dead_lettered" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdate) SetNillableDeadLettered(v *bool) *AIUsageOutboxUpdate {
+	if v != nil {
+		_u.SetDeadLettered(*v)
+	}
+	return _u
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (_u *AIUsageOutboxUpdate) SetDeadLetterReason(v string) *AIUsageOutboxUpdate {
+	_u.mutation.SetDeadLetterReason(v)
+	return _u
+}
+
+// SetNillableDeadLetterReason sets the "dead_letter_reason" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdate) SetNillableDeadLetterReason(v *string) *AIUsageOutboxUpdate {
+	if v != nil {
+		_u.SetDeadLetterReason(*v)
+	}
+	return _u
+}
+
 // Mutation returns the AIUsageOutboxMutation object of the builder.
 func (_u *AIUsageOutboxUpdate) Mutation() *AIUsageOutboxMutation {
 	return _u.mutation
@@ -123,6 +206,27 @@ func (_u *AIUsageOutboxUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.PublishedAtCleared() {
 		_spec.ClearField(aiusageoutbox.FieldPublishedAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.Owner(); ok {
+		_spec.SetField(aiusageoutbox.FieldOwner, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ClaimCount(); ok {
+		_spec.SetField(aiusageoutbox.FieldClaimCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedClaimCount(); ok {
+		_spec.AddField(aiusageoutbox.FieldClaimCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LeasedUntil(); ok {
+		_spec.SetField(aiusageoutbox.FieldLeasedUntil, field.TypeTime, value)
+	}
+	if _u.mutation.LeasedUntilCleared() {
+		_spec.ClearField(aiusageoutbox.FieldLeasedUntil, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeadLettered(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLettered, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DeadLetterReason(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLetterReason, field.TypeString, value)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{aiusageoutbox.Label}
@@ -174,6 +278,89 @@ func (_u *AIUsageOutboxUpdateOne) SetNillablePublishedAt(v *time.Time) *AIUsageO
 // ClearPublishedAt clears the value of the "published_at" field.
 func (_u *AIUsageOutboxUpdateOne) ClearPublishedAt() *AIUsageOutboxUpdateOne {
 	_u.mutation.ClearPublishedAt()
+	return _u
+}
+
+// SetOwner sets the "owner" field.
+func (_u *AIUsageOutboxUpdateOne) SetOwner(v string) *AIUsageOutboxUpdateOne {
+	_u.mutation.SetOwner(v)
+	return _u
+}
+
+// SetNillableOwner sets the "owner" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdateOne) SetNillableOwner(v *string) *AIUsageOutboxUpdateOne {
+	if v != nil {
+		_u.SetOwner(*v)
+	}
+	return _u
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (_u *AIUsageOutboxUpdateOne) SetClaimCount(v int) *AIUsageOutboxUpdateOne {
+	_u.mutation.ResetClaimCount()
+	_u.mutation.SetClaimCount(v)
+	return _u
+}
+
+// SetNillableClaimCount sets the "claim_count" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdateOne) SetNillableClaimCount(v *int) *AIUsageOutboxUpdateOne {
+	if v != nil {
+		_u.SetClaimCount(*v)
+	}
+	return _u
+}
+
+// AddClaimCount adds value to the "claim_count" field.
+func (_u *AIUsageOutboxUpdateOne) AddClaimCount(v int) *AIUsageOutboxUpdateOne {
+	_u.mutation.AddClaimCount(v)
+	return _u
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (_u *AIUsageOutboxUpdateOne) SetLeasedUntil(v time.Time) *AIUsageOutboxUpdateOne {
+	_u.mutation.SetLeasedUntil(v)
+	return _u
+}
+
+// SetNillableLeasedUntil sets the "leased_until" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdateOne) SetNillableLeasedUntil(v *time.Time) *AIUsageOutboxUpdateOne {
+	if v != nil {
+		_u.SetLeasedUntil(*v)
+	}
+	return _u
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (_u *AIUsageOutboxUpdateOne) ClearLeasedUntil() *AIUsageOutboxUpdateOne {
+	_u.mutation.ClearLeasedUntil()
+	return _u
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (_u *AIUsageOutboxUpdateOne) SetDeadLettered(v bool) *AIUsageOutboxUpdateOne {
+	_u.mutation.SetDeadLettered(v)
+	return _u
+}
+
+// SetNillableDeadLettered sets the "dead_lettered" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdateOne) SetNillableDeadLettered(v *bool) *AIUsageOutboxUpdateOne {
+	if v != nil {
+		_u.SetDeadLettered(*v)
+	}
+	return _u
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (_u *AIUsageOutboxUpdateOne) SetDeadLetterReason(v string) *AIUsageOutboxUpdateOne {
+	_u.mutation.SetDeadLetterReason(v)
+	return _u
+}
+
+// SetNillableDeadLetterReason sets the "dead_letter_reason" field if the given value is not nil.
+func (_u *AIUsageOutboxUpdateOne) SetNillableDeadLetterReason(v *string) *AIUsageOutboxUpdateOne {
+	if v != nil {
+		_u.SetDeadLetterReason(*v)
+	}
 	return _u
 }
 
@@ -267,6 +454,27 @@ func (_u *AIUsageOutboxUpdateOne) sqlSave(ctx context.Context) (_node *AIUsageOu
 	}
 	if _u.mutation.PublishedAtCleared() {
 		_spec.ClearField(aiusageoutbox.FieldPublishedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.Owner(); ok {
+		_spec.SetField(aiusageoutbox.FieldOwner, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ClaimCount(); ok {
+		_spec.SetField(aiusageoutbox.FieldClaimCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedClaimCount(); ok {
+		_spec.AddField(aiusageoutbox.FieldClaimCount, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.LeasedUntil(); ok {
+		_spec.SetField(aiusageoutbox.FieldLeasedUntil, field.TypeTime, value)
+	}
+	if _u.mutation.LeasedUntilCleared() {
+		_spec.ClearField(aiusageoutbox.FieldLeasedUntil, field.TypeTime)
+	}
+	if value, ok := _u.mutation.DeadLettered(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLettered, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DeadLetterReason(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLetterReason, field.TypeString, value)
 	}
 	_node = &AIUsageOutbox{config: _u.config}
 	_spec.Assign = _node.assignValues

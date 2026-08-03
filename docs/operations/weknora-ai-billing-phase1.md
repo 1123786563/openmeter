@@ -1,5 +1,11 @@
 # WeKnora AI Billing — Phase 1 Operations Guide
 
+> **CERTIFICATION GATE**: This feature has NOT been certified for production use.
+> Live E2E tests against real PostgreSQL, Kafka, and ClickHouse engines are
+> PENDING CERTIFICATION (see `docs/test-reports/openmeter-ai-billing-phase1.md`).
+> The `ai_usage.enabled` flag MUST NOT be set to `true` in any production or
+> staging deployment until the live E2E gate passes and this warning is removed.
+
 Operational runbook for the AI Usage billing subsystem shipped in Phase 1.
 Covers signing key rotation, outbox replay, migration rollback, production
 bootstrap, and metrics/alerts.

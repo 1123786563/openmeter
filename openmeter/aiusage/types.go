@@ -128,6 +128,12 @@ func (i CorrectionInput) Validate() error {
 		errs = append(errs, fmt.Errorf("payload_hash must not be empty"))
 	}
 
+	// I5: CorrectionInput.TenantSeq must be a FRESH seq for the subject, not
+	// a reuse of the original batch's seq. The database UNIQUE index on
+	// (namespace, subject_id, tenant_seq) provides the hard guarantee — a
+	// collision will fail at persist time. This validation only rejects
+	// obviously invalid values (<= 0); the DB constraint handles uniqueness.
+
 	return models.NewNillableGenericValidationError(errors.Join(errs...))
 }
 

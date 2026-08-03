@@ -246,6 +246,14 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 // Correct reverses a previously settled batch by fetching the original
 // allocations, calling the collector's CorrectCollectedAccrued, and persisting
 // the corrected batch — all within one customer-locked transaction.
+//
+// TenantSeq contract (I5): the CorrectionInput.TenantSeq MUST be unique per
+// (namespace, subject_id) and MUST NOT reuse the original batch's seq. The
+// database enforces this via a UNIQUE index on (namespace, subject_id,
+// tenant_seq) — a collision will fail with a constraint error at persist time.
+// Callers are responsible for allocating a fresh, monotonic seq for the
+// correction batch. The service rejects seq <= 0 in CorrectionInput.Validate;
+// the DB constraint provides the hard uniqueness guarantee.
 func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage.BatchSettlementResult, error) {
 	ctx, span := s.tracer.Start(ctx, "aiusage.service.Correct")
 	defer span.End()

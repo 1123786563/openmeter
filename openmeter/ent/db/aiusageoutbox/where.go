@@ -100,6 +100,31 @@ func PublishedAt(v time.Time) predicate.AIUsageOutbox {
 	return predicate.AIUsageOutbox(sql.FieldEQ(FieldPublishedAt, v))
 }
 
+// Owner applies equality check predicate on the "owner" field. It's identical to OwnerEQ.
+func Owner(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldOwner, v))
+}
+
+// ClaimCount applies equality check predicate on the "claim_count" field. It's identical to ClaimCountEQ.
+func ClaimCount(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldClaimCount, v))
+}
+
+// LeasedUntil applies equality check predicate on the "leased_until" field. It's identical to LeasedUntilEQ.
+func LeasedUntil(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldLeasedUntil, v))
+}
+
+// DeadLettered applies equality check predicate on the "dead_lettered" field. It's identical to DeadLetteredEQ.
+func DeadLettered(v bool) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldDeadLettered, v))
+}
+
+// DeadLetterReason applies equality check predicate on the "dead_letter_reason" field. It's identical to DeadLetterReasonEQ.
+func DeadLetterReason(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldDeadLetterReason, v))
+}
+
 // NamespaceEQ applies the EQ predicate on the "namespace" field.
 func NamespaceEQ(v string) predicate.AIUsageOutbox {
 	return predicate.AIUsageOutbox(sql.FieldEQ(FieldNamespace, v))
@@ -458,6 +483,236 @@ func PublishedAtIsNil() predicate.AIUsageOutbox {
 // PublishedAtNotNil applies the NotNil predicate on the "published_at" field.
 func PublishedAtNotNil() predicate.AIUsageOutbox {
 	return predicate.AIUsageOutbox(sql.FieldNotNull(FieldPublishedAt))
+}
+
+// OwnerEQ applies the EQ predicate on the "owner" field.
+func OwnerEQ(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldOwner, v))
+}
+
+// OwnerNEQ applies the NEQ predicate on the "owner" field.
+func OwnerNEQ(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNEQ(FieldOwner, v))
+}
+
+// OwnerIn applies the In predicate on the "owner" field.
+func OwnerIn(vs ...string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldIn(FieldOwner, vs...))
+}
+
+// OwnerNotIn applies the NotIn predicate on the "owner" field.
+func OwnerNotIn(vs ...string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNotIn(FieldOwner, vs...))
+}
+
+// OwnerGT applies the GT predicate on the "owner" field.
+func OwnerGT(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGT(FieldOwner, v))
+}
+
+// OwnerGTE applies the GTE predicate on the "owner" field.
+func OwnerGTE(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGTE(FieldOwner, v))
+}
+
+// OwnerLT applies the LT predicate on the "owner" field.
+func OwnerLT(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLT(FieldOwner, v))
+}
+
+// OwnerLTE applies the LTE predicate on the "owner" field.
+func OwnerLTE(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLTE(FieldOwner, v))
+}
+
+// OwnerContains applies the Contains predicate on the "owner" field.
+func OwnerContains(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldContains(FieldOwner, v))
+}
+
+// OwnerHasPrefix applies the HasPrefix predicate on the "owner" field.
+func OwnerHasPrefix(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldHasPrefix(FieldOwner, v))
+}
+
+// OwnerHasSuffix applies the HasSuffix predicate on the "owner" field.
+func OwnerHasSuffix(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldHasSuffix(FieldOwner, v))
+}
+
+// OwnerEqualFold applies the EqualFold predicate on the "owner" field.
+func OwnerEqualFold(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEqualFold(FieldOwner, v))
+}
+
+// OwnerContainsFold applies the ContainsFold predicate on the "owner" field.
+func OwnerContainsFold(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldContainsFold(FieldOwner, v))
+}
+
+// ClaimCountEQ applies the EQ predicate on the "claim_count" field.
+func ClaimCountEQ(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldClaimCount, v))
+}
+
+// ClaimCountNEQ applies the NEQ predicate on the "claim_count" field.
+func ClaimCountNEQ(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNEQ(FieldClaimCount, v))
+}
+
+// ClaimCountIn applies the In predicate on the "claim_count" field.
+func ClaimCountIn(vs ...int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldIn(FieldClaimCount, vs...))
+}
+
+// ClaimCountNotIn applies the NotIn predicate on the "claim_count" field.
+func ClaimCountNotIn(vs ...int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNotIn(FieldClaimCount, vs...))
+}
+
+// ClaimCountGT applies the GT predicate on the "claim_count" field.
+func ClaimCountGT(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGT(FieldClaimCount, v))
+}
+
+// ClaimCountGTE applies the GTE predicate on the "claim_count" field.
+func ClaimCountGTE(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGTE(FieldClaimCount, v))
+}
+
+// ClaimCountLT applies the LT predicate on the "claim_count" field.
+func ClaimCountLT(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLT(FieldClaimCount, v))
+}
+
+// ClaimCountLTE applies the LTE predicate on the "claim_count" field.
+func ClaimCountLTE(v int) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLTE(FieldClaimCount, v))
+}
+
+// LeasedUntilEQ applies the EQ predicate on the "leased_until" field.
+func LeasedUntilEQ(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldLeasedUntil, v))
+}
+
+// LeasedUntilNEQ applies the NEQ predicate on the "leased_until" field.
+func LeasedUntilNEQ(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNEQ(FieldLeasedUntil, v))
+}
+
+// LeasedUntilIn applies the In predicate on the "leased_until" field.
+func LeasedUntilIn(vs ...time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldIn(FieldLeasedUntil, vs...))
+}
+
+// LeasedUntilNotIn applies the NotIn predicate on the "leased_until" field.
+func LeasedUntilNotIn(vs ...time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNotIn(FieldLeasedUntil, vs...))
+}
+
+// LeasedUntilGT applies the GT predicate on the "leased_until" field.
+func LeasedUntilGT(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGT(FieldLeasedUntil, v))
+}
+
+// LeasedUntilGTE applies the GTE predicate on the "leased_until" field.
+func LeasedUntilGTE(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGTE(FieldLeasedUntil, v))
+}
+
+// LeasedUntilLT applies the LT predicate on the "leased_until" field.
+func LeasedUntilLT(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLT(FieldLeasedUntil, v))
+}
+
+// LeasedUntilLTE applies the LTE predicate on the "leased_until" field.
+func LeasedUntilLTE(v time.Time) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLTE(FieldLeasedUntil, v))
+}
+
+// LeasedUntilIsNil applies the IsNil predicate on the "leased_until" field.
+func LeasedUntilIsNil() predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldIsNull(FieldLeasedUntil))
+}
+
+// LeasedUntilNotNil applies the NotNil predicate on the "leased_until" field.
+func LeasedUntilNotNil() predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNotNull(FieldLeasedUntil))
+}
+
+// DeadLetteredEQ applies the EQ predicate on the "dead_lettered" field.
+func DeadLetteredEQ(v bool) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldDeadLettered, v))
+}
+
+// DeadLetteredNEQ applies the NEQ predicate on the "dead_lettered" field.
+func DeadLetteredNEQ(v bool) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNEQ(FieldDeadLettered, v))
+}
+
+// DeadLetterReasonEQ applies the EQ predicate on the "dead_letter_reason" field.
+func DeadLetterReasonEQ(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEQ(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonNEQ applies the NEQ predicate on the "dead_letter_reason" field.
+func DeadLetterReasonNEQ(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNEQ(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonIn applies the In predicate on the "dead_letter_reason" field.
+func DeadLetterReasonIn(vs ...string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldIn(FieldDeadLetterReason, vs...))
+}
+
+// DeadLetterReasonNotIn applies the NotIn predicate on the "dead_letter_reason" field.
+func DeadLetterReasonNotIn(vs ...string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldNotIn(FieldDeadLetterReason, vs...))
+}
+
+// DeadLetterReasonGT applies the GT predicate on the "dead_letter_reason" field.
+func DeadLetterReasonGT(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGT(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonGTE applies the GTE predicate on the "dead_letter_reason" field.
+func DeadLetterReasonGTE(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldGTE(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonLT applies the LT predicate on the "dead_letter_reason" field.
+func DeadLetterReasonLT(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLT(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonLTE applies the LTE predicate on the "dead_letter_reason" field.
+func DeadLetterReasonLTE(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldLTE(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonContains applies the Contains predicate on the "dead_letter_reason" field.
+func DeadLetterReasonContains(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldContains(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonHasPrefix applies the HasPrefix predicate on the "dead_letter_reason" field.
+func DeadLetterReasonHasPrefix(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldHasPrefix(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonHasSuffix applies the HasSuffix predicate on the "dead_letter_reason" field.
+func DeadLetterReasonHasSuffix(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldHasSuffix(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonEqualFold applies the EqualFold predicate on the "dead_letter_reason" field.
+func DeadLetterReasonEqualFold(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldEqualFold(FieldDeadLetterReason, v))
+}
+
+// DeadLetterReasonContainsFold applies the ContainsFold predicate on the "dead_letter_reason" field.
+func DeadLetterReasonContainsFold(v string) predicate.AIUsageOutbox {
+	return predicate.AIUsageOutbox(sql.FieldContainsFold(FieldDeadLetterReason, v))
 }
 
 // HasBatch applies the HasEdge predicate on the "batch" edge.

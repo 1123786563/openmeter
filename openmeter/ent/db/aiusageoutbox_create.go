@@ -96,6 +96,76 @@ func (_c *AIUsageOutboxCreate) SetNillablePublishedAt(v *time.Time) *AIUsageOutb
 	return _c
 }
 
+// SetOwner sets the "owner" field.
+func (_c *AIUsageOutboxCreate) SetOwner(v string) *AIUsageOutboxCreate {
+	_c.mutation.SetOwner(v)
+	return _c
+}
+
+// SetNillableOwner sets the "owner" field if the given value is not nil.
+func (_c *AIUsageOutboxCreate) SetNillableOwner(v *string) *AIUsageOutboxCreate {
+	if v != nil {
+		_c.SetOwner(*v)
+	}
+	return _c
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (_c *AIUsageOutboxCreate) SetClaimCount(v int) *AIUsageOutboxCreate {
+	_c.mutation.SetClaimCount(v)
+	return _c
+}
+
+// SetNillableClaimCount sets the "claim_count" field if the given value is not nil.
+func (_c *AIUsageOutboxCreate) SetNillableClaimCount(v *int) *AIUsageOutboxCreate {
+	if v != nil {
+		_c.SetClaimCount(*v)
+	}
+	return _c
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (_c *AIUsageOutboxCreate) SetLeasedUntil(v time.Time) *AIUsageOutboxCreate {
+	_c.mutation.SetLeasedUntil(v)
+	return _c
+}
+
+// SetNillableLeasedUntil sets the "leased_until" field if the given value is not nil.
+func (_c *AIUsageOutboxCreate) SetNillableLeasedUntil(v *time.Time) *AIUsageOutboxCreate {
+	if v != nil {
+		_c.SetLeasedUntil(*v)
+	}
+	return _c
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (_c *AIUsageOutboxCreate) SetDeadLettered(v bool) *AIUsageOutboxCreate {
+	_c.mutation.SetDeadLettered(v)
+	return _c
+}
+
+// SetNillableDeadLettered sets the "dead_lettered" field if the given value is not nil.
+func (_c *AIUsageOutboxCreate) SetNillableDeadLettered(v *bool) *AIUsageOutboxCreate {
+	if v != nil {
+		_c.SetDeadLettered(*v)
+	}
+	return _c
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (_c *AIUsageOutboxCreate) SetDeadLetterReason(v string) *AIUsageOutboxCreate {
+	_c.mutation.SetDeadLetterReason(v)
+	return _c
+}
+
+// SetNillableDeadLetterReason sets the "dead_letter_reason" field if the given value is not nil.
+func (_c *AIUsageOutboxCreate) SetNillableDeadLetterReason(v *string) *AIUsageOutboxCreate {
+	if v != nil {
+		_c.SetDeadLetterReason(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AIUsageOutboxCreate) SetID(v string) *AIUsageOutboxCreate {
 	_c.mutation.SetID(v)
@@ -164,6 +234,22 @@ func (_c *AIUsageOutboxCreate) defaults() {
 		v := aiusageoutbox.DefaultPublished
 		_c.mutation.SetPublished(v)
 	}
+	if _, ok := _c.mutation.Owner(); !ok {
+		v := aiusageoutbox.DefaultOwner
+		_c.mutation.SetOwner(v)
+	}
+	if _, ok := _c.mutation.ClaimCount(); !ok {
+		v := aiusageoutbox.DefaultClaimCount
+		_c.mutation.SetClaimCount(v)
+	}
+	if _, ok := _c.mutation.DeadLettered(); !ok {
+		v := aiusageoutbox.DefaultDeadLettered
+		_c.mutation.SetDeadLettered(v)
+	}
+	if _, ok := _c.mutation.DeadLetterReason(); !ok {
+		v := aiusageoutbox.DefaultDeadLetterReason
+		_c.mutation.SetDeadLetterReason(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := aiusageoutbox.DefaultID()
 		_c.mutation.SetID(v)
@@ -212,6 +298,18 @@ func (_c *AIUsageOutboxCreate) check() error {
 	}
 	if _, ok := _c.mutation.Published(); !ok {
 		return &ValidationError{Name: "published", err: errors.New(`db: missing required field "AIUsageOutbox.published"`)}
+	}
+	if _, ok := _c.mutation.Owner(); !ok {
+		return &ValidationError{Name: "owner", err: errors.New(`db: missing required field "AIUsageOutbox.owner"`)}
+	}
+	if _, ok := _c.mutation.ClaimCount(); !ok {
+		return &ValidationError{Name: "claim_count", err: errors.New(`db: missing required field "AIUsageOutbox.claim_count"`)}
+	}
+	if _, ok := _c.mutation.DeadLettered(); !ok {
+		return &ValidationError{Name: "dead_lettered", err: errors.New(`db: missing required field "AIUsageOutbox.dead_lettered"`)}
+	}
+	if _, ok := _c.mutation.DeadLetterReason(); !ok {
+		return &ValidationError{Name: "dead_letter_reason", err: errors.New(`db: missing required field "AIUsageOutbox.dead_letter_reason"`)}
 	}
 	if len(_c.mutation.BatchIDs()) == 0 {
 		return &ValidationError{Name: "batch", err: errors.New(`db: missing required edge "AIUsageOutbox.batch"`)}
@@ -283,6 +381,26 @@ func (_c *AIUsageOutboxCreate) createSpec() (*AIUsageOutbox, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.PublishedAt(); ok {
 		_spec.SetField(aiusageoutbox.FieldPublishedAt, field.TypeTime, value)
 		_node.PublishedAt = &value
+	}
+	if value, ok := _c.mutation.Owner(); ok {
+		_spec.SetField(aiusageoutbox.FieldOwner, field.TypeString, value)
+		_node.Owner = value
+	}
+	if value, ok := _c.mutation.ClaimCount(); ok {
+		_spec.SetField(aiusageoutbox.FieldClaimCount, field.TypeInt, value)
+		_node.ClaimCount = value
+	}
+	if value, ok := _c.mutation.LeasedUntil(); ok {
+		_spec.SetField(aiusageoutbox.FieldLeasedUntil, field.TypeTime, value)
+		_node.LeasedUntil = &value
+	}
+	if value, ok := _c.mutation.DeadLettered(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLettered, field.TypeBool, value)
+		_node.DeadLettered = value
+	}
+	if value, ok := _c.mutation.DeadLetterReason(); ok {
+		_spec.SetField(aiusageoutbox.FieldDeadLetterReason, field.TypeString, value)
+		_node.DeadLetterReason = value
 	}
 	if nodes := _c.mutation.BatchIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -380,6 +498,78 @@ func (u *AIUsageOutboxUpsert) UpdatePublishedAt() *AIUsageOutboxUpsert {
 // ClearPublishedAt clears the value of the "published_at" field.
 func (u *AIUsageOutboxUpsert) ClearPublishedAt() *AIUsageOutboxUpsert {
 	u.SetNull(aiusageoutbox.FieldPublishedAt)
+	return u
+}
+
+// SetOwner sets the "owner" field.
+func (u *AIUsageOutboxUpsert) SetOwner(v string) *AIUsageOutboxUpsert {
+	u.Set(aiusageoutbox.FieldOwner, v)
+	return u
+}
+
+// UpdateOwner sets the "owner" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsert) UpdateOwner() *AIUsageOutboxUpsert {
+	u.SetExcluded(aiusageoutbox.FieldOwner)
+	return u
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (u *AIUsageOutboxUpsert) SetClaimCount(v int) *AIUsageOutboxUpsert {
+	u.Set(aiusageoutbox.FieldClaimCount, v)
+	return u
+}
+
+// UpdateClaimCount sets the "claim_count" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsert) UpdateClaimCount() *AIUsageOutboxUpsert {
+	u.SetExcluded(aiusageoutbox.FieldClaimCount)
+	return u
+}
+
+// AddClaimCount adds v to the "claim_count" field.
+func (u *AIUsageOutboxUpsert) AddClaimCount(v int) *AIUsageOutboxUpsert {
+	u.Add(aiusageoutbox.FieldClaimCount, v)
+	return u
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (u *AIUsageOutboxUpsert) SetLeasedUntil(v time.Time) *AIUsageOutboxUpsert {
+	u.Set(aiusageoutbox.FieldLeasedUntil, v)
+	return u
+}
+
+// UpdateLeasedUntil sets the "leased_until" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsert) UpdateLeasedUntil() *AIUsageOutboxUpsert {
+	u.SetExcluded(aiusageoutbox.FieldLeasedUntil)
+	return u
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (u *AIUsageOutboxUpsert) ClearLeasedUntil() *AIUsageOutboxUpsert {
+	u.SetNull(aiusageoutbox.FieldLeasedUntil)
+	return u
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (u *AIUsageOutboxUpsert) SetDeadLettered(v bool) *AIUsageOutboxUpsert {
+	u.Set(aiusageoutbox.FieldDeadLettered, v)
+	return u
+}
+
+// UpdateDeadLettered sets the "dead_lettered" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsert) UpdateDeadLettered() *AIUsageOutboxUpsert {
+	u.SetExcluded(aiusageoutbox.FieldDeadLettered)
+	return u
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (u *AIUsageOutboxUpsert) SetDeadLetterReason(v string) *AIUsageOutboxUpsert {
+	u.Set(aiusageoutbox.FieldDeadLetterReason, v)
+	return u
+}
+
+// UpdateDeadLetterReason sets the "dead_letter_reason" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsert) UpdateDeadLetterReason() *AIUsageOutboxUpsert {
+	u.SetExcluded(aiusageoutbox.FieldDeadLetterReason)
 	return u
 }
 
@@ -481,6 +671,90 @@ func (u *AIUsageOutboxUpsertOne) UpdatePublishedAt() *AIUsageOutboxUpsertOne {
 func (u *AIUsageOutboxUpsertOne) ClearPublishedAt() *AIUsageOutboxUpsertOne {
 	return u.Update(func(s *AIUsageOutboxUpsert) {
 		s.ClearPublishedAt()
+	})
+}
+
+// SetOwner sets the "owner" field.
+func (u *AIUsageOutboxUpsertOne) SetOwner(v string) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetOwner(v)
+	})
+}
+
+// UpdateOwner sets the "owner" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertOne) UpdateOwner() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateOwner()
+	})
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (u *AIUsageOutboxUpsertOne) SetClaimCount(v int) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetClaimCount(v)
+	})
+}
+
+// AddClaimCount adds v to the "claim_count" field.
+func (u *AIUsageOutboxUpsertOne) AddClaimCount(v int) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.AddClaimCount(v)
+	})
+}
+
+// UpdateClaimCount sets the "claim_count" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertOne) UpdateClaimCount() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateClaimCount()
+	})
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (u *AIUsageOutboxUpsertOne) SetLeasedUntil(v time.Time) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetLeasedUntil(v)
+	})
+}
+
+// UpdateLeasedUntil sets the "leased_until" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertOne) UpdateLeasedUntil() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateLeasedUntil()
+	})
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (u *AIUsageOutboxUpsertOne) ClearLeasedUntil() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.ClearLeasedUntil()
+	})
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (u *AIUsageOutboxUpsertOne) SetDeadLettered(v bool) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetDeadLettered(v)
+	})
+}
+
+// UpdateDeadLettered sets the "dead_lettered" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertOne) UpdateDeadLettered() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateDeadLettered()
+	})
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (u *AIUsageOutboxUpsertOne) SetDeadLetterReason(v string) *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetDeadLetterReason(v)
+	})
+}
+
+// UpdateDeadLetterReason sets the "dead_letter_reason" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertOne) UpdateDeadLetterReason() *AIUsageOutboxUpsertOne {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateDeadLetterReason()
 	})
 }
 
@@ -749,6 +1023,90 @@ func (u *AIUsageOutboxUpsertBulk) UpdatePublishedAt() *AIUsageOutboxUpsertBulk {
 func (u *AIUsageOutboxUpsertBulk) ClearPublishedAt() *AIUsageOutboxUpsertBulk {
 	return u.Update(func(s *AIUsageOutboxUpsert) {
 		s.ClearPublishedAt()
+	})
+}
+
+// SetOwner sets the "owner" field.
+func (u *AIUsageOutboxUpsertBulk) SetOwner(v string) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetOwner(v)
+	})
+}
+
+// UpdateOwner sets the "owner" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertBulk) UpdateOwner() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateOwner()
+	})
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (u *AIUsageOutboxUpsertBulk) SetClaimCount(v int) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetClaimCount(v)
+	})
+}
+
+// AddClaimCount adds v to the "claim_count" field.
+func (u *AIUsageOutboxUpsertBulk) AddClaimCount(v int) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.AddClaimCount(v)
+	})
+}
+
+// UpdateClaimCount sets the "claim_count" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertBulk) UpdateClaimCount() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateClaimCount()
+	})
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (u *AIUsageOutboxUpsertBulk) SetLeasedUntil(v time.Time) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetLeasedUntil(v)
+	})
+}
+
+// UpdateLeasedUntil sets the "leased_until" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertBulk) UpdateLeasedUntil() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateLeasedUntil()
+	})
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (u *AIUsageOutboxUpsertBulk) ClearLeasedUntil() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.ClearLeasedUntil()
+	})
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (u *AIUsageOutboxUpsertBulk) SetDeadLettered(v bool) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetDeadLettered(v)
+	})
+}
+
+// UpdateDeadLettered sets the "dead_lettered" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertBulk) UpdateDeadLettered() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateDeadLettered()
+	})
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (u *AIUsageOutboxUpsertBulk) SetDeadLetterReason(v string) *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.SetDeadLetterReason(v)
+	})
+}
+
+// UpdateDeadLetterReason sets the "dead_letter_reason" field to the value that was provided on create.
+func (u *AIUsageOutboxUpsertBulk) UpdateDeadLetterReason() *AIUsageOutboxUpsertBulk {
+	return u.Update(func(s *AIUsageOutboxUpsert) {
+		s.UpdateDeadLetterReason()
 	})
 }
 

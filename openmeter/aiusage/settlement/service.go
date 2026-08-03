@@ -114,6 +114,16 @@ func New(cfg ServiceConfig) Service {
 // Within-category burn ordering (earliest expiry, earliest issuance, stable
 // ledger cursor) is handled entirely by the collector's
 // fboCollectionSource.Compare method. See ledger/collector/types.go.
+//
+// Transaction propagation contract (I3): the tx adapter.TxAdapter parameter is
+// intentionally unused (_ adapter.TxAdapter). The collector's
+// TransactionManager (transaction.Creator) propagates the transaction through
+// context — the adapter.WithCustomerLock call stores the ent transaction in
+// the context, and the collector's transaction.RunWithNoValue picks it up.
+// This requires that the collector's TransactionManager and the adapter share
+// the same *entdb.Client instance, which is guaranteed by the Wire DI graph
+// (both receive the same client). If the collector were backed by a different
+// database, the tx parameter would need to be wired into the collector call.
 func (s *service) AllocateAndBook(ctx context.Context, _ adapter.TxAdapter, in SettlementInput) ([]aiusage.Allocation, error) {
 	ctx, span := s.tracer.Start(ctx, "settlement.AllocateAndBook")
 	defer span.End()

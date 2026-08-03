@@ -67,7 +67,7 @@ func (h *handler) CreateAiUsageBatch() CreateAiUsageBatchHandler {
 			// IngestBatch is idempotent regardless, so this race is safe —
 			// the worst case is a 201 when another request created the batch
 			// concurrently; the data is still correct.
-			preExisting, _ := h.service.GetBatch(ctx, req.Namespace, req.Body.IdempotencyKey)
+			preExisting, _ := h.service.GetBatch(ctx, req.Namespace, req.Body.BillingCustomerId, req.Body.IdempotencyKey)
 			wasReplay := preExisting != nil && preExisting.PayloadHash == req.Body.PayloadHash
 
 			result, err := h.service.IngestBatch(ctx, input)

@@ -15,6 +15,33 @@ type AIUsageConfiguration struct {
 	AuthorizationTTL string `yaml:"authorization_ttl"`
 
 	Worker AIUsageWorkerConfiguration `yaml:"worker"`
+
+	// Settlement provides default billing profile parameters used by the
+	// settlement service when resolving a customer's charge ID, currency,
+	// feature key, and settlement mode. In production these are resolved per
+	// customer from the billing/subscription stack; this config provides the
+	// Phase 1 defaults.
+	Settlement AIUsageSettlementConfiguration `yaml:"settlement"`
+
+	// RateEntries are the default pricing table loaded into the pricing
+	// service at startup. Each entry maps a resource to a credit rate.
+	RateEntries []AIUsageRateEntryConfig `yaml:"rate_entries"`
+}
+
+// AIUsageSettlementConfiguration holds the default billing profile parameters.
+type AIUsageSettlementConfiguration struct {
+	DefaultChargeID   string `yaml:"default_charge_id"`
+	DefaultFeatureKey string `yaml:"default_feature_key"`
+	DefaultCurrency   string `yaml:"default_currency"`
+}
+
+// AIUsageRateEntryConfig configures a single pricing rate entry.
+type AIUsageRateEntryConfig struct {
+	ResourceCode   string `yaml:"resource_code"`
+	Provider       string `yaml:"provider"`
+	Model          string `yaml:"model"`
+	CreditsPerUnit int64  `yaml:"credits_per_unit"`
+	UnitSize       int64  `yaml:"unit_size"`
 }
 
 // AIUsageSigningConfiguration configures the Ed25519 signing key used for
@@ -56,4 +83,7 @@ func ConfigureAIUsage(v *viper.Viper) {
 	v.SetDefault("ai_usage.authorization_ttl", "5m")
 	v.SetDefault("ai_usage.worker.lease_duration", "30s")
 	v.SetDefault("ai_usage.worker.batch_size", 50)
+	v.SetDefault("ai_usage.settlement.default_charge_id", "")
+	v.SetDefault("ai_usage.settlement.default_feature_key", "ai_usage")
+	v.SetDefault("ai_usage.settlement.default_currency", "USD")
 }

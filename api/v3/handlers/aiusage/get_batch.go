@@ -17,10 +17,12 @@ import (
 type (
 	GetAiUsageBatchParams struct {
 		BatchID string
+		CustomerID string
 	}
 
 	GetAiUsageBatchRequest struct {
 		Namespace string
+		CustomerID string
 		BatchID   string
 	}
 
@@ -38,9 +40,10 @@ func (h *handler) GetAiUsageBatch() GetAiUsageBatchHandler {
 				return GetAiUsageBatchRequest{}, err
 			}
 			return GetAiUsageBatchRequest{Namespace: ns, BatchID: params.BatchID}, nil
+			return GetAiUsageBatchRequest{Namespace: ns, CustomerID: params.CustomerID, BatchID: params.BatchID}, nil
 		},
 		func(ctx context.Context, req GetAiUsageBatchRequest) (GetAiUsageBatchResponse, error) {
-			batch, err := h.service.GetBatch(ctx, req.Namespace, req.BatchID)
+			batch, err := h.service.GetBatch(ctx, req.Namespace, req.CustomerID, req.BatchID)
 			if err != nil {
 				return GetAiUsageBatchResponse{}, err
 			}

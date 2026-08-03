@@ -106,9 +106,13 @@ func (r *repository) CreateBatch(ctx context.Context, batch aiusage.AIUsageBatch
 	return r.mapBatchToResult(ent), nil
 }
 
-func (r *repository) GetBatchByBatchID(ctx context.Context, namespace, usageBatchID string) (*aiusage.AIUsageBatch, error) {
+func (r *repository) GetBatchByBatchID(ctx context.Context, namespace, customerID, usageBatchID string) (*aiusage.AIUsageBatch, error) {
 	ent, err := r.db.AIUsageBatch.Query().
-		Where(aiusagebatch.Namespace(namespace), aiusagebatch.UsageBatchID(usageBatchID)).
+		Where(
+			aiusagebatch.Namespace(namespace),
+			aiusagebatch.CustomerIDEQ(customerID),
+			aiusagebatch.UsageBatchID(usageBatchID),
+		).
 		WithLineItems().
 		WithRatingSnapshots().
 		Only(ctx)

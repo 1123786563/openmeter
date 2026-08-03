@@ -12,21 +12,25 @@ atomic, idempotent batch.
 endpoint (`GET /customers/{customerId}/runtime-authorization`) returns this
 string so clients can detect contract changes.
 
+> **CERTIFICATION GATE**: This subsystem has NOT been certified for production
+> use. Live E2E tests against real PostgreSQL, Kafka, and ClickHouse engines
+> are PENDING CERTIFICATION. The `ai_usage.enabled` flag MUST NOT be set to
+> `true` in any production or staging deployment until the live E2E gate passes.
+
 ## Ownership boundaries
 
 | Concern | Owner |
 |---|---|
-| Batch ingestion, rating, ceiling, settlement, watermark | `openmeter/aiusage` (this package) |
-| Ent persistence (batches, allocations, outbox, watermarks, rate cards) | `openmeter/aiusage/adapter` + `openmeter/ent/db` |
-| Pricing / rate-card resolution | `openmeter/aiusage/pricing` + `openmeter/aiusage/ratecard` |
-| Provider cost resolution | `openmeter/aiusage` (CostResolver interface; backed by llmcost in production) |
-| Credit ledger burn-down + corrections | `openmeter/aiusage/settlement` |
+| Batch ingestion, rating, ceiling, settlement, watermark | `openmeter/aiusage/service` + `openmeter/aiusage` (types, interfaces) |
+| Ent persistence (batches, allocations, outbox, watermarks) | `openmeter/aiusage/adapter` + `openmeter/ent/db` |
+| Pricing / rate resolution | `openmeter/aiusage/pricing` |
+| Credit ledger settlement via collector | `openmeter/aiusage/settlement` |
 | Ed25519 runtime authorization signing | `openmeter/aiusage/signing` |
 | Runtime authorization assembly | `openmeter/aiusage/runtimeauthorization` |
 | Outbox relay / Kafka projection | `openmeter/aiusage/worker` |
 | HTTP handlers | `api/v3/handlers/aiusage` |
 | Route registration + feature gate | `api/v3/server` |
-| DI wiring (app, config, noop placeholders) | `app/common/aiusage.go`, `app/common/aiusage_noop.go` |
+| DI wiring (app, config, providers) | `app/common/aiusage.go`, `app/common/aiusage_providers.go`, `app/common/aiusage_noop.go` |
 
 ## Entities
 

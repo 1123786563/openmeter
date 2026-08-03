@@ -41,6 +41,12 @@ func (AIUsageOutbox) Fields() []ent.Field {
 		// Published tracks whether a relay has forwarded the event.
 		field.Bool("published").Default(false),
 		field.Time("published_at").Optional().Nillable(),
+		// Worker lease fields for the outbox relay.
+		field.String("owner").Default(""),
+		field.Int("claim_count").Default(0),
+		field.Time("leased_until").Optional().Nillable(),
+		field.Bool("dead_lettered").Default(false),
+		field.String("dead_letter_reason").Default(""),
 	}
 }
 
@@ -58,5 +64,7 @@ func (AIUsageOutbox) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("namespace", "published"),
 		index.Fields("namespace", "customer_id"),
+		// Relay claim index: unpublished, not dead-lettered, lease expired.
+		index.Fields("namespace", "published", "dead_lettered", "leased_until"),
 	}
 }

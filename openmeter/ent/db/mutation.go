@@ -3592,23 +3592,29 @@ func (m *AIUsageLineItemMutation) ResetEdge(name string) error {
 // AIUsageOutboxMutation represents an operation that mutates the AIUsageOutbox nodes in the graph.
 type AIUsageOutboxMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *string
-	namespace     *string
-	created_at    *time.Time
-	customer_id   *string
-	subject_id    *string
-	event_type    *string
-	payload       *map[string]interface{}
-	published     *bool
-	published_at  *time.Time
-	clearedFields map[string]struct{}
-	batch         *string
-	clearedbatch  bool
-	done          bool
-	oldValue      func(context.Context) (*AIUsageOutbox, error)
-	predicates    []predicate.AIUsageOutbox
+	op                 Op
+	typ                string
+	id                 *string
+	namespace          *string
+	created_at         *time.Time
+	customer_id        *string
+	subject_id         *string
+	event_type         *string
+	payload            *map[string]interface{}
+	published          *bool
+	published_at       *time.Time
+	owner              *string
+	claim_count        *int
+	addclaim_count     *int
+	leased_until       *time.Time
+	dead_lettered      *bool
+	dead_letter_reason *string
+	clearedFields      map[string]struct{}
+	batch              *string
+	clearedbatch       bool
+	done               bool
+	oldValue           func(context.Context) (*AIUsageOutbox, error)
+	predicates         []predicate.AIUsageOutbox
 }
 
 var _ ent.Mutation = (*AIUsageOutboxMutation)(nil)
@@ -4016,6 +4022,219 @@ func (m *AIUsageOutboxMutation) ResetPublishedAt() {
 	delete(m.clearedFields, aiusageoutbox.FieldPublishedAt)
 }
 
+// SetOwner sets the "owner" field.
+func (m *AIUsageOutboxMutation) SetOwner(s string) {
+	m.owner = &s
+}
+
+// Owner returns the value of the "owner" field in the mutation.
+func (m *AIUsageOutboxMutation) Owner() (r string, exists bool) {
+	v := m.owner
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOwner returns the old "owner" field's value of the AIUsageOutbox entity.
+// If the AIUsageOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageOutboxMutation) OldOwner(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOwner is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOwner requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOwner: %w", err)
+	}
+	return oldValue.Owner, nil
+}
+
+// ResetOwner resets all changes to the "owner" field.
+func (m *AIUsageOutboxMutation) ResetOwner() {
+	m.owner = nil
+}
+
+// SetClaimCount sets the "claim_count" field.
+func (m *AIUsageOutboxMutation) SetClaimCount(i int) {
+	m.claim_count = &i
+	m.addclaim_count = nil
+}
+
+// ClaimCount returns the value of the "claim_count" field in the mutation.
+func (m *AIUsageOutboxMutation) ClaimCount() (r int, exists bool) {
+	v := m.claim_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimCount returns the old "claim_count" field's value of the AIUsageOutbox entity.
+// If the AIUsageOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageOutboxMutation) OldClaimCount(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimCount: %w", err)
+	}
+	return oldValue.ClaimCount, nil
+}
+
+// AddClaimCount adds i to the "claim_count" field.
+func (m *AIUsageOutboxMutation) AddClaimCount(i int) {
+	if m.addclaim_count != nil {
+		*m.addclaim_count += i
+	} else {
+		m.addclaim_count = &i
+	}
+}
+
+// AddedClaimCount returns the value that was added to the "claim_count" field in this mutation.
+func (m *AIUsageOutboxMutation) AddedClaimCount() (r int, exists bool) {
+	v := m.addclaim_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetClaimCount resets all changes to the "claim_count" field.
+func (m *AIUsageOutboxMutation) ResetClaimCount() {
+	m.claim_count = nil
+	m.addclaim_count = nil
+}
+
+// SetLeasedUntil sets the "leased_until" field.
+func (m *AIUsageOutboxMutation) SetLeasedUntil(t time.Time) {
+	m.leased_until = &t
+}
+
+// LeasedUntil returns the value of the "leased_until" field in the mutation.
+func (m *AIUsageOutboxMutation) LeasedUntil() (r time.Time, exists bool) {
+	v := m.leased_until
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLeasedUntil returns the old "leased_until" field's value of the AIUsageOutbox entity.
+// If the AIUsageOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageOutboxMutation) OldLeasedUntil(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLeasedUntil is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLeasedUntil requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLeasedUntil: %w", err)
+	}
+	return oldValue.LeasedUntil, nil
+}
+
+// ClearLeasedUntil clears the value of the "leased_until" field.
+func (m *AIUsageOutboxMutation) ClearLeasedUntil() {
+	m.leased_until = nil
+	m.clearedFields[aiusageoutbox.FieldLeasedUntil] = struct{}{}
+}
+
+// LeasedUntilCleared returns if the "leased_until" field was cleared in this mutation.
+func (m *AIUsageOutboxMutation) LeasedUntilCleared() bool {
+	_, ok := m.clearedFields[aiusageoutbox.FieldLeasedUntil]
+	return ok
+}
+
+// ResetLeasedUntil resets all changes to the "leased_until" field.
+func (m *AIUsageOutboxMutation) ResetLeasedUntil() {
+	m.leased_until = nil
+	delete(m.clearedFields, aiusageoutbox.FieldLeasedUntil)
+}
+
+// SetDeadLettered sets the "dead_lettered" field.
+func (m *AIUsageOutboxMutation) SetDeadLettered(b bool) {
+	m.dead_lettered = &b
+}
+
+// DeadLettered returns the value of the "dead_lettered" field in the mutation.
+func (m *AIUsageOutboxMutation) DeadLettered() (r bool, exists bool) {
+	v := m.dead_lettered
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeadLettered returns the old "dead_lettered" field's value of the AIUsageOutbox entity.
+// If the AIUsageOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageOutboxMutation) OldDeadLettered(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeadLettered is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeadLettered requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeadLettered: %w", err)
+	}
+	return oldValue.DeadLettered, nil
+}
+
+// ResetDeadLettered resets all changes to the "dead_lettered" field.
+func (m *AIUsageOutboxMutation) ResetDeadLettered() {
+	m.dead_lettered = nil
+}
+
+// SetDeadLetterReason sets the "dead_letter_reason" field.
+func (m *AIUsageOutboxMutation) SetDeadLetterReason(s string) {
+	m.dead_letter_reason = &s
+}
+
+// DeadLetterReason returns the value of the "dead_letter_reason" field in the mutation.
+func (m *AIUsageOutboxMutation) DeadLetterReason() (r string, exists bool) {
+	v := m.dead_letter_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeadLetterReason returns the old "dead_letter_reason" field's value of the AIUsageOutbox entity.
+// If the AIUsageOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageOutboxMutation) OldDeadLetterReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeadLetterReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeadLetterReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeadLetterReason: %w", err)
+	}
+	return oldValue.DeadLetterReason, nil
+}
+
+// ResetDeadLetterReason resets all changes to the "dead_letter_reason" field.
+func (m *AIUsageOutboxMutation) ResetDeadLetterReason() {
+	m.dead_letter_reason = nil
+}
+
 // SetBatchID sets the "batch" edge to the AIUsageBatch entity by id.
 func (m *AIUsageOutboxMutation) SetBatchID(id string) {
 	m.batch = &id
@@ -4089,7 +4308,7 @@ func (m *AIUsageOutboxMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AIUsageOutboxMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 13)
 	if m.namespace != nil {
 		fields = append(fields, aiusageoutbox.FieldNamespace)
 	}
@@ -4113,6 +4332,21 @@ func (m *AIUsageOutboxMutation) Fields() []string {
 	}
 	if m.published_at != nil {
 		fields = append(fields, aiusageoutbox.FieldPublishedAt)
+	}
+	if m.owner != nil {
+		fields = append(fields, aiusageoutbox.FieldOwner)
+	}
+	if m.claim_count != nil {
+		fields = append(fields, aiusageoutbox.FieldClaimCount)
+	}
+	if m.leased_until != nil {
+		fields = append(fields, aiusageoutbox.FieldLeasedUntil)
+	}
+	if m.dead_lettered != nil {
+		fields = append(fields, aiusageoutbox.FieldDeadLettered)
+	}
+	if m.dead_letter_reason != nil {
+		fields = append(fields, aiusageoutbox.FieldDeadLetterReason)
 	}
 	return fields
 }
@@ -4138,6 +4372,16 @@ func (m *AIUsageOutboxMutation) Field(name string) (ent.Value, bool) {
 		return m.Published()
 	case aiusageoutbox.FieldPublishedAt:
 		return m.PublishedAt()
+	case aiusageoutbox.FieldOwner:
+		return m.Owner()
+	case aiusageoutbox.FieldClaimCount:
+		return m.ClaimCount()
+	case aiusageoutbox.FieldLeasedUntil:
+		return m.LeasedUntil()
+	case aiusageoutbox.FieldDeadLettered:
+		return m.DeadLettered()
+	case aiusageoutbox.FieldDeadLetterReason:
+		return m.DeadLetterReason()
 	}
 	return nil, false
 }
@@ -4163,6 +4407,16 @@ func (m *AIUsageOutboxMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldPublished(ctx)
 	case aiusageoutbox.FieldPublishedAt:
 		return m.OldPublishedAt(ctx)
+	case aiusageoutbox.FieldOwner:
+		return m.OldOwner(ctx)
+	case aiusageoutbox.FieldClaimCount:
+		return m.OldClaimCount(ctx)
+	case aiusageoutbox.FieldLeasedUntil:
+		return m.OldLeasedUntil(ctx)
+	case aiusageoutbox.FieldDeadLettered:
+		return m.OldDeadLettered(ctx)
+	case aiusageoutbox.FieldDeadLetterReason:
+		return m.OldDeadLetterReason(ctx)
 	}
 	return nil, fmt.Errorf("unknown AIUsageOutbox field %s", name)
 }
@@ -4228,6 +4482,41 @@ func (m *AIUsageOutboxMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPublishedAt(v)
 		return nil
+	case aiusageoutbox.FieldOwner:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOwner(v)
+		return nil
+	case aiusageoutbox.FieldClaimCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimCount(v)
+		return nil
+	case aiusageoutbox.FieldLeasedUntil:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLeasedUntil(v)
+		return nil
+	case aiusageoutbox.FieldDeadLettered:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeadLettered(v)
+		return nil
+	case aiusageoutbox.FieldDeadLetterReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeadLetterReason(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AIUsageOutbox field %s", name)
 }
@@ -4235,13 +4524,21 @@ func (m *AIUsageOutboxMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *AIUsageOutboxMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addclaim_count != nil {
+		fields = append(fields, aiusageoutbox.FieldClaimCount)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *AIUsageOutboxMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case aiusageoutbox.FieldClaimCount:
+		return m.AddedClaimCount()
+	}
 	return nil, false
 }
 
@@ -4250,6 +4547,13 @@ func (m *AIUsageOutboxMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *AIUsageOutboxMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case aiusageoutbox.FieldClaimCount:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddClaimCount(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AIUsageOutbox numeric field %s", name)
 }
@@ -4260,6 +4564,9 @@ func (m *AIUsageOutboxMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(aiusageoutbox.FieldPublishedAt) {
 		fields = append(fields, aiusageoutbox.FieldPublishedAt)
+	}
+	if m.FieldCleared(aiusageoutbox.FieldLeasedUntil) {
+		fields = append(fields, aiusageoutbox.FieldLeasedUntil)
 	}
 	return fields
 }
@@ -4277,6 +4584,9 @@ func (m *AIUsageOutboxMutation) ClearField(name string) error {
 	switch name {
 	case aiusageoutbox.FieldPublishedAt:
 		m.ClearPublishedAt()
+		return nil
+	case aiusageoutbox.FieldLeasedUntil:
+		m.ClearLeasedUntil()
 		return nil
 	}
 	return fmt.Errorf("unknown AIUsageOutbox nullable field %s", name)
@@ -4309,6 +4619,21 @@ func (m *AIUsageOutboxMutation) ResetField(name string) error {
 		return nil
 	case aiusageoutbox.FieldPublishedAt:
 		m.ResetPublishedAt()
+		return nil
+	case aiusageoutbox.FieldOwner:
+		m.ResetOwner()
+		return nil
+	case aiusageoutbox.FieldClaimCount:
+		m.ResetClaimCount()
+		return nil
+	case aiusageoutbox.FieldLeasedUntil:
+		m.ResetLeasedUntil()
+		return nil
+	case aiusageoutbox.FieldDeadLettered:
+		m.ResetDeadLettered()
+		return nil
+	case aiusageoutbox.FieldDeadLetterReason:
+		m.ResetDeadLetterReason()
 		return nil
 	}
 	return fmt.Errorf("unknown AIUsageOutbox field %s", name)

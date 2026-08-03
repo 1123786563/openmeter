@@ -86,7 +86,7 @@ func (m *mockAIUsageService) IngestBatch(ctx context.Context, input aiusage.Inge
 	return result, nil
 }
 
-func (m *mockAIUsageService) GetBatch(ctx context.Context, namespace, usageBatchID string) (*aiusage.AIUsageBatch, error) {
+func (m *mockAIUsageService) GetBatch(ctx context.Context, namespace, customerID, usageBatchID string) (*aiusage.AIUsageBatch, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -486,8 +486,8 @@ func (l *loggingAIUsageService) IngestBatch(ctx context.Context, input aiusage.I
 	return l.inner.IngestBatch(ctx, input)
 }
 
-func (l *loggingAIUsageService) GetBatch(ctx context.Context, namespace, usageBatchID string) (*aiusage.AIUsageBatch, error) {
-	return l.inner.GetBatch(ctx, namespace, usageBatchID)
+func (l *loggingAIUsageService) GetBatch(ctx context.Context, namespace, customerID, usageBatchID string) (*aiusage.AIUsageBatch, error) {
+	return l.inner.GetBatch(ctx, namespace, customerID, usageBatchID)
 }
 
 func (l *loggingAIUsageService) GetCoveredSeq(ctx context.Context, namespace, customerID string) (int64, error) {

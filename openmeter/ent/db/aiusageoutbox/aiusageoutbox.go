@@ -30,6 +30,16 @@ const (
 	FieldPublished = "published"
 	// FieldPublishedAt holds the string denoting the published_at field in the database.
 	FieldPublishedAt = "published_at"
+	// FieldOwner holds the string denoting the owner field in the database.
+	FieldOwner = "owner"
+	// FieldClaimCount holds the string denoting the claim_count field in the database.
+	FieldClaimCount = "claim_count"
+	// FieldLeasedUntil holds the string denoting the leased_until field in the database.
+	FieldLeasedUntil = "leased_until"
+	// FieldDeadLettered holds the string denoting the dead_lettered field in the database.
+	FieldDeadLettered = "dead_lettered"
+	// FieldDeadLetterReason holds the string denoting the dead_letter_reason field in the database.
+	FieldDeadLetterReason = "dead_letter_reason"
 	// EdgeBatch holds the string denoting the batch edge name in mutations.
 	EdgeBatch = "batch"
 	// Table holds the table name of the aiusageoutbox in the database.
@@ -54,6 +64,11 @@ var Columns = []string{
 	FieldPayload,
 	FieldPublished,
 	FieldPublishedAt,
+	FieldOwner,
+	FieldClaimCount,
+	FieldLeasedUntil,
+	FieldDeadLettered,
+	FieldDeadLetterReason,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "ai_usage_outboxes"
@@ -90,6 +105,14 @@ var (
 	EventTypeValidator func(string) error
 	// DefaultPublished holds the default value on creation for the "published" field.
 	DefaultPublished bool
+	// DefaultOwner holds the default value on creation for the "owner" field.
+	DefaultOwner string
+	// DefaultClaimCount holds the default value on creation for the "claim_count" field.
+	DefaultClaimCount int
+	// DefaultDeadLettered holds the default value on creation for the "dead_lettered" field.
+	DefaultDeadLettered bool
+	// DefaultDeadLetterReason holds the default value on creation for the "dead_letter_reason" field.
+	DefaultDeadLetterReason string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -135,6 +158,31 @@ func ByPublished(opts ...sql.OrderTermOption) OrderOption {
 // ByPublishedAt orders the results by the published_at field.
 func ByPublishedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPublishedAt, opts...).ToFunc()
+}
+
+// ByOwner orders the results by the owner field.
+func ByOwner(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOwner, opts...).ToFunc()
+}
+
+// ByClaimCount orders the results by the claim_count field.
+func ByClaimCount(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClaimCount, opts...).ToFunc()
+}
+
+// ByLeasedUntil orders the results by the leased_until field.
+func ByLeasedUntil(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLeasedUntil, opts...).ToFunc()
+}
+
+// ByDeadLettered orders the results by the dead_lettered field.
+func ByDeadLettered(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeadLettered, opts...).ToFunc()
+}
+
+// ByDeadLetterReason orders the results by the dead_letter_reason field.
+func ByDeadLetterReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeadLetterReason, opts...).ToFunc()
 }
 
 // ByBatchField orders the results by batch field.

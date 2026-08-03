@@ -35,6 +35,16 @@ type AIUsageOutbox struct {
 	Published bool `json:"published,omitempty"`
 	// PublishedAt holds the value of the "published_at" field.
 	PublishedAt *time.Time `json:"published_at,omitempty"`
+	// Owner holds the value of the "owner" field.
+	Owner string `json:"owner,omitempty"`
+	// ClaimCount holds the value of the "claim_count" field.
+	ClaimCount int `json:"claim_count,omitempty"`
+	// LeasedUntil holds the value of the "leased_until" field.
+	LeasedUntil *time.Time `json:"leased_until,omitempty"`
+	// DeadLettered holds the value of the "dead_lettered" field.
+	DeadLettered bool `json:"dead_lettered,omitempty"`
+	// DeadLetterReason holds the value of the "dead_letter_reason" field.
+	DeadLetterReason string `json:"dead_letter_reason,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AIUsageOutboxQuery when eager-loading is set.
 	Edges                        AIUsageOutboxEdges `json:"edges"`
@@ -69,11 +79,13 @@ func (*AIUsageOutbox) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case aiusageoutbox.FieldPayload:
 			values[i] = new([]byte)
-		case aiusageoutbox.FieldPublished:
+		case aiusageoutbox.FieldPublished, aiusageoutbox.FieldDeadLettered:
 			values[i] = new(sql.NullBool)
-		case aiusageoutbox.FieldID, aiusageoutbox.FieldNamespace, aiusageoutbox.FieldCustomerID, aiusageoutbox.FieldSubjectID, aiusageoutbox.FieldEventType:
+		case aiusageoutbox.FieldClaimCount:
+			values[i] = new(sql.NullInt64)
+		case aiusageoutbox.FieldID, aiusageoutbox.FieldNamespace, aiusageoutbox.FieldCustomerID, aiusageoutbox.FieldSubjectID, aiusageoutbox.FieldEventType, aiusageoutbox.FieldOwner, aiusageoutbox.FieldDeadLetterReason:
 			values[i] = new(sql.NullString)
-		case aiusageoutbox.FieldCreatedAt, aiusageoutbox.FieldPublishedAt:
+		case aiusageoutbox.FieldCreatedAt, aiusageoutbox.FieldPublishedAt, aiusageoutbox.FieldLeasedUntil:
 			values[i] = new(sql.NullTime)
 		case aiusageoutbox.ForeignKeys[0]: // ai_usage_batch_outbox_events
 			values[i] = new(sql.NullString)
@@ -149,6 +161,37 @@ func (_m *AIUsageOutbox) assignValues(columns []string, values []any) error {
 				_m.PublishedAt = new(time.Time)
 				*_m.PublishedAt = value.Time
 			}
+		case aiusageoutbox.FieldOwner:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field owner", values[i])
+			} else if value.Valid {
+				_m.Owner = value.String
+			}
+		case aiusageoutbox.FieldClaimCount:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field claim_count", values[i])
+			} else if value.Valid {
+				_m.ClaimCount = int(value.Int64)
+			}
+		case aiusageoutbox.FieldLeasedUntil:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field leased_until", values[i])
+			} else if value.Valid {
+				_m.LeasedUntil = new(time.Time)
+				*_m.LeasedUntil = value.Time
+			}
+		case aiusageoutbox.FieldDeadLettered:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field dead_lettered", values[i])
+			} else if value.Valid {
+				_m.DeadLettered = value.Bool
+			}
+		case aiusageoutbox.FieldDeadLetterReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field dead_letter_reason", values[i])
+			} else if value.Valid {
+				_m.DeadLetterReason = value.String
+			}
 		case aiusageoutbox.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field ai_usage_batch_outbox_events", values[i])
@@ -222,6 +265,23 @@ func (_m *AIUsageOutbox) String() string {
 		builder.WriteString("published_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("owner=")
+	builder.WriteString(_m.Owner)
+	builder.WriteString(", ")
+	builder.WriteString("claim_count=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ClaimCount))
+	builder.WriteString(", ")
+	if v := _m.LeasedUntil; v != nil {
+		builder.WriteString("leased_until=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("dead_lettered=")
+	builder.WriteString(fmt.Sprintf("%v", _m.DeadLettered))
+	builder.WriteString(", ")
+	builder.WriteString("dead_letter_reason=")
+	builder.WriteString(_m.DeadLetterReason)
 	builder.WriteByte(')')
 	return builder.String()
 }

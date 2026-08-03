@@ -675,6 +675,90 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 	}
 	handler := common.NewLedgerNamespaceHandler(accountResolver)
 	aiUsageConfiguration := common.NewAIUsageConfig(conf)
+	adapterAdapter, err := common.NewAIUsageAdapter(aiUsageConfiguration, client, logger)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	pricingResolver, err := common.NewAIUsagePricingResolver(aiUsageConfiguration)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	collectorService, err := common.NewAIUsageCollector(aiUsageConfiguration, client, ledger, balanceQuerier, accountResolver, accountService)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	settlementService, err := common.NewAIUsageSettlementService(aiUsageConfiguration, collectorService, logger, tracer)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	customerProfileResolver, err := common.NewAIUsageProfileResolver(aiUsageConfiguration)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	allocationFetcher, err := common.NewAIUsageAllocationFetcher(aiUsageConfiguration, client)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	serviceService, err := common.NewAIUsageAppService(aiUsageConfiguration, adapterAdapter, pricingResolver, settlementService, customerProfileResolver, allocationFetcher, logger, tracer)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
 	aiusageRepository, err := common.NewAIUsageRepository(aiUsageConfiguration, client, logger)
 	if err != nil {
 		cleanup8()
@@ -687,7 +771,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	aiusageService, err := common.NewAIUsageService(aiUsageConfiguration, aiusageRepository, logger, tracer, ledger)
+	aiusageService, err := common.NewAIUsageServiceAdapter(aiUsageConfiguration, serviceService, aiusageRepository)
 	if err != nil {
 		cleanup8()
 		cleanup7()
@@ -711,7 +795,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, ledger, logger, tracer)
+	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, client, logger, tracer)
 	if err != nil {
 		cleanup8()
 		cleanup7()
@@ -723,7 +807,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	worker, err := common.NewAIUsageWorker(aiUsageConfiguration)
+	worker, err := common.NewAIUsageWorker(aiUsageConfiguration, client, logger, tracer)
 	if err != nil {
 		cleanup8()
 		cleanup7()
