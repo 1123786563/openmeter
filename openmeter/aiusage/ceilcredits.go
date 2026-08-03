@@ -13,11 +13,11 @@ import (
 // pricing design: line_credits = ceil(quantity * credits_per_unit / unit_size).
 // It MUST NOT use floating point at any step.
 func CeilCredits(quantity, creditsPerUnit, unitSize int64) (int64, error) {
-	if quantity == 0 {
-		return 0, nil
-	}
 	if quantity < 0 || creditsPerUnit < 0 || unitSize <= 0 {
 		return 0, ErrInvalidQuantity
+	}
+	if quantity == 0 {
+		return 0, nil
 	}
 
 	product := new(big.Int).Mul(big.NewInt(quantity), big.NewInt(creditsPerUnit))
