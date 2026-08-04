@@ -86,6 +86,7 @@ func (m *mockRepo) SetCollectionState(_ context.Context, namespace, id string, s
 		return nil, ErrAccountNotFound
 	}
 	acc.CollectionState = state
+	acc.CollectionStateEnteredAt = clock.Now()
 	acc.UpdatedAt = clock.Now()
 	cp := *acc
 	return &cp, nil
@@ -170,19 +171,25 @@ func (m *mockRepo) SetPeriodPaid(_ context.Context, namespace, id string, paidMi
 	return nil, ErrPeriodNotFound
 }
 
-func (m *mockRepo) AppendUsage(_ context.Context, accrual UsageAccrual) (*ReceivablePeriod, error) {
+func (m *mockRepo) TryAccrue(_ context.Context, accrual UsageAccrual, ceiling int64) (*ReceivablePeriod, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.usage[accrual.PeriodID] = append(m.usage[accrual.PeriodID], accrual)
-	// Update account used credits and balance.
+
+	// Atomic ceiling check: read UsedCredits, compare, and append — all under
+	// the same lock. This prevents the TOCTOU race.
 	for _, acc := range m.accounts {
 		if acc.Namespace == accrual.Namespace && acc.CustomerID == accrual.CustomerID {
+			if acc.UsedCredits+accrual.Credits > ceiling {
+				return nil, fmt.Errorf("%w: used=%d requested=%d ceiling=%d", ErrCeilingExhausted, acc.UsedCredits, accrual.Credits, ceiling)
+			}
 			acc.UsedCredits += accrual.Credits
 			acc.CurrentBalanceMinor -= accrual.AmountMinor
 			acc.UpdatedAt = clock.Now()
+			break
 		}
 	}
-	// Return the (unchanged total) open period copy.
+
+	m.usage[accrual.PeriodID] = append(m.usage[accrual.PeriodID], accrual)
 	for _, p := range m.periods {
 		if p.Namespace == accrual.Namespace && p.ID == accrual.PeriodID {
 			cp := *p
@@ -190,6 +197,19 @@ func (m *mockRepo) AppendUsage(_ context.Context, accrual UsageAccrual) (*Receiv
 		}
 	}
 	return nil, ErrPeriodNotFound
+}
+
+func (m *mockRepo) ResetUsedCredits(_ context.Context, namespace, accountID string) (*ReceivableAccount, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	acc, ok := m.byID[namespace+"|"+accountID]
+	if !ok {
+		return nil, ErrAccountNotFound
+	}
+	acc.UsedCredits = 0
+	acc.UpdatedAt = clock.Now()
+	cp := *acc
+	return &cp, nil
 }
 
 func (m *mockRepo) ListUsage(_ context.Context, namespace, periodID string) ([]UsageAccrual, error) {
@@ -1131,8 +1151,8 @@ func TestAccrueBeyondCeilingRejected(t *testing.T) {
 	_, err := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
 		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce, Credits: 30, RateMinor: 10,
 	})
-	if !errors.Is(err, ErrAboveCeiling) {
-		t.Errorf("expected ErrAboveCeiling, got %v", err)
+	if !errors.Is(err, ErrCeilingExhausted) {
+		t.Errorf("expected ErrCeilingExhausted, got %v", err)
 	}
 }
 
@@ -1226,5 +1246,179 @@ func TestConcurrentAccrual(t *testing.T) {
 	updated, _ := h.repo.GetAccount(context.Background(), "ns", "cust")
 	if updated.UsedCredits != 50 {
 		t.Errorf("used credits = %d, want 50", updated.UsedCredits)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Fix 1: Concurrent ceiling enforcement via atomic TryAccrue
+// ---------------------------------------------------------------------------
+
+// TestConcurrentCeilingEnforcement verifies that concurrent accruals cannot
+// exceed the credit ceiling. Without the atomic TryAccrue, two goroutines could
+// both read the same stale UsedCredits, both pass the ceiling check, and both
+// append — exceeding the ceiling.
+func TestConcurrentCeilingEnforcement(t *testing.T) {
+	clock.ResetTime()
+	h := newHarness(t)
+	_, auth := h.setupCustomer(t, "ns", "cust", 100)
+
+	const goroutines = 200
+	var wg sync.WaitGroup
+	var ok atomic.Int64
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
+				Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
+				Credits: 1, RateMinor: 1,
+				UserID: "u", AgentID: "a", APIKeyID: "k",
+			}); err == nil {
+				ok.Add(1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Exactly 100 should succeed (ceiling is 100).
+	if ok.Load() != 100 {
+		t.Errorf("successful accruals = %d, want exactly 100", ok.Load())
+	}
+	// UsedCredits must equal the ceiling, never more.
+	acc, _ := h.repo.GetAccount(context.Background(), "ns", "cust")
+	if acc.UsedCredits != 100 {
+		t.Errorf("used credits = %d, want exactly 100 (ceiling enforced atomically)", acc.UsedCredits)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Fix 2: UsedCredits resets when a new period opens
+// ---------------------------------------------------------------------------
+
+// TestMultiPeriodCeilingReset verifies that closing a period and opening a new
+// one resets UsedCredits to 0, so the ceiling applies per-period rather than
+// cumulatively across the account's lifetime.
+func TestMultiPeriodCeilingReset(t *testing.T) {
+	clock.ResetTime()
+	h := newHarness(t)
+	acc, auth := h.setupCustomer(t, "ns", "cust", 100)
+
+	// Period 1: accrue 80 credits (within ceiling).
+	period1, _ := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
+		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
+		Credits: 80, RateMinor: 10,
+	})
+	if _, err := h.svc.ClosePeriod(context.Background(), ClosePeriodInput{
+		Namespace: "ns", AccountID: period1.AccountID,
+	}); err != nil {
+		t.Fatalf("ClosePeriod 1: %v", err)
+	}
+
+	// After close, UsedCredits is still 80 (no open period yet).
+	mid, _ := h.repo.GetAccount(context.Background(), "ns", "cust")
+	if mid.UsedCredits != 80 {
+		t.Fatalf("used after close = %d, want 80", mid.UsedCredits)
+	}
+
+	// Open period 2 — this resets UsedCredits to 0.
+	if _, err := h.svc.EnsureOpenPeriod(context.Background(), "ns", acc.ID); err != nil {
+		t.Fatalf("EnsureOpenPeriod 2: %v", err)
+	}
+	after, _ := h.repo.GetAccount(context.Background(), "ns", "cust")
+	if after.UsedCredits != 0 {
+		t.Fatalf("used after new period = %d, want 0 (per-period reset)", after.UsedCredits)
+	}
+
+	// Accrue 80 credits in period 2 — should succeed (ceiling is 100 per-period).
+	if _, err := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
+		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
+		Credits: 80, RateMinor: 10,
+	}); err != nil {
+		t.Fatalf("AccrueUsage in period 2 should succeed with reset ceiling: %v", err)
+	}
+	final, _ := h.repo.GetAccount(context.Background(), "ns", "cust")
+	if final.UsedCredits != 80 {
+		t.Errorf("period 2 used = %d, want 80", final.UsedCredits)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Fix 3: Collection timer independent from accrual
+// ---------------------------------------------------------------------------
+
+// TestCollectionTimerIndependentFromAccrual verifies that usage accrual does not
+// reset the collection-state timer. EvaluateCollection uses
+// CollectionStateEnteredAt (set only on state transitions), not UpdatedAt
+// (bumped by any mutation including accruals). Without this fix, an overdue
+// customer who keeps consuming would have their restriction timer perpetually
+// reset, staying overdue indefinitely.
+func TestCollectionTimerIndependentFromAccrual(t *testing.T) {
+	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	clock.FreezeTime(base)
+	defer clock.UnFreeze()
+
+	h := newHarness(t, func(c *Config) {
+		c.Policy = CollectionPolicy{
+			Version: "test", GracePeriod: time.Hour,
+			RestrictionDelay: time.Hour, SuspensionDelay: time.Hour,
+		}
+	})
+	acc, auth := h.setupCustomer(t, "ns", "cust", 5000)
+	period, _ := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
+		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
+		Credits: 100, RateMinor: 10,
+	})
+	closed, _ := h.svc.ClosePeriod(context.Background(), ClosePeriodInput{
+		Namespace: "ns", AccountID: period.AccountID,
+	})
+
+	// Push the period end into the past for the grace check.
+	h.repo.mu.Lock()
+	for _, p := range h.repo.periods {
+		if p.ID == closed.ID {
+			p.PeriodEnd = base.Add(time.Hour)
+		}
+	}
+	h.repo.mu.Unlock()
+
+	// Advance past grace -> overdue. CollectionStateEnteredAt = base+2h.
+	clock.FreezeTime(base.Add(2 * time.Hour))
+	acc, _ = h.svc.EvaluateCollection(context.Background(), "ns", acc.ID)
+	if acc.CollectionState != CollectionStateOverdue {
+		t.Fatalf("state = %s, want overdue", acc.CollectionState)
+	}
+	overdueEnteredAt := acc.CollectionStateEnteredAt
+
+	// Open a new period and accrue usage — this bumps UpdatedAt but must NOT
+	// reset CollectionStateEnteredAt.
+	clock.FreezeTime(base.Add(2*time.Hour + 30*time.Minute))
+	h.svc.EnsureOpenPeriod(context.Background(), "ns", acc.ID)
+	if _, err := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
+		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
+		Credits: 10, RateMinor: 10,
+	}); err != nil {
+		t.Fatalf("AccrueUsage after overdue: %v", err)
+	}
+	// Verify UpdatedAt was bumped but CollectionStateEnteredAt was not.
+	afterAccrual, _ := h.repo.GetAccountByID(context.Background(), "ns", acc.ID)
+	if !afterAccrual.UpdatedAt.After(overdueEnteredAt) {
+		t.Error("UpdatedAt should be bumped by accrual")
+	}
+	if !afterAccrual.CollectionStateEnteredAt.Equal(overdueEnteredAt) {
+		t.Fatalf("CollectionStateEnteredAt changed: %s -> %s (should be independent of accrual)",
+			overdueEnteredAt, afterAccrual.CollectionStateEnteredAt)
+	}
+
+	// Advance to exactly restriction-delay past the overdue entry time (base+3h).
+	// With the fix, CollectionStateEnteredAt (=base+2h) is used: 1h >= 1h ->
+	// restricted. With the old UpdatedAt-based bug, UpdatedAt (=base+2h30m)
+	// would give 30m < 1h -> stuck overdue.
+	clock.FreezeTime(base.Add(3 * time.Hour))
+	acc, err := h.svc.EvaluateCollection(context.Background(), "ns", acc.ID)
+	if err != nil {
+		t.Fatalf("EvaluateCollection: %v", err)
+	}
+	if acc.CollectionState != CollectionStateRestricted {
+		t.Errorf("state = %s, want restricted (timer not reset by accrual)", acc.CollectionState)
 	}
 }

@@ -110,17 +110,18 @@ const (
 // per (namespace, customer_id). current_balance_minor is negative when the
 // customer owes money, down to -credit_limit_minor.
 type ReceivableAccount struct {
-	ID                  string
-	Namespace           string
-	CustomerID          string
-	CreditLimitMinor    int64 // money credit limit (schema: credit_limit_cents)
-	CurrentBalanceMinor int64 // money balance; negative = owes (schema: current_balance_cents)
-	CeilingCredits      int64 // Credit ceiling for the current open period
-	UsedCredits         int64 // Credits drawn against the current open period
-	Currency            string
-	CollectionState     CollectionState
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	ID                       string
+	Namespace                string
+	CustomerID               string
+	CreditLimitMinor         int64 // money credit limit (schema: credit_limit_cents)
+	CurrentBalanceMinor      int64 // money balance; negative = owes (schema: current_balance_cents)
+	CeilingCredits           int64 // Credit ceiling for the current open period
+	UsedCredits              int64 // Credits drawn against the current open period
+	Currency                 string
+	CollectionState          CollectionState
+	CollectionStateEnteredAt time.Time // when the current collection state was entered
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 // ReceivablePeriod is a billing period within a ReceivableAccount. period_start
@@ -376,6 +377,10 @@ type Repository interface {
 	GetAccountByID(ctx context.Context, namespace, id string) (*ReceivableAccount, error)
 	SetCollectionState(ctx context.Context, namespace, id string, state CollectionState) (*ReceivableAccount, error)
 
+	// ResetUsedCredits resets the per-period used-credits counter to 0. Called
+	// when a new billing period is opened so the ceiling check starts fresh.
+	ResetUsedCredits(ctx context.Context, namespace, accountID string) (*ReceivableAccount, error)
+
 	// --- Periods ---
 	CreatePeriod(ctx context.Context, period ReceivablePeriod) (*ReceivablePeriod, error)
 	GetOpenPeriod(ctx context.Context, namespace, accountID string) (*ReceivablePeriod, error)
@@ -385,7 +390,10 @@ type Repository interface {
 	SetPeriodPaid(ctx context.Context, namespace, id string, paidMinor int64, status PeriodStatus) (*ReceivablePeriod, error)
 
 	// --- Usage accruals ---
-	AppendUsage(ctx context.Context, accrual UsageAccrual) (*ReceivablePeriod, error)
+	// TryAccrue atomically checks the credit ceiling and appends usage. The
+	// ceiling is passed as a parameter (from the authorization's MaxCredit).
+	// Returns ErrCeilingExhausted if UsedCredits + accrual.Credits > ceiling.
+	TryAccrue(ctx context.Context, accrual UsageAccrual, ceiling int64) (*ReceivablePeriod, error)
 	ListUsage(ctx context.Context, namespace, periodID string) ([]UsageAccrual, error)
 
 	// --- Offline payments / audit facts ---
@@ -585,17 +593,18 @@ func (s *service) OpenAccount(ctx context.Context, in OpenAccountInput) (*Receiv
 
 	now := clock.Now()
 	acc := ReceivableAccount{
-		ID:                  s.ids.NewID(),
-		Namespace:           in.Namespace,
-		CustomerID:          in.CustomerID,
-		CreditLimitMinor:    in.CreditLimitMinor,
-		CurrentBalanceMinor: 0,
-		CeilingCredits:      in.CeilingCredits,
-		UsedCredits:         0,
-		Currency:            in.Currency,
-		CollectionState:     CollectionStateActive,
-		CreatedAt:           now,
-		UpdatedAt:           now,
+		ID:                       s.ids.NewID(),
+		Namespace:                in.Namespace,
+		CustomerID:               in.CustomerID,
+		CreditLimitMinor:         in.CreditLimitMinor,
+		CurrentBalanceMinor:      0,
+		CeilingCredits:           in.CeilingCredits,
+		UsedCredits:              0,
+		Currency:                 in.Currency,
+		CollectionState:          CollectionStateActive,
+		CollectionStateEnteredAt: now,
+		CreatedAt:                now,
+		UpdatedAt:                now,
 	}
 	return s.repo.CreateAccount(ctx, acc)
 }
@@ -629,7 +638,16 @@ func (s *service) EnsureOpenPeriod(ctx context.Context, namespace, accountID str
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	return s.repo.CreatePeriod(ctx, period)
+	created, err := s.repo.CreatePeriod(ctx, period)
+	if err != nil {
+		return nil, err
+	}
+	// Reset the per-period used-credits counter so the ceiling check starts
+	// fresh for the new billing period.
+	if _, err := s.repo.ResetUsedCredits(ctx, namespace, accountID); err != nil {
+		return nil, fmt.Errorf("enterprise: reset used credits: %w", err)
+	}
+	return created, nil
 }
 
 // IssueAuthorization issues a signed offline authorization.
@@ -725,6 +743,11 @@ func (s *service) Authorize(ctx context.Context, namespace, customerID, nonce st
 }
 
 // AccrueUsage accrues settled Credit usage into the open receivable period.
+//
+// The authorization is validated (signature, expiry, account state) first. The
+// ceiling check + append is then performed atomically via TryAccrue, preventing
+// a TOCTOU race where two concurrent accruals both pass the ceiling check
+// against the same stale snapshot.
 func (s *service) AccrueUsage(ctx context.Context, in AccrueUsageInput) (*ReceivablePeriod, error) {
 	if err := validateAccrueUsage(in); err != nil {
 		return nil, err
@@ -740,9 +763,25 @@ func (s *service) AccrueUsage(ctx context.Context, in AccrueUsageInput) (*Receiv
 		return nil, fmt.Errorf("%w: state=%s", ErrAccountRestricted, acc.CollectionState)
 	}
 
-	// A valid authorization must exist (ceiling + expiry enforced).
-	if err := s.Authorize(ctx, in.Namespace, in.CustomerID, in.Nonce, in.Credits); err != nil {
-		return nil, err
+	// Validate the authorization (signature + expiry). The ceiling check is
+	// deferred to the atomic TryAccrue to prevent the TOCTOU race.
+	auth, err := s.repo.GetAuthorization(ctx, in.Namespace, in.Nonce)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthorizationNotFound, err)
+	}
+	payload := AuthorizationPayload{
+		CustomerID: auth.CustomerID,
+		Subject:    auth.Subject,
+		MaxCredit:  auth.MaxCredit,
+		IssuedAt:   auth.IssuedAt,
+		Expiry:     auth.Expiry,
+		Nonce:      auth.Nonce,
+	}
+	if err := s.signer.Verify(payload, auth.Signature); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAuthorizationInvalid, err)
+	}
+	if !clock.Now().Before(auth.Expiry) {
+		return nil, fmt.Errorf("%w: expiry=%s", ErrAuthorizationExpired, auth.Expiry.Format(time.RFC3339))
 	}
 
 	period, err := s.repo.GetOpenPeriod(ctx, in.Namespace, acc.ID)
@@ -769,7 +808,17 @@ func (s *service) AccrueUsage(ctx context.Context, in AccrueUsageInput) (*Receiv
 		OccurredAt:  occurredAt,
 		CreatedAt:   clock.Now(),
 	}
-	return s.repo.AppendUsage(ctx, accrual)
+
+	// Atomically check ceiling and append. This is the authoritative ceiling
+	// enforcement — the check and the write happen under one lock.
+	result, err := s.repo.TryAccrue(ctx, accrual, auth.MaxCredit)
+	if err != nil {
+		if errors.Is(err, ErrCeilingExhausted) {
+			return nil, fmt.Errorf("%w", err)
+		}
+		return nil, fmt.Errorf("enterprise: try accrue: %w", err)
+	}
+	return result, nil
 }
 
 // ClosePeriod closes the open period, freezing the settlement range and amount.
@@ -947,9 +996,10 @@ func (s *service) UpdateInvoiceRefStatus(ctx context.Context, namespace, id stri
 //   - overdue -> restricted after RestrictionDelay in the overdue state.
 //   - restricted -> suspended after SuspensionDelay in the restricted state.
 //
-// The repository records UpdatedAt on each transition, which serves as the
-// entry time for the current state. State changes publish auditable events and
-// never rewrite historical usage.
+// The repository records CollectionStateEnteredAt on each transition, which
+// serves as the entry time for the current state. This is independent of
+// UpdatedAt, which may be bumped by usage accruals or other mutations. State
+// changes publish auditable events and never rewrite historical usage.
 func (s *service) EvaluateCollection(ctx context.Context, namespace, accountID string) (*ReceivableAccount, error) {
 	acc, err := s.repo.GetAccountByID(ctx, namespace, accountID)
 	if err != nil {
@@ -970,11 +1020,11 @@ func (s *service) EvaluateCollection(ctx context.Context, namespace, accountID s
 			target = CollectionStateOverdue
 		}
 	case CollectionStateOverdue:
-		if now.Sub(acc.UpdatedAt) >= s.policy.RestrictionDelay {
+		if now.Sub(acc.CollectionStateEnteredAt) >= s.policy.RestrictionDelay {
 			target = CollectionStateRestricted
 		}
 	case CollectionStateRestricted:
-		if now.Sub(acc.UpdatedAt) >= s.policy.SuspensionDelay {
+		if now.Sub(acc.CollectionStateEnteredAt) >= s.policy.SuspensionDelay {
 			target = CollectionStateSuspended
 		}
 	}
