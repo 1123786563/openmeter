@@ -4332,6 +4332,20 @@ func (u *CommerceOrderUpdateOne) SetOrClearDescription(value *string) *CommerceO
 	return u.SetDescription(*value)
 }
 
+func (u *CommerceOrderLineUpdate) SetOrClearSnapshotData(value *map[string]interface{}) *CommerceOrderLineUpdate {
+	if value == nil {
+		return u.ClearSnapshotData()
+	}
+	return u.SetSnapshotData(*value)
+}
+
+func (u *CommerceOrderLineUpdateOne) SetOrClearSnapshotData(value *map[string]interface{}) *CommerceOrderLineUpdateOne {
+	if value == nil {
+		return u.ClearSnapshotData()
+	}
+	return u.SetSnapshotData(*value)
+}
+
 func (u *CommerceProductUpdate) SetOrClearAnnotations(value *models.Annotations) *CommerceProductUpdate {
 	if value == nil {
 		return u.ClearAnnotations()

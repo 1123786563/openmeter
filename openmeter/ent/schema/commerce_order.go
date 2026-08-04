@@ -44,8 +44,8 @@ func (CommerceOrder) Fields() []ent.Field {
 			Values("plan_purchase", "subscription_renewal", "wallet_top_up").
 			Immutable(),
 		field.Enum("status").
-			Values("draft", "pending_payment", "processing", "paid", "fulfilled", "cancelled", "failed").
-			Default("draft"),
+			Values("created", "awaiting_payment", "paid", "fulfilled", "cancelled", "expired", "refund_pending", "partially_refunded", "refunded").
+			Default("created"),
 		field.Int64("total_cents").Min(0).Immutable(),
 		field.String("currency").Default("CNY").Immutable(),
 		field.String("idempotency_key").NotEmpty().Immutable(),

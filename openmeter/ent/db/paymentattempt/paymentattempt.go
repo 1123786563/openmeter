@@ -142,16 +142,16 @@ func ProviderValidator(pr Provider) error {
 // Status defines the type for the "status" enum field.
 type Status string
 
-// StatusPending is the default value of the Status enum.
-const DefaultStatus = StatusPending
+// StatusCreated is the default value of the Status enum.
+const DefaultStatus = StatusCreated
 
 // Status values.
 const (
+	StatusCreated   Status = "created"
 	StatusPending   Status = "pending"
 	StatusSucceeded Status = "succeeded"
 	StatusFailed    Status = "failed"
-	StatusCancelled Status = "cancelled"
-	StatusExpired   Status = "expired"
+	StatusClosed    Status = "closed"
 )
 
 func (s Status) String() string {
@@ -161,7 +161,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusPending, StatusSucceeded, StatusFailed, StatusCancelled, StatusExpired:
+	case StatusCreated, StatusPending, StatusSucceeded, StatusFailed, StatusClosed:
 		return nil
 	default:
 		return fmt.Errorf("paymentattempt: invalid enum value for status field: %q", s)

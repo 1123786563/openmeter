@@ -27,6 +27,18 @@ func (_u *CommerceOrderLineUpdate) Where(ps ...predicate.CommerceOrderLine) *Com
 	return _u
 }
 
+// SetSnapshotData sets the "snapshot_data" field.
+func (_u *CommerceOrderLineUpdate) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineUpdate {
+	_u.mutation.SetSnapshotData(v)
+	return _u
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (_u *CommerceOrderLineUpdate) ClearSnapshotData() *CommerceOrderLineUpdate {
+	_u.mutation.ClearSnapshotData()
+	return _u
+}
+
 // Mutation returns the CommerceOrderLineMutation object of the builder.
 func (_u *CommerceOrderLineUpdate) Mutation() *CommerceOrderLineMutation {
 	return _u.mutation
@@ -79,6 +91,12 @@ func (_u *CommerceOrderLineUpdate) sqlSave(ctx context.Context) (_node int, err 
 			}
 		}
 	}
+	if value, ok := _u.mutation.SnapshotData(); ok {
+		_spec.SetField(commerceorderline.FieldSnapshotData, field.TypeJSON, value)
+	}
+	if _u.mutation.SnapshotDataCleared() {
+		_spec.ClearField(commerceorderline.FieldSnapshotData, field.TypeJSON)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{commerceorderline.Label}
@@ -97,6 +115,18 @@ type CommerceOrderLineUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *CommerceOrderLineMutation
+}
+
+// SetSnapshotData sets the "snapshot_data" field.
+func (_u *CommerceOrderLineUpdateOne) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineUpdateOne {
+	_u.mutation.SetSnapshotData(v)
+	return _u
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (_u *CommerceOrderLineUpdateOne) ClearSnapshotData() *CommerceOrderLineUpdateOne {
+	_u.mutation.ClearSnapshotData()
+	return _u
 }
 
 // Mutation returns the CommerceOrderLineMutation object of the builder.
@@ -180,6 +210,12 @@ func (_u *CommerceOrderLineUpdateOne) sqlSave(ctx context.Context) (_node *Comme
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := _u.mutation.SnapshotData(); ok {
+		_spec.SetField(commerceorderline.FieldSnapshotData, field.TypeJSON, value)
+	}
+	if _u.mutation.SnapshotDataCleared() {
+		_spec.ClearField(commerceorderline.FieldSnapshotData, field.TypeJSON)
 	}
 	_node = &CommerceOrderLine{config: _u.config}
 	_spec.Assign = _node.assignValues

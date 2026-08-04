@@ -37,6 +37,11 @@ func (CommerceOrderLine) Fields() []ent.Field {
 		field.Int32("quantity").Min(0).Immutable(),
 		field.Int64("unit_price_cents").Min(0).Immutable(),
 		field.Int64("subtotal_cents").Min(0).Immutable(),
+		field.JSON("snapshot_data", map[string]any{}).
+			Optional().
+			SchemaType(map[string]string{
+				dialect.Postgres: "jsonb",
+			}),
 	}
 }
 

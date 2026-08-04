@@ -3803,7 +3803,7 @@ var (
 		{Name: "public_id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
 		{Name: "customer_id", Type: field.TypeString},
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"plan_purchase", "subscription_renewal", "wallet_top_up"}},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "pending_payment", "processing", "paid", "fulfilled", "cancelled", "failed"}, Default: "draft"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"created", "awaiting_payment", "paid", "fulfilled", "cancelled", "expired", "refund_pending", "partially_refunded", "refunded"}, Default: "created"},
 		{Name: "total_cents", Type: field.TypeInt64},
 		{Name: "currency", Type: field.TypeString, Default: "CNY"},
 		{Name: "idempotency_key", Type: field.TypeString},
@@ -3847,6 +3847,7 @@ var (
 		{Name: "quantity", Type: field.TypeInt32},
 		{Name: "unit_price_cents", Type: field.TypeInt64},
 		{Name: "subtotal_cents", Type: field.TypeInt64},
+		{Name: "snapshot_data", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// CommerceOrderLinesTable holds the schema information for the "commerce_order_lines" table.
@@ -3857,7 +3858,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "commerce_order_lines_commerce_orders_lines",
-				Columns:    []*schema.Column{CommerceOrderLinesColumns[8]},
+				Columns:    []*schema.Column{CommerceOrderLinesColumns[9]},
 				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -5789,7 +5790,7 @@ var (
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
 		{Name: "provider_order_id", Type: field.TypeString, Nullable: true},
 		{Name: "provider_payment_id", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "succeeded", "failed", "cancelled", "expired"}, Default: "pending"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"created", "pending", "succeeded", "failed", "closed"}, Default: "created"},
 		{Name: "provider_session_id", Type: field.TypeString, Nullable: true},
 		{Name: "idempotency_key", Type: field.TypeString},
 		{Name: "amount_cents", Type: field.TypeInt64},

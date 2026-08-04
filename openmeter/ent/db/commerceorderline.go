@@ -3,6 +3,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -33,6 +34,8 @@ type CommerceOrderLine struct {
 	UnitPriceCents int64 `json:"unit_price_cents,omitempty"`
 	// SubtotalCents holds the value of the "subtotal_cents" field.
 	SubtotalCents int64 `json:"subtotal_cents,omitempty"`
+	// SnapshotData holds the value of the "snapshot_data" field.
+	SnapshotData map[string]interface{} `json:"snapshot_data,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CommerceOrderLineQuery when eager-loading is set.
 	Edges        CommerceOrderLineEdges `json:"edges"`
@@ -64,6 +67,8 @@ func (*CommerceOrderLine) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case commerceorderline.FieldSnapshotData:
+			values[i] = new([]byte)
 		case commerceorderline.FieldQuantity, commerceorderline.FieldUnitPriceCents, commerceorderline.FieldSubtotalCents:
 			values[i] = new(sql.NullInt64)
 		case commerceorderline.FieldID, commerceorderline.FieldNamespace, commerceorderline.FieldCommerceOrderID, commerceorderline.FieldProductID, commerceorderline.FieldProductSku, commerceorderline.FieldProductName:
@@ -137,6 +142,14 @@ func (_m *CommerceOrderLine) assignValues(columns []string, values []any) error 
 			} else if value.Valid {
 				_m.SubtotalCents = value.Int64
 			}
+		case commerceorderline.FieldSnapshotData:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field snapshot_data", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SnapshotData); err != nil {
+					return fmt.Errorf("unmarshal field snapshot_data: %w", err)
+				}
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -201,6 +214,9 @@ func (_m *CommerceOrderLine) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("subtotal_cents=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SubtotalCents))
+	builder.WriteString(", ")
+	builder.WriteString("snapshot_data=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SnapshotData))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -87,6 +87,12 @@ func (_c *CommerceOrderLineCreate) SetSubtotalCents(v int64) *CommerceOrderLineC
 	return _c
 }
 
+// SetSnapshotData sets the "snapshot_data" field.
+func (_c *CommerceOrderLineCreate) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineCreate {
+	_c.mutation.SetSnapshotData(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *CommerceOrderLineCreate) SetID(v string) *CommerceOrderLineCreate {
 	_c.mutation.SetID(v)
@@ -274,6 +280,10 @@ func (_c *CommerceOrderLineCreate) createSpec() (*CommerceOrderLine, *sqlgraph.C
 		_spec.SetField(commerceorderline.FieldSubtotalCents, field.TypeInt64, value)
 		_node.SubtotalCents = value
 	}
+	if value, ok := _c.mutation.SnapshotData(); ok {
+		_spec.SetField(commerceorderline.FieldSnapshotData, field.TypeJSON, value)
+		_node.SnapshotData = value
+	}
 	if nodes := _c.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -342,6 +352,24 @@ type (
 		*sql.UpdateSet
 	}
 )
+
+// SetSnapshotData sets the "snapshot_data" field.
+func (u *CommerceOrderLineUpsert) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineUpsert {
+	u.Set(commerceorderline.FieldSnapshotData, v)
+	return u
+}
+
+// UpdateSnapshotData sets the "snapshot_data" field to the value that was provided on create.
+func (u *CommerceOrderLineUpsert) UpdateSnapshotData() *CommerceOrderLineUpsert {
+	u.SetExcluded(commerceorderline.FieldSnapshotData)
+	return u
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (u *CommerceOrderLineUpsert) ClearSnapshotData() *CommerceOrderLineUpsert {
+	u.SetNull(commerceorderline.FieldSnapshotData)
+	return u
+}
 
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
@@ -413,6 +441,27 @@ func (u *CommerceOrderLineUpsertOne) Update(set func(*CommerceOrderLineUpsert)) 
 		set(&CommerceOrderLineUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetSnapshotData sets the "snapshot_data" field.
+func (u *CommerceOrderLineUpsertOne) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineUpsertOne {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.SetSnapshotData(v)
+	})
+}
+
+// UpdateSnapshotData sets the "snapshot_data" field to the value that was provided on create.
+func (u *CommerceOrderLineUpsertOne) UpdateSnapshotData() *CommerceOrderLineUpsertOne {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.UpdateSnapshotData()
+	})
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (u *CommerceOrderLineUpsertOne) ClearSnapshotData() *CommerceOrderLineUpsertOne {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.ClearSnapshotData()
+	})
 }
 
 // Exec executes the query.
@@ -652,6 +701,27 @@ func (u *CommerceOrderLineUpsertBulk) Update(set func(*CommerceOrderLineUpsert))
 		set(&CommerceOrderLineUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetSnapshotData sets the "snapshot_data" field.
+func (u *CommerceOrderLineUpsertBulk) SetSnapshotData(v map[string]interface{}) *CommerceOrderLineUpsertBulk {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.SetSnapshotData(v)
+	})
+}
+
+// UpdateSnapshotData sets the "snapshot_data" field to the value that was provided on create.
+func (u *CommerceOrderLineUpsertBulk) UpdateSnapshotData() *CommerceOrderLineUpsertBulk {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.UpdateSnapshotData()
+	})
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (u *CommerceOrderLineUpsertBulk) ClearSnapshotData() *CommerceOrderLineUpsertBulk {
+	return u.Update(func(s *CommerceOrderLineUpsert) {
+		s.ClearSnapshotData()
+	})
 }
 
 // Exec executes the query.

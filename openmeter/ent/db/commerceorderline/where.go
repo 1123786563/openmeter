@@ -548,6 +548,16 @@ func SubtotalCentsLTE(v int64) predicate.CommerceOrderLine {
 	return predicate.CommerceOrderLine(sql.FieldLTE(FieldSubtotalCents, v))
 }
 
+// SnapshotDataIsNil applies the IsNil predicate on the "snapshot_data" field.
+func SnapshotDataIsNil() predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldIsNull(FieldSnapshotData))
+}
+
+// SnapshotDataNotNil applies the NotNil predicate on the "snapshot_data" field.
+func SnapshotDataNotNil() predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldNotNull(FieldSnapshotData))
+}
+
 // HasOrder applies the HasEdge predicate on the "order" edge.
 func HasOrder() predicate.CommerceOrderLine {
 	return predicate.CommerceOrderLine(func(s *sql.Selector) {

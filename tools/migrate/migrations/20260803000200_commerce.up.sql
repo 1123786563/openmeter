@@ -4,9 +4,9 @@
 -- Enum types must be created before tables that reference them.
 CREATE TYPE commerce_product_kind AS ENUM ('plan_purchase', 'subscription_renewal', 'wallet_top_up');
 CREATE TYPE commerce_order_kind AS ENUM ('plan_purchase', 'subscription_renewal', 'wallet_top_up');
-CREATE TYPE commerce_order_status AS ENUM ('draft', 'pending_payment', 'processing', 'paid', 'fulfilled', 'cancelled', 'failed');
+CREATE TYPE commerce_order_status AS ENUM ('created', 'awaiting_payment', 'paid', 'fulfilled', 'cancelled', 'expired', 'refund_pending', 'partially_refunded', 'refunded');
 CREATE TYPE payment_attempt_provider AS ENUM ('wechat', 'alipay', 'offline');
-CREATE TYPE payment_attempt_status AS ENUM ('pending', 'succeeded', 'failed', 'cancelled', 'expired');
+CREATE TYPE payment_attempt_status AS ENUM ('created', 'pending', 'succeeded', 'failed', 'closed');
 CREATE TYPE payment_fact_provider AS ENUM ('wechat', 'alipay', 'offline');
 CREATE TYPE fulfillment_status AS ENUM ('pending', 'processing', 'fulfilled', 'failed');
 CREATE TYPE refund_request_status AS ENUM ('pending_fence', 'provider_processing', 'ledger_reversing', 'fulfilled', 'failed');
@@ -48,7 +48,7 @@ CREATE TABLE "commerce_orders" (
   "public_id" character(26) NOT NULL,
   "customer_id" character varying NOT NULL,
   "kind" commerce_order_kind NOT NULL,
-  "status" commerce_order_status DEFAULT 'draft',
+  "status" commerce_order_status DEFAULT 'created',
   "total_cents" bigint NOT NULL,
   "currency" character varying DEFAULT 'CNY',
   "idempotency_key" character varying NOT NULL,
@@ -72,6 +72,7 @@ CREATE TABLE "commerce_order_lines" (
   "quantity" integer NOT NULL,
   "unit_price_cents" bigint NOT NULL,
   "subtotal_cents" bigint NOT NULL,
+  "snapshot_data" jsonb,
   "commerce_order_id" character(26) NOT NULL,
   PRIMARY KEY ("id"),
   CONSTRAINT "commerceorderline_quantity_check" CHECK ("quantity" >= 0),
@@ -94,7 +95,7 @@ CREATE TABLE "payment_attempts" (
   "provider" payment_attempt_provider NOT NULL,
   "provider_order_id" character varying NULL,
   "provider_payment_id" character varying NULL,
-  "status" payment_attempt_status DEFAULT 'pending',
+  "status" payment_attempt_status DEFAULT 'created',
   "provider_session_id" character varying NULL,
   "idempotency_key" character varying NOT NULL,
   "amount_cents" bigint NOT NULL,

@@ -41,8 +41,8 @@ func (PaymentAttempt) Fields() []ent.Field {
 		// provider_payment_id is the payment identifier assigned by the provider.
 		field.String("provider_payment_id").Optional().Nillable(),
 		field.Enum("status").
-			Values("pending", "succeeded", "failed", "cancelled", "expired").
-			Default("pending"),
+			Values("created", "pending", "succeeded", "failed", "closed").
+			Default("created"),
 		// provider_session_id carries provider-specific session data (e.g. WeChat prepay_id).
 		field.String("provider_session_id").Optional().Nillable(),
 		field.String("idempotency_key").NotEmpty().Immutable(),

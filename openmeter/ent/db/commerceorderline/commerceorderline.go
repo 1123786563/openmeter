@@ -28,6 +28,8 @@ const (
 	FieldUnitPriceCents = "unit_price_cents"
 	// FieldSubtotalCents holds the string denoting the subtotal_cents field in the database.
 	FieldSubtotalCents = "subtotal_cents"
+	// FieldSnapshotData holds the string denoting the snapshot_data field in the database.
+	FieldSnapshotData = "snapshot_data"
 	// EdgeOrder holds the string denoting the order edge name in mutations.
 	EdgeOrder = "order"
 	// Table holds the table name of the commerceorderline in the database.
@@ -52,6 +54,7 @@ var Columns = []string{
 	FieldQuantity,
 	FieldUnitPriceCents,
 	FieldSubtotalCents,
+	FieldSnapshotData,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

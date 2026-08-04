@@ -85085,6 +85085,7 @@ type CommerceOrderLineMutation struct {
 	addunit_price_cents *int64
 	subtotal_cents      *int64
 	addsubtotal_cents   *int64
+	snapshot_data       *map[string]interface{}
 	clearedFields       map[string]struct{}
 	_order              *string
 	cleared_order       bool
@@ -85545,6 +85546,55 @@ func (m *CommerceOrderLineMutation) ResetSubtotalCents() {
 	m.addsubtotal_cents = nil
 }
 
+// SetSnapshotData sets the "snapshot_data" field.
+func (m *CommerceOrderLineMutation) SetSnapshotData(value map[string]interface{}) {
+	m.snapshot_data = &value
+}
+
+// SnapshotData returns the value of the "snapshot_data" field in the mutation.
+func (m *CommerceOrderLineMutation) SnapshotData() (r map[string]interface{}, exists bool) {
+	v := m.snapshot_data
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSnapshotData returns the old "snapshot_data" field's value of the CommerceOrderLine entity.
+// If the CommerceOrderLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOrderLineMutation) OldSnapshotData(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSnapshotData is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSnapshotData requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSnapshotData: %w", err)
+	}
+	return oldValue.SnapshotData, nil
+}
+
+// ClearSnapshotData clears the value of the "snapshot_data" field.
+func (m *CommerceOrderLineMutation) ClearSnapshotData() {
+	m.snapshot_data = nil
+	m.clearedFields[commerceorderline.FieldSnapshotData] = struct{}{}
+}
+
+// SnapshotDataCleared returns if the "snapshot_data" field was cleared in this mutation.
+func (m *CommerceOrderLineMutation) SnapshotDataCleared() bool {
+	_, ok := m.clearedFields[commerceorderline.FieldSnapshotData]
+	return ok
+}
+
+// ResetSnapshotData resets all changes to the "snapshot_data" field.
+func (m *CommerceOrderLineMutation) ResetSnapshotData() {
+	m.snapshot_data = nil
+	delete(m.clearedFields, commerceorderline.FieldSnapshotData)
+}
+
 // SetOrderID sets the "order" edge to the CommerceOrder entity by id.
 func (m *CommerceOrderLineMutation) SetOrderID(id string) {
 	m._order = &id
@@ -85619,7 +85669,7 @@ func (m *CommerceOrderLineMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CommerceOrderLineMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.namespace != nil {
 		fields = append(fields, commerceorderline.FieldNamespace)
 	}
@@ -85643,6 +85693,9 @@ func (m *CommerceOrderLineMutation) Fields() []string {
 	}
 	if m.subtotal_cents != nil {
 		fields = append(fields, commerceorderline.FieldSubtotalCents)
+	}
+	if m.snapshot_data != nil {
+		fields = append(fields, commerceorderline.FieldSnapshotData)
 	}
 	return fields
 }
@@ -85668,6 +85721,8 @@ func (m *CommerceOrderLineMutation) Field(name string) (ent.Value, bool) {
 		return m.UnitPriceCents()
 	case commerceorderline.FieldSubtotalCents:
 		return m.SubtotalCents()
+	case commerceorderline.FieldSnapshotData:
+		return m.SnapshotData()
 	}
 	return nil, false
 }
@@ -85693,6 +85748,8 @@ func (m *CommerceOrderLineMutation) OldField(ctx context.Context, name string) (
 		return m.OldUnitPriceCents(ctx)
 	case commerceorderline.FieldSubtotalCents:
 		return m.OldSubtotalCents(ctx)
+	case commerceorderline.FieldSnapshotData:
+		return m.OldSnapshotData(ctx)
 	}
 	return nil, fmt.Errorf("unknown CommerceOrderLine field %s", name)
 }
@@ -85757,6 +85814,13 @@ func (m *CommerceOrderLineMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSubtotalCents(v)
+		return nil
+	case commerceorderline.FieldSnapshotData:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSnapshotData(v)
 		return nil
 	}
 	return fmt.Errorf("unknown CommerceOrderLine field %s", name)
@@ -85826,7 +85890,11 @@ func (m *CommerceOrderLineMutation) AddField(name string, value ent.Value) error
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *CommerceOrderLineMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(commerceorderline.FieldSnapshotData) {
+		fields = append(fields, commerceorderline.FieldSnapshotData)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -85839,6 +85907,11 @@ func (m *CommerceOrderLineMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *CommerceOrderLineMutation) ClearField(name string) error {
+	switch name {
+	case commerceorderline.FieldSnapshotData:
+		m.ClearSnapshotData()
+		return nil
+	}
 	return fmt.Errorf("unknown CommerceOrderLine nullable field %s", name)
 }
 
@@ -85869,6 +85942,9 @@ func (m *CommerceOrderLineMutation) ResetField(name string) error {
 		return nil
 	case commerceorderline.FieldSubtotalCents:
 		m.ResetSubtotalCents()
+		return nil
+	case commerceorderline.FieldSnapshotData:
+		m.ResetSnapshotData()
 		return nil
 	}
 	return fmt.Errorf("unknown CommerceOrderLine field %s", name)

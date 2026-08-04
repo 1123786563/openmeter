@@ -156,18 +156,20 @@ func KindValidator(k Kind) error {
 // Status defines the type for the "status" enum field.
 type Status string
 
-// StatusDraft is the default value of the Status enum.
-const DefaultStatus = StatusDraft
+// StatusCreated is the default value of the Status enum.
+const DefaultStatus = StatusCreated
 
 // Status values.
 const (
-	StatusDraft          Status = "draft"
-	StatusPendingPayment Status = "pending_payment"
-	StatusProcessing     Status = "processing"
-	StatusPaid           Status = "paid"
-	StatusFulfilled      Status = "fulfilled"
-	StatusCancelled      Status = "cancelled"
-	StatusFailed         Status = "failed"
+	StatusCreated           Status = "created"
+	StatusAwaitingPayment   Status = "awaiting_payment"
+	StatusPaid              Status = "paid"
+	StatusFulfilled         Status = "fulfilled"
+	StatusCancelled         Status = "cancelled"
+	StatusExpired           Status = "expired"
+	StatusRefundPending     Status = "refund_pending"
+	StatusPartiallyRefunded Status = "partially_refunded"
+	StatusRefunded          Status = "refunded"
 )
 
 func (s Status) String() string {
@@ -177,7 +179,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusDraft, StatusPendingPayment, StatusProcessing, StatusPaid, StatusFulfilled, StatusCancelled, StatusFailed:
+	case StatusCreated, StatusAwaitingPayment, StatusPaid, StatusFulfilled, StatusCancelled, StatusExpired, StatusRefundPending, StatusPartiallyRefunded, StatusRefunded:
 		return nil
 	default:
 		return fmt.Errorf("commerceorder: invalid enum value for status field: %q", s)
