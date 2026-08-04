@@ -62,7 +62,9 @@ log "Phase 2 acceptance passed."
 # ---------------------------------------------------------------------------
 log "Computing OpenAPI checksums..."
 P1_CHECKSUM="$(shasum -a 256 api/v3/openapi.yaml | cut -d' ' -f1)"
-P2_CHECKSUM="$P1_CHECKSUM"  # P2 extends the same spec
+# P2 checksum covers the spec plus Phase 2 commerce contract additions
+CONTRACT_EVENTS="order.updated payment.settled payment.failed refund.updated invoice.updated subscription.updated"
+P2_CHECKSUM="$(printf '%s %s' "$(cat api/v3/openapi.yaml)" "$CONTRACT_EVENTS" | shasum -a 256 | cut -d' ' -f1)"
 
 CONTRACT_VERSION="commerce.phase2.v1"
 
@@ -93,6 +95,17 @@ IMAGE_TAG="openmeter-phase2:${COMMIT_SHA:0:12}"
 log "Building Docker image: $IMAGE_TAG"
 if ! docker build -t "$IMAGE_TAG" -f Dockerfile .; then
     fail "Docker build failed."
+fi
+
+# Embed the contract manifest into the image at /contract/manifest.json.
+log "Embedding contract manifest into image..."
+CONTAINER_ID="$(docker create "$IMAGE_TAG" /bin/true 2>/dev/null || true)"
+if [ -n "$CONTAINER_ID" ]; then
+    docker cp "$MANIFEST_FILE" "${CONTAINER_ID}:/contract/manifest.json" || log "WARNING: could not copy manifest into container."
+    docker commit "$CONTAINER_ID" "$IMAGE_TAG" >/dev/null 2>&1 || log "WARNING: could not commit manifest layer."
+    docker rm "$CONTAINER_ID" >/dev/null 2>&1 || true
+else
+    log "WARNING: could not create temp container to embed manifest."
 fi
 
 # ---------------------------------------------------------------------------

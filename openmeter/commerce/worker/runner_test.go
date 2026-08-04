@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -154,4 +155,132 @@ func TestNew_MissingJob(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for missing job")
 	}
+}
+
+type countingLeaseRecoverer struct {
+	calls int32
+	err   error
+}
+
+func (c *countingLeaseRecoverer) RecoverExpiredLeases(context.Context) (int, error) {
+	atomic.AddInt32(&c.calls, 1)
+	if c.err != nil {
+		return 0, c.err
+	}
+	return 5, nil
+}
+
+func TestManager_LeaseRecoveryOnStart(t *testing.T) {
+	lr := &countingLeaseRecoverer{}
+	m := NewManager(nil)
+	m.leaseRecovery = lr
+
+	r, _ := New(RunnerConfig{
+		Name: "test",
+		Job:  func(context.Context) (int, error) { return 0, nil },
+	})
+	m.Register(r)
+
+	ctx := context.Background()
+	m.Start(ctx)
+	time.Sleep(20 * time.Millisecond)
+	m.Stop()
+
+	if atomic.LoadInt32(&lr.calls) != 1 {
+		t.Errorf("expected lease recovery called once, got %d", atomic.LoadInt32(&lr.calls))
+	}
+}
+
+func TestManager_LeaseRecoveryErrorDoesNotBlockStart(t *testing.T) {
+	lr := &countingLeaseRecoverer{err: errors.New("db unavailable")}
+	m := NewManager(nil)
+	m.leaseRecovery = lr
+
+	r, _ := New(RunnerConfig{
+		Name: "test",
+		Job:  func(context.Context) (int, error) { return 0, nil },
+	})
+	m.Register(r)
+
+	ctx := context.Background()
+	m.Start(ctx)
+	m.Stop()
+	// Should not panic or hang — runners start even if recovery fails
+}
+
+func TestRegisterCommerceWorkers_FulfillmentOnly(t *testing.T) {
+	var calls int32
+	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{
+		Namespace: "test-ns",
+		Fulfillment: &mockFulfillmentProcessor{
+			fn: func(_ context.Context, _ string, _ int) (int, error) {
+				atomic.AddInt32(&calls, 1)
+				return 1, nil
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create manager: %v", err)
+	}
+	if len(mgr.RunnerNames()) != 1 {
+		t.Fatalf("expected 1 runner, got %d: %v", len(mgr.RunnerNames()), mgr.RunnerNames())
+	}
+	if mgr.RunnerNames()[0] != "fulfillment" {
+		t.Errorf("expected fulfillment, got %s", mgr.RunnerNames()[0])
+	}
+}
+
+func TestRegisterCommerceWorkers_AllRunners(t *testing.T) {
+	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{
+		Namespace:      "test-ns",
+		Fulfillment:    &mockFulfillmentProcessor{},
+		Refund:         &mockRefundProcessor{},
+		Payment:        &mockPaymentConfirmer{},
+		Reconciliation: &mockReconRunner{},
+		Enterprise:     &mockEnterpriseCloser{},
+	})
+	if err != nil {
+		t.Fatalf("create manager: %v", err)
+	}
+	names := mgr.RunnerNames()
+	if len(names) != 5 {
+		t.Fatalf("expected 5 runners, got %d: %v", len(names), names)
+	}
+}
+
+// Mock types for RegisterCommerceWorkers
+
+type mockFulfillmentProcessor struct {
+	fn func(ctx context.Context, ns string, limit int) (int, error)
+}
+
+func (m *mockFulfillmentProcessor) ProcessPending(ctx context.Context, ns string, limit int) (int, error) {
+	if m.fn != nil {
+		return m.fn(ctx, ns, limit)
+	}
+	return 0, nil
+}
+
+type mockRefundProcessor struct{}
+
+func (m *mockRefundProcessor) ProcessOne(context.Context, string, string) (interface{}, error) {
+	return nil, nil
+}
+
+type mockPaymentConfirmer struct{}
+
+func (m *mockPaymentConfirmer) ConfirmPayment(context.Context, string, string) (interface{}, error) {
+	return nil, nil
+}
+
+type mockReconRunner struct{}
+
+func (m *mockReconRunner) Run(context.Context, string) (interface{}, error) {
+	return nil, nil
+}
+
+type mockEnterpriseCloser struct{}
+
+func (m *mockEnterpriseCloser) EvaluateCollection(context.Context, string, string) (interface{}, error) {
+	return nil, nil
 }

@@ -43,6 +43,8 @@ type Services struct {
 type Handler interface {
 	GetCustomerWallet() http.HandlerFunc
 	ListRechargeProducts() http.HandlerFunc
+	CreateProduct() http.HandlerFunc
+	UpdateProduct() http.HandlerFunc
 	CreateOrder() http.HandlerFunc
 	GetOrder() http.HandlerFunc
 	CreateCheckoutSession() http.HandlerFunc
@@ -133,6 +135,88 @@ func (h *handler) ListRechargeProducts() http.HandlerFunc {
 	}
 }
 
+// CreateProduct creates a new catalog product. Admin-only mutation: the RBAC
+// middleware ensures the caller has admin role before reaching this handler.
+func (h *handler) CreateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		var body struct {
+			SKU          string                `json:"sku"`
+			DisplayName  string                `json:"display_name"`
+			Kind         api.CommerceOrderKind `json:"kind"`
+			Credits      int64                 `json:"credits"`
+			AmountFen    api.CommerceFenAmount `json:"amount_fen"`
+			Currency     api.CurrencyCode      `json:"currency"`
+			DisplayOrder int                   `json:"display_order"`
+			RefundPolicy string                `json:"refund_policy"`
+			Description  string                `json:"description"`
+		}
+		if err := decodeJSON(r, &body); err != nil {
+			writeStatus(ctx, w, http.StatusBadRequest, err)
+			return
+		}
+		product, err := h.svc.Catalog.CreateProduct(ctx, commerce.CreateProductInput{
+			Namespace:    ns,
+			SKU:          body.SKU,
+			DisplayName:  body.DisplayName,
+			Kind:         commerce.ProductKind(body.Kind),
+			Credits:      body.Credits,
+			AmountMinor:  body.AmountFen,
+			Currency:     body.Currency,
+			DisplayOrder: body.DisplayOrder,
+			Description:  body.Description,
+		})
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		writeJSON(ctx, w, http.StatusCreated, toAPIRechargeProduct(*product))
+	}
+}
+
+// UpdateProduct updates a catalog product's mutable fields. Admin-only.
+func (h *handler) UpdateProduct() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		productID := r.PathValue("productId")
+		if productID == "" {
+			writeStatus(ctx, w, http.StatusBadRequest, errors.New("productId is required"))
+			return
+		}
+		var body struct {
+			DisplayName *string                `json:"display_name,omitempty"`
+			AmountFen   *api.CommerceFenAmount `json:"amount_fen,omitempty"`
+			Active      *bool                  `json:"active,omitempty"`
+		}
+		if err := decodeJSON(r, &body); err != nil {
+			writeStatus(ctx, w, http.StatusBadRequest, err)
+			return
+		}
+		product, err := h.svc.Catalog.UpdateProduct(ctx, commerce.UpdateProductInput{
+			Namespace:   ns,
+			ID:          productID,
+			DisplayName: body.DisplayName,
+			AmountMinor: body.AmountFen,
+			Active:      body.Active,
+		})
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		writeJSON(ctx, w, http.StatusOK, toAPIRechargeProduct(*product))
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Orders
 // ---------------------------------------------------------------------------
@@ -198,6 +282,10 @@ func (h *handler) GetOrder() http.HandlerFunc {
 func (h *handler) CreateCheckoutSession() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		if h.svc.Payment == nil {
+			writeStatus(ctx, w, http.StatusNotImplemented, errors.New("payment service not configured"))
+			return
+		}
 		ns, err := h.resolveNamespace(ctx)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
@@ -243,6 +331,10 @@ func (h *handler) CreateCheckoutSession() http.HandlerFunc {
 func (h *handler) GetCheckoutSession() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		if h.svc.Payment == nil {
+			writeStatus(ctx, w, http.StatusNotImplemented, errors.New("payment service not configured"))
+			return
+		}
 		ns, err := h.resolveNamespace(ctx)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
@@ -267,10 +359,16 @@ func (h *handler) GetCheckoutSession() http.HandlerFunc {
 // ---------------------------------------------------------------------------
 
 func (h *handler) AlipayPaymentCallback() http.HandlerFunc {
+	if h.svc.Payment == nil {
+		return notImplementedHandler("payment service not configured")
+	}
 	return h.paymentCallback(payment.ProviderAlipay)
 }
 
 func (h *handler) WechatPaymentCallback() http.HandlerFunc {
+	if h.svc.Payment == nil {
+		return notImplementedHandler("payment service not configured")
+	}
 	return h.paymentCallback(payment.ProviderWeChat)
 }
 
@@ -292,11 +390,41 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 		_, cbErr := h.svc.Payment.HandleCallback(ctx, ns, provider, r.Header, body)
 		if cbErr != nil {
 			h.logger.WarnContext(ctx, "commerce: payment callback error", "provider", provider, "error", cbErr)
+			// Return 500 on transient/internal errors so the provider retries.
+			// Only ACK (200) when the callback was processed successfully or
+			// was definitively rejected (e.g. invalid signature — those are
+			// non-retryable and ACK prevents infinite retries).
+			if isRetryableCallbackError(cbErr) {
+				writeStatus(ctx, w, http.StatusInternalServerError, cbErr)
+				return
+			}
+			// Definitive rejection (bad signature, mismatch) — ACK so the
+			// provider stops retrying a genuinely bad callback.
+			writeJSON(ctx, w, http.StatusOK, api.CommerceProviderCallbackAck{
+				Ack: providerCallbackAck(provider),
+			})
+			return
 		}
+		// Success — ACK the provider.
 		writeJSON(ctx, w, http.StatusOK, api.CommerceProviderCallbackAck{
 			Ack: providerCallbackAck(provider),
 		})
 	}
+}
+
+// isRetryableCallbackError reports whether a payment callback error is
+// transient and should cause the provider to retry. Signature verification
+// failures, amount mismatches, and contradictory facts are definitive (the
+// provider should stop retrying). Database errors, network timeouts, and
+// unknown errors are transient (the provider should retry).
+func isRetryableCallbackError(err error) bool {
+	// Signature/verification errors are definitive — retrying won't help.
+	var ve models.ValidationIssue
+	if errors.As(err, &ve) {
+		return false // validation issues (mismatch, contradiction) are definitive
+	}
+	// Unknown errors are treated as transient so the provider retries.
+	return true
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +434,10 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 func (h *handler) CreateRefund() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		if h.svc.Refund == nil {
+			writeStatus(ctx, w, http.StatusNotImplemented, errors.New("refund service not configured"))
+			return
+		}
 		ns, err := h.resolveNamespace(ctx)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
@@ -339,6 +471,10 @@ func (h *handler) CreateRefund() http.HandlerFunc {
 func (h *handler) GetRefund() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		if h.svc.Refund == nil {
+			writeStatus(ctx, w, http.StatusNotImplemented, errors.New("refund service not configured"))
+			return
+		}
 		ns, err := h.resolveNamespace(ctx)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
@@ -594,6 +730,13 @@ func writeJSON(ctx context.Context, w http.ResponseWriter, status int, v any) {
 
 func writeStatus(ctx context.Context, w http.ResponseWriter, status int, err error) {
 	writeJSON(ctx, w, status, apierrors.NewInternalError(ctx, err))
+}
+
+// notImplementedHandler returns a handler that responds with 501 Not Implemented.
+func notImplementedHandler(msg string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeStatus(r.Context(), w, http.StatusNotImplemented, errors.New(msg))
+	}
 }
 
 func writeCommerceError(ctx context.Context, w http.ResponseWriter, err error) {

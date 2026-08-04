@@ -154,6 +154,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Wire Phase 2 commerce services (catalog, orders, wallet) from the Ent client.
+	commerceWiring, err := wireCommerce(app.EntClient, logger)
+	if err != nil {
+		logger.Error("failed to wire commerce services", "error", err)
+		os.Exit(1)
+	}
+
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{
 			NamespaceDecoder:            namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace()),
@@ -208,6 +215,7 @@ func main() {
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
 		ResponseValidation:  conf.Server.ResponseValidation,
 		ClientIPMiddleware:  pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
+		CommerceHandler:     commerceWiring.Handler,
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)

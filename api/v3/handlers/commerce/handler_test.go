@@ -31,26 +31,28 @@ func (m *mockWallet) GetWallet(_ context.Context, _, _ string) (*commerce.Wallet
 
 type mockCatalog struct {
 	products []commerce.Product
+	product  *commerce.Product
 	err      error
 }
 
 func (m *mockCatalog) CreateProduct(_ context.Context, _ commerce.CreateProductInput) (*commerce.Product, error) {
-	return nil, m.err
+	return m.product, m.err
 }
 func (m *mockCatalog) GetProduct(_ context.Context, _, _ string) (*commerce.Product, error) {
-	return nil, m.err
+	return m.product, m.err
 }
 func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, _ bool) ([]commerce.Product, error) {
 	return m.products, m.err
 }
 func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductInput) (*commerce.Product, error) {
-	return nil, m.err
+	return m.product, m.err
 }
 
 type mockOrders struct {
-	order   *commerce.Order
-	created bool
-	err     error
+	order    *commerce.Order
+	created  bool
+	err      error
+	conflict bool
 }
 
 func (m *mockOrders) CreateOrder(_ context.Context, _ commerce.CreateOrderInput) (*commerce.Order, bool, error) {
@@ -432,6 +434,196 @@ func TestUpdateExternalInvoice_Success(t *testing.T) {
 	}
 	if resp.InvoiceNumber != "INV-001" {
 		t.Errorf("expected INV-001, got %s", resp.InvoiceNumber)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Idempotency conflict test (Important #5)
+// ---------------------------------------------------------------------------
+
+func TestCreateOrder_IdempotencyConflict_409(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{
+			err: commerce.ErrOrderIdempotencyConflict,
+		},
+	})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "cust-1",
+		Kind:              api.CommerceOrderKindWalletTopUp,
+		Currency:          "CNY",
+		IdempotencyKey:    "idem-conflict",
+	}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for idempotency conflict, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Catalog mutation tests (Important #6)
+// ---------------------------------------------------------------------------
+
+func TestCreateProduct_Success(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{
+			product: &commerce.Product{
+				DisplayName: "100 Credits",
+				SKU:         "SKU-100",
+				Kind:        commerce.ProductKindWalletTopUp,
+				Credits:     100,
+				AmountMinor: 1000,
+				Currency:    "CNY",
+				Active:      true,
+			},
+		},
+	})
+	body := map[string]any{
+		"sku":          "SKU-100",
+		"display_name": "100 Credits",
+		"kind":         "wallet_top_up",
+		"credits":      100,
+		"amount_fen":   1000,
+		"currency":     "CNY",
+	}
+	rr := doRequest(t, h.CreateProduct(), http.MethodPost, "/recharge-products", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var prod api.CommerceRechargeProduct
+	if err := json.NewDecoder(rr.Body).Decode(&prod); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if prod.PriceFen != 1000 {
+		t.Errorf("expected price 1000, got %d", prod.PriceFen)
+	}
+}
+
+func TestCreateProduct_SKUConflict(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{err: commerce.ErrSKUNotUnique},
+	})
+	body := map[string]any{
+		"sku":          "SKU-DUP",
+		"display_name": "Dup",
+		"kind":         "wallet_top_up",
+		"credits":      50,
+		"amount_fen":   500,
+		"currency":     "CNY",
+	}
+	rr := doRequest(t, h.CreateProduct(), http.MethodPost, "/recharge-products", body, nil)
+	if rr.Code != http.StatusConflict {
+		t.Errorf("expected 409 for duplicate SKU, got %d", rr.Code)
+	}
+}
+
+func TestUpdateProduct_Success(t *testing.T) {
+	active := true
+	h := testHandler(Services{
+		Catalog: &mockCatalog{
+			product: &commerce.Product{
+				DisplayName: "Updated Name",
+				AmountMinor: 2000,
+				Currency:    "CNY",
+				Active:      true,
+			},
+		},
+	})
+	body := map[string]any{
+		"display_name": "Updated Name",
+		"amount_fen":   2000,
+		"active":       active,
+	}
+	rr := doRequest(t, h.UpdateProduct(), http.MethodPut, "/recharge-products/prod-1", body,
+		map[string]string{"productId": "prod-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var prod api.CommerceRechargeProduct
+	if err := json.NewDecoder(rr.Body).Decode(&prod); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if prod.PriceFen != 2000 {
+		t.Errorf("expected price 2000, got %d", prod.PriceFen)
+	}
+}
+
+func TestUpdateProduct_NotFound(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{err: commerce.ErrProductNotFound},
+	})
+	body := map[string]any{"display_name": "x"}
+	rr := doRequest(t, h.UpdateProduct(), http.MethodPut, "/recharge-products/none", body,
+		map[string]string{"productId": "none"})
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Nil-service 501 tests (Critical #2 verification)
+// ---------------------------------------------------------------------------
+
+func TestCreateCheckoutSession_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.CreateCheckoutSession(), http.MethodPost, "/orders/ord-1/checkout", nil,
+		map[string]string{"orderId": "ord-1"})
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment service, got %d", rr.Code)
+	}
+}
+
+func TestCreateRefund_NilRefund_501(t *testing.T) {
+	h := testHandler(Services{})
+	body := api.CommerceRefundCreate{
+		BillingCustomerId: "cust-1",
+		OrderId:           "ord-1",
+		AmountFen:         500,
+		IdempotencyKey:    "idem-r1",
+	}
+	rr := doRequest(t, h.CreateRefund(), http.MethodPost, "/refunds", body, nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil refund service, got %d", rr.Code)
+	}
+}
+
+func TestAlipayCallback_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment callback, got %d", rr.Code)
+	}
+}
+
+func TestWechatCallback_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment callback, got %d", rr.Code)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Payment callback transient error test (Important #3)
+// ---------------------------------------------------------------------------
+
+func TestPaymentCallback_TransientError_500(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: errors.New("database connection lost")},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 on transient error, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestPaymentCallback_SignatureRejection_200(t *testing.T) {
+	// Signature verification failures are ValidationIssues — definitive, so ACK (200)
+	h := testHandler(Services{
+		Payment: &mockPayment{err: commerce.ErrOrderNotFound},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 on definitive rejection, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 
