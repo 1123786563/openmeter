@@ -15,6 +15,7 @@ export { Addons } from './sdk/addons.js'
 export { PlanAddons } from './sdk/planAddons.js'
 export { Defaults } from './sdk/defaults.js'
 export { AIUsage } from './sdk/aiUsage.js'
+export { Commerce } from './sdk/commerce.js'
 export { Client } from './core.js'
 export { HTTPError } from './models/errors.js'
 export {
@@ -57,6 +58,7 @@ export type * from './models/operations/planAddons.js'
 export type * from './models/operations/defaults.js'
 export type * from './models/operations/governance.js'
 export type * from './models/operations/aiUsage.js'
+export type * from './models/operations/commerce.js'
 
 export type {
   Labels,
@@ -98,11 +100,13 @@ export type {
   GovernanceQueryRequestFeatures,
   AiUsageUsageLineCreate,
   AiUsageRuntimeAuthorizationQuery,
+  CommerceProviderCallbackAck,
   QueryFilterInteger,
   QueryFilterFloat,
   QueryFilterBoolean,
   PagePaginationQuery,
   PublicLabels,
+  CommerceProviderCallbackBody,
   SystemAccountAccessToken,
   PersonalAccessToken,
   KonnectAccessToken,
@@ -141,7 +145,9 @@ export type {
   AppReference,
   ChargeReference,
   UpdateResourceReference,
+  CommercePlanRef,
   AiUsageLedgerEntryRef,
+  CommerceSubscriptionRef,
   Event,
   MeterQueryRow,
   AppStripeCreateCustomerPortalSessionResult,
@@ -152,6 +158,8 @@ export type {
   FeatureCostQueryRow,
   AiUsageRuntimeAuthorization,
   AiUsageCreditBalance,
+  CommerceExternalInvoiceUpdate,
+  CommerceExternalInvoice,
   Resource,
   ResourceImmutable,
   QueryFilterDateTime,
@@ -222,6 +230,18 @@ export type {
   GovernanceQueryError,
   AiUsageUsageBatchCreate,
   AiUsageCreditTransaction,
+  CommerceWalletBucket,
+  CommerceLedgerProvenance,
+  CommerceRechargeProduct,
+  CommerceRefundCreate,
+  CommerceOfflinePaymentCreate,
+  CommerceOfflinePayment,
+  CommerceRechargeProductWithBonus,
+  CommerceCheckoutSessionCreate,
+  CommerceCheckoutSession,
+  CommercePaymentFact,
+  CommerceRefund,
+  CommerceReceivablePeriod,
   AppCustomerData,
   UpsertAppCustomerDataRequest,
   CreditAdjustment,
@@ -249,6 +269,8 @@ export type {
   ProfileAppReferences,
   InvoiceWorkflowAppsReferences,
   UpdateRateCardTaxConfig,
+  CommerceOrderCreate,
+  CommerceOrder,
   ListEventsParamsFilter,
   ListInvoicesParamsFilter,
   ResourceFilters,
@@ -283,6 +305,9 @@ export type {
   UpdateBillingInvoiceWorkflow,
   GovernanceFeatureAccess,
   AiCreditTransactionPaginatedResponse,
+  CommerceWalletTransaction,
+  CommerceRechargeProductList,
+  ReceivablePeriodPaginatedResponse,
   CustomerData,
   UpsertCustomerBillingDataRequest,
   CreditBalances,
@@ -315,6 +340,7 @@ export type {
   InvoiceDetailedLine,
   UpdateInvoiceWorkflowSettings,
   GovernanceQueryResult,
+  CommerceWallet,
   AiUsageUsageBatch,
   AiUsageBatchSettlementResult,
   Feature,

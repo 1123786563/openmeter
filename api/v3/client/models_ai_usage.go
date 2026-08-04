@@ -59,8 +59,8 @@ type AIUsageCostSnapshot struct {
 
 // Integer credit balance for AI usage, scoped to a single currency.
 //
-// Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as
-// signed 64-bit integers to avoid floating-point rounding in settlement.
+// Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed
+// 64-bit integers to avoid floating-point rounding in settlement.
 type AIUsageCreditBalance struct {
 	// The timestamp of the balance retrieval.
 	RetrievedAt time.Time `json:"retrieved_at"`
@@ -110,11 +110,11 @@ func (value AIUsageCreditTransactionType) Valid() bool {
 // Runtime authorization decision for a customer's AI usage.
 //
 // Returned before processing a usage batch to indicate whether the customer is
-// authorized to consume AI resources, along with their current credit balance
-// and reservation ceiling.
+// authorized to consume AI resources, along with their current credit balance and
+// reservation ceiling.
 type AIUsageRuntimeAuthorization struct {
-	// The frozen Phase 1 contract version string (currently
-	// `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+	// The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`).
+	// Clients can use this to detect contract changes.
 	ContractVersion string `json:"contract_version"`
 	// The timestamp of the authorization check.
 	RetrievedAt time.Time `json:"retrieved_at"`
@@ -122,8 +122,8 @@ type AIUsageRuntimeAuthorization struct {
 	Authorized bool `json:"authorized"`
 	// Available integer Credit balance for AI consumption.
 	AvailableCredits int64 `json:"available_credits"`
-	// The reservation ceiling in Credits, if a reservation is active. When set,
-	// usage is capped at this amount per reservation period.
+	// The reservation ceiling in Credits, if a reservation is active. When set, usage
+	// is capped at this amount per reservation period.
 	ReservationCeilingCredits *int64 `json:"reservation_ceiling_credits,omitempty"`
 	// The highest continuously covered tenant sequence number, used for watermark
 	// tracking.
@@ -171,8 +171,8 @@ type AIUsageUsageBatch struct {
 
 // Request body for submitting a Canonical AI Usage Batch.
 //
-// A batch represents one business action (a chat turn, an agent run, etc.) and
-// is the atomic unit of AI billing settlement.
+// A batch represents one business action (a chat turn, an agent run, etc.) and is
+// the atomic unit of AI billing settlement.
 type AIUsageUsageBatchCreate struct {
 	// Client-generated idempotency key. Replaying the same key with the same
 	// `payload_hash` returns the stored result with HTTP 200. A replay with a
@@ -185,15 +185,15 @@ type AIUsageUsageBatchCreate struct {
 	BillingCustomerID string `json:"billing_customer_id"`
 	// The subject or tenant key that produced the usage.
 	SubjectKey string `json:"subject_key"`
-	// Monotonic per-tenant sequence number for watermark tracking. Must be
-	// strictly increasing within a tenant.
+	// Monotonic per-tenant sequence number for watermark tracking. Must be strictly
+	// increasing within a tenant.
 	TenantSeq int64 `json:"tenant_seq"`
 	// When the business action occurred. Used for rate package version resolution.
 	OccurredAt time.Time `json:"occurred_at"`
 	// Links to the WeKnora runtime reservation, if any.
 	ReservationID string `json:"reservation_id"`
-	// Caps the total Credit charge for this batch. The platform absorbs any
-	// excess above the ceiling.
+	// Caps the total Credit charge for this batch. The platform absorbs any excess
+	// above the ceiling.
 	ReservationCeilingCredits int64 `json:"reservation_ceiling_credits"`
 	// Rate package version snapshot used for settlement.
 	RatePackageVersion string `json:"rate_package_version"`
@@ -202,8 +202,8 @@ type AIUsageUsageBatchCreate struct {
 	// Whether model resources are platform-managed. Set to `false` for
 	// bring-your-own-key (BYOK) models.
 	ProviderManaged bool `json:"provider_managed"`
-	// The individual resource consumption entries. Must contain at least one line
-	// for `component` billing mode.
+	// The individual resource consumption entries. Must contain at least one line for
+	// `component` billing mode.
 	Lines []AIUsageUsageLineCreate `json:"lines"`
 }
 
@@ -212,25 +212,24 @@ type AIUsageUsageBatchCreate struct {
 type AIUsageUsageLine struct {
 	// Resource code identifying the billable resource type.
 	//
-	// Valid codes include:
-	// `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
-	// `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
-	// `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
-	// `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
-	// `web_searches`, `agent_runs`.
+	// Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
+	// `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
+	// `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
+	// `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
+	// `mcp_tool_calls`, `web_searches`, `agent_runs`.
 	ResourceCode string `json:"resource_code"`
 	// Raw consumption quantity (tokens, calls, seconds, pages, or images).
 	Quantity int64 `json:"quantity"`
 	// LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
 	// resources.
 	Provider *string `json:"provider,omitempty"`
-	// Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
-	// for provider-managed resources.
+	// Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
+	// provider-managed resources.
 	Model *string `json:"model,omitempty"`
 	// Optional resource-specific pricing dimensions (e.g. region, tier).
 	PricingDimensions map[string]string `json:"pricing_dimensions,omitempty"`
-	// Stable zero-based position used for deterministic ceiling allocation when
-	// the batch total exceeds the reservation ceiling.
+	// Stable zero-based position used for deterministic ceiling allocation when the
+	// batch total exceeds the reservation ceiling.
 	CanonicalLineIndex int32 `json:"canonical_line_index"`
 	// Integer Credit charge for this line.
 	Credits int64 `json:"credits"`
@@ -244,24 +243,23 @@ type AIUsageUsageLine struct {
 type AIUsageUsageLineCreate struct {
 	// Resource code identifying the billable resource type.
 	//
-	// Valid codes include:
-	// `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
-	// `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
-	// `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
-	// `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
-	// `web_searches`, `agent_runs`.
+	// Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
+	// `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
+	// `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
+	// `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
+	// `mcp_tool_calls`, `web_searches`, `agent_runs`.
 	ResourceCode string `json:"resource_code"`
 	// Raw consumption quantity (tokens, calls, seconds, pages, or images).
 	Quantity int64 `json:"quantity"`
 	// LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
 	// resources.
 	Provider *string `json:"provider,omitempty"`
-	// Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
-	// for provider-managed resources.
+	// Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
+	// provider-managed resources.
 	Model *string `json:"model,omitempty"`
 	// Optional resource-specific pricing dimensions (e.g. region, tier).
 	PricingDimensions *map[string]string `json:"pricing_dimensions,omitempty"`
-	// Stable zero-based position used for deterministic ceiling allocation when
-	// the batch total exceeds the reservation ceiling.
+	// Stable zero-based position used for deterministic ceiling allocation when the
+	// batch total exceeds the reservation ceiling.
 	CanonicalLineIndex int32 `json:"canonical_line_index"`
 }

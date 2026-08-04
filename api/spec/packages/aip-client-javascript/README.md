@@ -34,6 +34,7 @@ TypeSpec definitions and ships fully-typed request and response models.
   - [PlanAddons](#planaddons)
   - [Defaults](#defaults)
   - [AIUsage](#aiusage)
+  - [Commerce](#commerce)
 - [Internal Operations](#internal-operations)
   - [Internal Subscriptions](#internal-subscriptions)
   - [Internal Apps](#internal-apps)
@@ -413,6 +414,24 @@ The full call path, HTTP route, and a short description are listed below.
 | `client.aiUsage.getCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark.                                                                                                                                                                  |
 | `client.aiUsage.getCreditBalance`                | `GET /customers/{customerId}/credit-balance`        | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                             |
 | `client.aiUsage.listCreditTransactions`          | `GET /customers/{customerId}/credit-transactions`   | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                   |
+
+### Commerce
+
+| Method                                  | HTTP                                                                         | Description                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `client.commerce.getCustomerWallet`     | `GET /customers/{customerId}/wallet`                                         | Get a customer's Wallet view, including all credit buckets and recent transactions.                                                                                                        |
+| `client.commerce.listRechargeProducts`  | `GET /recharge-products`                                                     | List all active recharge products available for purchase.                                                                                                                                  |
+| `client.commerce.createOrder`           | `POST /orders`                                                               | Create a new order (plan purchase, subscription renewal, or wallet top-up). Returns HTTP 201 on first creation. Replaying the same idempotency key returns the stored order with HTTP 200. |
+| `client.commerce.getOrder`              | `GET /orders/{orderId}`                                                      | Retrieve an order by its ID.                                                                                                                                                               |
+| `client.commerce.createCheckoutSession` | `POST /orders/{orderId}/checkout-sessions`                                   | Create a checkout session for an order, initiating a payment attempt with the specified provider.                                                                                          |
+| `client.commerce.getCheckoutSession`    | `GET /checkout-sessions/{sessionId}`                                         | Retrieve a checkout session by its ID (for polling payment status after QR code expiry or page reload).                                                                                    |
+| `client.commerce.createRefund`          | `POST /refunds`                                                              | Create a refund request for an order.                                                                                                                                                      |
+| `client.commerce.getRefund`             | `GET /refunds/{refundId}`                                                    | Retrieve a refund by its ID.                                                                                                                                                               |
+| `client.commerce.wechatPaymentCallback` | `POST /payment-providers/wechat/callback`                                    | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order.                                                                          |
+| `client.commerce.alipayPaymentCallback` | `POST /payment-providers/alipay/callback`                                    | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order.                                                                              |
+| `client.commerce.listReceivablePeriods` | `GET /customers/{customerId}/receivable-periods`                             | List receivable periods for a customer.                                                                                                                                                    |
+| `client.commerce.createOfflinePayment`  | `POST /customers/{customerId}/offline-payments`                              | Record an offline payment (bank transfer, enterprise remittance) for a customer. The payment is held for reconciliation before being applied to a receivable period.                       |
+| `client.commerce.updateExternalInvoice` | `PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice` | Attach or update an external invoice reference on a receivable period.                                                                                                                     |
 
 ## Internal Operations
 

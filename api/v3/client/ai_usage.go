@@ -16,8 +16,8 @@ type AIUsageService struct {
 }
 
 type GetCustomerRuntimeAuthorizationFilter struct {
-	// The subject or tenant key that will produce the usage. Required to check
-	// the tenant's sequence watermark and reservation status.
+	// The subject or tenant key that will produce the usage. Required to check the
+	// tenant's sequence watermark and reservation status.
 	SubjectKey *string
 	// The reservation ID to check the ceiling against.
 	ReservationID *string
@@ -70,10 +70,10 @@ func (p AIUsageCreditTransactionListParams) values() url.Values {
 
 // Submit a Canonical AI Usage Batch for settlement.
 //
-// The first submit for a given `idempotency_key` returns HTTP 201 with the
-// settled batch. An identical replay (same `idempotency_key` and
-// `payload_hash`) returns HTTP 200 with the stored result. A replay with the
-// same `idempotency_key` but a different `payload_hash` returns HTTP 409.
+// The first submit for a given `idempotency_key` returns HTTP 201 with the settled
+// batch. An identical replay (same `idempotency_key` and `payload_hash`) returns
+// HTTP 200 with the stored result. A replay with the same `idempotency_key` but a
+// different `payload_hash` returns HTTP 409.
 func (s *AIUsageService) CreateBatch(ctx context.Context, request AIUsageUsageBatchCreate) (*AIUsageUsageBatch, error) {
 	path := "/ai-usage-batches"
 
@@ -115,8 +115,8 @@ func (s *AIUsageService) GetBatch(ctx context.Context, batchID string) (*AIUsage
 
 // Check whether a customer is authorized to consume AI resources.
 //
-// Returns the current integer credit balance, reservation ceiling, and the
-// covered tenant sequence watermark.
+// Returns the current integer credit balance, reservation ceiling, and the covered
+// tenant sequence watermark.
 func (s *AIUsageService) GetCustomerRuntimeAuthorization(ctx context.Context, customerID string, params GetCustomerRuntimeAuthorizationParams) (*AIUsageRuntimeAuthorization, error) {
 	if customerID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "customerID", ErrEmptyID)
@@ -139,8 +139,8 @@ func (s *AIUsageService) GetCustomerRuntimeAuthorization(ctx context.Context, cu
 	return &out, nil
 }
 
-// Get a customer's credit balance for AI usage. Returns the same balance
-// model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
+// Get a customer's credit balance for AI usage. Returns the same balance model as
+// the OpenMeter Credits endpoint but scoped to the AI Usage route.
 func (s *AIUsageService) GetCreditBalance(ctx context.Context, customerID string, params GetAIUsageCreditBalanceParams) (*AIUsageCreditBalance, error) {
 	if customerID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "customerID", ErrEmptyID)
@@ -163,9 +163,8 @@ func (s *AIUsageService) GetCreditBalance(ctx context.Context, customerID string
 	return &out, nil
 }
 
-// List credit transactions for a customer's AI usage. Returns the same
-// transaction model as the OpenMeter Credits endpoint but scoped to the AI
-// Usage route.
+// List credit transactions for a customer's AI usage. Returns the same transaction
+// model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
 func (s *AIUsageService) ListCreditTransactions(ctx context.Context, customerID string, params AIUsageCreditTransactionListParams) (*AICreditTransactionPaginatedResponse, error) {
 	if customerID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "customerID", ErrEmptyID)
