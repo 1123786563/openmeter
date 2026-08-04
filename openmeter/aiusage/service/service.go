@@ -167,6 +167,10 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 			return fmt.Errorf("idempotency check: %w", err)
 		}
 		if existing != nil {
+			// Hash conflict: same UsageBatchID, different payload → 409.
+			if existing.PayloadHash != in.PayloadHash {
+				return aiusage.ErrIdempotencyConflict
+			}
 			result = &aiusage.BatchSettlementResult{
 				BatchID:          existing.UsageBatchID,
 				Status:           existing.Status,
@@ -293,6 +297,10 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 			return fmt.Errorf("idempotency check: %w", err)
 		}
 		if existing != nil {
+			// Hash conflict: same correction batch ID, different payload → 409.
+			if existing.PayloadHash != in.PayloadHash {
+				return aiusage.ErrIdempotencyConflict
+			}
 			result = &aiusage.BatchSettlementResult{
 				BatchID:          existing.UsageBatchID,
 				Status:           existing.Status,
@@ -322,7 +330,6 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 		if err != nil {
 			return err
 		}
-
 
 		settled := aiusage.SettledBatch{
 			Namespace:       in.Namespace,

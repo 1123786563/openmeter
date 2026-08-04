@@ -89,9 +89,14 @@ func (m *mockTxAdapter) CreateSettledBatch(_ context.Context, in aiusage.Settled
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if b, ok := m.storedBatches[in.UsageBatchID]; ok {
+		// On replay with a different hash, surface the conflict so the
+		// service-level short-circuit and the adapter-level check agree.
+		if b.PayloadHash != in.PayloadHash {
+			return nil, false, aiusage.ErrIdempotencyConflict
+		}
 		return b, false, nil
 	}
-	b := &aiusage.AIUsageBatch{UsageBatchID: in.UsageBatchID, Status: in.Status, TenantSeq: in.TenantSeq}
+	b := &aiusage.AIUsageBatch{UsageBatchID: in.UsageBatchID, Status: in.Status, TenantSeq: in.TenantSeq, PayloadHash: in.PayloadHash}
 	m.storedBatches[in.UsageBatchID] = b
 	m.batches = append(m.batches, in)
 	return b, true, nil
@@ -381,6 +386,38 @@ func TestSettle_IdempotentReplay(t *testing.T) {
 	// Still only one batch persisted (dedup by UsageBatchID).
 	require.Len(t, tx.getBatches(), 1)
 	require.Equal(t, int32(1), settle.getAllocCount(), "collector must NOT be called on replay")
+}
+
+// Test 3b: Hash conflict — same UsageBatchID with a different PayloadHash
+// returns ErrIdempotencyConflict (HTTP 409), not a silent success.
+func TestSettle_HashConflictReturnsError(t *testing.T) {
+	tx := newMockTxAdapter()
+	adp := &mockAdapter{txAdapter: tx}
+	pms := &mockPricingResolver{result: resolvedComponentBatch()}
+	settle := &mockSettlement{allocResult: allocationsCovering(40)}
+
+	svc := newService(t, service.Config{
+		Adapter:         adp,
+		Pricing:         pms,
+		Settlement:      settle,
+		ProfileResolver: &mockProfileResolver{profile: defaultProfile()},
+	})
+
+	// First submission creates the batch.
+	_, err := svc.Settle(t.Context(), componentInput())
+	require.NoError(t, err)
+	require.Len(t, tx.getBatches(), 1)
+
+	// Second submission with the SAME UsageBatchID but a DIFFERENT PayloadHash.
+	conflict := componentInput()
+	conflict.PayloadHash = "hash-changed"
+	_, err = svc.Settle(t.Context(), conflict)
+	require.ErrorIs(t, err, aiusage.ErrIdempotencyConflict)
+
+	// The collector must not have fired on the conflicting submission.
+	require.Equal(t, int32(1), settle.getAllocCount(), "collector must not fire on hash conflict")
+	// Still only one batch persisted.
+	require.Len(t, tx.getBatches(), 1)
 }
 
 // Test 4: Correction flow — fetches original allocations, reverses via
