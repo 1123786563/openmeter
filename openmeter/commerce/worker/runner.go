@@ -282,24 +282,31 @@ type fulfillmentProcessor interface {
 	ProcessPending(ctx context.Context, namespace string, limit int) (int, error)
 }
 
-// refundProcessor drives refunds stuck in provider_processing.
+// refundProcessor drives refunds stuck in provider_processing. The runner
+// lists refunds that need provider polling and processes each one.
 type refundProcessor interface {
-	ProcessOne(ctx context.Context, namespace, refundID string) (interface{}, error)
+	ListProviderProcessing(ctx context.Context, namespace string) ([]string, error)
+	ProcessOne(ctx context.Context, namespace, refundID string) error
 }
 
-// paymentConfirmer confirms payment attempts stuck in pending.
+// paymentConfirmer confirms payment attempts stuck in pending. The runner
+// lists stale pending attempts and confirms each one via the provider.
 type paymentConfirmer interface {
-	ConfirmPayment(ctx context.Context, namespace, attemptID string) (interface{}, error)
+	ListStalePending(ctx context.Context, namespace string) ([]string, error)
+	ConfirmPayment(ctx context.Context, namespace, attemptID string) error
 }
 
-// reconRunner runs the reconciliation check suite.
+// reconRunner runs the reconciliation check suite and returns the count of
+// findings. The runner logs findings but never fails — reconciliation reports.
 type reconRunner interface {
-	Run(ctx context.Context, namespace string) (interface{}, error)
+	Run(ctx context.Context, namespace string) (int, error)
 }
 
-// enterpriseCloser closes ended enterprise periods.
+// enterpriseCloser evaluates collection policy for all receivable accounts
+// in the namespace. The runner lists account IDs and evaluates each one.
 type enterpriseCloser interface {
-	EvaluateCollection(ctx context.Context, namespace, accountID string) (interface{}, error)
+	ListAccountsForEvaluation(ctx context.Context, namespace string) ([]string, error)
+	EvaluateCollection(ctx context.Context, namespace, accountID string) error
 }
 
 // RegisterCommerceWorkers creates all five Phase 2 runners from the given deps
@@ -376,11 +383,7 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 			Name:     "receivable-close",
 			Interval: 1 * time.Hour,
 			Job: func(ctx context.Context) (int, error) {
-				_, err := deps.Enterprise.EvaluateCollection(ctx, deps.Namespace, "")
-				if err != nil {
-					return 0, err
-				}
-				return 1, nil
+				return evaluateAllAccounts(ctx, deps.Enterprise, deps.Namespace, logger)
 			},
 			Logger: logger,
 		})
@@ -395,12 +398,14 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 			Name:     "reconciliation",
 			Interval: 5 * time.Minute,
 			Job: func(ctx context.Context) (int, error) {
-				report, err := deps.Reconciliation.Run(ctx, deps.Namespace)
+				findings, err := deps.Reconciliation.Run(ctx, deps.Namespace)
 				if err != nil {
-					return 0, err
+					logger.WarnContext(ctx, "reconciliation run failed", "error", err)
+					return 0, nil
 				}
-				// Log findings but never fail — reconciliation reports, never crashes.
-				_ = report
+				if findings > 0 {
+					logger.WarnContext(ctx, "reconciliation found issues", "findings", findings)
+				}
 				return 1, nil
 			},
 			Logger: logger,
@@ -415,21 +420,58 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 	return mgr, nil
 }
 
-// processRefundBatch processes all pending refunds in the namespace. This is
-// a best-effort batch — individual refund failures are logged and skipped.
+// processRefundBatch lists all refunds in provider_processing status and
+// processes each one. This is a best-effort batch — individual refund failures
+// are logged and skipped so one bad refund doesn't block the rest.
 func processRefundBatch(ctx context.Context, svc refundProcessor, namespace string) (int, error) {
-	// The full implementation would list refunds in provider_processing and
-	// call ProcessOne for each. Without a ListPending method on the interface,
-	// we return 0 — the runner still ticks and logs. A future enhancement adds
-	// ListPendingRefunds to the refund.Repository.
-	return 0, nil
+	ids, err := svc.ListProviderProcessing(ctx, namespace)
+	if err != nil {
+		return 0, fmt.Errorf("list provider-processing refunds: %w", err)
+	}
+	processed := 0
+	for _, id := range ids {
+		if err := svc.ProcessOne(ctx, namespace, id); err != nil {
+			slog.WarnContext(ctx, "refund-query: process failed", "refund_id", id, "error", err)
+			continue
+		}
+		processed++
+	}
+	return processed, nil
 }
 
-// confirmPendingPayments confirms payment attempts stuck in pending status.
-// This is the callback-lost recovery path.
+// confirmPendingPayments lists payment attempts stuck in pending status past
+// the callback window and queries the provider for each one. This is the
+// callback-lost recovery path.
 func confirmPendingPayments(ctx context.Context, confirmer paymentConfirmer, namespace string) (int, error) {
-	// The full implementation would list attempts in pending status past the
-	// callback window and call ConfirmPayment for each. Without a ListPending
-	// method on the payment attempt repository, we return 0.
-	return 0, nil
+	ids, err := confirmer.ListStalePending(ctx, namespace)
+	if err != nil {
+		return 0, fmt.Errorf("list stale pending attempts: %w", err)
+	}
+	processed := 0
+	for _, id := range ids {
+		if err := confirmer.ConfirmPayment(ctx, namespace, id); err != nil {
+			slog.WarnContext(ctx, "payment-query-recovery: confirm failed", "attempt_id", id, "error", err)
+			continue
+		}
+		processed++
+	}
+	return processed, nil
+}
+
+// evaluateAllAccounts lists all receivable accounts in the namespace and
+// evaluates the collection policy for each one.
+func evaluateAllAccounts(ctx context.Context, closer enterpriseCloser, namespace string, logger *slog.Logger) (int, error) {
+	accountIDs, err := closer.ListAccountsForEvaluation(ctx, namespace)
+	if err != nil {
+		return 0, fmt.Errorf("list accounts for evaluation: %w", err)
+	}
+	processed := 0
+	for _, accountID := range accountIDs {
+		if err := closer.EvaluateCollection(ctx, namespace, accountID); err != nil {
+			logger.WarnContext(ctx, "receivable-close: evaluate failed", "account_id", accountID, "error", err)
+			continue
+		}
+		processed++
+	}
+	return processed, nil
 }
