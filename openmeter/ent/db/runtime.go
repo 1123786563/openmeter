@@ -67,6 +67,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruns"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
@@ -2186,6 +2187,41 @@ func init() {
 	commerceorderlineDescID := commerceorderlineMixinFields0[0].Descriptor()
 	// commerceorderline.DefaultID holds the default value on creation for the id field.
 	commerceorderline.DefaultID = commerceorderlineDescID.Default.(func() string)
+	commerceoutboxMixin := schema.CommerceOutbox{}.Mixin()
+	commerceoutboxMixinFields0 := commerceoutboxMixin[0].Fields()
+	_ = commerceoutboxMixinFields0
+	commerceoutboxMixinFields1 := commerceoutboxMixin[1].Fields()
+	_ = commerceoutboxMixinFields1
+	commerceoutboxFields := schema.CommerceOutbox{}.Fields()
+	_ = commerceoutboxFields
+	// commerceoutboxDescNamespace is the schema descriptor for namespace field.
+	commerceoutboxDescNamespace := commerceoutboxMixinFields1[0].Descriptor()
+	// commerceoutbox.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	commerceoutbox.NamespaceValidator = commerceoutboxDescNamespace.Validators[0].(func(string) error)
+	// commerceoutboxDescCreatedAt is the schema descriptor for created_at field.
+	commerceoutboxDescCreatedAt := commerceoutboxFields[0].Descriptor()
+	// commerceoutbox.DefaultCreatedAt holds the default value on creation for the created_at field.
+	commerceoutbox.DefaultCreatedAt = commerceoutboxDescCreatedAt.Default.(func() time.Time)
+	// commerceoutboxDescAggregateType is the schema descriptor for aggregate_type field.
+	commerceoutboxDescAggregateType := commerceoutboxFields[1].Descriptor()
+	// commerceoutbox.AggregateTypeValidator is a validator for the "aggregate_type" field. It is called by the builders before save.
+	commerceoutbox.AggregateTypeValidator = commerceoutboxDescAggregateType.Validators[0].(func(string) error)
+	// commerceoutboxDescAggregateID is the schema descriptor for aggregate_id field.
+	commerceoutboxDescAggregateID := commerceoutboxFields[2].Descriptor()
+	// commerceoutbox.AggregateIDValidator is a validator for the "aggregate_id" field. It is called by the builders before save.
+	commerceoutbox.AggregateIDValidator = commerceoutboxDescAggregateID.Validators[0].(func(string) error)
+	// commerceoutboxDescEventType is the schema descriptor for event_type field.
+	commerceoutboxDescEventType := commerceoutboxFields[3].Descriptor()
+	// commerceoutbox.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	commerceoutbox.EventTypeValidator = commerceoutboxDescEventType.Validators[0].(func(string) error)
+	// commerceoutboxDescPublished is the schema descriptor for published field.
+	commerceoutboxDescPublished := commerceoutboxFields[5].Descriptor()
+	// commerceoutbox.DefaultPublished holds the default value on creation for the published field.
+	commerceoutbox.DefaultPublished = commerceoutboxDescPublished.Default.(bool)
+	// commerceoutboxDescID is the schema descriptor for id field.
+	commerceoutboxDescID := commerceoutboxMixinFields0[0].Descriptor()
+	// commerceoutbox.DefaultID holds the default value on creation for the id field.
+	commerceoutbox.DefaultID = commerceoutboxDescID.Default.(func() string)
 	commerceproductMixin := schema.CommerceProduct{}.Mixin()
 	commerceproductMixinFields0 := commerceproductMixin[0].Fields()
 	_ = commerceproductMixinFields0
@@ -2654,7 +2690,7 @@ func init() {
 	// fulfillment.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
 	fulfillment.CustomerIDValidator = fulfillmentDescCustomerID.Validators[0].(func(string) error)
 	// fulfillmentDescCreditsGranted is the schema descriptor for credits_granted field.
-	fulfillmentDescCreditsGranted := fulfillmentFields[4].Descriptor()
+	fulfillmentDescCreditsGranted := fulfillmentFields[5].Descriptor()
 	// fulfillment.DefaultCreditsGranted holds the default value on creation for the credits_granted field.
 	fulfillment.DefaultCreditsGranted = fulfillmentDescCreditsGranted.Default.(int64)
 	// fulfillment.CreditsGrantedValidator is a validator for the "credits_granted" field. It is called by the builders before save.

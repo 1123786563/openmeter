@@ -635,3 +635,188 @@ func containsStr(s, substr string) bool {
 	}
 	return false
 }
+
+// ---------------------------------------------------------------------------
+// RBAC ownership check tests (C4)
+// ---------------------------------------------------------------------------
+
+// doRequestWithAuth is like doRequest but injects auth context values.
+func doRequestWithAuth(t *testing.T, h http.Handler, method, path string, body any, pathValues map[string]string, authCustomerID string, isAdmin bool) *httptest.ResponseRecorder {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatalf("encode body: %v", err)
+		}
+	}
+	req := httptest.NewRequest(method, path, &buf)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range pathValues {
+		req.SetPathValue(k, v)
+	}
+	ctx := req.Context()
+	if authCustomerID != "" || authCustomerID == "" && isAdmin {
+		ctx = WithAuthCustomerID(ctx, authCustomerID)
+	}
+	ctx = WithAuthAdmin(ctx, isAdmin)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+// TestGetCustomerWallet_OwnershipForbidden verifies that an authenticated
+// non-admin customer gets 403 when trying to read another customer's wallet.
+func TestGetCustomerWallet_OwnershipForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	// Authenticated as cust-2, trying to read cust-1's wallet.
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"cust-2", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer access, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// TestGetCustomerWallet_OwnershipAllowed verifies that the authenticated
+// customer can read their own wallet.
+func TestGetCustomerWallet_OwnershipAllowed(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"cust-1", false)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 for own wallet, got %d", rr.Code)
+	}
+}
+
+// TestGetCustomerWallet_AdminCanReadAny verifies that an admin can read any
+// customer's wallet.
+func TestGetCustomerWallet_AdminCanReadAny(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"admin-user", true)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 for admin reading any wallet, got %d", rr.Code)
+	}
+}
+
+// TestGetOrder_OwnershipForbidden verifies cross-customer order access is denied.
+func TestGetOrder_OwnershipForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{order: &commerce.Order{
+			CustomerID: "cust-owner",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetOrder(), http.MethodGet,
+		"/orders/ord-1", nil,
+		map[string]string{"orderId": "ord-1"},
+		"cust-other", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer order access, got %d", rr.Code)
+	}
+}
+
+// TestCreateProduct_NonAdminForbidden verifies that a non-admin cannot create
+// catalog products.
+func TestCreateProduct_NonAdminForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{}},
+	})
+	body := map[string]any{
+		"sku": "SKU-X", "display_name": "X", "kind": "wallet_top_up",
+		"credits": 100, "amount_fen": 1000, "currency": "CNY",
+	}
+	rr := doRequestWithAuth(t, h.CreateProduct(), http.MethodPost,
+		"/recharge-products", body, nil,
+		"regular-customer", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for non-admin creating product, got %d", rr.Code)
+	}
+}
+
+// TestCreateProduct_AdminAllowed verifies that an admin can create products.
+func TestCreateProduct_AdminAllowed(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{
+			DisplayName: "X", SKU: "SKU-X", Active: true,
+		}},
+	})
+	body := map[string]any{
+		"sku": "SKU-X", "display_name": "X", "kind": "wallet_top_up",
+		"credits": 100, "amount_fen": 1000, "currency": "CNY",
+	}
+	rr := doRequestWithAuth(t, h.CreateProduct(), http.MethodPost,
+		"/recharge-products", body, nil,
+		"admin-user", true)
+	if rr.Code != http.StatusCreated {
+		t.Errorf("expected 201 for admin creating product, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// TestUpdateProduct_NonAdminForbidden verifies that a non-admin cannot update
+// catalog products.
+func TestUpdateProduct_NonAdminForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{}},
+	})
+	body := map[string]any{"display_name": "updated"}
+	rr := doRequestWithAuth(t, h.UpdateProduct(), http.MethodPut,
+		"/recharge-products/prod-1", body,
+		map[string]string{"productId": "prod-1"},
+		"regular-customer", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for non-admin updating product, got %d", rr.Code)
+	}
+}
+
+// TestGetRefund_OwnershipForbidden verifies cross-customer refund access is denied.
+func TestGetRefund_OwnershipForbidden(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Refund: &mockRefund{rec: &refund.RefundRequest{
+			ID: "ref-1", CustomerID: "cust-owner", Status: refund.RefundStatusFulfilled,
+			CreatedAt: now, UpdatedAt: now,
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetRefund(), http.MethodGet,
+		"/refunds/ref-1", nil,
+		map[string]string{"refundId": "ref-1"},
+		"cust-other", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer refund access, got %d", rr.Code)
+	}
+}
+
+// TestRBAC_NoAuthContext_Permissive verifies that when no auth context is set
+// (no middleware wired), the handler is permissive (dev / single-tenant mode).
+func TestRBAC_NoAuthContext_Permissive(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{CustomerID: "cust-1"}},
+	})
+	// No auth context injected — should pass.
+	rr := doRequest(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"})
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 with no auth context (permissive), got %d", rr.Code)
+	}
+}

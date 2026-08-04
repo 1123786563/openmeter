@@ -83,6 +83,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruns"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
@@ -214,6 +215,7 @@ const (
 	TypeChargesSearchV1                                  = "ChargesSearchV1"
 	TypeCommerceOrder                                    = "CommerceOrder"
 	TypeCommerceOrderLine                                = "CommerceOrderLine"
+	TypeCommerceOutbox                                   = "CommerceOutbox"
 	TypeCommerceProduct                                  = "CommerceProduct"
 	TypeCreditRealizationLineage                         = "CreditRealizationLineage"
 	TypeCreditRealizationLineageSegment                  = "CreditRealizationLineageSegment"
@@ -86024,6 +86026,738 @@ func (m *CommerceOrderLineMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown CommerceOrderLine edge %s", name)
 }
 
+// CommerceOutboxMutation represents an operation that mutates the CommerceOutbox nodes in the graph.
+type CommerceOutboxMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *string
+	namespace      *string
+	created_at     *time.Time
+	aggregate_type *string
+	aggregate_id   *string
+	event_type     *string
+	payload        *map[string]interface{}
+	published      *bool
+	published_at   *time.Time
+	clearedFields  map[string]struct{}
+	done           bool
+	oldValue       func(context.Context) (*CommerceOutbox, error)
+	predicates     []predicate.CommerceOutbox
+}
+
+var _ ent.Mutation = (*CommerceOutboxMutation)(nil)
+
+// commerceoutboxOption allows management of the mutation configuration using functional options.
+type commerceoutboxOption func(*CommerceOutboxMutation)
+
+// newCommerceOutboxMutation creates new mutation for the CommerceOutbox entity.
+func newCommerceOutboxMutation(c config, op Op, opts ...commerceoutboxOption) *CommerceOutboxMutation {
+	m := &CommerceOutboxMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCommerceOutbox,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCommerceOutboxID sets the ID field of the mutation.
+func withCommerceOutboxID(id string) commerceoutboxOption {
+	return func(m *CommerceOutboxMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *CommerceOutbox
+		)
+		m.oldValue = func(ctx context.Context) (*CommerceOutbox, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().CommerceOutbox.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCommerceOutbox sets the old CommerceOutbox of the mutation.
+func withCommerceOutbox(node *CommerceOutbox) commerceoutboxOption {
+	return func(m *CommerceOutboxMutation) {
+		m.oldValue = func(context.Context) (*CommerceOutbox, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CommerceOutboxMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CommerceOutboxMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of CommerceOutbox entities.
+func (m *CommerceOutboxMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CommerceOutboxMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CommerceOutboxMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().CommerceOutbox.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *CommerceOutboxMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *CommerceOutboxMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *CommerceOutboxMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *CommerceOutboxMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *CommerceOutboxMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *CommerceOutboxMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetAggregateType sets the "aggregate_type" field.
+func (m *CommerceOutboxMutation) SetAggregateType(s string) {
+	m.aggregate_type = &s
+}
+
+// AggregateType returns the value of the "aggregate_type" field in the mutation.
+func (m *CommerceOutboxMutation) AggregateType() (r string, exists bool) {
+	v := m.aggregate_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAggregateType returns the old "aggregate_type" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldAggregateType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAggregateType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAggregateType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAggregateType: %w", err)
+	}
+	return oldValue.AggregateType, nil
+}
+
+// ResetAggregateType resets all changes to the "aggregate_type" field.
+func (m *CommerceOutboxMutation) ResetAggregateType() {
+	m.aggregate_type = nil
+}
+
+// SetAggregateID sets the "aggregate_id" field.
+func (m *CommerceOutboxMutation) SetAggregateID(s string) {
+	m.aggregate_id = &s
+}
+
+// AggregateID returns the value of the "aggregate_id" field in the mutation.
+func (m *CommerceOutboxMutation) AggregateID() (r string, exists bool) {
+	v := m.aggregate_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAggregateID returns the old "aggregate_id" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldAggregateID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAggregateID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAggregateID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAggregateID: %w", err)
+	}
+	return oldValue.AggregateID, nil
+}
+
+// ResetAggregateID resets all changes to the "aggregate_id" field.
+func (m *CommerceOutboxMutation) ResetAggregateID() {
+	m.aggregate_id = nil
+}
+
+// SetEventType sets the "event_type" field.
+func (m *CommerceOutboxMutation) SetEventType(s string) {
+	m.event_type = &s
+}
+
+// EventType returns the value of the "event_type" field in the mutation.
+func (m *CommerceOutboxMutation) EventType() (r string, exists bool) {
+	v := m.event_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEventType returns the old "event_type" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldEventType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEventType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEventType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEventType: %w", err)
+	}
+	return oldValue.EventType, nil
+}
+
+// ResetEventType resets all changes to the "event_type" field.
+func (m *CommerceOutboxMutation) ResetEventType() {
+	m.event_type = nil
+}
+
+// SetPayload sets the "payload" field.
+func (m *CommerceOutboxMutation) SetPayload(value map[string]interface{}) {
+	m.payload = &value
+}
+
+// Payload returns the value of the "payload" field in the mutation.
+func (m *CommerceOutboxMutation) Payload() (r map[string]interface{}, exists bool) {
+	v := m.payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayload returns the old "payload" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
+	}
+	return oldValue.Payload, nil
+}
+
+// ResetPayload resets all changes to the "payload" field.
+func (m *CommerceOutboxMutation) ResetPayload() {
+	m.payload = nil
+}
+
+// SetPublished sets the "published" field.
+func (m *CommerceOutboxMutation) SetPublished(b bool) {
+	m.published = &b
+}
+
+// Published returns the value of the "published" field in the mutation.
+func (m *CommerceOutboxMutation) Published() (r bool, exists bool) {
+	v := m.published
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublished returns the old "published" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldPublished(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublished is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublished requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublished: %w", err)
+	}
+	return oldValue.Published, nil
+}
+
+// ResetPublished resets all changes to the "published" field.
+func (m *CommerceOutboxMutation) ResetPublished() {
+	m.published = nil
+}
+
+// SetPublishedAt sets the "published_at" field.
+func (m *CommerceOutboxMutation) SetPublishedAt(t time.Time) {
+	m.published_at = &t
+}
+
+// PublishedAt returns the value of the "published_at" field in the mutation.
+func (m *CommerceOutboxMutation) PublishedAt() (r time.Time, exists bool) {
+	v := m.published_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPublishedAt returns the old "published_at" field's value of the CommerceOutbox entity.
+// If the CommerceOutbox object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOutboxMutation) OldPublishedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPublishedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPublishedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPublishedAt: %w", err)
+	}
+	return oldValue.PublishedAt, nil
+}
+
+// ClearPublishedAt clears the value of the "published_at" field.
+func (m *CommerceOutboxMutation) ClearPublishedAt() {
+	m.published_at = nil
+	m.clearedFields[commerceoutbox.FieldPublishedAt] = struct{}{}
+}
+
+// PublishedAtCleared returns if the "published_at" field was cleared in this mutation.
+func (m *CommerceOutboxMutation) PublishedAtCleared() bool {
+	_, ok := m.clearedFields[commerceoutbox.FieldPublishedAt]
+	return ok
+}
+
+// ResetPublishedAt resets all changes to the "published_at" field.
+func (m *CommerceOutboxMutation) ResetPublishedAt() {
+	m.published_at = nil
+	delete(m.clearedFields, commerceoutbox.FieldPublishedAt)
+}
+
+// Where appends a list predicates to the CommerceOutboxMutation builder.
+func (m *CommerceOutboxMutation) Where(ps ...predicate.CommerceOutbox) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CommerceOutboxMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CommerceOutboxMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CommerceOutbox, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CommerceOutboxMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CommerceOutboxMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (CommerceOutbox).
+func (m *CommerceOutboxMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CommerceOutboxMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.namespace != nil {
+		fields = append(fields, commerceoutbox.FieldNamespace)
+	}
+	if m.created_at != nil {
+		fields = append(fields, commerceoutbox.FieldCreatedAt)
+	}
+	if m.aggregate_type != nil {
+		fields = append(fields, commerceoutbox.FieldAggregateType)
+	}
+	if m.aggregate_id != nil {
+		fields = append(fields, commerceoutbox.FieldAggregateID)
+	}
+	if m.event_type != nil {
+		fields = append(fields, commerceoutbox.FieldEventType)
+	}
+	if m.payload != nil {
+		fields = append(fields, commerceoutbox.FieldPayload)
+	}
+	if m.published != nil {
+		fields = append(fields, commerceoutbox.FieldPublished)
+	}
+	if m.published_at != nil {
+		fields = append(fields, commerceoutbox.FieldPublishedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CommerceOutboxMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case commerceoutbox.FieldNamespace:
+		return m.Namespace()
+	case commerceoutbox.FieldCreatedAt:
+		return m.CreatedAt()
+	case commerceoutbox.FieldAggregateType:
+		return m.AggregateType()
+	case commerceoutbox.FieldAggregateID:
+		return m.AggregateID()
+	case commerceoutbox.FieldEventType:
+		return m.EventType()
+	case commerceoutbox.FieldPayload:
+		return m.Payload()
+	case commerceoutbox.FieldPublished:
+		return m.Published()
+	case commerceoutbox.FieldPublishedAt:
+		return m.PublishedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CommerceOutboxMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case commerceoutbox.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case commerceoutbox.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case commerceoutbox.FieldAggregateType:
+		return m.OldAggregateType(ctx)
+	case commerceoutbox.FieldAggregateID:
+		return m.OldAggregateID(ctx)
+	case commerceoutbox.FieldEventType:
+		return m.OldEventType(ctx)
+	case commerceoutbox.FieldPayload:
+		return m.OldPayload(ctx)
+	case commerceoutbox.FieldPublished:
+		return m.OldPublished(ctx)
+	case commerceoutbox.FieldPublishedAt:
+		return m.OldPublishedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown CommerceOutbox field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CommerceOutboxMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case commerceoutbox.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case commerceoutbox.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case commerceoutbox.FieldAggregateType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAggregateType(v)
+		return nil
+	case commerceoutbox.FieldAggregateID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAggregateID(v)
+		return nil
+	case commerceoutbox.FieldEventType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEventType(v)
+		return nil
+	case commerceoutbox.FieldPayload:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayload(v)
+		return nil
+	case commerceoutbox.FieldPublished:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublished(v)
+		return nil
+	case commerceoutbox.FieldPublishedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPublishedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CommerceOutbox field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CommerceOutboxMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CommerceOutboxMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CommerceOutboxMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown CommerceOutbox numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CommerceOutboxMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(commerceoutbox.FieldPublishedAt) {
+		fields = append(fields, commerceoutbox.FieldPublishedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CommerceOutboxMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CommerceOutboxMutation) ClearField(name string) error {
+	switch name {
+	case commerceoutbox.FieldPublishedAt:
+		m.ClearPublishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown CommerceOutbox nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CommerceOutboxMutation) ResetField(name string) error {
+	switch name {
+	case commerceoutbox.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case commerceoutbox.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case commerceoutbox.FieldAggregateType:
+		m.ResetAggregateType()
+		return nil
+	case commerceoutbox.FieldAggregateID:
+		m.ResetAggregateID()
+		return nil
+	case commerceoutbox.FieldEventType:
+		m.ResetEventType()
+		return nil
+	case commerceoutbox.FieldPayload:
+		m.ResetPayload()
+		return nil
+	case commerceoutbox.FieldPublished:
+		m.ResetPublished()
+		return nil
+	case commerceoutbox.FieldPublishedAt:
+		m.ResetPublishedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown CommerceOutbox field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CommerceOutboxMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CommerceOutboxMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CommerceOutboxMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CommerceOutboxMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CommerceOutboxMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CommerceOutboxMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CommerceOutboxMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown CommerceOutbox unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CommerceOutboxMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown CommerceOutbox edge %s", name)
+}
+
 // CommerceProductMutation represents an operation that mutates the CommerceProduct nodes in the graph.
 type CommerceProductMutation struct {
 	config
@@ -100590,6 +101324,7 @@ type FulfillmentMutation struct {
 	deleted_at         *time.Time
 	customer_id        *string
 	status             *fulfillment.Status
+	claimed_at         *time.Time
 	grant_id           *string
 	credits_granted    *int64
 	addcredits_granted *int64
@@ -100972,6 +101707,55 @@ func (m *FulfillmentMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetClaimedAt sets the "claimed_at" field.
+func (m *FulfillmentMutation) SetClaimedAt(t time.Time) {
+	m.claimed_at = &t
+}
+
+// ClaimedAt returns the value of the "claimed_at" field in the mutation.
+func (m *FulfillmentMutation) ClaimedAt() (r time.Time, exists bool) {
+	v := m.claimed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimedAt returns the old "claimed_at" field's value of the Fulfillment entity.
+// If the Fulfillment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FulfillmentMutation) OldClaimedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimedAt: %w", err)
+	}
+	return oldValue.ClaimedAt, nil
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (m *FulfillmentMutation) ClearClaimedAt() {
+	m.claimed_at = nil
+	m.clearedFields[fulfillment.FieldClaimedAt] = struct{}{}
+}
+
+// ClaimedAtCleared returns if the "claimed_at" field was cleared in this mutation.
+func (m *FulfillmentMutation) ClaimedAtCleared() bool {
+	_, ok := m.clearedFields[fulfillment.FieldClaimedAt]
+	return ok
+}
+
+// ResetClaimedAt resets all changes to the "claimed_at" field.
+func (m *FulfillmentMutation) ResetClaimedAt() {
+	m.claimed_at = nil
+	delete(m.clearedFields, fulfillment.FieldClaimedAt)
+}
+
 // SetGrantID sets the "grant_id" field.
 func (m *FulfillmentMutation) SetGrantID(s string) {
 	m.grant_id = &s
@@ -101249,7 +102033,7 @@ func (m *FulfillmentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FulfillmentMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.namespace != nil {
 		fields = append(fields, fulfillment.FieldNamespace)
 	}
@@ -101270,6 +102054,9 @@ func (m *FulfillmentMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, fulfillment.FieldStatus)
+	}
+	if m.claimed_at != nil {
+		fields = append(fields, fulfillment.FieldClaimedAt)
 	}
 	if m.grant_id != nil {
 		fields = append(fields, fulfillment.FieldGrantID)
@@ -101305,6 +102092,8 @@ func (m *FulfillmentMutation) Field(name string) (ent.Value, bool) {
 		return m.CustomerID()
 	case fulfillment.FieldStatus:
 		return m.Status()
+	case fulfillment.FieldClaimedAt:
+		return m.ClaimedAt()
 	case fulfillment.FieldGrantID:
 		return m.GrantID()
 	case fulfillment.FieldCreditsGranted:
@@ -101336,6 +102125,8 @@ func (m *FulfillmentMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldCustomerID(ctx)
 	case fulfillment.FieldStatus:
 		return m.OldStatus(ctx)
+	case fulfillment.FieldClaimedAt:
+		return m.OldClaimedAt(ctx)
 	case fulfillment.FieldGrantID:
 		return m.OldGrantID(ctx)
 	case fulfillment.FieldCreditsGranted:
@@ -101401,6 +102192,13 @@ func (m *FulfillmentMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case fulfillment.FieldClaimedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimedAt(v)
 		return nil
 	case fulfillment.FieldGrantID:
 		v, ok := value.(string)
@@ -101478,6 +102276,9 @@ func (m *FulfillmentMutation) ClearedFields() []string {
 	if m.FieldCleared(fulfillment.FieldDeletedAt) {
 		fields = append(fields, fulfillment.FieldDeletedAt)
 	}
+	if m.FieldCleared(fulfillment.FieldClaimedAt) {
+		fields = append(fields, fulfillment.FieldClaimedAt)
+	}
 	if m.FieldCleared(fulfillment.FieldGrantID) {
 		fields = append(fields, fulfillment.FieldGrantID)
 	}
@@ -101503,6 +102304,9 @@ func (m *FulfillmentMutation) ClearField(name string) error {
 	switch name {
 	case fulfillment.FieldDeletedAt:
 		m.ClearDeletedAt()
+		return nil
+	case fulfillment.FieldClaimedAt:
+		m.ClearClaimedAt()
 		return nil
 	case fulfillment.FieldGrantID:
 		m.ClearGrantID()
@@ -101541,6 +102345,9 @@ func (m *FulfillmentMutation) ResetField(name string) error {
 		return nil
 	case fulfillment.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case fulfillment.FieldClaimedAt:
+		m.ResetClaimedAt()
 		return nil
 	case fulfillment.FieldGrantID:
 		m.ResetGrantID()

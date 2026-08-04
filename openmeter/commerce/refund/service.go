@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce"
@@ -210,6 +211,16 @@ type OrderReader interface {
 	GetOrder(ctx context.Context, namespace, id string) (*commerce.Order, error)
 }
 
+// ProviderResolver looks up which payment provider was used for an order by
+// inspecting the order's payment attempts. This replaces non-deterministic
+// map iteration (I5) with a deterministic, data-driven provider selection.
+type ProviderResolver interface {
+	// ResolveProviderForOrder returns the provider used for the order's
+	// successful (or most recent) payment attempt. Returns "" if no attempt
+	// is found.
+	ResolveProviderForOrder(ctx context.Context, namespace, orderID string) (payment.Provider, error)
+}
+
 // WalletDataPort provides refundable credit grants from the Credit Ledger.
 type WalletDataPort interface {
 	GetGrants(ctx context.Context, namespace, customerID string) ([]commerce.AllocationGrant, error)
@@ -312,6 +323,10 @@ type Config struct {
 	Fence     FenceClient
 	Reverser  CreditReverser
 	Providers map[payment.Provider]ProviderRefunder
+	// ProviderResolver determines which provider was used for an order's payment
+	// (I5). If nil, lookupProvider falls back to the refund's ProviderName or,
+	// failing that, a deterministic first-key selection (no map iteration).
+	ProviderResolver ProviderResolver
 	Snapshots SnapshotPublisher
 	Logger    *slog.Logger
 }
@@ -323,6 +338,7 @@ type service struct {
 	fence     FenceClient
 	reverser  CreditReverser
 	providers map[payment.Provider]ProviderRefunder
+	pResolver ProviderResolver
 	snapshots SnapshotPublisher
 	logger    *slog.Logger
 }
@@ -349,6 +365,7 @@ func New(cfg Config) (Service, error) {
 		fence:     cfg.Fence,
 		reverser:  cfg.Reverser,
 		providers: cfg.Providers,
+		pResolver: cfg.ProviderResolver,
 		snapshots: cfg.Snapshots,
 		logger:    logger,
 	}, nil
@@ -509,7 +526,7 @@ func (s *service) reserveAndSubmit(ctx context.Context, rec *RefundRequest) (*Re
 
 // submitToProvider submits the refund to the payment provider.
 func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
-	provider := s.lookupProvider(rec)
+	provider := s.lookupProvider(ctx, rec)
 	if provider == nil {
 		reason := "no provider configured for refund"
 		rec = s.failRefund(ctx, rec, reason)
@@ -567,7 +584,7 @@ func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*Re
 
 // processProviderProcessing queries the provider for the current status.
 func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
-	provider := s.lookupProvider(rec)
+	provider := s.lookupProvider(ctx, rec)
 	if provider == nil {
 		return rec, errors.New("refund: no provider configured")
 	}
@@ -814,14 +831,38 @@ func (s *service) failRefund(ctx context.Context, rec *RefundRequest, reason str
 	return updated
 }
 
-func (s *service) lookupProvider(rec *RefundRequest) ProviderRefunder {
+// lookupProvider resolves the payment provider for a refund request. The
+// resolution order is deterministic (I5):
+//  1. If the refund already has a ProviderName (set during a prior submission),
+//     use it.
+//  2. If a ProviderResolver is configured, look up the provider from the
+//     order's payment attempt data.
+//  3. Deterministic fallback: select the lexicographically smallest provider
+//     key (no map iteration). This path should not be reached in production
+//     (resolver is wired), but avoids non-deterministic behavior.
+func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) ProviderRefunder {
 	if rec.ProviderName != "" {
 		if p, ok := s.providers[payment.Provider(rec.ProviderName)]; ok {
 			return p
 		}
 	}
-	for _, p := range s.providers {
-		return p
+	// I5: resolve from the order's payment attempt if a resolver is wired.
+	if s.pResolver != nil {
+		prov, err := s.pResolver.ResolveProviderForOrder(ctx, rec.Namespace, rec.CommerceOrderID)
+		if err == nil && prov != "" {
+			if p, ok := s.providers[prov]; ok {
+				return p
+			}
+		}
+	}
+	// Deterministic fallback: sorted first key — never iterate the map.
+	if len(s.providers) > 0 {
+		keys := make([]string, 0, len(s.providers))
+		for k := range s.providers {
+			keys = append(keys, string(k))
+		}
+		sort.Strings(keys)
+		return s.providers[payment.Provider(keys[0])]
 	}
 	return nil
 }
@@ -886,7 +927,9 @@ func validateRefundable(order *commerce.Order) error {
 	if order.Kind != commerce.OrderKindWalletTopUp {
 		return fmt.Errorf("%w: order kind %s is not a wallet top-up", ErrOrderNotRefundable, order.Kind)
 	}
-	if order.Status != commerce.OrderStatusFulfilled && order.Status != commerce.OrderStatusPaid {
+	// I6: only fulfilled orders may be refunded. A paid-but-not-fulfilled order
+	// has not granted credits yet, so there is nothing to fence or reverse.
+	if order.Status != commerce.OrderStatusFulfilled {
 		return fmt.Errorf("%w: order status %s is not fulfilled", ErrOrderNotRefundable, order.Status)
 	}
 	return nil

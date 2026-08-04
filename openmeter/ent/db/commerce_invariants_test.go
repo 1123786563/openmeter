@@ -51,7 +51,7 @@ func newTestClient(t *testing.T) *db.Client {
 	commerceTables := []string{
 		"external_invoice_refs", "offline_payments", "receivable_periods",
 		"receivable_accounts", "refund_facts", "refund_requests",
-		"fulfillments", "payment_facts", "payment_attempts",
+		"fulfillments", "payment_facts", "payment_attempts", "commerce_outbox",
 		"commerce_order_lines", "commerce_orders", "commerce_products",
 	}
 	for _, tbl := range commerceTables {

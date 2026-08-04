@@ -32,6 +32,8 @@ type Fulfillment struct {
 	CustomerID string `json:"customer_id,omitempty"`
 	// Status holds the value of the "status" field.
 	Status fulfillment.Status `json:"status,omitempty"`
+	// ClaimedAt holds the value of the "claimed_at" field.
+	ClaimedAt *time.Time `json:"claimed_at,omitempty"`
 	// GrantID holds the value of the "grant_id" field.
 	GrantID *string `json:"grant_id,omitempty"`
 	// CreditsGranted holds the value of the "credits_granted" field.
@@ -75,7 +77,7 @@ func (*Fulfillment) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case fulfillment.FieldID, fulfillment.FieldNamespace, fulfillment.FieldCommerceOrderID, fulfillment.FieldCustomerID, fulfillment.FieldStatus, fulfillment.FieldGrantID, fulfillment.FieldFailureReason:
 			values[i] = new(sql.NullString)
-		case fulfillment.FieldCreatedAt, fulfillment.FieldUpdatedAt, fulfillment.FieldDeletedAt, fulfillment.FieldFulfilledAt:
+		case fulfillment.FieldCreatedAt, fulfillment.FieldUpdatedAt, fulfillment.FieldDeletedAt, fulfillment.FieldClaimedAt, fulfillment.FieldFulfilledAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -140,6 +142,13 @@ func (_m *Fulfillment) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = fulfillment.Status(value.String)
+			}
+		case fulfillment.FieldClaimedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field claimed_at", values[i])
+			} else if value.Valid {
+				_m.ClaimedAt = new(time.Time)
+				*_m.ClaimedAt = value.Time
 			}
 		case fulfillment.FieldGrantID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -231,6 +240,11 @@ func (_m *Fulfillment) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	if v := _m.ClaimedAt; v != nil {
+		builder.WriteString("claimed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	if v := _m.GrantID; v != nil {
 		builder.WriteString("grant_id=")

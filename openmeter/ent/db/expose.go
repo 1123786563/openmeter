@@ -205,6 +205,8 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		CommerceOrderLine: NewCommerceOrderLineClient(config),
 
+		CommerceOutbox: NewCommerceOutboxClient(config),
+
 		CommerceProduct: NewCommerceProductClient(config),
 
 		CreditRealizationLineage: NewCreditRealizationLineageClient(config),

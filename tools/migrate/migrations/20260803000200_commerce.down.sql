@@ -1,5 +1,12 @@
 -- reverse: drop tables, indexes, and enum types (child tables first)
 
+-- drop "commerce_outbox"
+DROP INDEX IF EXISTS "commerceoutbox_namespace_aggregate_id";
+DROP INDEX IF EXISTS "commerceoutbox_namespace_published";
+DROP INDEX IF EXISTS "commerceoutbox_namespace";
+DROP INDEX IF EXISTS "commerceoutbox_id";
+DROP TABLE IF EXISTS "commerce_outbox";
+
 -- drop refund sum trigger and function
 DROP TRIGGER IF EXISTS commerce_refund_sum_check ON refund_requests;
 DROP FUNCTION IF EXISTS commerce_check_refund_sum();
@@ -53,6 +60,7 @@ DROP INDEX IF EXISTS "fulfillment_id";
 DROP TABLE IF EXISTS "fulfillments";
 
 -- drop "payment_facts"
+DROP INDEX IF EXISTS "paymentfact_namespace_raw_hash";
 DROP INDEX IF EXISTS "paymentfact_namespace";
 DROP INDEX IF EXISTS "paymentfact_id";
 DROP TABLE IF EXISTS "payment_facts";

@@ -29,6 +29,8 @@ const (
 	FieldCustomerID = "customer_id"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldClaimedAt holds the string denoting the claimed_at field in the database.
+	FieldClaimedAt = "claimed_at"
 	// FieldGrantID holds the string denoting the grant_id field in the database.
 	FieldGrantID = "grant_id"
 	// FieldCreditsGranted holds the string denoting the credits_granted field in the database.
@@ -60,6 +62,7 @@ var Columns = []string{
 	FieldCommerceOrderID,
 	FieldCustomerID,
 	FieldStatus,
+	FieldClaimedAt,
 	FieldGrantID,
 	FieldCreditsGranted,
 	FieldFulfilledAt,
@@ -164,6 +167,11 @@ func ByCustomerID(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByClaimedAt orders the results by the claimed_at field.
+func ByClaimedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClaimedAt, opts...).ToFunc()
 }
 
 // ByGrantID orders the results by the grant_id field.

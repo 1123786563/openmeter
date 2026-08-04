@@ -130,6 +130,8 @@ type Tx struct {
 	CommerceOrder *CommerceOrderClient
 	// CommerceOrderLine is the client for interacting with the CommerceOrderLine builders.
 	CommerceOrderLine *CommerceOrderLineClient
+	// CommerceOutbox is the client for interacting with the CommerceOutbox builders.
+	CommerceOutbox *CommerceOutboxClient
 	// CommerceProduct is the client for interacting with the CommerceProduct builders.
 	CommerceProduct *CommerceProductClient
 	// CreditRealizationLineage is the client for interacting with the CreditRealizationLineage builders.
@@ -419,6 +421,7 @@ func (tx *Tx) init() {
 	tx.ChargesSearchV1 = NewChargesSearchV1Client(tx.config)
 	tx.CommerceOrder = NewCommerceOrderClient(tx.config)
 	tx.CommerceOrderLine = NewCommerceOrderLineClient(tx.config)
+	tx.CommerceOutbox = NewCommerceOutboxClient(tx.config)
 	tx.CommerceProduct = NewCommerceProductClient(tx.config)
 	tx.CreditRealizationLineage = NewCreditRealizationLineageClient(tx.config)
 	tx.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(tx.config)

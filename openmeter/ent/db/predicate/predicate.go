@@ -345,6 +345,9 @@ type CommerceOrder func(*sql.Selector)
 // CommerceOrderLine is the predicate function for commerceorderline builders.
 type CommerceOrderLine func(*sql.Selector)
 
+// CommerceOutbox is the predicate function for commerceoutbox builders.
+type CommerceOutbox func(*sql.Selector)
+
 // CommerceProduct is the predicate function for commerceproduct builders.
 type CommerceProduct func(*sql.Selector)
 

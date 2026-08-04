@@ -35,6 +35,9 @@ func (Fulfillment) Fields() []ent.Field {
 		field.Enum("status").
 			Values("pending", "processing", "fulfilled", "failed").
 			Default("pending"),
+		// claimed_at records when a worker started processing; records stuck
+		// in processing past the lease timeout become eligible for re-claim.
+		field.Time("claimed_at").Optional().Nillable(),
 		// grant_id references the Grant created by this fulfillment.
 		field.String("grant_id").Optional().Nillable().SchemaType(map[string]string{
 			dialect.Postgres: "char(26)",

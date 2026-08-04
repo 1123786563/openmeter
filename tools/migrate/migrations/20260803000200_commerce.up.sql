@@ -127,6 +127,9 @@ CREATE TABLE "payment_facts" (
 );
 CREATE UNIQUE INDEX "paymentfact_id" ON "payment_facts" ("id");
 CREATE INDEX "paymentfact_namespace" ON "payment_facts" ("namespace");
+-- Dedup enforcement: one fact per raw_hash within a namespace. Prevents two
+-- concurrent callbacks from both inserting the same fact.
+CREATE UNIQUE INDEX "paymentfact_namespace_raw_hash" ON "payment_facts" ("namespace", "raw_hash");
 ALTER TABLE "payment_facts" ADD CONSTRAINT "payment_facts_payment_attempts_facts" FOREIGN KEY ("payment_attempt_id") REFERENCES "payment_attempts" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION;
 
 -- create "fulfillments" table
@@ -138,6 +141,7 @@ CREATE TABLE "fulfillments" (
   "deleted_at" timestamptz NULL,
   "customer_id" character varying NOT NULL,
   "status" fulfillment_status DEFAULT 'pending',
+  "claimed_at" timestamptz NULL,
   "grant_id" character(26) NULL,
   "credits_granted" bigint DEFAULT 0,
   "fulfilled_at" timestamptz NULL,
@@ -303,3 +307,21 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER commerce_refund_sum_check
     BEFORE INSERT ON refund_requests
     FOR EACH ROW EXECUTE FUNCTION commerce_check_refund_sum();
+
+-- create "commerce_outbox" table (transactional outbox for domain events)
+CREATE TABLE "commerce_outbox" (
+  "id" character(26) NOT NULL,
+  "namespace" character varying NOT NULL,
+  "created_at" timestamptz NOT NULL,
+  "aggregate_type" character varying NOT NULL,
+  "aggregate_id" character varying NOT NULL,
+  "event_type" character varying NOT NULL,
+  "payload" jsonb NOT NULL,
+  "published" boolean DEFAULT false,
+  "published_at" timestamptz NULL,
+  PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "commerceoutbox_id" ON "commerce_outbox" ("id");
+CREATE INDEX "commerceoutbox_namespace" ON "commerce_outbox" ("namespace");
+CREATE INDEX "commerceoutbox_namespace_published" ON "commerce_outbox" ("namespace", "published");
+CREATE INDEX "commerceoutbox_namespace_aggregate_id" ON "commerce_outbox" ("namespace", "aggregate_id");

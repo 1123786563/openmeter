@@ -72,6 +72,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruns"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
@@ -247,6 +248,8 @@ type Client struct {
 	CommerceOrder *CommerceOrderClient
 	// CommerceOrderLine is the client for interacting with the CommerceOrderLine builders.
 	CommerceOrderLine *CommerceOrderLineClient
+	// CommerceOutbox is the client for interacting with the CommerceOutbox builders.
+	CommerceOutbox *CommerceOutboxClient
 	// CommerceProduct is the client for interacting with the CommerceProduct builders.
 	CommerceProduct *CommerceProductClient
 	// CreditRealizationLineage is the client for interacting with the CreditRealizationLineage builders.
@@ -416,6 +419,7 @@ func (c *Client) init() {
 	c.ChargesSearchV1 = NewChargesSearchV1Client(c.config)
 	c.CommerceOrder = NewCommerceOrderClient(c.config)
 	c.CommerceOrderLine = NewCommerceOrderLineClient(c.config)
+	c.CommerceOutbox = NewCommerceOutboxClient(c.config)
 	c.CommerceProduct = NewCommerceProductClient(c.config)
 	c.CreditRealizationLineage = NewCreditRealizationLineageClient(c.config)
 	c.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(c.config)
@@ -616,6 +620,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ChargesSearchV1:                                  NewChargesSearchV1Client(cfg),
 		CommerceOrder:                                    NewCommerceOrderClient(cfg),
 		CommerceOrderLine:                                NewCommerceOrderLineClient(cfg),
+		CommerceOutbox:                                   NewCommerceOutboxClient(cfg),
 		CommerceProduct:                                  NewCommerceProductClient(cfg),
 		CreditRealizationLineage:                         NewCreditRealizationLineageClient(cfg),
 		CreditRealizationLineageSegment:                  NewCreditRealizationLineageSegmentClient(cfg),
@@ -743,6 +748,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ChargesSearchV1:                                  NewChargesSearchV1Client(cfg),
 		CommerceOrder:                                    NewCommerceOrderClient(cfg),
 		CommerceOrderLine:                                NewCommerceOrderLineClient(cfg),
+		CommerceOutbox:                                   NewCommerceOutboxClient(cfg),
 		CommerceProduct:                                  NewCommerceProductClient(cfg),
 		CreditRealizationLineage:                         NewCreditRealizationLineageClient(cfg),
 		CreditRealizationLineageSegment:                  NewCreditRealizationLineageSegmentClient(cfg),
@@ -844,7 +850,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ChargeUsageBasedCostBasis, c.ChargeUsageBasedOverride,
 		c.ChargeUsageBasedRunCreditAllocations, c.ChargeUsageBasedRunDetailedLine,
 		c.ChargeUsageBasedRunInvoicedUsage, c.ChargeUsageBasedRunPayment,
-		c.ChargeUsageBasedRuns, c.CommerceOrder, c.CommerceOrderLine,
+		c.ChargeUsageBasedRuns, c.CommerceOrder, c.CommerceOrderLine, c.CommerceOutbox,
 		c.CommerceProduct, c.CreditRealizationLineage,
 		c.CreditRealizationLineageSegment, c.CurrencyCostBasis, c.CustomCurrency,
 		c.Customer, c.CustomerAIRatePackage, c.CustomerSubjects, c.Entitlement,
@@ -892,21 +898,21 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ChargeUsageBasedRunCreditAllocations, c.ChargeUsageBasedRunDetailedLine,
 		c.ChargeUsageBasedRunInvoicedUsage, c.ChargeUsageBasedRunPayment,
 		c.ChargeUsageBasedRuns, c.ChargesSearchV1, c.CommerceOrder,
-		c.CommerceOrderLine, c.CommerceProduct, c.CreditRealizationLineage,
-		c.CreditRealizationLineageSegment, c.CurrencyCostBasis, c.CustomCurrency,
-		c.Customer, c.CustomerAIRatePackage, c.CustomerSubjects, c.Entitlement,
-		c.ExternalInvoiceRef, c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice,
-		c.LedgerAccount, c.LedgerBreakageRecord, c.LedgerCreditVoidRecord,
-		c.LedgerCustomerAccount, c.LedgerEntry, c.LedgerSubAccount,
-		c.LedgerSubAccountRoute, c.LedgerTransaction, c.LedgerTransactionGroup,
-		c.ManualResourceCost, c.Meter, c.NotificationChannel, c.NotificationEvent,
-		c.NotificationEventDeliveryStatus, c.NotificationRule, c.OfflinePayment,
-		c.OrganizationDefaultTaxCodes, c.PaymentAttempt, c.PaymentFact, c.Plan,
-		c.PlanAddon, c.PlanPhase, c.PlanRateCard, c.ReceivableAccount,
-		c.ReceivablePeriod, c.RefundFact, c.RefundRequest, c.Subject, c.Subscription,
-		c.SubscriptionAddon, c.SubscriptionAddonQuantity,
-		c.SubscriptionBillingSyncState, c.SubscriptionItem, c.SubscriptionPhase,
-		c.TaxCode, c.UsageReset,
+		c.CommerceOrderLine, c.CommerceOutbox, c.CommerceProduct,
+		c.CreditRealizationLineage, c.CreditRealizationLineageSegment,
+		c.CurrencyCostBasis, c.CustomCurrency, c.Customer, c.CustomerAIRatePackage,
+		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
+		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
+		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
+		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
+		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
+		c.NotificationChannel, c.NotificationEvent, c.NotificationEventDeliveryStatus,
+		c.NotificationRule, c.OfflinePayment, c.OrganizationDefaultTaxCodes,
+		c.PaymentAttempt, c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase,
+		c.PlanRateCard, c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact,
+		c.RefundRequest, c.Subject, c.Subscription, c.SubscriptionAddon,
+		c.SubscriptionAddonQuantity, c.SubscriptionBillingSyncState,
+		c.SubscriptionItem, c.SubscriptionPhase, c.TaxCode, c.UsageReset,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -1029,6 +1035,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CommerceOrder.mutate(ctx, m)
 	case *CommerceOrderLineMutation:
 		return c.CommerceOrderLine.mutate(ctx, m)
+	case *CommerceOutboxMutation:
+		return c.CommerceOutbox.mutate(ctx, m)
 	case *CommerceProductMutation:
 		return c.CommerceProduct.mutate(ctx, m)
 	case *CreditRealizationLineageMutation:
@@ -11849,6 +11857,139 @@ func (c *CommerceOrderLineClient) mutate(ctx context.Context, m *CommerceOrderLi
 	}
 }
 
+// CommerceOutboxClient is a client for the CommerceOutbox schema.
+type CommerceOutboxClient struct {
+	config
+}
+
+// NewCommerceOutboxClient returns a client for the CommerceOutbox from the given config.
+func NewCommerceOutboxClient(c config) *CommerceOutboxClient {
+	return &CommerceOutboxClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `commerceoutbox.Hooks(f(g(h())))`.
+func (c *CommerceOutboxClient) Use(hooks ...Hook) {
+	c.hooks.CommerceOutbox = append(c.hooks.CommerceOutbox, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `commerceoutbox.Intercept(f(g(h())))`.
+func (c *CommerceOutboxClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CommerceOutbox = append(c.inters.CommerceOutbox, interceptors...)
+}
+
+// Create returns a builder for creating a CommerceOutbox entity.
+func (c *CommerceOutboxClient) Create() *CommerceOutboxCreate {
+	mutation := newCommerceOutboxMutation(c.config, OpCreate)
+	return &CommerceOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CommerceOutbox entities.
+func (c *CommerceOutboxClient) CreateBulk(builders ...*CommerceOutboxCreate) *CommerceOutboxCreateBulk {
+	return &CommerceOutboxCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CommerceOutboxClient) MapCreateBulk(slice any, setFunc func(*CommerceOutboxCreate, int)) *CommerceOutboxCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CommerceOutboxCreateBulk{err: fmt.Errorf("calling to CommerceOutboxClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CommerceOutboxCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CommerceOutboxCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CommerceOutbox.
+func (c *CommerceOutboxClient) Update() *CommerceOutboxUpdate {
+	mutation := newCommerceOutboxMutation(c.config, OpUpdate)
+	return &CommerceOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CommerceOutboxClient) UpdateOne(_m *CommerceOutbox) *CommerceOutboxUpdateOne {
+	mutation := newCommerceOutboxMutation(c.config, OpUpdateOne, withCommerceOutbox(_m))
+	return &CommerceOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CommerceOutboxClient) UpdateOneID(id string) *CommerceOutboxUpdateOne {
+	mutation := newCommerceOutboxMutation(c.config, OpUpdateOne, withCommerceOutboxID(id))
+	return &CommerceOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CommerceOutbox.
+func (c *CommerceOutboxClient) Delete() *CommerceOutboxDelete {
+	mutation := newCommerceOutboxMutation(c.config, OpDelete)
+	return &CommerceOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CommerceOutboxClient) DeleteOne(_m *CommerceOutbox) *CommerceOutboxDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CommerceOutboxClient) DeleteOneID(id string) *CommerceOutboxDeleteOne {
+	builder := c.Delete().Where(commerceoutbox.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CommerceOutboxDeleteOne{builder}
+}
+
+// Query returns a query builder for CommerceOutbox.
+func (c *CommerceOutboxClient) Query() *CommerceOutboxQuery {
+	return &CommerceOutboxQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCommerceOutbox},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CommerceOutbox entity by its id.
+func (c *CommerceOutboxClient) Get(ctx context.Context, id string) (*CommerceOutbox, error) {
+	return c.Query().Where(commerceoutbox.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CommerceOutboxClient) GetX(ctx context.Context, id string) *CommerceOutbox {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CommerceOutboxClient) Hooks() []Hook {
+	return c.hooks.CommerceOutbox
+}
+
+// Interceptors returns the client interceptors.
+func (c *CommerceOutboxClient) Interceptors() []Interceptor {
+	return c.inters.CommerceOutbox
+}
+
+func (c *CommerceOutboxClient) mutate(ctx context.Context, m *CommerceOutboxMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CommerceOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CommerceOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CommerceOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CommerceOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CommerceOutbox mutation op: %q", m.Op())
+	}
+}
+
 // CommerceProductClient is a client for the CommerceProduct schema.
 type CommerceProductClient struct {
 	config
@@ -20922,7 +21063,7 @@ type (
 		ChargeUsageBasedOverride, ChargeUsageBasedRunCreditAllocations,
 		ChargeUsageBasedRunDetailedLine, ChargeUsageBasedRunInvoicedUsage,
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, CommerceOrder,
-		CommerceOrderLine, CommerceProduct, CreditRealizationLineage,
+		CommerceOrderLine, CommerceOutbox, CommerceProduct, CreditRealizationLineage,
 		CreditRealizationLineageSegment, CurrencyCostBasis, CustomCurrency, Customer,
 		CustomerAIRatePackage, CustomerSubjects, Entitlement, ExternalInvoiceRef,
 		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
@@ -20957,17 +21098,17 @@ type (
 		ChargeUsageBasedOverride, ChargeUsageBasedRunCreditAllocations,
 		ChargeUsageBasedRunDetailedLine, ChargeUsageBasedRunInvoicedUsage,
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, ChargesSearchV1,
-		CommerceOrder, CommerceOrderLine, CommerceProduct, CreditRealizationLineage,
-		CreditRealizationLineageSegment, CurrencyCostBasis, CustomCurrency, Customer,
-		CustomerAIRatePackage, CustomerSubjects, Entitlement, ExternalInvoiceRef,
-		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
-		LedgerCreditVoidRecord, LedgerCustomerAccount, LedgerEntry, LedgerSubAccount,
-		LedgerSubAccountRoute, LedgerTransaction, LedgerTransactionGroup,
-		ManualResourceCost, Meter, NotificationChannel, NotificationEvent,
-		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
-		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
-		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
-		RefundRequest, Subject, Subscription, SubscriptionAddon,
+		CommerceOrder, CommerceOrderLine, CommerceOutbox, CommerceProduct,
+		CreditRealizationLineage, CreditRealizationLineageSegment, CurrencyCostBasis,
+		CustomCurrency, Customer, CustomerAIRatePackage, CustomerSubjects, Entitlement,
+		ExternalInvoiceRef, Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount,
+		LedgerBreakageRecord, LedgerCreditVoidRecord, LedgerCustomerAccount,
+		LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute, LedgerTransaction,
+		LedgerTransactionGroup, ManualResourceCost, Meter, NotificationChannel,
+		NotificationEvent, NotificationEventDeliveryStatus, NotificationRule,
+		OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan,
+		PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod,
+		RefundFact, RefundRequest, Subject, Subscription, SubscriptionAddon,
 		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
 		SubscriptionPhase, TaxCode, UsageReset []ent.Interceptor
 	}

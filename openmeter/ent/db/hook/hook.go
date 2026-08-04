@@ -693,6 +693,18 @@ func (f CommerceOrderLineFunc) Mutate(ctx context.Context, m db.Mutation) (db.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CommerceOrderLineMutation", m)
 }
 
+// The CommerceOutboxFunc type is an adapter to allow the use of ordinary
+// function as CommerceOutbox mutator.
+type CommerceOutboxFunc func(context.Context, *db.CommerceOutboxMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CommerceOutboxFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.CommerceOutboxMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CommerceOutboxMutation", m)
+}
+
 // The CommerceProductFunc type is an adapter to allow the use of ordinary
 // function as CommerceProduct mutator.
 type CommerceProductFunc func(context.Context, *db.CommerceProductMutation) (db.Value, error)

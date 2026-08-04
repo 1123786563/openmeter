@@ -95,6 +95,11 @@ func CustomerID(v string) predicate.Fulfillment {
 	return predicate.Fulfillment(sql.FieldEQ(FieldCustomerID, v))
 }
 
+// ClaimedAt applies equality check predicate on the "claimed_at" field. It's identical to ClaimedAtEQ.
+func ClaimedAt(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldEQ(FieldClaimedAt, v))
+}
+
 // GrantID applies equality check predicate on the "grant_id" field. It's identical to GrantIDEQ.
 func GrantID(v string) predicate.Fulfillment {
 	return predicate.Fulfillment(sql.FieldEQ(FieldGrantID, v))
@@ -458,6 +463,56 @@ func StatusIn(vs ...Status) predicate.Fulfillment {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.Fulfillment {
 	return predicate.Fulfillment(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// ClaimedAtEQ applies the EQ predicate on the "claimed_at" field.
+func ClaimedAtEQ(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldEQ(FieldClaimedAt, v))
+}
+
+// ClaimedAtNEQ applies the NEQ predicate on the "claimed_at" field.
+func ClaimedAtNEQ(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldNEQ(FieldClaimedAt, v))
+}
+
+// ClaimedAtIn applies the In predicate on the "claimed_at" field.
+func ClaimedAtIn(vs ...time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldIn(FieldClaimedAt, vs...))
+}
+
+// ClaimedAtNotIn applies the NotIn predicate on the "claimed_at" field.
+func ClaimedAtNotIn(vs ...time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldNotIn(FieldClaimedAt, vs...))
+}
+
+// ClaimedAtGT applies the GT predicate on the "claimed_at" field.
+func ClaimedAtGT(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldGT(FieldClaimedAt, v))
+}
+
+// ClaimedAtGTE applies the GTE predicate on the "claimed_at" field.
+func ClaimedAtGTE(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldGTE(FieldClaimedAt, v))
+}
+
+// ClaimedAtLT applies the LT predicate on the "claimed_at" field.
+func ClaimedAtLT(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldLT(FieldClaimedAt, v))
+}
+
+// ClaimedAtLTE applies the LTE predicate on the "claimed_at" field.
+func ClaimedAtLTE(v time.Time) predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldLTE(FieldClaimedAt, v))
+}
+
+// ClaimedAtIsNil applies the IsNil predicate on the "claimed_at" field.
+func ClaimedAtIsNil() predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldIsNull(FieldClaimedAt))
+}
+
+// ClaimedAtNotNil applies the NotNil predicate on the "claimed_at" field.
+func ClaimedAtNotNil() predicate.Fulfillment {
+	return predicate.Fulfillment(sql.FieldNotNull(FieldClaimedAt))
 }
 
 // GrantIDEQ applies the EQ predicate on the "grant_id" field.

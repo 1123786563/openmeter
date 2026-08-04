@@ -889,6 +889,26 @@ func TestCreateRefundRejectsNonWalletTopUp(t *testing.T) {
 	}
 }
 
+// TestCreateRefundRejectsPaidOrder (I6): a paid-but-not-fulfilled order has not
+// granted credits yet, so it must not be refundable.
+func TestCreateRefundRejectsPaidOrder(t *testing.T) {
+	h := newTestHarness(t)
+	h.orders.orders["order-paid"] = &commerce.Order{
+		NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-paid"},
+		CustomerID:   "cust",
+		Kind:         commerce.OrderKindWalletTopUp,
+		Status:       commerce.OrderStatusPaid, // paid but NOT fulfilled
+		Currency:     "CNY",
+	}
+	_, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-paid", CustomerID: "cust",
+		AmountCents: 0, Currency: "CNY", IdempotencyKey: "idem-paid",
+	})
+	if !errors.Is(err, ErrOrderNotRefundable) {
+		t.Errorf("expected ErrOrderNotRefundable for paid (not fulfilled) order, got %v", err)
+	}
+}
+
 // ===========================================================================
 // Step 5: Concurrency / race tests
 // ===========================================================================

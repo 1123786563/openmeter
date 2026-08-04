@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 
 	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"
@@ -50,11 +51,18 @@ func (PaymentFact) Fields() []ent.Field {
 
 func (PaymentFact) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("attempt", PaymentAttempt.Type).
-			Ref("facts").
-			Field("payment_attempt_id").
-			Required().
-			Immutable().
-			Unique(),
+	edge.From("attempt", PaymentAttempt.Type).
+		Ref("facts").
+		Field("payment_attempt_id").
+		Required().
+		Immutable().
+		Unique(),
+	}
+}
+
+func (PaymentFact) Indexes() []ent.Index {
+	return []ent.Index{
+		// DB-enforced callback dedup: one fact per raw_hash within a namespace.
+		index.Fields("namespace", "raw_hash").Unique(),
 	}
 }

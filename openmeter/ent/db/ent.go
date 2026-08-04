@@ -71,6 +71,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruns"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
@@ -243,6 +244,7 @@ func checkColumn(t, c string) error {
 			chargessearchv1.Table:                                  chargessearchv1.ValidColumn,
 			commerceorder.Table:                                    commerceorder.ValidColumn,
 			commerceorderline.Table:                                commerceorderline.ValidColumn,
+			commerceoutbox.Table:                                   commerceoutbox.ValidColumn,
 			commerceproduct.Table:                                  commerceproduct.ValidColumn,
 			creditrealizationlineage.Table:                         creditrealizationlineage.ValidColumn,
 			creditrealizationlineagesegment.Table:                  creditrealizationlineagesegment.ValidColumn,

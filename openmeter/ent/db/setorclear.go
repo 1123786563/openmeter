@@ -4346,6 +4346,20 @@ func (u *CommerceOrderLineUpdateOne) SetOrClearSnapshotData(value *map[string]in
 	return u.SetSnapshotData(*value)
 }
 
+func (u *CommerceOutboxUpdate) SetOrClearPublishedAt(value *time.Time) *CommerceOutboxUpdate {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *CommerceOutboxUpdateOne) SetOrClearPublishedAt(value *time.Time) *CommerceOutboxUpdateOne {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
 func (u *CommerceProductUpdate) SetOrClearAnnotations(value *models.Annotations) *CommerceProductUpdate {
 	if value == nil {
 		return u.ClearAnnotations()
@@ -5128,6 +5142,20 @@ func (u *FulfillmentUpdateOne) SetOrClearDeletedAt(value *time.Time) *Fulfillmen
 		return u.ClearDeletedAt()
 	}
 	return u.SetDeletedAt(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearClaimedAt(value *time.Time) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearClaimedAt()
+	}
+	return u.SetClaimedAt(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearClaimedAt(value *time.Time) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearClaimedAt()
+	}
+	return u.SetClaimedAt(*value)
 }
 
 func (u *FulfillmentUpdate) SetOrClearGrantID(value *string) *FulfillmentUpdate {

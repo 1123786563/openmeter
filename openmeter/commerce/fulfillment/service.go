@@ -298,6 +298,12 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 	if err != nil {
 		return nil, fmt.Errorf("fulfillment: get fulfillment: %w", err)
 	}
+	// C3 nil guard: if the repository returns no record (e.g. stub adapter in
+	// production before the Ent fulfillment repo is wired), return early
+	// instead of panicking on a nil dereference.
+	if rec == nil {
+		return nil, fmt.Errorf("fulfillment: record %s not found in namespace %s", fulfillmentID, namespace)
+	}
 
 	// Already fulfilled — idempotent success.
 	if rec.Status == FulfillmentStatusFulfilled {
@@ -312,6 +318,11 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 			return rec, nil
 		}
 		return nil, fmt.Errorf("fulfillment: claim for processing: %w", err)
+	}
+	// C3 nil guard: ClaimForProcessing should never return nil without error,
+	// but guard defensively for stub adapters.
+	if rec == nil {
+		return nil, fmt.Errorf("fulfillment: claim returned no record for %s", fulfillmentID)
 	}
 
 	// Fetch the order.
@@ -413,6 +424,11 @@ func (s *service) ProcessPending(ctx context.Context, namespace string, limit in
 	pending, err := s.repo.ListPending(ctx, namespace, limit)
 	if err != nil {
 		return 0, fmt.Errorf("fulfillment: list pending: %w", err)
+	}
+	// C3 nil guard: ListPending returning nil is safe (ranging over nil is a
+	// no-op), but log at debug so a stub adapter is visible during development.
+	if len(pending) == 0 {
+		return 0, nil
 	}
 
 	processed := 0

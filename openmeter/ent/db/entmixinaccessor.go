@@ -2443,6 +2443,14 @@ func (e *CommerceOrderLine) GetNamespace() string {
 	return e.Namespace
 }
 
+func (e *CommerceOutbox) GetID() string {
+	return e.ID
+}
+
+func (e *CommerceOutbox) GetNamespace() string {
+	return e.Namespace
+}
+
 func (e *CommerceProduct) GetID() string {
 	return e.ID
 }

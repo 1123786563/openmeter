@@ -68,6 +68,26 @@ func (_u *FulfillmentUpdate) SetNillableStatus(v *fulfillment.Status) *Fulfillme
 	return _u
 }
 
+// SetClaimedAt sets the "claimed_at" field.
+func (_u *FulfillmentUpdate) SetClaimedAt(v time.Time) *FulfillmentUpdate {
+	_u.mutation.SetClaimedAt(v)
+	return _u
+}
+
+// SetNillableClaimedAt sets the "claimed_at" field if the given value is not nil.
+func (_u *FulfillmentUpdate) SetNillableClaimedAt(v *time.Time) *FulfillmentUpdate {
+	if v != nil {
+		_u.SetClaimedAt(*v)
+	}
+	return _u
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (_u *FulfillmentUpdate) ClearClaimedAt() *FulfillmentUpdate {
+	_u.mutation.ClearClaimedAt()
+	return _u
+}
+
 // SetGrantID sets the "grant_id" field.
 func (_u *FulfillmentUpdate) SetGrantID(v string) *FulfillmentUpdate {
 	_u.mutation.SetGrantID(v)
@@ -232,6 +252,12 @@ func (_u *FulfillmentUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fulfillment.FieldStatus, field.TypeEnum, value)
 	}
+	if value, ok := _u.mutation.ClaimedAt(); ok {
+		_spec.SetField(fulfillment.FieldClaimedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ClaimedAtCleared() {
+		_spec.ClearField(fulfillment.FieldClaimedAt, field.TypeTime)
+	}
 	if value, ok := _u.mutation.GrantID(); ok {
 		_spec.SetField(fulfillment.FieldGrantID, field.TypeString, value)
 	}
@@ -313,6 +339,26 @@ func (_u *FulfillmentUpdateOne) SetNillableStatus(v *fulfillment.Status) *Fulfil
 	if v != nil {
 		_u.SetStatus(*v)
 	}
+	return _u
+}
+
+// SetClaimedAt sets the "claimed_at" field.
+func (_u *FulfillmentUpdateOne) SetClaimedAt(v time.Time) *FulfillmentUpdateOne {
+	_u.mutation.SetClaimedAt(v)
+	return _u
+}
+
+// SetNillableClaimedAt sets the "claimed_at" field if the given value is not nil.
+func (_u *FulfillmentUpdateOne) SetNillableClaimedAt(v *time.Time) *FulfillmentUpdateOne {
+	if v != nil {
+		_u.SetClaimedAt(*v)
+	}
+	return _u
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (_u *FulfillmentUpdateOne) ClearClaimedAt() *FulfillmentUpdateOne {
+	_u.mutation.ClearClaimedAt()
 	return _u
 }
 
@@ -509,6 +555,12 @@ func (_u *FulfillmentUpdateOne) sqlSave(ctx context.Context) (_node *Fulfillment
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(fulfillment.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ClaimedAt(); ok {
+		_spec.SetField(fulfillment.FieldClaimedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ClaimedAtCleared() {
+		_spec.ClearField(fulfillment.FieldClaimedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.GrantID(); ok {
 		_spec.SetField(fulfillment.FieldGrantID, field.TypeString, value)

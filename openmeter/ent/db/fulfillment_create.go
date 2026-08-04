@@ -98,6 +98,20 @@ func (_c *FulfillmentCreate) SetNillableStatus(v *fulfillment.Status) *Fulfillme
 	return _c
 }
 
+// SetClaimedAt sets the "claimed_at" field.
+func (_c *FulfillmentCreate) SetClaimedAt(v time.Time) *FulfillmentCreate {
+	_c.mutation.SetClaimedAt(v)
+	return _c
+}
+
+// SetNillableClaimedAt sets the "claimed_at" field if the given value is not nil.
+func (_c *FulfillmentCreate) SetNillableClaimedAt(v *time.Time) *FulfillmentCreate {
+	if v != nil {
+		_c.SetClaimedAt(*v)
+	}
+	return _c
+}
+
 // SetGrantID sets the "grant_id" field.
 func (_c *FulfillmentCreate) SetGrantID(v string) *FulfillmentCreate {
 	_c.mutation.SetGrantID(v)
@@ -342,6 +356,10 @@ func (_c *FulfillmentCreate) createSpec() (*Fulfillment, *sqlgraph.CreateSpec) {
 		_spec.SetField(fulfillment.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
+	if value, ok := _c.mutation.ClaimedAt(); ok {
+		_spec.SetField(fulfillment.FieldClaimedAt, field.TypeTime, value)
+		_node.ClaimedAt = &value
+	}
 	if value, ok := _c.mutation.GrantID(); ok {
 		_spec.SetField(fulfillment.FieldGrantID, field.TypeString, value)
 		_node.GrantID = &value
@@ -466,6 +484,24 @@ func (u *FulfillmentUpsert) SetStatus(v fulfillment.Status) *FulfillmentUpsert {
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *FulfillmentUpsert) UpdateStatus() *FulfillmentUpsert {
 	u.SetExcluded(fulfillment.FieldStatus)
+	return u
+}
+
+// SetClaimedAt sets the "claimed_at" field.
+func (u *FulfillmentUpsert) SetClaimedAt(v time.Time) *FulfillmentUpsert {
+	u.Set(fulfillment.FieldClaimedAt, v)
+	return u
+}
+
+// UpdateClaimedAt sets the "claimed_at" field to the value that was provided on create.
+func (u *FulfillmentUpsert) UpdateClaimedAt() *FulfillmentUpsert {
+	u.SetExcluded(fulfillment.FieldClaimedAt)
+	return u
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (u *FulfillmentUpsert) ClearClaimedAt() *FulfillmentUpsert {
+	u.SetNull(fulfillment.FieldClaimedAt)
 	return u
 }
 
@@ -647,6 +683,27 @@ func (u *FulfillmentUpsertOne) SetStatus(v fulfillment.Status) *FulfillmentUpser
 func (u *FulfillmentUpsertOne) UpdateStatus() *FulfillmentUpsertOne {
 	return u.Update(func(s *FulfillmentUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetClaimedAt sets the "claimed_at" field.
+func (u *FulfillmentUpsertOne) SetClaimedAt(v time.Time) *FulfillmentUpsertOne {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.SetClaimedAt(v)
+	})
+}
+
+// UpdateClaimedAt sets the "claimed_at" field to the value that was provided on create.
+func (u *FulfillmentUpsertOne) UpdateClaimedAt() *FulfillmentUpsertOne {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.UpdateClaimedAt()
+	})
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (u *FulfillmentUpsertOne) ClearClaimedAt() *FulfillmentUpsertOne {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.ClearClaimedAt()
 	})
 }
 
@@ -1007,6 +1064,27 @@ func (u *FulfillmentUpsertBulk) SetStatus(v fulfillment.Status) *FulfillmentUpse
 func (u *FulfillmentUpsertBulk) UpdateStatus() *FulfillmentUpsertBulk {
 	return u.Update(func(s *FulfillmentUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetClaimedAt sets the "claimed_at" field.
+func (u *FulfillmentUpsertBulk) SetClaimedAt(v time.Time) *FulfillmentUpsertBulk {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.SetClaimedAt(v)
+	})
+}
+
+// UpdateClaimedAt sets the "claimed_at" field to the value that was provided on create.
+func (u *FulfillmentUpsertBulk) UpdateClaimedAt() *FulfillmentUpsertBulk {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.UpdateClaimedAt()
+	})
+}
+
+// ClearClaimedAt clears the value of the "claimed_at" field.
+func (u *FulfillmentUpsertBulk) ClearClaimedAt() *FulfillmentUpsertBulk {
+	return u.Update(func(s *FulfillmentUpsert) {
+		s.ClearClaimedAt()
 	})
 }
 

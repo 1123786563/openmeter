@@ -3881,6 +3881,46 @@ var (
 			},
 		},
 	}
+	// CommerceOutboxesColumns holds the columns for the "commerce_outboxes" table.
+	CommerceOutboxesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "aggregate_type", Type: field.TypeString},
+		{Name: "aggregate_id", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "published", Type: field.TypeBool, Default: false},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+	}
+	// CommerceOutboxesTable holds the schema information for the "commerce_outboxes" table.
+	CommerceOutboxesTable = &schema.Table{
+		Name:       "commerce_outboxes",
+		Columns:    CommerceOutboxesColumns,
+		PrimaryKey: []*schema.Column{CommerceOutboxesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "commerceoutbox_id",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceOutboxesColumns[0]},
+			},
+			{
+				Name:    "commerceoutbox_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1]},
+			},
+			{
+				Name:    "commerceoutbox_namespace_published",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1], CommerceOutboxesColumns[7]},
+			},
+			{
+				Name:    "commerceoutbox_namespace_aggregate_id",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1], CommerceOutboxesColumns[4]},
+			},
+		},
+	}
 	// CommerceProductsColumns holds the columns for the "commerce_products" table.
 	CommerceProductsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -4556,6 +4596,7 @@ var (
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "customer_id", Type: field.TypeString},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "fulfilled", "failed"}, Default: "pending"},
+		{Name: "claimed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "grant_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "char(26)"}},
 		{Name: "credits_granted", Type: field.TypeInt64, Default: 0},
 		{Name: "fulfilled_at", Type: field.TypeTime, Nullable: true},
@@ -4570,7 +4611,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "fulfillments_commerce_orders_fulfillments",
-				Columns:    []*schema.Column{FulfillmentsColumns[11]},
+				Columns:    []*schema.Column{FulfillmentsColumns[12]},
 				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -4589,7 +4630,7 @@ var (
 			{
 				Name:    "fulfillment_namespace_commerce_order_id",
 				Unique:  true,
-				Columns: []*schema.Column{FulfillmentsColumns[1], FulfillmentsColumns[11]},
+				Columns: []*schema.Column{FulfillmentsColumns[1], FulfillmentsColumns[12]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "status = 'fulfilled'",
 				},
@@ -5889,6 +5930,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{PaymentFactsColumns[1]},
 			},
+			{
+				Name:    "paymentfact_namespace_raw_hash",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentFactsColumns[1], PaymentFactsColumns[3]},
+			},
 		},
 	}
 	// PlansColumns holds the columns for the "plans" table.
@@ -7040,6 +7086,7 @@ var (
 		ChargeUsageBasedRunsTable,
 		CommerceOrdersTable,
 		CommerceOrderLinesTable,
+		CommerceOutboxesTable,
 		CommerceProductsTable,
 		CreditRealizationLineagesTable,
 		CreditRealizationLineageSegmentsTable,

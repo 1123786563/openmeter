@@ -61,6 +61,7 @@ type Handler interface {
 type handler struct {
 	resolveNamespace func(ctx context.Context) (string, error)
 	svc              Services
+	rbac             RBAC
 	options          []httptransport.HandlerOption
 	logger           *slog.Logger
 }
@@ -74,9 +75,106 @@ func New(
 	return &handler{
 		resolveNamespace: resolveNamespace,
 		svc:              svc,
+		rbac:             customerRBAC{},
 		options:          options,
 		logger:           slog.Default(),
 	}
+}
+
+// ---------------------------------------------------------------------------
+// RBAC (C4): ownership verification and admin role checks
+// ---------------------------------------------------------------------------
+
+// RBAC provides ownership verification and role checks. The default
+// implementation reads identity from context values populated by upstream auth
+// middleware (WithAuthCustomerID / WithAuthAdmin). When no auth info is present,
+// checks are permissive so the handler remains usable in dev / single-tenant
+// mode. When an upstream middleware IS wired, it populates the context and the
+// checks enforce strictly.
+type RBAC interface {
+	// AuthenticatedCustomerID returns the customer ID of the authenticated
+	// subject, or "" if none is set. The boolean is false when no auth context
+	// exists at all (permissive mode).
+	AuthenticatedCustomerID(ctx context.Context) (string, bool)
+
+	// IsAdmin reports whether the authenticated subject has an admin role.
+	IsAdmin(ctx context.Context) bool
+}
+
+type customerRBAC struct{}
+
+type rbacContextKey string
+
+const (
+	rbacKeyCustomerID rbacContextKey = "commerce_auth_customer_id"
+	rbacKeyAdmin      rbacContextKey = "commerce_auth_is_admin"
+)
+
+// WithAuthCustomerID stores the authenticated customer ID in context. Upstream
+// auth middleware calls this so the handler can enforce ownership.
+func WithAuthCustomerID(ctx context.Context, customerID string) context.Context {
+	return context.WithValue(ctx, rbacKeyCustomerID, customerID)
+}
+
+// WithAuthAdmin stores whether the authenticated subject is an admin.
+func WithAuthAdmin(ctx context.Context, isAdmin bool) context.Context {
+	return context.WithValue(ctx, rbacKeyAdmin, isAdmin)
+}
+
+func (customerRBAC) AuthenticatedCustomerID(ctx context.Context) (string, bool) {
+	v := ctx.Value(rbacKeyCustomerID)
+	if v == nil {
+		return "", false
+	}
+	s, _ := v.(string)
+	return s, true
+}
+
+func (customerRBAC) IsAdmin(ctx context.Context) bool {
+	v := ctx.Value(rbacKeyAdmin)
+	if v == nil {
+		return true // no auth info — permissive for dev / single-tenant
+	}
+	b, _ := v.(bool)
+	return b
+}
+
+// verifyOwnership ensures the authenticated subject owns the requested customer
+// resource. Returns false (and writes a 403) if access is denied; the caller
+// must return immediately. Permissive when no auth context exists.
+func (h *handler) verifyOwnership(ctx context.Context, w http.ResponseWriter, pathCustomerID string) bool {
+	if h.rbac == nil {
+		return true
+	}
+	authCustomerID, hasAuth := h.rbac.AuthenticatedCustomerID(ctx)
+	if !hasAuth {
+		return true
+	}
+	if h.rbac.IsAdmin(ctx) {
+		return true
+	}
+	if authCustomerID != pathCustomerID {
+		writeStatus(ctx, w, http.StatusForbidden, errors.New("access denied: resource does not belong to the authenticated customer"))
+		return false
+	}
+	return true
+}
+
+// requireAdmin ensures the authenticated subject has an admin role. Returns
+// false (and writes a 403) if denied. Permissive when no auth context exists.
+func (h *handler) requireAdmin(ctx context.Context, w http.ResponseWriter) bool {
+	if h.rbac == nil {
+		return true
+	}
+	_, hasAuth := h.rbac.AuthenticatedCustomerID(ctx)
+	if !hasAuth {
+		return true
+	}
+	if !h.rbac.IsAdmin(ctx) {
+		writeStatus(ctx, w, http.StatusForbidden, errors.New("admin role required for this operation"))
+		return false
+	}
+	return true
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +192,10 @@ func (h *handler) GetCustomerWallet() http.HandlerFunc {
 		customerID := r.PathValue("customerId")
 		if customerID == "" {
 			writeStatus(ctx, w, http.StatusBadRequest, errors.New("customerId is required"))
+			return
+		}
+		// C4: ownership check — authenticated customer may only read their own wallet.
+		if !h.verifyOwnership(ctx, w, customerID) {
 			return
 		}
 		wallet, err := h.svc.Wallet.GetWallet(ctx, ns, customerID)
@@ -145,6 +247,10 @@ func (h *handler) CreateProduct() http.HandlerFunc {
 			writeCommerceError(ctx, w, err)
 			return
 		}
+		// C4: admin-only mutation.
+		if !h.requireAdmin(ctx, w) {
+			return
+		}
 		var body struct {
 			SKU          string                `json:"sku"`
 			DisplayName  string                `json:"display_name"`
@@ -186,6 +292,10 @@ func (h *handler) UpdateProduct() http.HandlerFunc {
 		ns, err := h.resolveNamespace(ctx)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
+			return
+		}
+		// C4: admin-only mutation.
+		if !h.requireAdmin(ctx, w) {
 			return
 		}
 		productID := r.PathValue("productId")
@@ -273,6 +383,10 @@ func (h *handler) GetOrder() http.HandlerFunc {
 		order, err := h.svc.Orders.GetOrder(ctx, ns, orderID)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
+			return
+		}
+		// C4: ownership check — verify the authenticated customer owns this order.
+		if !h.verifyOwnership(ctx, w, order.CustomerID) {
 			return
 		}
 		writeJSON(ctx, w, http.StatusOK, toAPIOrder(order))
@@ -448,6 +562,10 @@ func (h *handler) CreateRefund() http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
 		}
+		// C4: ownership check — verify the caller owns the refund's customer.
+		if !h.verifyOwnership(ctx, w, body.BillingCustomerId) {
+			return
+		}
 		rec, created, err := h.svc.Refund.CreateRefund(ctx, refund.CreateRefundInput{
 			Namespace:      ns,
 			OrderID:        body.OrderId,
@@ -488,6 +606,10 @@ func (h *handler) GetRefund() http.HandlerFunc {
 		rec, err := h.svc.Refund.GetRefund(ctx, ns, refundID)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
+			return
+		}
+		// C4: ownership check — verify the authenticated customer owns this refund.
+		if !h.verifyOwnership(ctx, w, rec.CustomerID) {
 			return
 		}
 		writeJSON(ctx, w, http.StatusOK, toAPIRefund(rec))

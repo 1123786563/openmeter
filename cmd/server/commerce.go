@@ -10,6 +10,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce/catalog"
 	"github.com/openmeterio/openmeter/openmeter/commerce/fulfillment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/order"
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/reconciliation"
 	"github.com/openmeterio/openmeter/openmeter/commerce/wallet"
 	"github.com/openmeterio/openmeter/openmeter/commerce/worker"
@@ -225,4 +226,36 @@ func (a fulfillmentOrderAdapter) GetOrder(ctx context.Context, namespace, id str
 
 func (a fulfillmentOrderAdapter) UpdateOrderStatus(ctx context.Context, namespace, id string, expectedFrom, to commerce.OrderStatus) (*commerce.Order, error) {
 	return a.EntAdapter.UpdateOrderStatus(ctx, namespace, id, expectedFrom, to)
+}
+
+// ---------------------------------------------------------------------------
+// PaidTxRunner adapter (C2)
+// ---------------------------------------------------------------------------
+
+// entPaidTxRunner bridges commerce.EntAdapter.RunPaidTransition to the
+// payment.PaidTxRunner interface. It executes the atomic paid transition
+// (insert fact + move order to paid + create fulfillment + write outbox) within
+// a single customer-locked Ent transaction.
+type entPaidTxRunner struct {
+	adapter *commerce.EntAdapter
+}
+
+// RunPaidTransition implements payment.PaidTxRunner. It delegates to the
+// EntAdapter's transactional RunPaidTransition, then maps the result.
+func (r *entPaidTxRunner) RunPaidTransition(ctx context.Context, in payment.PaidTransitionInput) (payment.PaidTransitionResult, error) {
+	err := r.adapter.RunPaidTransition(ctx, commerce.PaidTransitionParams{
+		Namespace:        in.Namespace,
+		CustomerID:       in.Attempt.CustomerID,
+		OrderID:          in.Attempt.OrderID,
+		PaymentAttemptID: in.Attempt.ID,
+		RawHash:          in.Fact.RawHash,
+		Provider:         string(in.Attempt.Provider),
+		SignedPayload:    in.Fact.SignedPayload,
+	})
+	if err != nil {
+		return payment.PaidTransitionResult{}, err
+	}
+	return payment.PaidTransitionResult{
+		Fact: &in.Fact,
+	}, nil
 }

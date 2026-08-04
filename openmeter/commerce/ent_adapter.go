@@ -15,7 +15,9 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/billingcustomerlock"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
+	dbgrant "github.com/openmeterio/openmeter/openmeter/ent/db/grant"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/receivableaccount"
+	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"
 	"github.com/openmeterio/openmeter/pkg/framework/transaction"
 	"github.com/openmeterio/openmeter/pkg/models"
@@ -376,9 +378,70 @@ func (a *EntAdapter) ListOrdersByCustomer(ctx context.Context, namespace, custom
 // queries the Credit Ledger's grant balances via the collector; this provides
 // the interface contract for the wallet service.
 func (a *EntAdapter) GetGrants(ctx context.Context, namespace, customerID string) ([]AllocationGrant, error) {
-	// Placeholder: the full wallet data port queries the ledger collector for
-	// grant balances. This is wired in the server composition layer (Task 4+).
-	return []AllocationGrant{}, nil
+	// I3: query the Phase 1 Grant table directly. Grants with VoidedAt=nil and
+	// not expired are active. The consumed amount requires the ledger collector
+	// (Balance), so we report Granted as the grant amount and Consumed=0; the
+	// refund service independently computes refundable credits from the wallet
+	// snapshot. This returns real allocation data instead of an empty stub.
+	q := a.db.Grant.Query().
+		Where(
+			dbgrant.NamespaceEQ(namespace),
+			dbgrant.OwnerIDEQ(customerID),
+			dbgrant.VoidedAtIsNil(),
+		)
+
+	grants, err := q.All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ent: list grants: %w", err)
+	}
+
+	result := make([]AllocationGrant, 0, len(grants))
+	for _, g := range grants {
+		// Skip expired grants.
+		if g.ExpiresAt != nil && g.ExpiresAt.Before(clock.Now()) {
+			continue
+		}
+		granted := int64(g.Amount)
+		source := sourceFromPriority(int(g.Priority))
+		result = append(result, AllocationGrant{
+			GrantID:   g.ID,
+			Source:    source,
+			Granted:   granted,
+			Consumed:  0, // requires ledger collector; refund path computes independently
+			Priority:  SourcePriority(source),
+			ExpiresAt: g.ExpiresAt,
+			CreatedAt: g.CreatedAt,
+			// Refundable: only recharge grants are refundable. We report the
+			// full granted amount as refundable for recharge; the refund
+			// service applies the actual unspent computation via ReserveCredits.
+			Refundable: refundableForSource(source, granted),
+		})
+	}
+	return result, nil
+}
+
+// sourceFromPriority maps a grant's numeric priority to a BucketSource using
+// the SourcePriority ranges (plan=10, gift=20, recharge=30, enterprise=40).
+func sourceFromPriority(p int) BucketSource {
+	switch {
+	case p < 15:
+		return BucketSourcePlan
+	case p < 25:
+		return BucketSourceGift
+	case p < 35:
+		return BucketSourceRecharge
+	default:
+		return BucketSourceEnterpriseReceivable
+	}
+}
+
+// refundableForSource returns the refundable amount for a source. Only recharge
+// credits are refundable; the exact unspent computation happens in ReserveCredits.
+func refundableForSource(source BucketSource, granted int64) int64 {
+	if source == BucketSourceRecharge {
+		return granted
+	}
+	return 0
 }
 
 // GetEnterpriseReceivable reads the enterprise receivable account for a customer.
