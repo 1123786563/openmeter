@@ -24,13 +24,13 @@ import (
 var ValidTransitions = map[commerce.OrderStatus]map[commerce.OrderStatus]bool{
 	commerce.OrderStatusCreated: {
 		commerce.OrderStatusAwaitingPayment: true,
-		commerce.OrderStatusCancelled:        true,
-		commerce.OrderStatusExpired:          true,
+		commerce.OrderStatusCancelled:       true,
+		commerce.OrderStatusExpired:         true,
 	},
 	commerce.OrderStatusAwaitingPayment: {
-		commerce.OrderStatusPaid:       true,
-		commerce.OrderStatusCancelled:  true,
-		commerce.OrderStatusExpired:    true,
+		commerce.OrderStatusPaid:      true,
+		commerce.OrderStatusCancelled: true,
+		commerce.OrderStatusExpired:   true,
 	},
 	commerce.OrderStatusPaid: {
 		commerce.OrderStatusFulfilled: true,
@@ -40,15 +40,15 @@ var ValidTransitions = map[commerce.OrderStatus]map[commerce.OrderStatus]bool{
 	},
 	commerce.OrderStatusRefundPending: {
 		commerce.OrderStatusPartiallyRefunded: true,
-		commerce.OrderStatusRefunded:           true,
+		commerce.OrderStatusRefunded:          true,
 	},
 	commerce.OrderStatusPartiallyRefunded: {
 		commerce.OrderStatusRefunded: true,
 	},
 	// Terminal states: no outgoing transitions.
-	commerce.OrderStatusCancelled:         {},
-	commerce.OrderStatusExpired:           {},
-	commerce.OrderStatusRefunded:          {},
+	commerce.OrderStatusCancelled: {},
+	commerce.OrderStatusExpired:   {},
+	commerce.OrderStatusRefunded:  {},
 }
 
 // CanTransition returns true if transitioning from `from` to `to` is allowed

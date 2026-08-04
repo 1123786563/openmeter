@@ -83,7 +83,7 @@ type service struct {
 	orders  OrderService
 }
 
-func (s *service) Wallet() WalletService  { return s.wallet }
+func (s *service) Wallet() WalletService   { return s.wallet }
 func (s *service) Catalog() CatalogService { return s.catalog }
 func (s *service) Orders() OrderService    { return s.orders }
 

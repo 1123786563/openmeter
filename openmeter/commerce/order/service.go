@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 
@@ -30,9 +31,9 @@ type ProductLookup interface {
 
 // Config wires the order service.
 type Config struct {
-	Repo    Repository
+	Repo     Repository
 	Products ProductLookup
-	Logger  *slog.Logger
+	Logger   *slog.Logger
 }
 
 // Service is the order lifecycle interface.
@@ -162,11 +163,12 @@ func snapshotProduct(p commerce.Product) commerce.OrderLineSnapshot {
 		SubtotalMinor:      p.AmountMinor,
 		Credits:            p.Credits,
 		Currency:           p.Currency,
+		ValidityDays:       p.ValidityDays,
 		IncludedPlanCredit: planCreditForKind(p),
 		Metadata: map[string]string{
-			"product_version":  fmt.Sprintf("%d", p.Version),
-			"refund_policy":    string(p.RefundPolicy),
-			"bonus_credits":    fmt.Sprintf("%d", p.BonusCredits),
+			"product_version": fmt.Sprintf("%d", p.Version),
+			"refund_policy":   string(p.RefundPolicy),
+			"bonus_credits":   fmt.Sprintf("%d", p.BonusCredits),
 		},
 	}
 }
@@ -219,21 +221,22 @@ func validateCreateInput(in commerce.CreateOrderInput) error {
 	return models.NewNillableGenericValidationError(errors.Join(errs...))
 }
 
-// RenewalSchedule describes the monthly plan-credit grants scheduled for a
-// yearly subscription renewal. A yearly renewal never grants the whole annual
-// credit at payment time — it schedules twelve monthly grants starting from
-// fulfillment.
-type RenewalSchedule struct {
+// RenewalScheduleEntry is one monthly grant in a yearly subscription renewal
+// schedule. A yearly renewal never grants the whole annual credit at payment
+// time — it schedules twelve monthly grants starting from fulfillment.
+type RenewalScheduleEntry struct {
 	OrderID    string
-	MonthlyGrant int64
-	Months     int
-	StartDate  string // RFC3339
+	GrantDate  time.Time
+	Credits    int64
+	MonthIndex int // 1-based: 1 through 12
 }
 
-// ScheduleYearlyRenewal produces the twelve-month grant schedule for a yearly
-// Pro/Team subscription renewal. Each month grants exactly 1/12 of the total
-// plan credits. The schedule starts at fulfillment, not at payment.
-func ScheduleYearlyRenewal(order commerce.Order) []RenewalSchedule {
+// ScheduleYearlyRenewal produces twelve concrete monthly grant entries for a
+// yearly Pro/Team subscription renewal. Each entry grants exactly 1/12 of the
+// total plan credits, scheduled one month apart starting from the order's
+// UpdatedAt (which represents fulfillment time). The annual credit is never
+// granted at payment time.
+func ScheduleYearlyRenewal(order commerce.Order) []RenewalScheduleEntry {
 	if order.Kind != commerce.OrderKindSubscriptionRenewal {
 		return nil
 	}
@@ -251,18 +254,21 @@ func ScheduleYearlyRenewal(order commerce.Order) []RenewalSchedule {
 		monthly = 1 // floor at 1 Credit per month
 	}
 
-	// The schedule is only valid after fulfillment; we record start date.
-	startDate := order.UpdatedAt
-	if order.ExpiredAt != nil {
-		startDate = *order.ExpiredAt
+	start := order.UpdatedAt
+	if start.IsZero() {
+		start = time.Now()
 	}
 
-	return []RenewalSchedule{{
-		OrderID:      order.ID,
-		MonthlyGrant: monthly,
-		Months:       12,
-		StartDate:    startDate.Format("2006-01-02"),
-	}}
+	entries := make([]RenewalScheduleEntry, 12)
+	for i := 0; i < 12; i++ {
+		entries[i] = RenewalScheduleEntry{
+			OrderID:    order.ID,
+			GrantDate:  start.AddDate(0, i, 0),
+			Credits:    monthly,
+			MonthIndex: i + 1,
+		}
+	}
+	return entries
 }
 
 // IsTerminal returns true if the status is a terminal state (no further

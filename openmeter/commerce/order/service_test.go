@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -15,10 +14,10 @@ import (
 // --- Mock implementations ---
 
 type mockRepo struct {
-	mu       sync.Mutex
-	orders   map[string]*commerce.Order
-	byIdem   map[string]string // (namespace+customerID+key) -> orderID
-	statusN  atomic.Int64      // count of status updates
+	mu      sync.Mutex
+	orders  map[string]*commerce.Order
+	byIdem  map[string]string // (namespace+customerID+key) -> orderID
+	statusN atomic.Int64      // count of status updates
 }
 
 func newMockRepo() *mockRepo {
@@ -468,23 +467,28 @@ func TestYearlyRenewalSchedulesMonthlyGrants(t *testing.T) {
 	}
 
 	schedule := ScheduleYearlyRenewal(*order)
-	if len(schedule) != 1 {
-		t.Fatalf("expected 1 schedule entry, got %d", len(schedule))
+	if len(schedule) != 12 {
+		t.Fatalf("expected 12 monthly entries, got %d", len(schedule))
 	}
 
-	s := schedule[0]
-	if s.Months != 12 {
-		t.Errorf("months = %d, want 12", s.Months)
-	}
 	// 120000 / 12 = 10000 per month
-	if s.MonthlyGrant != 10000 {
-		t.Errorf("monthly_grant = %d, want 10000", s.MonthlyGrant)
+	for i, e := range schedule {
+		if e.Credits != 10000 {
+			t.Errorf("entry[%d] credits = %d, want 10000", i, e.Credits)
+		}
+		if e.MonthIndex != i+1 {
+			t.Errorf("entry[%d] month_index = %d, want %d", i, e.MonthIndex, i+1)
+		}
+		// Each grant date is one month apart.
+		expectedDate := schedule[0].GrantDate.AddDate(0, i, 0)
+		if !e.GrantDate.Equal(expectedDate) {
+			t.Errorf("entry[%d] grant_date = %v, want %v", i, e.GrantDate, expectedDate)
+		}
 	}
 
 	// Verify the annual credit is NOT granted upfront at order creation time.
-	// The order line has the total credits snapshot, but the schedule splits
-	// it into 12 monthly grants. The fulfillment grants monthly, not annual.
-	if s.MonthlyGrant >= 120000 {
+	// Each monthly grant is 1/12 of the total, not the full amount.
+	if schedule[0].Credits >= 120000 {
 		t.Fatal("monthly grant should not equal the full annual credit")
 	}
 }
@@ -609,64 +613,25 @@ func TestConcurrentOrderCreation(t *testing.T) {
 	}
 }
 
-// TestConcurrentDebitConsumptionPriority verifies that two simultaneous debits
-// that together exceed recharge credit result in exactly one consuming the
-// remaining paid bucket and the other failing (or proceeding to enterprise
-// receivable when enabled).
-func TestConcurrentDebitConsumptionPriority(t *testing.T) {
-	// This test verifies the consumption priority logic at the domain level.
-	// Two debits: recharge bucket has 100 credits, debit 70 and 50.
-	// One gets 70 (remaining 30), the other gets 30 from recharge and 20 from
-	// enterprise receivable if enabled, or fails.
-
-	rechargeRemaining := int64(100)
-	enterpriseCeiling := int64(10000)
-	enterpriseUsed := int64(0)
-
-	// Simulate consumption: plan=10, gift=20, recharge=30, enterprise_receivable=40.
-	// No plan or gift credits in this scenario.
-	consume := func(amount int64) (int64, error) {
-		// First try recharge.
-		if rechargeRemaining >= amount {
-			rechargeRemaining -= amount
-			return 0, nil
+// TestConsumptionPriorityConstants verifies that the fixed source-priority
+// ordering matches the contract: plan=10, gift=20, recharge=30,
+// enterprise_receivable=40. The full CreditEngine implementation (concurrent
+// debit with spillover to enterprise receivable) is deferred to a later task;
+// this test only guards the constants.
+func TestConsumptionPriorityConstants(t *testing.T) {
+	tests := []struct {
+		source commerce.BucketSource
+		want   int
+	}{
+		{commerce.BucketSourcePlan, 10},
+		{commerce.BucketSourceGift, 20},
+		{commerce.BucketSourceRecharge, 30},
+		{commerce.BucketSourceEnterpriseReceivable, 40},
+	}
+	for _, tt := range tests {
+		got := commerce.SourcePriority(tt.source)
+		if got != tt.want {
+			t.Errorf("SourcePriority(%s) = %d, want %d", tt.source, got, tt.want)
 		}
-		// Partially consume recharge, then enterprise.
-		remaining := amount - rechargeRemaining
-		rechargeRemaining = 0
-
-		avail := enterpriseCeiling - enterpriseUsed
-		if avail >= remaining {
-			enterpriseUsed += remaining
-			return 0, nil
-		}
-		return remaining - avail, fmt.Errorf("insufficient credits")
-	}
-
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var results []int64
-
-	for _, amt := range []int64{70, 50} {
-		wg.Add(1)
-		go func(amount int64) {
-			defer wg.Done()
-			mu.Lock()
-			remaining, _ := consume(amount)
-			results = append(results, remaining)
-			mu.Unlock()
-		}(amt)
-	}
-	wg.Wait()
-
-	// Exactly one should fully consume from recharge (70), the other gets 30
-	// from recharge + 20 from enterprise. Total consumed from recharge = 100.
-	if rechargeRemaining != 0 {
-		t.Errorf("recharge remaining = %d, want 0 (both debits exhausted recharge)", rechargeRemaining)
-	}
-
-	// Enterprise should have absorbed the spillover: 50 - 30 = 20.
-	if enterpriseUsed != 20 {
-		t.Errorf("enterprise used = %d, want 20", enterpriseUsed)
 	}
 }

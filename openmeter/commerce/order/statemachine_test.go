@@ -1,6 +1,7 @@
 package order
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce"
@@ -66,12 +67,7 @@ func TestInvalidTransitionReturnsStableError(t *testing.T) {
 }
 
 func isInvalidTransitionError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// Check by wrapping the sentinel comparison. We use errors.Is semantics
-	// via the models.ValidationIssue type.
-	return err.Error() != ""
+	return errors.Is(err, commerce.ErrInvalidOrderTransition)
 }
 
 // TestIsTerminal verifies terminal state detection.

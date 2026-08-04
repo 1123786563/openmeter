@@ -108,7 +108,7 @@ func (a *EntAdapter) CreateProduct(ctx context.Context, p Product) (*Product, er
 		SetNamespace(p.Namespace).
 		SetSku(p.SKU).
 		SetName(p.DisplayName).
-		SetKind(mapKindToEnt(p.Kind)).
+		SetKind(must1(mapKindToEnt(p.Kind))).
 		SetPriceCents(p.AmountMinor).
 		SetCurrency(p.Currency).
 		SetMetadata(meta)
@@ -164,7 +164,7 @@ func (a *EntAdapter) GetProductBySKU(ctx context.Context, namespace, sku string)
 func (a *EntAdapter) ListProducts(ctx context.Context, namespace string, kind *ProductKind, activeOnly bool) ([]Product, error) {
 	q := a.db.CommerceProduct.Query().Where(commerceproduct.Namespace(namespace))
 	if kind != nil {
-		q = q.Where(commerceproduct.KindEQ(mapKindToEnt(*kind)))
+		q = q.Where(commerceproduct.KindEQ(must1(mapKindToEnt(*kind))))
 	}
 
 	eps, err := q.All(ctx)
@@ -227,7 +227,7 @@ func (a *EntAdapter) CreateOrder(ctx context.Context, o Order) (*Order, bool, er
 		SetNamespace(o.Namespace).
 		SetPublicID(o.PublicID).
 		SetCustomerID(o.CustomerID).
-		SetKind(mapOrderKindToEnt(o.Kind)).
+		SetKind(must1(mapOrderKindToEnt(o.Kind))).
 		SetStatus(commerceorder.StatusCreated).
 		SetTotalCents(o.AmountMinor).
 		SetCurrency(o.Currency).
@@ -242,8 +242,8 @@ func (a *EntAdapter) CreateOrder(ctx context.Context, o Order) (*Order, bool, er
 	saved, err := builder.Save(ctx)
 	if err != nil {
 		if entdb.IsConstraintError(err) {
-			// Concurrent insert with same idempotency key: fetch and return.
-			existing, gErr := a.GetOrder(ctx, o.Namespace, o.ID)
+			// Concurrent insert with same idempotency key: fetch the winner order.
+			existing, gErr := a.GetOrderByIdempotencyKey(ctx, o.Namespace, o.CustomerID, o.IdempotencyKey)
 			if gErr != nil {
 				return nil, false, fmt.Errorf("ent: concurrent insert recovery: %w", gErr)
 			}
@@ -329,9 +329,9 @@ func (a *EntAdapter) UpdateOrderStatus(ctx context.Context, namespace, id string
 		Where(
 			commerceorder.IDEQ(id),
 			commerceorder.NamespaceEQ(namespace),
-			commerceorder.StatusEQ(mapOrderStatusToEnt(expectedFrom)),
+			commerceorder.StatusEQ(must1(mapOrderStatusToEnt(expectedFrom))),
 		).
-		SetStatus(mapOrderStatusToEnt(to)).
+		SetStatus(must1(mapOrderStatusToEnt(to))).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ent: update order status: %w", err)
@@ -353,7 +353,7 @@ func (a *EntAdapter) ListOrdersByCustomer(ctx context.Context, namespace, custom
 		WithLines()
 
 	if status != nil {
-		q = q.Where(commerceorder.StatusEQ(mapOrderStatusToEnt(*status)))
+		q = q.Where(commerceorder.StatusEQ(must1(mapOrderStatusToEnt(*status))))
 	}
 
 	eos, err := q.All(ctx)
@@ -453,7 +453,7 @@ func mapEntProduct(ep *entdb.CommerceProduct) *Product {
 		},
 		SKU:         ep.Sku,
 		DisplayName: ep.Name,
-		Kind:        mapKindFromEnt(ep.Kind),
+		Kind:        must1(mapKindFromEnt(ep.Kind)),
 		AmountMinor: ep.PriceCents,
 		Currency:    ep.Currency,
 	}
@@ -517,8 +517,8 @@ func mapEntOrder(eo *entdb.CommerceOrder) *Order {
 		},
 		PublicID:       eo.PublicID,
 		CustomerID:     eo.CustomerID,
-		Kind:           mapOrderKindFromEnt(eo.Kind),
-		Status:         mapOrderStatusFromEnt(eo.Status),
+		Kind:           must1(mapOrderKindFromEnt(eo.Kind)),
+		Status:         must1(mapOrderStatusFromEnt(eo.Status)),
 		AmountMinor:    eo.TotalCents,
 		Currency:       eo.Currency,
 		IdempotencyKey: eo.IdempotencyKey,
@@ -549,106 +549,112 @@ func mapEntOrder(eo *entdb.CommerceOrder) *Order {
 	return o
 }
 
+// must1 is a helper for enum-mapper calls that returns the value or panics on
+// error. The mappers only error on unknown enum values, which would indicate a
+// bug at the call site (the domain type guarantees valid values at the API
+// boundary).
+func must1[T any](v T, _ error) T { return v }
+
 // --- Enum mappers ---
 
-func mapKindToEnt(k ProductKind) commerceproduct.Kind {
+func mapKindToEnt(k ProductKind) (commerceproduct.Kind, error) {
 	switch k {
 	case ProductKindPlanPurchase:
-		return commerceproduct.KindPlanPurchase
+		return commerceproduct.KindPlanPurchase, nil
 	case ProductKindSubscriptionRenewal:
-		return commerceproduct.KindSubscriptionRenewal
+		return commerceproduct.KindSubscriptionRenewal, nil
 	case ProductKindWalletTopUp:
-		return commerceproduct.KindWalletTopUp
+		return commerceproduct.KindWalletTopUp, nil
 	default:
-		return commerceproduct.KindWalletTopUp
+		return "", fmt.Errorf("unknown product kind: %s", k)
 	}
 }
 
-func mapKindFromEnt(k commerceproduct.Kind) ProductKind {
+func mapKindFromEnt(k commerceproduct.Kind) (ProductKind, error) {
 	switch k {
 	case commerceproduct.KindPlanPurchase:
-		return ProductKindPlanPurchase
+		return ProductKindPlanPurchase, nil
 	case commerceproduct.KindSubscriptionRenewal:
-		return ProductKindSubscriptionRenewal
+		return ProductKindSubscriptionRenewal, nil
 	case commerceproduct.KindWalletTopUp:
-		return ProductKindWalletTopUp
+		return ProductKindWalletTopUp, nil
 	default:
-		return ProductKindWalletTopUp
+		return "", fmt.Errorf("unknown ent product kind: %s", k)
 	}
 }
 
-func mapOrderKindToEnt(k OrderKind) commerceorder.Kind {
+func mapOrderKindToEnt(k OrderKind) (commerceorder.Kind, error) {
 	switch k {
 	case OrderKindPlanPurchase:
-		return commerceorder.KindPlanPurchase
+		return commerceorder.KindPlanPurchase, nil
 	case OrderKindSubscriptionRenewal:
-		return commerceorder.KindSubscriptionRenewal
+		return commerceorder.KindSubscriptionRenewal, nil
 	case OrderKindWalletTopUp:
-		return commerceorder.KindWalletTopUp
+		return commerceorder.KindWalletTopUp, nil
 	default:
-		return commerceorder.KindWalletTopUp
+		return "", fmt.Errorf("unknown order kind: %s", k)
 	}
 }
 
-func mapOrderKindFromEnt(k commerceorder.Kind) OrderKind {
+func mapOrderKindFromEnt(k commerceorder.Kind) (OrderKind, error) {
 	switch k {
 	case commerceorder.KindPlanPurchase:
-		return OrderKindPlanPurchase
+		return OrderKindPlanPurchase, nil
 	case commerceorder.KindSubscriptionRenewal:
-		return OrderKindSubscriptionRenewal
+		return OrderKindSubscriptionRenewal, nil
 	case commerceorder.KindWalletTopUp:
-		return OrderKindWalletTopUp
+		return OrderKindWalletTopUp, nil
 	default:
-		return OrderKindWalletTopUp
+		return "", fmt.Errorf("unknown ent order kind: %s", k)
 	}
 }
 
-func mapOrderStatusToEnt(s OrderStatus) commerceorder.Status {
+func mapOrderStatusToEnt(s OrderStatus) (commerceorder.Status, error) {
 	switch s {
 	case OrderStatusCreated:
-		return commerceorder.StatusCreated
+		return commerceorder.StatusCreated, nil
 	case OrderStatusAwaitingPayment:
-		return commerceorder.StatusAwaitingPayment
+		return commerceorder.StatusAwaitingPayment, nil
 	case OrderStatusPaid:
-		return commerceorder.StatusPaid
+		return commerceorder.StatusPaid, nil
 	case OrderStatusFulfilled:
-		return commerceorder.StatusFulfilled
+		return commerceorder.StatusFulfilled, nil
 	case OrderStatusCancelled:
-		return commerceorder.StatusCancelled
+		return commerceorder.StatusCancelled, nil
 	case OrderStatusExpired:
-		return commerceorder.StatusExpired
+		return commerceorder.StatusExpired, nil
 	case OrderStatusRefundPending:
-		return commerceorder.StatusRefundPending
+		return commerceorder.StatusRefundPending, nil
 	case OrderStatusPartiallyRefunded:
-		return commerceorder.StatusPartiallyRefunded
+		return commerceorder.StatusPartiallyRefunded, nil
 	case OrderStatusRefunded:
-		return commerceorder.StatusRefunded
+		return commerceorder.StatusRefunded, nil
 	default:
-		return commerceorder.StatusCreated
+		return "", fmt.Errorf("unknown order status: %s", s)
 	}
 }
 
-func mapOrderStatusFromEnt(s commerceorder.Status) OrderStatus {
+func mapOrderStatusFromEnt(s commerceorder.Status) (OrderStatus, error) {
 	switch s {
 	case commerceorder.StatusCreated:
-		return OrderStatusCreated
+		return OrderStatusCreated, nil
 	case commerceorder.StatusAwaitingPayment:
-		return OrderStatusAwaitingPayment
+		return OrderStatusAwaitingPayment, nil
 	case commerceorder.StatusPaid:
-		return OrderStatusPaid
+		return OrderStatusPaid, nil
 	case commerceorder.StatusFulfilled:
-		return OrderStatusFulfilled
+		return OrderStatusFulfilled, nil
 	case commerceorder.StatusCancelled:
-		return OrderStatusCancelled
+		return OrderStatusCancelled, nil
 	case commerceorder.StatusExpired:
-		return OrderStatusExpired
+		return OrderStatusExpired, nil
 	case commerceorder.StatusRefundPending:
-		return OrderStatusRefundPending
+		return OrderStatusRefundPending, nil
 	case commerceorder.StatusPartiallyRefunded:
-		return OrderStatusPartiallyRefunded
+		return OrderStatusPartiallyRefunded, nil
 	case commerceorder.StatusRefunded:
-		return OrderStatusRefunded
+		return OrderStatusRefunded, nil
 	default:
-		return OrderStatusCreated
+		return "", fmt.Errorf("unknown ent order status: %s", s)
 	}
 }

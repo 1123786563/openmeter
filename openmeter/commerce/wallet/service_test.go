@@ -62,8 +62,8 @@ func TestWalletAggregationTable(t *testing.T) {
 	}
 
 	expected := []struct {
-		source    commerce.BucketSource
-		available int64
+		source     commerce.BucketSource
+		available  int64
 		refundable *int64
 	}{
 		{commerce.BucketSourcePlan, 600, nil},
@@ -233,7 +233,7 @@ func TestWalletChangesOnlyAfterFactsChange(t *testing.T) {
 func TestWalletSkipsFullyConsumedGrants(t *testing.T) {
 	grants := []commerce.AllocationGrant{
 		{GrantID: "g1", Source: commerce.BucketSourcePlan, Granted: 100, Consumed: 100, Priority: 10}, // exactly consumed
-		{GrantID: "g2", Source: commerce.BucketSourceGift, Granted: 100, Consumed: 150, Priority: 20},  // over-consumed
+		{GrantID: "g2", Source: commerce.BucketSourceGift, Granted: 100, Consumed: 150, Priority: 20}, // over-consumed
 		{GrantID: "g3", Source: commerce.BucketSourceRecharge, Granted: 100, Consumed: 50, Priority: 30, Refundable: 50},
 	}
 	buckets := AggregateBuckets(grants, nil)

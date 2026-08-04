@@ -67,8 +67,8 @@ const (
 // LedgerProvenance links a Wallet transaction to its underlying ledger entry
 // without exposing internal Ent IDs.
 type LedgerProvenance struct {
-	GrantID  string      `json:"grant_id"`
-	Priority int         `json:"priority"`
+	GrantID  string       `json:"grant_id"`
+	Priority int          `json:"priority"`
 	Source   BucketSource `json:"source"`
 }
 
@@ -139,6 +139,7 @@ type Product struct {
 	OffSaleAt       *time.Time   `json:"off_sale_at,omitempty"`
 	PurchaseLimit   int          `json:"purchase_limit,omitempty"`
 	RefundPolicy    RefundPolicy `json:"refund_policy"`
+	ValidityDays    int          `json:"validity_days,omitempty"`
 	BonusCredits    int64        `json:"bonus_credits,omitempty"`
 	Description     string       `json:"description,omitempty"`
 	Metadata        []byte       `json:"metadata,omitempty"`
@@ -196,11 +197,11 @@ type Order struct {
 	models.ManagedModel
 
 	PublicID               string              `json:"public_id"`
-	CustomerID             string             `json:"customer_id"`
+	CustomerID             string              `json:"customer_id"`
 	Kind                   OrderKind           `json:"kind"`
 	Status                 OrderStatus         `json:"status"`
 	AmountMinor            int64               `json:"amount_minor"`
-	Currency               string             `json:"currency"`
+	Currency               string              `json:"currency"`
 	IdempotencyKey         string              `json:"idempotency_key"`
 	Lines                  []OrderLineSnapshot `json:"lines"`
 	BusinessTrackingNumber *string             `json:"business_tracking_number,omitempty"`
