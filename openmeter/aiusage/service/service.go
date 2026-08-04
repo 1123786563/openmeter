@@ -158,7 +158,23 @@ func (s *svc) Settle(ctx context.Context, in aiusage.IngestBatchInput) (*aiusage
 
 	var result *aiusage.BatchSettlementResult
 
-	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(tx adapter.TxAdapter) error {
+	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(ctx context.Context, tx adapter.TxAdapter) error {
+		// Idempotency short-circuit (Finding B): if a batch with this
+		// UsageBatchID already exists, return it without calling the
+		// collector. This prevents a second collector invocation on replay.
+		existing, err := tx.GetBatchByIdempotencyKey(ctx, in.Namespace, in.CustomerID, in.UsageBatchID)
+		if err != nil {
+			return fmt.Errorf("idempotency check: %w", err)
+		}
+		if existing != nil {
+			result = &aiusage.BatchSettlementResult{
+				BatchID:          existing.UsageBatchID,
+				Status:           existing.Status,
+				CoveredTenantSeq: existing.TenantSeq,
+			}
+			return nil
+		}
+
 		// Settle through the collector inside the locked transaction.
 		allocations, err := s.settlement.AllocateAndBook(ctx, tx, settlement.SettlementInput{
 			Namespace:       in.Namespace,
@@ -269,7 +285,22 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 
 	var result *aiusage.BatchSettlementResult
 
-	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(tx adapter.TxAdapter) error {
+	err = s.adp.WithCustomerLock(ctx, in.Namespace, in.CustomerID, func(ctx context.Context, tx adapter.TxAdapter) error {
+		// Idempotency short-circuit (Finding B): skip the collector on replay.
+		correctionBatchID := "corr-" + in.OriginalBatchID
+		existing, err := tx.GetBatchByIdempotencyKey(ctx, in.Namespace, in.CustomerID, correctionBatchID)
+		if err != nil {
+			return fmt.Errorf("idempotency check: %w", err)
+		}
+		if existing != nil {
+			result = &aiusage.BatchSettlementResult{
+				BatchID:          existing.UsageBatchID,
+				Status:           existing.Status,
+				CoveredTenantSeq: existing.TenantSeq,
+			}
+			return nil
+		}
+
 		// Fetch original allocations.
 		originalAllocs, err := s.allocFetcher.GetAllocations(ctx, in.Namespace, in.CustomerID, in.OriginalBatchID)
 		if err != nil {
@@ -292,7 +323,6 @@ func (s *svc) Correct(ctx context.Context, in aiusage.CorrectionInput) (*aiusage
 			return err
 		}
 
-		correctionBatchID := "corr-" + in.OriginalBatchID
 
 		settled := aiusage.SettledBatch{
 			Namespace:       in.Namespace,

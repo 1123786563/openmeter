@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,14 +29,14 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockAdapter struct {
-	mu          sync.Mutex
-	txAdapter   *mockTxAdapter
-	lockErr     error
-	committed   bool
-	rolledBack  bool
+	mu         sync.Mutex
+	txAdapter  *mockTxAdapter
+	lockErr    error
+	committed  bool
+	rolledBack bool
 }
 
-func (a *mockAdapter) WithCustomerLock(_ context.Context, _, _ string, fn func(adapter.TxAdapter) error) error {
+func (a *mockAdapter) WithCustomerLock(ctx context.Context, _, _ string, fn func(ctx context.Context, tx adapter.TxAdapter) error) error {
 	if a.lockErr != nil {
 		return a.lockErr
 	}
@@ -44,7 +45,7 @@ func (a *mockAdapter) WithCustomerLock(_ context.Context, _, _ string, fn func(a
 	a.rolledBack = false
 	a.mu.Unlock()
 
-	err := fn(a.txAdapter)
+	err := fn(ctx, a.txAdapter)
 	a.mu.Lock()
 	if err != nil {
 		a.rolledBack = true
@@ -63,19 +64,20 @@ type mockTxAdapter struct {
 	watermarkErr  error
 	outboxEvents  []aiusage.OutboxEvent
 	outboxErr     error
-	dedupByKey    map[string]bool
-	idempotentKey string
+	storedBatches map[string]*aiusage.AIUsageBatch
 }
 
 func newMockTxAdapter() *mockTxAdapter {
 	return &mockTxAdapter{
-		dedupByKey: make(map[string]bool),
+		storedBatches: make(map[string]*aiusage.AIUsageBatch),
 	}
 }
 
 func (m *mockTxAdapter) GetBatchByIdempotencyKey(_ context.Context, _, _, key string) (*aiusage.AIUsageBatch, error) {
-	if m.idempotentKey != "" && key == m.idempotentKey {
-		return &aiusage.AIUsageBatch{UsageBatchID: key, Status: aiusage.BatchStatusSettled}, nil
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if b, ok := m.storedBatches[key]; ok {
+		return b, nil
 	}
 	return nil, nil
 }
@@ -86,12 +88,13 @@ func (m *mockTxAdapter) CreateSettledBatch(_ context.Context, in aiusage.Settled
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.dedupByKey[in.UsageBatchID] {
-		return &aiusage.AIUsageBatch{UsageBatchID: in.UsageBatchID, Status: in.Status, TenantSeq: in.TenantSeq}, false, nil
+	if b, ok := m.storedBatches[in.UsageBatchID]; ok {
+		return b, false, nil
 	}
-	m.dedupByKey[in.UsageBatchID] = true
+	b := &aiusage.AIUsageBatch{UsageBatchID: in.UsageBatchID, Status: in.Status, TenantSeq: in.TenantSeq}
+	m.storedBatches[in.UsageBatchID] = b
 	m.batches = append(m.batches, in)
-	return &aiusage.AIUsageBatch{UsageBatchID: in.UsageBatchID, Status: in.Status, TenantSeq: in.TenantSeq}, true, nil
+	return b, true, nil
 }
 
 func (m *mockTxAdapter) AdvanceWatermark(_ context.Context, _, _ string, seq int64) (int64, error) {
@@ -161,6 +164,7 @@ type mockSettlement struct {
 	mu               sync.Mutex
 	allocResult      []aiusage.Allocation
 	allocErr         error
+	allocCount       int32
 	correctResult    []aiusage.Allocation
 	correctErr       error
 	lastAllocInput   *settlement.SettlementInput
@@ -168,6 +172,7 @@ type mockSettlement struct {
 }
 
 func (m *mockSettlement) AllocateAndBook(_ context.Context, _ adapter.TxAdapter, in settlement.SettlementInput) ([]aiusage.Allocation, error) {
+	atomic.AddInt32(&m.allocCount, 1)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.lastAllocInput = &in
@@ -179,6 +184,10 @@ func (m *mockSettlement) Correct(_ context.Context, _ adapter.TxAdapter, in sett
 	defer m.mu.Unlock()
 	m.lastCorrectInput = &in
 	return m.correctResult, m.correctErr
+}
+
+func (m *mockSettlement) getAllocCount() int32 {
+	return atomic.LoadInt32(&m.allocCount)
 }
 
 // ---------------------------------------------------------------------------
@@ -207,15 +216,15 @@ func defaultProfile() service.CustomerProfile {
 
 func componentInput() aiusage.IngestBatchInput {
 	return aiusage.IngestBatchInput{
-		Namespace:     "ns-1",
-		CustomerID:    "cust-1",
-		SubjectID:     "subj-1",
-		UsageBatchID:  "batch-001",
-		TenantSeq:     1,
-		OccurredAt:    time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC),
-		RateVersion:   "v1",
-		BillingMode:   aiusage.BillingModeComponent,
-		PayloadHash:   "hash-001",
+		Namespace:    "ns-1",
+		CustomerID:   "cust-1",
+		SubjectID:    "subj-1",
+		UsageBatchID: "batch-001",
+		TenantSeq:    1,
+		OccurredAt:   time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC),
+		RateVersion:  "v1",
+		BillingMode:  aiusage.BillingModeComponent,
+		PayloadHash:  "hash-001",
 		LineItems: []aiusage.UsageLineItem{
 			{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-4", ProviderManaged: true},
 		},
@@ -362,13 +371,16 @@ func TestSettle_IdempotentReplay(t *testing.T) {
 	_, err := svc.Settle(t.Context(), componentInput())
 	require.NoError(t, err)
 	require.Len(t, tx.getBatches(), 1)
+	require.Equal(t, int32(1), settle.getAllocCount(), "collector should be called once on first submission")
 
-	// Second call with same ID is idempotent (CreateSettledBatch returns false).
+	// Second call with same ID is idempotent — the collector is NOT called
+	// because the idempotency short-circuit fires before AllocateAndBook.
 	_, err = svc.Settle(t.Context(), componentInput())
 	require.NoError(t, err)
 
 	// Still only one batch persisted (dedup by UsageBatchID).
 	require.Len(t, tx.getBatches(), 1)
+	require.Equal(t, int32(1), settle.getAllocCount(), "collector must NOT be called on replay")
 }
 
 // Test 4: Correction flow — fetches original allocations, reverses via
@@ -388,10 +400,10 @@ func TestCorrect_FullFlow(t *testing.T) {
 	}
 
 	svc := newService(t, service.Config{
-		Adapter:            adp,
-		Settlement:         settle,
-		ProfileResolver:    &mockProfileResolver{profile: defaultProfile()},
-		AllocationFetcher:  fetcher,
+		Adapter:           adp,
+		Settlement:        settle,
+		ProfileResolver:   &mockProfileResolver{profile: defaultProfile()},
+		AllocationFetcher: fetcher,
 	})
 
 	result, err := svc.Correct(t.Context(), correctionInput())
@@ -621,13 +633,15 @@ func TestCorrectionInput_Validate(t *testing.T) {
 }
 
 // Compile-time interface checks.
-var _ adapter.Adapter = (*mockAdapter)(nil)
-var _ adapter.TxAdapter = (*mockTxAdapter)(nil)
-var _ service.PricingResolver = (*mockPricingResolver)(nil)
-var _ service.CustomerProfileResolver = (*mockProfileResolver)(nil)
-var _ service.ScopeResolver = (*mockScopeResolver)(nil)
-var _ service.AllocationFetcher = (*mockAllocationFetcher)(nil)
-var _ settlement.Service = (*mockSettlement)(nil)
+var (
+	_ adapter.Adapter                 = (*mockAdapter)(nil)
+	_ adapter.TxAdapter               = (*mockTxAdapter)(nil)
+	_ service.PricingResolver         = (*mockPricingResolver)(nil)
+	_ service.CustomerProfileResolver = (*mockProfileResolver)(nil)
+	_ service.ScopeResolver           = (*mockScopeResolver)(nil)
+	_ service.AllocationFetcher       = (*mockAllocationFetcher)(nil)
+	_ settlement.Service              = (*mockSettlement)(nil)
+)
 
 // Suppress unused imports.
 var (

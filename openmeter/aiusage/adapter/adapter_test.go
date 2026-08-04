@@ -108,7 +108,7 @@ func TestCreateSettledBatchIsIdempotent(t *testing.T) {
 	in1 := makeSettledBatch(ns, customerID, subjectID, "batch-A", 1, "hash-aaa")
 
 	// First submission creates the batch.
-	err := adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err := adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		b, created, err := tx.CreateSettledBatch(ctx, in1)
 		require.NoError(t, err)
 		require.NotNil(t, b)
@@ -119,7 +119,7 @@ func TestCreateSettledBatchIsIdempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Second submission with same key + hash → returns existing batch, created=false.
-	err = adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err = adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		b, created, err := tx.CreateSettledBatch(ctx, in1)
 		require.NoError(t, err)
 		require.NotNil(t, b)
@@ -131,7 +131,7 @@ func TestCreateSettledBatchIsIdempotent(t *testing.T) {
 
 	// Same key + different hash → conflict.
 	in2 := makeSettledBatch(ns, customerID, subjectID, "batch-A", 1, "hash-bbb")
-	err = adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err = adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		_, _, err := tx.CreateSettledBatch(ctx, in2)
 		return err
 	})
@@ -153,7 +153,7 @@ func TestWatermarkGap(t *testing.T) {
 	checkWatermark := func(expected int64) {
 		t.Helper()
 		var covered int64
-		err := adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+		err := adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 			// seq 0 can never advance the watermark, so this reads the current value.
 			c, err := tx.AdvanceWatermark(ctx, ns, subjectID, 0)
 			covered = c
@@ -164,7 +164,7 @@ func TestWatermarkGap(t *testing.T) {
 	}
 
 	// seq 1 → covered = 1
-	err := adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err := adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		_, _, err := tx.CreateSettledBatch(ctx, mk("gap-1", 1))
 		return err
 	})
@@ -172,7 +172,7 @@ func TestWatermarkGap(t *testing.T) {
 	checkWatermark(1)
 
 	// seq 3 → gap, covered stays 1
-	err = adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err = adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		_, _, err := tx.CreateSettledBatch(ctx, mk("gap-3", 3))
 		return err
 	})
@@ -180,7 +180,7 @@ func TestWatermarkGap(t *testing.T) {
 	checkWatermark(1)
 
 	// seq 2 → fills the gap, covered catches up to 3
-	err = adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err = adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		_, _, err := tx.CreateSettledBatch(ctx, mk("gap-2", 2))
 		return err
 	})
@@ -208,7 +208,7 @@ func TestConcurrentIdempotency(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			err := adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+			err := adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 				_, created, err := tx.CreateSettledBatch(ctx, in)
 				if err != nil {
 					return err
@@ -220,7 +220,6 @@ func TestConcurrentIdempotency(t *testing.T) {
 				}
 				return nil
 			})
-
 			if err != nil {
 				atomic.AddInt32(&errCount, 1)
 			}
@@ -261,7 +260,7 @@ func TestRollbackOnCallbackError(t *testing.T) {
 	in := makeSettledBatch(ns, customerID, subjectID, "batch-rollback", 1, "hash-rollback")
 
 	// Submit a batch successfully, then return an error from the callback.
-	err := adp.WithCustomerLock(ctx, ns, customerID, func(tx aiusageadapter.TxAdapter) error {
+	err := adp.WithCustomerLock(ctx, ns, customerID, func(_ context.Context, tx aiusageadapter.TxAdapter) error {
 		_, created, cerr := tx.CreateSettledBatch(ctx, in)
 		require.NoError(t, cerr)
 		require.True(t, created)

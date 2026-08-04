@@ -43,7 +43,7 @@ type TxAdapter interface {
 // Adapter is the persistence adapter for AI Usage batches. All writes go through
 // WithCustomerLock to guarantee per-customer serialisability.
 type Adapter interface {
-	WithCustomerLock(ctx context.Context, namespace, customerID string, fn func(TxAdapter) error) error
+	WithCustomerLock(ctx context.Context, namespace, customerID string, fn func(ctx context.Context, tx TxAdapter) error) error
 }
 
 // New creates a new Adapter from the given Config.
@@ -93,7 +93,7 @@ func (a *adapter) Self() *adapter { return a }
 // on the customer (via the billing_customer_locks sentinel table), then executes
 // fn with a TxAdapter backed by the same transaction. Commit on success,
 // rollback on error.
-func (a *adapter) WithCustomerLock(ctx context.Context, namespace, customerID string, fn func(TxAdapter) error) error {
+func (a *adapter) WithCustomerLock(ctx context.Context, namespace, customerID string, fn func(ctx context.Context, tx TxAdapter) error) error {
 	return transaction.RunWithNoValue(ctx, a, func(ctx context.Context) error {
 		return entutils.TransactingRepoWithNoValue(ctx, a, func(ctx context.Context, txa *adapter) error {
 			// Upsert sentinel lock row; DO NOTHING returns sql.ErrNoRows when the
@@ -118,7 +118,9 @@ func (a *adapter) WithCustomerLock(ctx context.Context, namespace, customerID st
 				return fmt.Errorf("lock customer: %w", err)
 			}
 
-			return fn(&txAdapter{db: txa.db, logger: a.logger, customerID: customerID})
+			// Pass the transaction-scoped ctx so the collector can resolve the
+			// tx driver via GetDriverFromContext.
+			return fn(ctx, &txAdapter{db: txa.db, logger: a.logger, customerID: customerID})
 		})
 	})
 }
