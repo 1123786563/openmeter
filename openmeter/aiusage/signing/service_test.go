@@ -154,7 +154,7 @@ func TestGenerateKeyPair(t *testing.T) {
 	require.Equal(t, "gen-key", kp.KeyID)
 	require.Len(t, kp.Seed, 32)
 
-	s, err := signing.New(signing.Config{CurrentKey: kp})
+	s, err := signing.New(signing.Config{CurrentKey: kp, Now: fixedClock()})
 	require.NoError(t, err)
 
 	pkg := validAuthorizationPackage()
@@ -167,8 +167,8 @@ func TestVerifyRejectsExpiredPackage(t *testing.T) {
 	signer := newTestSigner(t, "key-expiry")
 
 	pkg := validAuthorizationPackage()
-	// Set ExpiresAt to the past.
-	pkg.ExpiresAt = time.Now().Add(-1 * time.Minute)
+	// Set ExpiresAt before the signer's pinned clock (testNow) so it is expired.
+	pkg.ExpiresAt = testNow.Add(-1 * time.Minute)
 	signed, err := signer.Sign(pkg)
 	require.NoError(t, err)
 

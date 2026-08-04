@@ -34,6 +34,12 @@ type Config struct {
 	// TTL is how long a signed authorization package remains valid. Defaults to
 	// 5 minutes. Must not exceed 15 minutes.
 	TTL time.Duration
+
+	// Now returns the current time used by Verify to check package expiry.
+	// When nil, time.Now is used (the production default). Tests inject a
+	// fixed clock so expiry checks are deterministic rather than racing the
+	// wall clock.
+	Now func() time.Time
 }
 
 func (c Config) validate() error {
@@ -98,11 +104,15 @@ func New(cfg Config) (Signer, error) {
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
+	now := cfg.Now
+	if now == nil {
+		now = time.Now
+	}
 	return &signer{
 		current:  cfg.CurrentKey,
 		previous: cfg.PreviousKey,
 		ttl:      cfg.resolvedTTL(),
-		now:      time.Now,
+		now:      now,
 	}, nil
 }
 

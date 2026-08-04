@@ -102,7 +102,12 @@ func deterministicSigner(t *testing.T, keyID string) signing.Signer {
 	t.Helper()
 	h := sha256.Sum256([]byte(keyID))
 	kp := signing.KeyPair{KeyID: keyID, Seed: h[:32]}
-	s, err := signing.New(signing.Config{CurrentKey: kp})
+	// Pin the signer's clock to the same instant the service mockClock uses
+	// (12:00 UTC) so Verify's expiry check sees now < ExpiresAt (12:05)
+	// regardless of the real wall clock. Without this, the service builds
+	// ExpiresAt from the mock clock while Verify uses the real time.
+	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	s, err := signing.New(signing.Config{CurrentKey: kp, Now: func() time.Time { return now }})
 	require.NoError(t, err)
 	return s
 }

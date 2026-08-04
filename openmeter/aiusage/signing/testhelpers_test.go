@@ -2,9 +2,21 @@ package signing_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/aiusage/signing"
 )
+
+// testNow is the fixed instant all test signers use as their clock. The
+// fixture package in service_test.go sets ExpiresAt to 12:05 UTC, five minutes
+// after this point, so packages are always freshly valid (never expired)
+// regardless of the real wall clock.
+var testNow = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+
+// fixedClock returns a Now func pinned to testNow for deterministic expiry.
+func fixedClock() func() time.Time {
+	return func() time.Time { return testNow }
+}
 
 // newTestSigner builds a deterministic signer for tests using a fixed key pair
 // derived from the key_id. This avoids randomness in test assertions while
@@ -17,6 +29,7 @@ func newTestSigner(t *testing.T, keyID string) signing.Signer {
 	}
 	s, err := signing.New(signing.Config{
 		CurrentKey: kp,
+		Now:        fixedClock(),
 	})
 	if err != nil {
 		t.Fatalf("new signer: %v", err)
@@ -38,6 +51,7 @@ func newTestSignerWithRotation(t *testing.T, currentID, previousID string) signi
 	s, err := signing.New(signing.Config{
 		CurrentKey:  curr,
 		PreviousKey: &prev,
+		Now:         fixedClock(),
 	})
 	if err != nil {
 		t.Fatalf("new signer: %v", err)
