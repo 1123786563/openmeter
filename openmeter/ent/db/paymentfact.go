@@ -23,6 +23,8 @@ type PaymentFact struct {
 	Namespace string `json:"namespace,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// PaymentAttemptID holds the value of the "payment_attempt_id" field.
+	PaymentAttemptID string `json:"payment_attempt_id,omitempty"`
 	// RawHash holds the value of the "raw_hash" field.
 	RawHash string `json:"raw_hash,omitempty"`
 	// Provider holds the value of the "provider" field.
@@ -33,9 +35,8 @@ type PaymentFact struct {
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentFactQuery when eager-loading is set.
-	Edges                 PaymentFactEdges `json:"edges"`
-	payment_attempt_facts *string
-	selectValues          sql.SelectValues
+	Edges        PaymentFactEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // PaymentFactEdges holds the relations/edges for other nodes in the graph.
@@ -65,12 +66,10 @@ func (*PaymentFact) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case paymentfact.FieldSignedPayload:
 			values[i] = new([]byte)
-		case paymentfact.FieldID, paymentfact.FieldNamespace, paymentfact.FieldRawHash, paymentfact.FieldProvider:
+		case paymentfact.FieldID, paymentfact.FieldNamespace, paymentfact.FieldPaymentAttemptID, paymentfact.FieldRawHash, paymentfact.FieldProvider:
 			values[i] = new(sql.NullString)
 		case paymentfact.FieldCreatedAt, paymentfact.FieldTimestamp:
 			values[i] = new(sql.NullTime)
-		case paymentfact.ForeignKeys[0]: // payment_attempt_facts
-			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -104,6 +103,12 @@ func (_m *PaymentFact) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
+		case paymentfact.FieldPaymentAttemptID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payment_attempt_id", values[i])
+			} else if value.Valid {
+				_m.PaymentAttemptID = value.String
+			}
 		case paymentfact.FieldRawHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field raw_hash", values[i])
@@ -129,13 +134,6 @@ func (_m *PaymentFact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field timestamp", values[i])
 			} else if value.Valid {
 				_m.Timestamp = value.Time
-			}
-		case paymentfact.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field payment_attempt_facts", values[i])
-			} else if value.Valid {
-				_m.payment_attempt_facts = new(string)
-				*_m.payment_attempt_facts = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -183,6 +181,9 @@ func (_m *PaymentFact) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("payment_attempt_id=")
+	builder.WriteString(_m.PaymentAttemptID)
 	builder.WriteString(", ")
 	builder.WriteString("raw_hash=")
 	builder.WriteString(_m.RawHash)

@@ -23,6 +23,8 @@ type RefundFact struct {
 	Namespace string `json:"namespace,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// RefundRequestID holds the value of the "refund_request_id" field.
+	RefundRequestID string `json:"refund_request_id,omitempty"`
 	// RawHash holds the value of the "raw_hash" field.
 	RawHash string `json:"raw_hash,omitempty"`
 	// Provider holds the value of the "provider" field.
@@ -33,9 +35,8 @@ type RefundFact struct {
 	Timestamp time.Time `json:"timestamp,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RefundFactQuery when eager-loading is set.
-	Edges                RefundFactEdges `json:"edges"`
-	refund_request_facts *string
-	selectValues         sql.SelectValues
+	Edges        RefundFactEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // RefundFactEdges holds the relations/edges for other nodes in the graph.
@@ -65,12 +66,10 @@ func (*RefundFact) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case refundfact.FieldSignedPayload:
 			values[i] = new([]byte)
-		case refundfact.FieldID, refundfact.FieldNamespace, refundfact.FieldRawHash, refundfact.FieldProvider:
+		case refundfact.FieldID, refundfact.FieldNamespace, refundfact.FieldRefundRequestID, refundfact.FieldRawHash, refundfact.FieldProvider:
 			values[i] = new(sql.NullString)
 		case refundfact.FieldCreatedAt, refundfact.FieldTimestamp:
 			values[i] = new(sql.NullTime)
-		case refundfact.ForeignKeys[0]: // refund_request_facts
-			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -104,6 +103,12 @@ func (_m *RefundFact) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
+		case refundfact.FieldRefundRequestID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field refund_request_id", values[i])
+			} else if value.Valid {
+				_m.RefundRequestID = value.String
+			}
 		case refundfact.FieldRawHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field raw_hash", values[i])
@@ -129,13 +134,6 @@ func (_m *RefundFact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field timestamp", values[i])
 			} else if value.Valid {
 				_m.Timestamp = value.Time
-			}
-		case refundfact.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field refund_request_facts", values[i])
-			} else if value.Valid {
-				_m.refund_request_facts = new(string)
-				*_m.refund_request_facts = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -183,6 +181,9 @@ func (_m *RefundFact) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("refund_request_id=")
+	builder.WriteString(_m.RefundRequestID)
 	builder.WriteString(", ")
 	builder.WriteString("raw_hash=")
 	builder.WriteString(_m.RawHash)

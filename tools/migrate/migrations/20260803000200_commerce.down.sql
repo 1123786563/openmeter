@@ -1,5 +1,9 @@
 -- reverse: drop tables, indexes, and enum types (child tables first)
 
+-- drop refund sum trigger and function
+DROP TRIGGER IF EXISTS commerce_refund_sum_check ON refund_requests;
+DROP FUNCTION IF EXISTS commerce_check_refund_sum();
+
 -- drop "external_invoice_refs"
 DROP INDEX IF EXISTS "externalinvoiceref_namespace_receivable_period_id";
 DROP INDEX IF EXISTS "externalinvoiceref_namespace_invoice_number";

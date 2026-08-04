@@ -19,6 +19,8 @@ type CommerceOrderLine struct {
 	ID string `json:"id,omitempty"`
 	// Namespace holds the value of the "namespace" field.
 	Namespace string `json:"namespace,omitempty"`
+	// CommerceOrderID holds the value of the "commerce_order_id" field.
+	CommerceOrderID string `json:"commerce_order_id,omitempty"`
 	// ProductID holds the value of the "product_id" field.
 	ProductID string `json:"product_id,omitempty"`
 	// ProductSku holds the value of the "product_sku" field.
@@ -33,9 +35,8 @@ type CommerceOrderLine struct {
 	SubtotalCents int64 `json:"subtotal_cents,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CommerceOrderLineQuery when eager-loading is set.
-	Edges                CommerceOrderLineEdges `json:"edges"`
-	commerce_order_lines *string
-	selectValues         sql.SelectValues
+	Edges        CommerceOrderLineEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // CommerceOrderLineEdges holds the relations/edges for other nodes in the graph.
@@ -65,9 +66,7 @@ func (*CommerceOrderLine) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case commerceorderline.FieldQuantity, commerceorderline.FieldUnitPriceCents, commerceorderline.FieldSubtotalCents:
 			values[i] = new(sql.NullInt64)
-		case commerceorderline.FieldID, commerceorderline.FieldNamespace, commerceorderline.FieldProductID, commerceorderline.FieldProductSku, commerceorderline.FieldProductName:
-			values[i] = new(sql.NullString)
-		case commerceorderline.ForeignKeys[0]: // commerce_order_lines
+		case commerceorderline.FieldID, commerceorderline.FieldNamespace, commerceorderline.FieldCommerceOrderID, commerceorderline.FieldProductID, commerceorderline.FieldProductSku, commerceorderline.FieldProductName:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -95,6 +94,12 @@ func (_m *CommerceOrderLine) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field namespace", values[i])
 			} else if value.Valid {
 				_m.Namespace = value.String
+			}
+		case commerceorderline.FieldCommerceOrderID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field commerce_order_id", values[i])
+			} else if value.Valid {
+				_m.CommerceOrderID = value.String
 			}
 		case commerceorderline.FieldProductID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -131,13 +136,6 @@ func (_m *CommerceOrderLine) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field subtotal_cents", values[i])
 			} else if value.Valid {
 				_m.SubtotalCents = value.Int64
-			}
-		case commerceorderline.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field commerce_order_lines", values[i])
-			} else if value.Valid {
-				_m.commerce_order_lines = new(string)
-				*_m.commerce_order_lines = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -182,6 +180,9 @@ func (_m *CommerceOrderLine) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("namespace=")
 	builder.WriteString(_m.Namespace)
+	builder.WriteString(", ")
+	builder.WriteString("commerce_order_id=")
+	builder.WriteString(_m.CommerceOrderID)
 	builder.WriteString(", ")
 	builder.WriteString("product_id=")
 	builder.WriteString(_m.ProductID)

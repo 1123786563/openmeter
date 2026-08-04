@@ -75,6 +75,11 @@ func CreatedAt(v time.Time) predicate.RefundFact {
 	return predicate.RefundFact(sql.FieldEQ(FieldCreatedAt, v))
 }
 
+// RefundRequestID applies equality check predicate on the "refund_request_id" field. It's identical to RefundRequestIDEQ.
+func RefundRequestID(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldEQ(FieldRefundRequestID, v))
+}
+
 // RawHash applies equality check predicate on the "raw_hash" field. It's identical to RawHashEQ.
 func RawHash(v string) predicate.RefundFact {
 	return predicate.RefundFact(sql.FieldEQ(FieldRawHash, v))
@@ -188,6 +193,71 @@ func CreatedAtLT(v time.Time) predicate.RefundFact {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.RefundFact {
 	return predicate.RefundFact(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// RefundRequestIDEQ applies the EQ predicate on the "refund_request_id" field.
+func RefundRequestIDEQ(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldEQ(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDNEQ applies the NEQ predicate on the "refund_request_id" field.
+func RefundRequestIDNEQ(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldNEQ(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDIn applies the In predicate on the "refund_request_id" field.
+func RefundRequestIDIn(vs ...string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldIn(FieldRefundRequestID, vs...))
+}
+
+// RefundRequestIDNotIn applies the NotIn predicate on the "refund_request_id" field.
+func RefundRequestIDNotIn(vs ...string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldNotIn(FieldRefundRequestID, vs...))
+}
+
+// RefundRequestIDGT applies the GT predicate on the "refund_request_id" field.
+func RefundRequestIDGT(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldGT(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDGTE applies the GTE predicate on the "refund_request_id" field.
+func RefundRequestIDGTE(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldGTE(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDLT applies the LT predicate on the "refund_request_id" field.
+func RefundRequestIDLT(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldLT(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDLTE applies the LTE predicate on the "refund_request_id" field.
+func RefundRequestIDLTE(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldLTE(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDContains applies the Contains predicate on the "refund_request_id" field.
+func RefundRequestIDContains(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldContains(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDHasPrefix applies the HasPrefix predicate on the "refund_request_id" field.
+func RefundRequestIDHasPrefix(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldHasPrefix(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDHasSuffix applies the HasSuffix predicate on the "refund_request_id" field.
+func RefundRequestIDHasSuffix(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldHasSuffix(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDEqualFold applies the EqualFold predicate on the "refund_request_id" field.
+func RefundRequestIDEqualFold(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldEqualFold(FieldRefundRequestID, v))
+}
+
+// RefundRequestIDContainsFold applies the ContainsFold predicate on the "refund_request_id" field.
+func RefundRequestIDContainsFold(v string) predicate.RefundFact {
+	return predicate.RefundFact(sql.FieldContainsFold(FieldRefundRequestID, v))
 }
 
 // RawHashEQ applies the EQ predicate on the "raw_hash" field.

@@ -28,6 +28,9 @@ func (RefundFact) Fields() []ent.Field {
 		field.Time("created_at").
 			Default(clock.Now).
 			Immutable(),
+		field.String("refund_request_id").Immutable().SchemaType(map[string]string{
+			dialect.Postgres: "char(26)",
+		}),
 		field.String("raw_hash").NotEmpty().Immutable(),
 		field.Enum("provider").
 			Values("wechat", "alipay", "offline").
@@ -45,6 +48,7 @@ func (RefundFact) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("refund_request", RefundRequest.Type).
 			Ref("facts").
+			Field("refund_request_id").
 			Required().
 			Immutable().
 			Unique(),

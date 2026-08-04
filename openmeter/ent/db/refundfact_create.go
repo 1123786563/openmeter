@@ -44,6 +44,12 @@ func (_c *RefundFactCreate) SetNillableCreatedAt(v *time.Time) *RefundFactCreate
 	return _c
 }
 
+// SetRefundRequestID sets the "refund_request_id" field.
+func (_c *RefundFactCreate) SetRefundRequestID(v string) *RefundFactCreate {
+	_c.mutation.SetRefundRequestID(v)
+	return _c
+}
+
 // SetRawHash sets the "raw_hash" field.
 func (_c *RefundFactCreate) SetRawHash(v string) *RefundFactCreate {
 	_c.mutation.SetRawHash(v)
@@ -79,12 +85,6 @@ func (_c *RefundFactCreate) SetNillableID(v *string) *RefundFactCreate {
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetRefundRequestID sets the "refund_request" edge to the RefundRequest entity by ID.
-func (_c *RefundFactCreate) SetRefundRequestID(id string) *RefundFactCreate {
-	_c.mutation.SetRefundRequestID(id)
 	return _c
 }
 
@@ -150,6 +150,9 @@ func (_c *RefundFactCreate) check() error {
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`db: missing required field "RefundFact.created_at"`)}
+	}
+	if _, ok := _c.mutation.RefundRequestID(); !ok {
+		return &ValidationError{Name: "refund_request_id", err: errors.New(`db: missing required field "RefundFact.refund_request_id"`)}
 	}
 	if _, ok := _c.mutation.RawHash(); !ok {
 		return &ValidationError{Name: "raw_hash", err: errors.New(`db: missing required field "RefundFact.raw_hash"`)}
@@ -250,7 +253,7 @@ func (_c *RefundFactCreate) createSpec() (*RefundFact, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.refund_request_facts = &nodes[0]
+		_node.RefundRequestID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -327,6 +330,9 @@ func (u *RefundFactUpsertOne) UpdateNewValues() *RefundFactUpsertOne {
 		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(refundfact.FieldCreatedAt)
+		}
+		if _, exists := u.create.mutation.RefundRequestID(); exists {
+			s.SetIgnore(refundfact.FieldRefundRequestID)
 		}
 		if _, exists := u.create.mutation.RawHash(); exists {
 			s.SetIgnore(refundfact.FieldRawHash)
@@ -559,6 +565,9 @@ func (u *RefundFactUpsertBulk) UpdateNewValues() *RefundFactUpsertBulk {
 			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(refundfact.FieldCreatedAt)
+			}
+			if _, exists := b.mutation.RefundRequestID(); exists {
+				s.SetIgnore(refundfact.FieldRefundRequestID)
 			}
 			if _, exists := b.mutation.RawHash(); exists {
 				s.SetIgnore(refundfact.FieldRawHash)

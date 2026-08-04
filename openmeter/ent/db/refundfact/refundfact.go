@@ -19,6 +19,8 @@ const (
 	FieldNamespace = "namespace"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// FieldRefundRequestID holds the string denoting the refund_request_id field in the database.
+	FieldRefundRequestID = "refund_request_id"
 	// FieldRawHash holds the string denoting the raw_hash field in the database.
 	FieldRawHash = "raw_hash"
 	// FieldProvider holds the string denoting the provider field in the database.
@@ -37,7 +39,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "refundrequest" package.
 	RefundRequestInverseTable = "refund_requests"
 	// RefundRequestColumn is the table column denoting the refund_request relation/edge.
-	RefundRequestColumn = "refund_request_facts"
+	RefundRequestColumn = "refund_request_id"
 )
 
 // Columns holds all SQL columns for refundfact fields.
@@ -45,27 +47,17 @@ var Columns = []string{
 	FieldID,
 	FieldNamespace,
 	FieldCreatedAt,
+	FieldRefundRequestID,
 	FieldRawHash,
 	FieldProvider,
 	FieldSignedPayload,
 	FieldTimestamp,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "refund_facts"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"refund_request_facts",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -123,6 +115,11 @@ func ByNamespace(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByRefundRequestID orders the results by the refund_request_id field.
+func ByRefundRequestID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRefundRequestID, opts...).ToFunc()
 }
 
 // ByRawHash orders the results by the raw_hash field.

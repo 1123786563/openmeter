@@ -44,6 +44,12 @@ func (_c *PaymentFactCreate) SetNillableCreatedAt(v *time.Time) *PaymentFactCrea
 	return _c
 }
 
+// SetPaymentAttemptID sets the "payment_attempt_id" field.
+func (_c *PaymentFactCreate) SetPaymentAttemptID(v string) *PaymentFactCreate {
+	_c.mutation.SetPaymentAttemptID(v)
+	return _c
+}
+
 // SetRawHash sets the "raw_hash" field.
 func (_c *PaymentFactCreate) SetRawHash(v string) *PaymentFactCreate {
 	_c.mutation.SetRawHash(v)
@@ -151,6 +157,9 @@ func (_c *PaymentFactCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`db: missing required field "PaymentFact.created_at"`)}
 	}
+	if _, ok := _c.mutation.PaymentAttemptID(); !ok {
+		return &ValidationError{Name: "payment_attempt_id", err: errors.New(`db: missing required field "PaymentFact.payment_attempt_id"`)}
+	}
 	if _, ok := _c.mutation.RawHash(); !ok {
 		return &ValidationError{Name: "raw_hash", err: errors.New(`db: missing required field "PaymentFact.raw_hash"`)}
 	}
@@ -250,7 +259,7 @@ func (_c *PaymentFactCreate) createSpec() (*PaymentFact, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.payment_attempt_facts = &nodes[0]
+		_node.PaymentAttemptID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -327,6 +336,9 @@ func (u *PaymentFactUpsertOne) UpdateNewValues() *PaymentFactUpsertOne {
 		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(paymentfact.FieldCreatedAt)
+		}
+		if _, exists := u.create.mutation.PaymentAttemptID(); exists {
+			s.SetIgnore(paymentfact.FieldPaymentAttemptID)
 		}
 		if _, exists := u.create.mutation.RawHash(); exists {
 			s.SetIgnore(paymentfact.FieldRawHash)
@@ -559,6 +571,9 @@ func (u *PaymentFactUpsertBulk) UpdateNewValues() *PaymentFactUpsertBulk {
 			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(paymentfact.FieldCreatedAt)
+			}
+			if _, exists := b.mutation.PaymentAttemptID(); exists {
+				s.SetIgnore(paymentfact.FieldPaymentAttemptID)
 			}
 			if _, exists := b.mutation.RawHash(); exists {
 				s.SetIgnore(paymentfact.FieldRawHash)

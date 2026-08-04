@@ -68,6 +68,11 @@ func Namespace(v string) predicate.CommerceOrderLine {
 	return predicate.CommerceOrderLine(sql.FieldEQ(FieldNamespace, v))
 }
 
+// CommerceOrderID applies equality check predicate on the "commerce_order_id" field. It's identical to CommerceOrderIDEQ.
+func CommerceOrderID(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldEQ(FieldCommerceOrderID, v))
+}
+
 // ProductID applies equality check predicate on the "product_id" field. It's identical to ProductIDEQ.
 func ProductID(v string) predicate.CommerceOrderLine {
 	return predicate.CommerceOrderLine(sql.FieldEQ(FieldProductID, v))
@@ -161,6 +166,71 @@ func NamespaceEqualFold(v string) predicate.CommerceOrderLine {
 // NamespaceContainsFold applies the ContainsFold predicate on the "namespace" field.
 func NamespaceContainsFold(v string) predicate.CommerceOrderLine {
 	return predicate.CommerceOrderLine(sql.FieldContainsFold(FieldNamespace, v))
+}
+
+// CommerceOrderIDEQ applies the EQ predicate on the "commerce_order_id" field.
+func CommerceOrderIDEQ(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldEQ(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDNEQ applies the NEQ predicate on the "commerce_order_id" field.
+func CommerceOrderIDNEQ(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldNEQ(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDIn applies the In predicate on the "commerce_order_id" field.
+func CommerceOrderIDIn(vs ...string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldIn(FieldCommerceOrderID, vs...))
+}
+
+// CommerceOrderIDNotIn applies the NotIn predicate on the "commerce_order_id" field.
+func CommerceOrderIDNotIn(vs ...string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldNotIn(FieldCommerceOrderID, vs...))
+}
+
+// CommerceOrderIDGT applies the GT predicate on the "commerce_order_id" field.
+func CommerceOrderIDGT(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldGT(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDGTE applies the GTE predicate on the "commerce_order_id" field.
+func CommerceOrderIDGTE(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldGTE(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDLT applies the LT predicate on the "commerce_order_id" field.
+func CommerceOrderIDLT(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldLT(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDLTE applies the LTE predicate on the "commerce_order_id" field.
+func CommerceOrderIDLTE(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldLTE(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDContains applies the Contains predicate on the "commerce_order_id" field.
+func CommerceOrderIDContains(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldContains(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDHasPrefix applies the HasPrefix predicate on the "commerce_order_id" field.
+func CommerceOrderIDHasPrefix(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldHasPrefix(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDHasSuffix applies the HasSuffix predicate on the "commerce_order_id" field.
+func CommerceOrderIDHasSuffix(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldHasSuffix(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDEqualFold applies the EqualFold predicate on the "commerce_order_id" field.
+func CommerceOrderIDEqualFold(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldEqualFold(FieldCommerceOrderID, v))
+}
+
+// CommerceOrderIDContainsFold applies the ContainsFold predicate on the "commerce_order_id" field.
+func CommerceOrderIDContainsFold(v string) predicate.CommerceOrderLine {
+	return predicate.CommerceOrderLine(sql.FieldContainsFold(FieldCommerceOrderID, v))
 }
 
 // ProductIDEQ applies the EQ predicate on the "product_id" field.

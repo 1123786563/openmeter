@@ -29,6 +29,9 @@ func (PaymentFact) Fields() []ent.Field {
 		field.Time("created_at").
 			Default(clock.Now).
 			Immutable(),
+		field.String("payment_attempt_id").Immutable().SchemaType(map[string]string{
+			dialect.Postgres: "char(26)",
+		}),
 		// raw_hash is the SHA-256 of the provider callback raw body. Immutable.
 		field.String("raw_hash").NotEmpty().Immutable(),
 		field.Enum("provider").
@@ -49,6 +52,7 @@ func (PaymentFact) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("attempt", PaymentAttempt.Type).
 			Ref("facts").
+			Field("payment_attempt_id").
 			Required().
 			Immutable().
 			Unique(),

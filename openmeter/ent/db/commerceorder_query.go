@@ -552,7 +552,9 @@ func (_q *CommerceOrderQuery) loadLines(ctx context.Context, query *CommerceOrde
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(commerceorderline.FieldCommerceOrderID)
+	}
 	query.Where(predicate.CommerceOrderLine(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(commerceorder.LinesColumn), fks...))
 	}))
@@ -561,13 +563,10 @@ func (_q *CommerceOrderQuery) loadLines(ctx context.Context, query *CommerceOrde
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.commerce_order_lines
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "commerce_order_lines" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.CommerceOrderID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "commerce_order_lines" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "commerce_order_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

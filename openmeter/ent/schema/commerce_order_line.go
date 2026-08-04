@@ -26,6 +26,9 @@ func (CommerceOrderLine) Mixin() []ent.Mixin {
 
 func (CommerceOrderLine) Fields() []ent.Field {
 	return []ent.Field{
+		field.String("commerce_order_id").Immutable().SchemaType(map[string]string{
+			dialect.Postgres: "char(26)",
+		}),
 		field.String("product_id").Immutable().SchemaType(map[string]string{
 			dialect.Postgres: "char(26)",
 		}),
@@ -41,6 +44,7 @@ func (CommerceOrderLine) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("order", CommerceOrder.Type).
 			Ref("lines").
+			Field("commerce_order_id").
 			Required().
 			Immutable().
 			Unique(),

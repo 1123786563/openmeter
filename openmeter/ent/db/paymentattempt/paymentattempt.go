@@ -62,7 +62,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "paymentfact" package.
 	FactsInverseTable = "payment_facts"
 	// FactsColumn is the table column denoting the facts relation/edge.
-	FactsColumn = "payment_attempt_facts"
+	FactsColumn = "payment_attempt_id"
 )
 
 // Columns holds all SQL columns for paymentattempt fields.

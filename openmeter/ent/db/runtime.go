@@ -2163,23 +2163,23 @@ func init() {
 	// commerceorderline.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
 	commerceorderline.NamespaceValidator = commerceorderlineDescNamespace.Validators[0].(func(string) error)
 	// commerceorderlineDescProductSku is the schema descriptor for product_sku field.
-	commerceorderlineDescProductSku := commerceorderlineFields[1].Descriptor()
+	commerceorderlineDescProductSku := commerceorderlineFields[2].Descriptor()
 	// commerceorderline.DefaultProductSku holds the default value on creation for the product_sku field.
 	commerceorderline.DefaultProductSku = commerceorderlineDescProductSku.Default.(string)
 	// commerceorderlineDescProductName is the schema descriptor for product_name field.
-	commerceorderlineDescProductName := commerceorderlineFields[2].Descriptor()
+	commerceorderlineDescProductName := commerceorderlineFields[3].Descriptor()
 	// commerceorderline.DefaultProductName holds the default value on creation for the product_name field.
 	commerceorderline.DefaultProductName = commerceorderlineDescProductName.Default.(string)
 	// commerceorderlineDescQuantity is the schema descriptor for quantity field.
-	commerceorderlineDescQuantity := commerceorderlineFields[3].Descriptor()
+	commerceorderlineDescQuantity := commerceorderlineFields[4].Descriptor()
 	// commerceorderline.QuantityValidator is a validator for the "quantity" field. It is called by the builders before save.
 	commerceorderline.QuantityValidator = commerceorderlineDescQuantity.Validators[0].(func(int32) error)
 	// commerceorderlineDescUnitPriceCents is the schema descriptor for unit_price_cents field.
-	commerceorderlineDescUnitPriceCents := commerceorderlineFields[4].Descriptor()
+	commerceorderlineDescUnitPriceCents := commerceorderlineFields[5].Descriptor()
 	// commerceorderline.UnitPriceCentsValidator is a validator for the "unit_price_cents" field. It is called by the builders before save.
 	commerceorderline.UnitPriceCentsValidator = commerceorderlineDescUnitPriceCents.Validators[0].(func(int64) error)
 	// commerceorderlineDescSubtotalCents is the schema descriptor for subtotal_cents field.
-	commerceorderlineDescSubtotalCents := commerceorderlineFields[5].Descriptor()
+	commerceorderlineDescSubtotalCents := commerceorderlineFields[6].Descriptor()
 	// commerceorderline.SubtotalCentsValidator is a validator for the "subtotal_cents" field. It is called by the builders before save.
 	commerceorderline.SubtotalCentsValidator = commerceorderlineDescSubtotalCents.Validators[0].(func(int64) error)
 	// commerceorderlineDescID is the schema descriptor for id field.
@@ -3384,7 +3384,7 @@ func init() {
 	// paymentfact.DefaultCreatedAt holds the default value on creation for the created_at field.
 	paymentfact.DefaultCreatedAt = paymentfactDescCreatedAt.Default.(func() time.Time)
 	// paymentfactDescRawHash is the schema descriptor for raw_hash field.
-	paymentfactDescRawHash := paymentfactFields[1].Descriptor()
+	paymentfactDescRawHash := paymentfactFields[2].Descriptor()
 	// paymentfact.RawHashValidator is a validator for the "raw_hash" field. It is called by the builders before save.
 	paymentfact.RawHashValidator = paymentfactDescRawHash.Validators[0].(func(string) error)
 	// paymentfactDescID is the schema descriptor for id field.
@@ -3689,7 +3689,7 @@ func init() {
 	// refundfact.DefaultCreatedAt holds the default value on creation for the created_at field.
 	refundfact.DefaultCreatedAt = refundfactDescCreatedAt.Default.(func() time.Time)
 	// refundfactDescRawHash is the schema descriptor for raw_hash field.
-	refundfactDescRawHash := refundfactFields[1].Descriptor()
+	refundfactDescRawHash := refundfactFields[2].Descriptor()
 	// refundfact.RawHashValidator is a validator for the "raw_hash" field. It is called by the builders before save.
 	refundfact.RawHashValidator = refundfactDescRawHash.Validators[0].(func(string) error)
 	// refundfactDescID is the schema descriptor for id field.

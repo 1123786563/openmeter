@@ -14,6 +14,8 @@ const (
 	FieldID = "id"
 	// FieldNamespace holds the string denoting the namespace field in the database.
 	FieldNamespace = "namespace"
+	// FieldCommerceOrderID holds the string denoting the commerce_order_id field in the database.
+	FieldCommerceOrderID = "commerce_order_id"
 	// FieldProductID holds the string denoting the product_id field in the database.
 	FieldProductID = "product_id"
 	// FieldProductSku holds the string denoting the product_sku field in the database.
@@ -36,13 +38,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "commerceorder" package.
 	OrderInverseTable = "commerce_orders"
 	// OrderColumn is the table column denoting the order relation/edge.
-	OrderColumn = "commerce_order_lines"
+	OrderColumn = "commerce_order_id"
 )
 
 // Columns holds all SQL columns for commerceorderline fields.
 var Columns = []string{
 	FieldID,
 	FieldNamespace,
+	FieldCommerceOrderID,
 	FieldProductID,
 	FieldProductSku,
 	FieldProductName,
@@ -51,21 +54,10 @@ var Columns = []string{
 	FieldSubtotalCents,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "commerce_order_lines"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"commerce_order_lines",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -100,6 +92,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByNamespace orders the results by the namespace field.
 func ByNamespace(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNamespace, opts...).ToFunc()
+}
+
+// ByCommerceOrderID orders the results by the commerce_order_id field.
+func ByCommerceOrderID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCommerceOrderID, opts...).ToFunc()
 }
 
 // ByProductID orders the results by the product_id field.

@@ -56,7 +56,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "refundfact" package.
 	FactsInverseTable = "refund_facts"
 	// FactsColumn is the table column denoting the facts relation/edge.
-	FactsColumn = "refund_request_facts"
+	FactsColumn = "refund_request_id"
 )
 
 // Columns holds all SQL columns for refundrequest fields.

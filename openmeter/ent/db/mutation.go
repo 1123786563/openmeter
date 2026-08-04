@@ -85233,6 +85233,42 @@ func (m *CommerceOrderLineMutation) ResetNamespace() {
 	m.namespace = nil
 }
 
+// SetCommerceOrderID sets the "commerce_order_id" field.
+func (m *CommerceOrderLineMutation) SetCommerceOrderID(s string) {
+	m._order = &s
+}
+
+// CommerceOrderID returns the value of the "commerce_order_id" field in the mutation.
+func (m *CommerceOrderLineMutation) CommerceOrderID() (r string, exists bool) {
+	v := m._order
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCommerceOrderID returns the old "commerce_order_id" field's value of the CommerceOrderLine entity.
+// If the CommerceOrderLine object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CommerceOrderLineMutation) OldCommerceOrderID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCommerceOrderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCommerceOrderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCommerceOrderID: %w", err)
+	}
+	return oldValue.CommerceOrderID, nil
+}
+
+// ResetCommerceOrderID resets all changes to the "commerce_order_id" field.
+func (m *CommerceOrderLineMutation) ResetCommerceOrderID() {
+	m._order = nil
+}
+
 // SetProductID sets the "product_id" field.
 func (m *CommerceOrderLineMutation) SetProductID(s string) {
 	m.product_id = &s
@@ -85517,6 +85553,7 @@ func (m *CommerceOrderLineMutation) SetOrderID(id string) {
 // ClearOrder clears the "order" edge to the CommerceOrder entity.
 func (m *CommerceOrderLineMutation) ClearOrder() {
 	m.cleared_order = true
+	m.clearedFields[commerceorderline.FieldCommerceOrderID] = struct{}{}
 }
 
 // OrderCleared reports if the "order" edge to the CommerceOrder entity was cleared.
@@ -85582,9 +85619,12 @@ func (m *CommerceOrderLineMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CommerceOrderLineMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
 	if m.namespace != nil {
 		fields = append(fields, commerceorderline.FieldNamespace)
+	}
+	if m._order != nil {
+		fields = append(fields, commerceorderline.FieldCommerceOrderID)
 	}
 	if m.product_id != nil {
 		fields = append(fields, commerceorderline.FieldProductID)
@@ -85614,6 +85654,8 @@ func (m *CommerceOrderLineMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case commerceorderline.FieldNamespace:
 		return m.Namespace()
+	case commerceorderline.FieldCommerceOrderID:
+		return m.CommerceOrderID()
 	case commerceorderline.FieldProductID:
 		return m.ProductID()
 	case commerceorderline.FieldProductSku:
@@ -85637,6 +85679,8 @@ func (m *CommerceOrderLineMutation) OldField(ctx context.Context, name string) (
 	switch name {
 	case commerceorderline.FieldNamespace:
 		return m.OldNamespace(ctx)
+	case commerceorderline.FieldCommerceOrderID:
+		return m.OldCommerceOrderID(ctx)
 	case commerceorderline.FieldProductID:
 		return m.OldProductID(ctx)
 	case commerceorderline.FieldProductSku:
@@ -85664,6 +85708,13 @@ func (m *CommerceOrderLineMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNamespace(v)
+		return nil
+	case commerceorderline.FieldCommerceOrderID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCommerceOrderID(v)
 		return nil
 	case commerceorderline.FieldProductID:
 		v, ok := value.(string)
@@ -85797,6 +85848,9 @@ func (m *CommerceOrderLineMutation) ResetField(name string) error {
 	switch name {
 	case commerceorderline.FieldNamespace:
 		m.ResetNamespace()
+		return nil
+	case commerceorderline.FieldCommerceOrderID:
+		m.ResetCommerceOrderID()
 		return nil
 	case commerceorderline.FieldProductID:
 		m.ResetProductID()
@@ -124345,6 +124399,42 @@ func (m *PaymentFactMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// SetPaymentAttemptID sets the "payment_attempt_id" field.
+func (m *PaymentFactMutation) SetPaymentAttemptID(s string) {
+	m.attempt = &s
+}
+
+// PaymentAttemptID returns the value of the "payment_attempt_id" field in the mutation.
+func (m *PaymentFactMutation) PaymentAttemptID() (r string, exists bool) {
+	v := m.attempt
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPaymentAttemptID returns the old "payment_attempt_id" field's value of the PaymentFact entity.
+// If the PaymentFact object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentFactMutation) OldPaymentAttemptID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPaymentAttemptID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPaymentAttemptID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPaymentAttemptID: %w", err)
+	}
+	return oldValue.PaymentAttemptID, nil
+}
+
+// ResetPaymentAttemptID resets all changes to the "payment_attempt_id" field.
+func (m *PaymentFactMutation) ResetPaymentAttemptID() {
+	m.attempt = nil
+}
+
 // SetRawHash sets the "raw_hash" field.
 func (m *PaymentFactMutation) SetRawHash(s string) {
 	m.raw_hash = &s
@@ -124497,6 +124587,7 @@ func (m *PaymentFactMutation) SetAttemptID(id string) {
 // ClearAttempt clears the "attempt" edge to the PaymentAttempt entity.
 func (m *PaymentFactMutation) ClearAttempt() {
 	m.clearedattempt = true
+	m.clearedFields[paymentfact.FieldPaymentAttemptID] = struct{}{}
 }
 
 // AttemptCleared reports if the "attempt" edge to the PaymentAttempt entity was cleared.
@@ -124562,12 +124653,15 @@ func (m *PaymentFactMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentFactMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.namespace != nil {
 		fields = append(fields, paymentfact.FieldNamespace)
 	}
 	if m.created_at != nil {
 		fields = append(fields, paymentfact.FieldCreatedAt)
+	}
+	if m.attempt != nil {
+		fields = append(fields, paymentfact.FieldPaymentAttemptID)
 	}
 	if m.raw_hash != nil {
 		fields = append(fields, paymentfact.FieldRawHash)
@@ -124593,6 +124687,8 @@ func (m *PaymentFactMutation) Field(name string) (ent.Value, bool) {
 		return m.Namespace()
 	case paymentfact.FieldCreatedAt:
 		return m.CreatedAt()
+	case paymentfact.FieldPaymentAttemptID:
+		return m.PaymentAttemptID()
 	case paymentfact.FieldRawHash:
 		return m.RawHash()
 	case paymentfact.FieldProvider:
@@ -124614,6 +124710,8 @@ func (m *PaymentFactMutation) OldField(ctx context.Context, name string) (ent.Va
 		return m.OldNamespace(ctx)
 	case paymentfact.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
+	case paymentfact.FieldPaymentAttemptID:
+		return m.OldPaymentAttemptID(ctx)
 	case paymentfact.FieldRawHash:
 		return m.OldRawHash(ctx)
 	case paymentfact.FieldProvider:
@@ -124644,6 +124742,13 @@ func (m *PaymentFactMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
+		return nil
+	case paymentfact.FieldPaymentAttemptID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPaymentAttemptID(v)
 		return nil
 	case paymentfact.FieldRawHash:
 		v, ok := value.(string)
@@ -124727,6 +124832,9 @@ func (m *PaymentFactMutation) ResetField(name string) error {
 		return nil
 	case paymentfact.FieldCreatedAt:
 		m.ResetCreatedAt()
+		return nil
+	case paymentfact.FieldPaymentAttemptID:
+		m.ResetPaymentAttemptID()
 		return nil
 	case paymentfact.FieldRawHash:
 		m.ResetRawHash()
@@ -132898,6 +133006,42 @@ func (m *RefundFactMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// SetRefundRequestID sets the "refund_request_id" field.
+func (m *RefundFactMutation) SetRefundRequestID(s string) {
+	m.refund_request = &s
+}
+
+// RefundRequestID returns the value of the "refund_request_id" field in the mutation.
+func (m *RefundFactMutation) RefundRequestID() (r string, exists bool) {
+	v := m.refund_request
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRefundRequestID returns the old "refund_request_id" field's value of the RefundFact entity.
+// If the RefundFact object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundFactMutation) OldRefundRequestID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRefundRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRefundRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRefundRequestID: %w", err)
+	}
+	return oldValue.RefundRequestID, nil
+}
+
+// ResetRefundRequestID resets all changes to the "refund_request_id" field.
+func (m *RefundFactMutation) ResetRefundRequestID() {
+	m.refund_request = nil
+}
+
 // SetRawHash sets the "raw_hash" field.
 func (m *RefundFactMutation) SetRawHash(s string) {
 	m.raw_hash = &s
@@ -133042,27 +133186,15 @@ func (m *RefundFactMutation) ResetTimestamp() {
 	m.timestamp = nil
 }
 
-// SetRefundRequestID sets the "refund_request" edge to the RefundRequest entity by id.
-func (m *RefundFactMutation) SetRefundRequestID(id string) {
-	m.refund_request = &id
-}
-
 // ClearRefundRequest clears the "refund_request" edge to the RefundRequest entity.
 func (m *RefundFactMutation) ClearRefundRequest() {
 	m.clearedrefund_request = true
+	m.clearedFields[refundfact.FieldRefundRequestID] = struct{}{}
 }
 
 // RefundRequestCleared reports if the "refund_request" edge to the RefundRequest entity was cleared.
 func (m *RefundFactMutation) RefundRequestCleared() bool {
 	return m.clearedrefund_request
-}
-
-// RefundRequestID returns the "refund_request" edge ID in the mutation.
-func (m *RefundFactMutation) RefundRequestID() (id string, exists bool) {
-	if m.refund_request != nil {
-		return *m.refund_request, true
-	}
-	return
 }
 
 // RefundRequestIDs returns the "refund_request" edge IDs in the mutation.
@@ -133115,12 +133247,15 @@ func (m *RefundFactMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RefundFactMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.namespace != nil {
 		fields = append(fields, refundfact.FieldNamespace)
 	}
 	if m.created_at != nil {
 		fields = append(fields, refundfact.FieldCreatedAt)
+	}
+	if m.refund_request != nil {
+		fields = append(fields, refundfact.FieldRefundRequestID)
 	}
 	if m.raw_hash != nil {
 		fields = append(fields, refundfact.FieldRawHash)
@@ -133146,6 +133281,8 @@ func (m *RefundFactMutation) Field(name string) (ent.Value, bool) {
 		return m.Namespace()
 	case refundfact.FieldCreatedAt:
 		return m.CreatedAt()
+	case refundfact.FieldRefundRequestID:
+		return m.RefundRequestID()
 	case refundfact.FieldRawHash:
 		return m.RawHash()
 	case refundfact.FieldProvider:
@@ -133167,6 +133304,8 @@ func (m *RefundFactMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldNamespace(ctx)
 	case refundfact.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
+	case refundfact.FieldRefundRequestID:
+		return m.OldRefundRequestID(ctx)
 	case refundfact.FieldRawHash:
 		return m.OldRawHash(ctx)
 	case refundfact.FieldProvider:
@@ -133197,6 +133336,13 @@ func (m *RefundFactMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
+		return nil
+	case refundfact.FieldRefundRequestID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRefundRequestID(v)
 		return nil
 	case refundfact.FieldRawHash:
 		v, ok := value.(string)
@@ -133280,6 +133426,9 @@ func (m *RefundFactMutation) ResetField(name string) error {
 		return nil
 	case refundfact.FieldCreatedAt:
 		m.ResetCreatedAt()
+		return nil
+	case refundfact.FieldRefundRequestID:
+		m.ResetRefundRequestID()
 		return nil
 	case refundfact.FieldRawHash:
 		m.ResetRawHash()

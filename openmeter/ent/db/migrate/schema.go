@@ -3847,7 +3847,7 @@ var (
 		{Name: "quantity", Type: field.TypeInt32},
 		{Name: "unit_price_cents", Type: field.TypeInt64},
 		{Name: "subtotal_cents", Type: field.TypeInt64},
-		{Name: "commerce_order_lines", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// CommerceOrderLinesTable holds the schema information for the "commerce_order_lines" table.
 	CommerceOrderLinesTable = &schema.Table{
@@ -5862,7 +5862,7 @@ var (
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
 		{Name: "signed_payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "timestamp", Type: field.TypeTime},
-		{Name: "payment_attempt_facts", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "payment_attempt_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// PaymentFactsTable holds the schema information for the "payment_facts" table.
 	PaymentFactsTable = &schema.Table{
@@ -6307,7 +6307,7 @@ var (
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
 		{Name: "signed_payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "timestamp", Type: field.TypeTime},
-		{Name: "refund_request_facts", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "refund_request_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// RefundFactsTable holds the schema information for the "refund_facts" table.
 	RefundFactsTable = &schema.Table{

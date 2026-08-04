@@ -55,7 +55,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "commerceorderline" package.
 	LinesInverseTable = "commerce_order_lines"
 	// LinesColumn is the table column denoting the lines relation/edge.
-	LinesColumn = "commerce_order_lines"
+	LinesColumn = "commerce_order_id"
 	// PaymentAttemptsTable is the table that holds the payment_attempts relation/edge.
 	PaymentAttemptsTable = "payment_attempts"
 	// PaymentAttemptsInverseTable is the table name for the PaymentAttempt entity.

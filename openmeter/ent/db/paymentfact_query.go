@@ -25,7 +25,6 @@ type PaymentFactQuery struct {
 	inters      []Interceptor
 	predicates  []predicate.PaymentFact
 	withAttempt *PaymentAttemptQuery
-	withFKs     bool
 	modifiers   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -372,18 +371,11 @@ func (_q *PaymentFactQuery) prepareQuery(ctx context.Context) error {
 func (_q *PaymentFactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PaymentFact, error) {
 	var (
 		nodes       = []*PaymentFact{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withAttempt != nil,
 		}
 	)
-	if _q.withAttempt != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, paymentfact.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*PaymentFact).scanValues(nil, columns)
 	}
@@ -418,10 +410,7 @@ func (_q *PaymentFactQuery) loadAttempt(ctx context.Context, query *PaymentAttem
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*PaymentFact)
 	for i := range nodes {
-		if nodes[i].payment_attempt_facts == nil {
-			continue
-		}
-		fk := *nodes[i].payment_attempt_facts
+		fk := nodes[i].PaymentAttemptID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -438,7 +427,7 @@ func (_q *PaymentFactQuery) loadAttempt(ctx context.Context, query *PaymentAttem
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "payment_attempt_facts" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "payment_attempt_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -474,6 +463,9 @@ func (_q *PaymentFactQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != paymentfact.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withAttempt != nil {
+			_spec.Node.AddColumnOnce(paymentfact.FieldPaymentAttemptID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

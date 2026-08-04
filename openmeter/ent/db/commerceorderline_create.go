@@ -29,6 +29,12 @@ func (_c *CommerceOrderLineCreate) SetNamespace(v string) *CommerceOrderLineCrea
 	return _c
 }
 
+// SetCommerceOrderID sets the "commerce_order_id" field.
+func (_c *CommerceOrderLineCreate) SetCommerceOrderID(v string) *CommerceOrderLineCreate {
+	_c.mutation.SetCommerceOrderID(v)
+	return _c
+}
+
 // SetProductID sets the "product_id" field.
 func (_c *CommerceOrderLineCreate) SetProductID(v string) *CommerceOrderLineCreate {
 	_c.mutation.SetProductID(v)
@@ -165,6 +171,9 @@ func (_c *CommerceOrderLineCreate) check() error {
 			return &ValidationError{Name: "namespace", err: fmt.Errorf(`db: validator failed for field "CommerceOrderLine.namespace": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.CommerceOrderID(); !ok {
+		return &ValidationError{Name: "commerce_order_id", err: errors.New(`db: missing required field "CommerceOrderLine.commerce_order_id"`)}
+	}
 	if _, ok := _c.mutation.ProductID(); !ok {
 		return &ValidationError{Name: "product_id", err: errors.New(`db: missing required field "CommerceOrderLine.product_id"`)}
 	}
@@ -279,7 +288,7 @@ func (_c *CommerceOrderLineCreate) createSpec() (*CommerceOrderLine, *sqlgraph.C
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.commerce_order_lines = &nodes[0]
+		_node.CommerceOrderID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -353,6 +362,9 @@ func (u *CommerceOrderLineUpsertOne) UpdateNewValues() *CommerceOrderLineUpsertO
 		}
 		if _, exists := u.create.mutation.Namespace(); exists {
 			s.SetIgnore(commerceorderline.FieldNamespace)
+		}
+		if _, exists := u.create.mutation.CommerceOrderID(); exists {
+			s.SetIgnore(commerceorderline.FieldCommerceOrderID)
 		}
 		if _, exists := u.create.mutation.ProductID(); exists {
 			s.SetIgnore(commerceorderline.FieldProductID)
@@ -588,6 +600,9 @@ func (u *CommerceOrderLineUpsertBulk) UpdateNewValues() *CommerceOrderLineUpsert
 			}
 			if _, exists := b.mutation.Namespace(); exists {
 				s.SetIgnore(commerceorderline.FieldNamespace)
+			}
+			if _, exists := b.mutation.CommerceOrderID(); exists {
+				s.SetIgnore(commerceorderline.FieldCommerceOrderID)
 			}
 			if _, exists := b.mutation.ProductID(); exists {
 				s.SetIgnore(commerceorderline.FieldProductID)

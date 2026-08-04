@@ -19,6 +19,8 @@ const (
 	FieldNamespace = "namespace"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// FieldPaymentAttemptID holds the string denoting the payment_attempt_id field in the database.
+	FieldPaymentAttemptID = "payment_attempt_id"
 	// FieldRawHash holds the string denoting the raw_hash field in the database.
 	FieldRawHash = "raw_hash"
 	// FieldProvider holds the string denoting the provider field in the database.
@@ -37,7 +39,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "paymentattempt" package.
 	AttemptInverseTable = "payment_attempts"
 	// AttemptColumn is the table column denoting the attempt relation/edge.
-	AttemptColumn = "payment_attempt_facts"
+	AttemptColumn = "payment_attempt_id"
 )
 
 // Columns holds all SQL columns for paymentfact fields.
@@ -45,27 +47,17 @@ var Columns = []string{
 	FieldID,
 	FieldNamespace,
 	FieldCreatedAt,
+	FieldPaymentAttemptID,
 	FieldRawHash,
 	FieldProvider,
 	FieldSignedPayload,
 	FieldTimestamp,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "payment_facts"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"payment_attempt_facts",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -123,6 +115,11 @@ func ByNamespace(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByPaymentAttemptID orders the results by the payment_attempt_id field.
+func ByPaymentAttemptID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPaymentAttemptID, opts...).ToFunc()
 }
 
 // ByRawHash orders the results by the raw_hash field.

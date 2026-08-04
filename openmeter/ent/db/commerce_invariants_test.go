@@ -3,8 +3,11 @@ package db_test
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 	"os"
 	"testing"
+	"time"
 
 	"entgo.io/ent/dialect"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -15,6 +18,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/enttest"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/fulfillment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 )
 
 const testNS = "test-namespace"
@@ -58,8 +63,46 @@ func newTestClient(t *testing.T) *db.Client {
 		}
 	}
 
+	// Create the refund-sum trigger (lives in migration SQL but enttest
+	// uses Ent auto-migration, so we recreate it here for tests that
+	// depend on it).
+	if _, err := c.ExecContext(context.Background(), refundSumTriggerSQL); err != nil {
+		t.Logf("create refund trigger: %v", err)
+	}
+
 	return c
 }
+
+// refundSumTriggerSQL creates the BEFORE INSERT trigger on refund_requests
+// that enforces the invariant: sum of non-failed refunds must not exceed
+// the order total_cents. This trigger lives in the migration SQL; we
+// recreate it here because enttest.Open uses Ent auto-migration.
+const refundSumTriggerSQL = `
+CREATE OR REPLACE FUNCTION commerce_check_refund_sum() RETURNS TRIGGER AS $$
+DECLARE
+    order_total BIGINT;
+    existing_refunds BIGINT;
+BEGIN
+    SELECT total_cents INTO order_total
+        FROM commerce_orders WHERE id = NEW.commerce_order_id;
+    SELECT COALESCE(SUM(amount_cents), 0) INTO existing_refunds
+        FROM refund_requests
+        WHERE commerce_order_id = NEW.commerce_order_id
+        AND status NOT IN ('failed');
+    IF existing_refunds + NEW.amount_cents > order_total THEN
+        RAISE EXCEPTION 'refund sum % exceeds order total %',
+            existing_refunds + NEW.amount_cents, order_total
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS commerce_refund_sum_check ON refund_requests;
+CREATE TRIGGER commerce_refund_sum_check
+    BEFORE INSERT ON refund_requests
+    FOR EACH ROW EXECUTE FUNCTION commerce_check_refund_sum();
+`
 
 // --- Idempotency key uniqueness ---
 
@@ -310,4 +353,99 @@ func createOrderX(ctx context.Context, t *testing.T, c *db.Client, idemKey strin
 		SetCurrency("CNY").
 		SetIdempotencyKey(idemKey).
 		SaveX(ctx)
+}
+
+// --- Refund sum never exceeds order total ---
+
+func TestRefundSumExceedsOrderTotal(t *testing.T) {
+	ctx := context.Background()
+	c := newTestClient(t)
+	defer c.Close()
+
+	order := createOrderX(ctx, t, c, "idem-refund-sum")
+
+	// Refund 600 of 1000: OK.
+	c.RefundRequest.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(order.ID).
+		SetCustomerID("cust-1").
+		SetAmountCents(600).
+		SetIdempotencyKey("refund-600").
+		SetStatus(refundrequest.StatusFulfilled).
+		SaveX(ctx)
+
+	// Refund another 500 (total 1100 > 1000): should fail via DB trigger.
+	_, err := c.RefundRequest.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(order.ID).
+		SetCustomerID("cust-1").
+		SetAmountCents(500).
+		SetIdempotencyKey("refund-500").
+		SetStatus(refundrequest.StatusFulfilled).
+		Save(ctx)
+	if err == nil {
+		t.Fatal("refund exceeding order total should be rejected by trigger")
+	}
+	if !strings.Contains(err.Error(), "exceeds order total") {
+		t.Fatalf("expected trigger error about exceeding order total, got: %v", err)
+	}
+
+	// Refund 400 (total 1000 = 1000): OK, exactly at the boundary.
+	c.RefundRequest.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(order.ID).
+		SetCustomerID("cust-1").
+		SetAmountCents(400).
+		SetIdempotencyKey("refund-400").
+		SetStatus(refundrequest.StatusFulfilled).
+		SaveX(ctx)
+}
+
+// --- PaymentFact immutability ---
+
+func TestPaymentFactImmutable(t *testing.T) {
+	ctx := context.Background()
+	c := newTestClient(t)
+	defer c.Close()
+
+	order := createOrderX(ctx, t, c, "idem-fact-imm")
+	attempt := c.PaymentAttempt.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(order.ID).
+		SetCustomerID("cust-1").
+		SetProvider(paymentattempt.ProviderWechat).
+		SetIdempotencyKey("pay-fact-imm").
+		SetAmountCents(1000).
+		SaveX(ctx)
+
+	originalHash := "sha256:abc123original"
+	fact := c.PaymentFact.Create().
+		SetNamespace(testNS).
+		SetPaymentAttemptID(attempt.ID).
+		SetRawHash(originalHash).
+		SetProvider(paymentfact.ProviderWechat).
+		SetSignedPayload(map[string]any{"amount": 1000}).
+		SetTimestamp(time.Now()).
+		SaveX(ctx)
+
+	// Ent enforces immutability at the codegen level: when a field is
+	// Immutable(), the update builder does not get a Set<Field> method.
+	// We verify this by checking that PaymentFactUpdateOne lacks setters
+	// for all immutable fields.
+	immutableFields := []string{"SetRawHash", "SetProvider", "SetSignedPayload", "SetTimestamp"}
+	builderType := reflect.TypeOf(&db.PaymentFactUpdateOne{})
+	for _, method := range immutableFields {
+		if _, ok := builderType.MethodByName(method); ok {
+			t.Fatalf("PaymentFactUpdateOne should not expose %s (field is immutable)", method)
+		}
+	}
+
+	// Data round-trip: verify the raw_hash preserves its value.
+	queried, err := c.PaymentFact.Get(ctx, fact.ID)
+	if err != nil {
+		t.Fatalf("get payment fact: %v", err)
+	}
+	if queried.RawHash != originalHash {
+		t.Fatalf("raw_hash changed: got %s, want %s", queried.RawHash, originalHash)
+	}
 }

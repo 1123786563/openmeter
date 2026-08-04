@@ -490,7 +490,9 @@ func (_q *RefundRequestQuery) loadFacts(ctx context.Context, query *RefundFactQu
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(refundfact.FieldRefundRequestID)
+	}
 	query.Where(predicate.RefundFact(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(refundrequest.FactsColumn), fks...))
 	}))
@@ -499,13 +501,10 @@ func (_q *RefundRequestQuery) loadFacts(ctx context.Context, query *RefundFactQu
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.refund_request_facts
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "refund_request_facts" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.RefundRequestID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "refund_request_facts" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "refund_request_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

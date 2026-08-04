@@ -75,6 +75,11 @@ func CreatedAt(v time.Time) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldEQ(FieldCreatedAt, v))
 }
 
+// PaymentAttemptID applies equality check predicate on the "payment_attempt_id" field. It's identical to PaymentAttemptIDEQ.
+func PaymentAttemptID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldPaymentAttemptID, v))
+}
+
 // RawHash applies equality check predicate on the "raw_hash" field. It's identical to RawHashEQ.
 func RawHash(v string) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldEQ(FieldRawHash, v))
@@ -188,6 +193,71 @@ func CreatedAtLT(v time.Time) predicate.PaymentFact {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// PaymentAttemptIDEQ applies the EQ predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDNEQ applies the NEQ predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDIn applies the In predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldPaymentAttemptID, vs...))
+}
+
+// PaymentAttemptIDNotIn applies the NotIn predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldPaymentAttemptID, vs...))
+}
+
+// PaymentAttemptIDGT applies the GT predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDGTE applies the GTE predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDLT applies the LT predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDLTE applies the LTE predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDContains applies the Contains predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDHasPrefix applies the HasPrefix predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDHasSuffix applies the HasSuffix predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDEqualFold applies the EqualFold predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldPaymentAttemptID, v))
+}
+
+// PaymentAttemptIDContainsFold applies the ContainsFold predicate on the "payment_attempt_id" field.
+func PaymentAttemptIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldPaymentAttemptID, v))
 }
 
 // RawHashEQ applies the EQ predicate on the "raw_hash" field.

@@ -25,7 +25,6 @@ type CommerceOrderLineQuery struct {
 	inters     []Interceptor
 	predicates []predicate.CommerceOrderLine
 	withOrder  *CommerceOrderQuery
-	withFKs    bool
 	modifiers  []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -372,18 +371,11 @@ func (_q *CommerceOrderLineQuery) prepareQuery(ctx context.Context) error {
 func (_q *CommerceOrderLineQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CommerceOrderLine, error) {
 	var (
 		nodes       = []*CommerceOrderLine{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withOrder != nil,
 		}
 	)
-	if _q.withOrder != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, commerceorderline.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*CommerceOrderLine).scanValues(nil, columns)
 	}
@@ -418,10 +410,7 @@ func (_q *CommerceOrderLineQuery) loadOrder(ctx context.Context, query *Commerce
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*CommerceOrderLine)
 	for i := range nodes {
-		if nodes[i].commerce_order_lines == nil {
-			continue
-		}
-		fk := *nodes[i].commerce_order_lines
+		fk := nodes[i].CommerceOrderID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -438,7 +427,7 @@ func (_q *CommerceOrderLineQuery) loadOrder(ctx context.Context, query *Commerce
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "commerce_order_lines" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "commerce_order_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -474,6 +463,9 @@ func (_q *CommerceOrderLineQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != commerceorderline.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withOrder != nil {
+			_spec.Node.AddColumnOnce(commerceorderline.FieldCommerceOrderID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -25,7 +25,6 @@ type RefundFactQuery struct {
 	inters            []Interceptor
 	predicates        []predicate.RefundFact
 	withRefundRequest *RefundRequestQuery
-	withFKs           bool
 	modifiers         []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -372,18 +371,11 @@ func (_q *RefundFactQuery) prepareQuery(ctx context.Context) error {
 func (_q *RefundFactQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*RefundFact, error) {
 	var (
 		nodes       = []*RefundFact{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withRefundRequest != nil,
 		}
 	)
-	if _q.withRefundRequest != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, refundfact.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*RefundFact).scanValues(nil, columns)
 	}
@@ -418,10 +410,7 @@ func (_q *RefundFactQuery) loadRefundRequest(ctx context.Context, query *RefundR
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*RefundFact)
 	for i := range nodes {
-		if nodes[i].refund_request_facts == nil {
-			continue
-		}
-		fk := *nodes[i].refund_request_facts
+		fk := nodes[i].RefundRequestID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -438,7 +427,7 @@ func (_q *RefundFactQuery) loadRefundRequest(ctx context.Context, query *RefundR
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "refund_request_facts" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "refund_request_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -474,6 +463,9 @@ func (_q *RefundFactQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != refundfact.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withRefundRequest != nil {
+			_spec.Node.AddColumnOnce(refundfact.FieldRefundRequestID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {
