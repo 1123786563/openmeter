@@ -339,6 +339,15 @@ type ChargeUsageBasedRuns func(*sql.Selector)
 // ChargesSearchV1 is the predicate function for chargessearchv1 builders.
 type ChargesSearchV1 func(*sql.Selector)
 
+// CommerceOrder is the predicate function for commerceorder builders.
+type CommerceOrder func(*sql.Selector)
+
+// CommerceOrderLine is the predicate function for commerceorderline builders.
+type CommerceOrderLine func(*sql.Selector)
+
+// CommerceProduct is the predicate function for commerceproduct builders.
+type CommerceProduct func(*sql.Selector)
+
 // CreditRealizationLineage is the predicate function for creditrealizationlineage builders.
 type CreditRealizationLineage func(*sql.Selector)
 
@@ -374,8 +383,14 @@ func EntitlementOrErr(p Entitlement, err error) Entitlement {
 	}
 }
 
+// ExternalInvoiceRef is the predicate function for externalinvoiceref builders.
+type ExternalInvoiceRef func(*sql.Selector)
+
 // Feature is the predicate function for dbfeature builders.
 type Feature func(*sql.Selector)
+
+// Fulfillment is the predicate function for fulfillment builders.
+type Fulfillment func(*sql.Selector)
 
 // Grant is the predicate function for dbgrant builders.
 type Grant func(*sql.Selector)
@@ -461,8 +476,17 @@ func NotificationRuleOrErr(p NotificationRule, err error) NotificationRule {
 	}
 }
 
+// OfflinePayment is the predicate function for offlinepayment builders.
+type OfflinePayment func(*sql.Selector)
+
 // OrganizationDefaultTaxCodes is the predicate function for organizationdefaulttaxcodes builders.
 type OrganizationDefaultTaxCodes func(*sql.Selector)
+
+// PaymentAttempt is the predicate function for paymentattempt builders.
+type PaymentAttempt func(*sql.Selector)
+
+// PaymentFact is the predicate function for paymentfact builders.
+type PaymentFact func(*sql.Selector)
 
 // Plan is the predicate function for plan builders.
 type Plan func(*sql.Selector)
@@ -497,6 +521,18 @@ func PlanRateCardOrErr(p PlanRateCard, err error) PlanRateCard {
 		p(s)
 	}
 }
+
+// ReceivableAccount is the predicate function for receivableaccount builders.
+type ReceivableAccount func(*sql.Selector)
+
+// ReceivablePeriod is the predicate function for receivableperiod builders.
+type ReceivablePeriod func(*sql.Selector)
+
+// RefundFact is the predicate function for refundfact builders.
+type RefundFact func(*sql.Selector)
+
+// RefundRequest is the predicate function for refundrequest builders.
+type RefundRequest func(*sql.Selector)
 
 // Subject is the predicate function for subject builders.
 type Subject func(*sql.Selector)
