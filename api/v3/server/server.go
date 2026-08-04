@@ -37,6 +37,7 @@ import (
 	subscriptionshandler "github.com/openmeterio/openmeter/api/v3/handlers/subscriptions"
 	subscriptionaddonshandler "github.com/openmeterio/openmeter/api/v3/handlers/subscriptions/subscriptionaddons"
 	taxcodeshandler "github.com/openmeterio/openmeter/api/v3/handlers/taxcodes"
+	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
 	"github.com/openmeterio/openmeter/api/v3/oasmiddleware"
 	"github.com/openmeterio/openmeter/api/v3/render"
 	"github.com/openmeterio/openmeter/app/config"
@@ -121,6 +122,9 @@ type Config struct {
 	AIUsageEnabled              bool
 	AIUsageService              aiusage.Service
 	RuntimeAuthorizationService runtimeauthorization.Service
+
+	// Commerce
+	CommerceHandler commercehandler.Handler
 }
 
 func (c *Config) Validate() error {
@@ -285,6 +289,8 @@ type Server struct {
 	featuresHandler             featureshandler.Handler
 	featureCostHandler          featurecosthandler.Handler
 	aiusageHandler              aiusagehandler.Handler
+
+	commerceHandler commercehandler.Handler
 }
 
 // Make sure we conform to ServerInterface
@@ -397,6 +403,7 @@ func NewServer(config *Config) (*Server, error) {
 		featureCostHandler:          featureCostH,
 		governanceHandler:           governanceHandler,
 		aiusageHandler:              aiusageH,
+		commerceHandler:             config.CommerceHandler,
 	}, nil
 }
 
