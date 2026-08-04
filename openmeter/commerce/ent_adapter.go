@@ -553,7 +553,12 @@ func mapEntOrder(eo *entdb.CommerceOrder) *Order {
 // error. The mappers only error on unknown enum values, which would indicate a
 // bug at the call site (the domain type guarantees valid values at the API
 // boundary).
-func must1[T any](v T, _ error) T { return v }
+func must1[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
 
 // --- Enum mappers ---
 

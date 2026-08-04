@@ -256,7 +256,7 @@ func ScheduleYearlyRenewal(order commerce.Order) []RenewalScheduleEntry {
 
 	start := order.UpdatedAt
 	if start.IsZero() {
-		start = time.Now()
+		start = clock.Now()
 	}
 
 	entries := make([]RenewalScheduleEntry, 12)
