@@ -116,8 +116,8 @@ export function listRechargeProducts(
  *
  * Create a new order (plan purchase, subscription renewal, or wallet top-up).
  *
- * Returns HTTP 201 on first creation. Replaying the same idempotency key
- * returns the stored order with HTTP 200.
+ * Returns HTTP 201 on first creation. Replaying the same idempotency key returns
+ * the stored order with HTTP 200.
  *
  * POST /orders
  */
@@ -186,8 +186,8 @@ export function getOrder(
 /**
  * Create checkout session
  *
- * Create a checkout session for an order, initiating a payment attempt with
- * the specified provider.
+ * Create a checkout session for an order, initiating a payment attempt with the
+ * specified provider.
  *
  * POST /orders/{orderId}/checkout-sessions
  */
@@ -231,8 +231,8 @@ export function createCheckoutSession(
 /**
  * Get checkout session
  *
- * Retrieve a checkout session by its ID (for polling payment status after
- * QR code expiry or page reload).
+ * Retrieve a checkout session by its ID (for polling payment status after QR code
+ * expiry or page reload).
  *
  * GET /checkout-sessions/{sessionId}
  */
@@ -341,8 +341,8 @@ export function getRefund(
 /**
  * WeChat Pay callback
  *
- * WeChat Pay payment callback. OpenMeter verifies the signature, confirms
- * the payment fact, and fulfills the order.
+ * WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
+ * payment fact, and fulfills the order.
  *
  * POST /payment-providers/wechat/callback
  */
@@ -371,8 +371,8 @@ export function wechatPaymentCallback(
 /**
  * Alipay callback
  *
- * Alipay payment callback. OpenMeter verifies the signature, confirms
- * the payment fact, and fulfills the order.
+ * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
+ * fact, and fulfills the order.
  *
  * POST /payment-providers/alipay/callback
  */
@@ -451,9 +451,9 @@ export function listReceivablePeriods(
 /**
  * Create offline payment
  *
- * Record an offline payment (bank transfer, enterprise remittance) for a
- * customer. The payment is held for reconciliation before being applied to a
- * receivable period.
+ * Record an offline payment (bank transfer, enterprise remittance) for a customer.
+ * The payment is held for reconciliation before being applied to a receivable
+ * period.
  *
  * POST /customers/{customerId}/offline-payments
  */

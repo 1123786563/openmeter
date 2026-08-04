@@ -4,13 +4,6 @@ import "../currencies/index.tsp";
 namespace Commerce;
 
 /**
- * Phase 2 commerce contract version string. Backward compatible with the Phase 1
- * `weknora-billing-p1-v1` contract; Phase 2 adds Wallet, Catalog, Order,
- * Payment, Refund and Enterprise receivable surfaces.
- */
-const Phase2ContractVersion = "weknora-billing-p2-v1";
-
-/**
  * The origin of a Wallet credit bucket. Determines consumption priority and refund
  * eligibility.
  *

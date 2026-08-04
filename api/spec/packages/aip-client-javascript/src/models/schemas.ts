@@ -1567,15 +1567,6 @@ export const aiUsageErrorCode = z
     'Machine-readable error codes specific to AI Usage billing. These codes appear in the `error_code` field of RFC-7807 problem responses returned by AI Usage endpoints.',
   )
 
-export const commerceProviderCallbackBody = z
-  .object({
-    body: z.string(),
-  })
-
-  .describe(
-    'The raw body of a payment provider callback (WeChat Pay or Alipay). The exact format is provider-specific; OpenMeter verifies the signature, confirms the payment fact, and returns a provider-appropriate acknowledgment. The client does not need to understand this format. This is an opaque string-typed body because the callback payloads are provider-specific (XML, form-encoded, or JSON) and are never exposed in client-facing SDK types.',
-  )
-
 export const systemAccountAccessToken = z
   .object({
     type: z.literal('http').describe('Http authentication'),
@@ -9545,15 +9536,6 @@ export const aiUsageErrorCodeWire = z
 
   .describe(
     'Machine-readable error codes specific to AI Usage billing. These codes appear in the `error_code` field of RFC-7807 problem responses returned by AI Usage endpoints.',
-  )
-
-export const commerceProviderCallbackBodyWire = z
-  .strictObject({
-    body: z.string(),
-  })
-
-  .describe(
-    'The raw body of a payment provider callback (WeChat Pay or Alipay). The exact format is provider-specific; OpenMeter verifies the signature, confirms the payment fact, and returns a provider-appropriate acknowledgment. The client does not need to understand this format. This is an opaque string-typed body because the callback payloads are provider-specific (XML, form-encoded, or JSON) and are never exposed in client-facing SDK types.',
   )
 
 export const systemAccountAccessTokenWire = z

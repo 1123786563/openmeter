@@ -67,8 +67,8 @@ type CommerceExternalInvoiceUpdate struct {
 type CommerceLedgerProvenance struct {
 	// Public identifier of the credit grant or ledger source.
 	GrantID string `json:"grant_id"`
-	// Settlement priority (0 = plan credit, 10 = gift, 20 = recharge,
-	// 30 = enterprise receivable).
+	// Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise
+	// receivable).
 	Priority int32 `json:"priority"`
 	// The credit source that funded this transaction.
 	Source CommerceWalletBucketSource `json:"source"`
@@ -145,8 +145,8 @@ type CommerceOrderCreate struct {
 	BillingCustomerID string `json:"billing_customer_id"`
 	// The business type of the order.
 	Kind CommerceOrderKind `json:"kind"`
-	// For `plan_purchase` or `subscription_renewal`: the plan and billing period
-	// being purchased.
+	// For `plan_purchase` or `subscription_renewal`: the plan and billing period being
+	// purchased.
 	Plan *CommercePlanRef `json:"plan,omitempty"`
 	// For `wallet_top_up`: the recharge product being purchased.
 	RechargeProductID *string `json:"recharge_product_id,omitempty"`
@@ -242,8 +242,8 @@ func (value CommercePaymentProvider) Valid() bool {
 	}
 }
 
-// A lightweight reference to a plan in the product catalog, embedded in order
-// and catalog responses without duplicating the full plan definition.
+// A lightweight reference to a plan in the product catalog, embedded in order and
+// catalog responses without duplicating the full plan definition.
 type CommercePlanRef struct {
 	PlanID      string `json:"plan_id"`
 	PlanKey     string `json:"plan_key"`
@@ -306,8 +306,8 @@ func (value CommerceReceivablePeriodStatus) Valid() bool {
 	}
 }
 
-// A recharge product (SKU) available for purchase. Each product defines a
-// credit package and its retail price in integer fen.
+// A recharge product (SKU) available for purchase. Each product defines a credit
+// package and its retail price in integer fen.
 type CommerceRechargeProduct struct {
 	// Public identifier of the recharge product.
 	ID string `json:"id"`
@@ -330,8 +330,8 @@ type CommerceRechargeProductList struct {
 	Products []CommerceRechargeProduct `json:"products"`
 }
 
-// A refund request, progressing through the billing fence and provider
-// processing before the ledger is reversed.
+// A refund request, progressing through the billing fence and provider processing
+// before the ledger is reversed.
 type CommerceRefund struct {
 	// Public identifier of the refund.
 	ID string `json:"id"`
@@ -426,8 +426,8 @@ type CommerceWallet struct {
 // A single credit bucket in a customer's Wallet. Each bucket represents credits
 // from one funding source with its own balance and expiration rules.
 //
-// The Wallet is a read-only aggregation over the immutable Credit Ledger; it
-// never holds a mutable second balance.
+// The Wallet is a read-only aggregation over the immutable Credit Ledger; it never
+// holds a mutable second balance.
 type CommerceWalletBucket struct {
 	// The funding source of this bucket.
 	Source CommerceWalletBucketSource `json:"source"`
@@ -440,8 +440,8 @@ type CommerceWalletBucket struct {
 	RefundableCredits *int64 `json:"refundable_credits,omitempty"`
 }
 
-// The origin of a Wallet credit bucket. Determines consumption priority and
-// refund eligibility.
+// The origin of a Wallet credit bucket. Determines consumption priority and refund
+// eligibility.
 //
 // - `plan`: Credits granted from a subscription plan, consumed first.
 // - `gift`: Promotional or compensatory credits.

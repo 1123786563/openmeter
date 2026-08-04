@@ -83,8 +83,8 @@ func (s *CommerceService) ListRechargeProducts(ctx context.Context, params ListR
 
 // Create a new order (plan purchase, subscription renewal, or wallet top-up).
 //
-// Returns HTTP 201 on first creation. Replaying the same idempotency key
-// returns the stored order with HTTP 200.
+// Returns HTTP 201 on first creation. Replaying the same idempotency key returns
+// the stored order with HTTP 200.
 func (s *CommerceService) CreateOrder(ctx context.Context, request CommerceOrderCreate) (*CommerceOrder, error) {
 	path := "/orders"
 
@@ -124,8 +124,8 @@ func (s *CommerceService) GetOrder(ctx context.Context, orderID string) (*Commer
 	return &out, nil
 }
 
-// Create a checkout session for an order, initiating a payment attempt with
-// the specified provider.
+// Create a checkout session for an order, initiating a payment attempt with the
+// specified provider.
 func (s *CommerceService) CreateCheckoutSession(ctx context.Context, orderID string, request CommerceCheckoutSessionCreate) (*CommerceCheckoutSession, error) {
 	if orderID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "orderID", ErrEmptyID)
@@ -148,8 +148,8 @@ func (s *CommerceService) CreateCheckoutSession(ctx context.Context, orderID str
 	return &out, nil
 }
 
-// Retrieve a checkout session by its ID (for polling payment status after
-// QR code expiry or page reload).
+// Retrieve a checkout session by its ID (for polling payment status after QR code
+// expiry or page reload).
 func (s *CommerceService) GetCheckoutSession(ctx context.Context, sessionID string) (*CommerceCheckoutSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "sessionID", ErrEmptyID)
@@ -212,8 +212,8 @@ func (s *CommerceService) GetRefund(ctx context.Context, refundID string) (*Comm
 	return &out, nil
 }
 
-// WeChat Pay payment callback. OpenMeter verifies the signature, confirms
-// the payment fact, and fulfills the order.
+// WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
+// payment fact, and fulfills the order.
 func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request string) (*CommerceProviderCallbackAck, error) {
 	path := "/payment-providers/wechat/callback"
 
@@ -230,8 +230,8 @@ func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request str
 	return &out, nil
 }
 
-// Alipay payment callback. OpenMeter verifies the signature, confirms
-// the payment fact, and fulfills the order.
+// Alipay payment callback. OpenMeter verifies the signature, confirms the payment
+// fact, and fulfills the order.
 func (s *CommerceService) AlipayPaymentCallback(ctx context.Context, request string) (*CommerceProviderCallbackAck, error) {
 	path := "/payment-providers/alipay/callback"
 
@@ -286,9 +286,9 @@ func (s *CommerceService) ListReceivablePeriodsAll(ctx context.Context, customer
 	})
 }
 
-// Record an offline payment (bank transfer, enterprise remittance) for a
-// customer. The payment is held for reconciliation before being applied to a
-// receivable period.
+// Record an offline payment (bank transfer, enterprise remittance) for a customer.
+// The payment is held for reconciliation before being applied to a receivable
+// period.
 func (s *CommerceService) CreateOfflinePayment(ctx context.Context, customerID string, request CommerceOfflinePaymentCreate) (*CommerceOfflinePayment, error) {
 	if customerID == "" {
 		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "customerID", ErrEmptyID)

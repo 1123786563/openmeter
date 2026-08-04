@@ -530,20 +530,6 @@ export interface PagePaginationQuery {
 export type PublicLabels = Record<string, string>
 
 /**
- * The raw body of a payment provider callback (WeChat Pay or Alipay). The exact
- * format is provider-specific; OpenMeter verifies the signature, confirms the
- * payment fact, and returns a provider-appropriate acknowledgment. The client
- * does not need to understand this format.
- *
- * This is an opaque string-typed body because the callback payloads are
- * provider-specific (XML, form-encoded, or JSON) and are never exposed in
- * client-facing SDK types.
- */
-export interface CommerceProviderCallbackBody {
-  body: string
-}
-
-/**
  * The system account access token is meant for automations and integrations that
  * are not directly associated with a human identity.
  */
@@ -962,8 +948,8 @@ export interface UpdateResourceReference {
 }
 
 /**
- * A lightweight reference to a plan in the product catalog, embedded in order
- * and catalog responses without duplicating the full plan definition.
+ * A lightweight reference to a plan in the product catalog, embedded in order and
+ * catalog responses without duplicating the full plan definition.
  */
 export interface CommercePlanRef {
   planId: string
@@ -2511,8 +2497,8 @@ export interface AiUsageCreditTransaction {
  * A single credit bucket in a customer's Wallet. Each bucket represents credits
  * from one funding source with its own balance and expiration rules.
  *
- * The Wallet is a read-only aggregation over the immutable Credit Ledger; it
- * never holds a mutable second balance.
+ * The Wallet is a read-only aggregation over the immutable Credit Ledger; it never
+ * holds a mutable second balance.
  */
 export interface CommerceWalletBucket {
   /** The funding source of this bucket. */
@@ -2537,8 +2523,8 @@ export interface CommerceLedgerProvenance {
   /** Public identifier of the credit grant or ledger source. */
   grantId: string
   /**
-   * Settlement priority (0 = plan credit, 10 = gift, 20 = recharge,
-   * 30 = enterprise receivable).
+   * Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise
+   * receivable).
    */
   priority: number
   /** The credit source that funded this transaction. */
@@ -2546,8 +2532,8 @@ export interface CommerceLedgerProvenance {
 }
 
 /**
- * A recharge product (SKU) available for purchase. Each product defines a
- * credit package and its retail price in integer fen.
+ * A recharge product (SKU) available for purchase. Each product defines a credit
+ * package and its retail price in integer fen.
  */
 export interface CommerceRechargeProduct {
   /** Public identifier of the recharge product. */
@@ -2710,8 +2696,8 @@ export interface CommercePaymentFact {
 }
 
 /**
- * A refund request, progressing through the billing fence and provider
- * processing before the ledger is reversed.
+ * A refund request, progressing through the billing fence and provider processing
+ * before the ledger is reversed.
  */
 export interface CommerceRefund {
   /** Public identifier of the refund. */
@@ -3303,8 +3289,8 @@ export interface CommerceOrderCreate {
   /** The business type of the order. */
   kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
   /**
-   * For `plan_purchase` or `subscription_renewal`: the plan and billing period
-   * being purchased.
+   * For `plan_purchase` or `subscription_renewal`: the plan and billing period being
+   * purchased.
    */
   plan?: CommercePlanRef
   /** For `wallet_top_up`: the recharge product being purchased. */

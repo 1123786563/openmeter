@@ -136,8 +136,8 @@ paths:
       operationId: get-checkout-session
       summary: Get checkout session
       description: |-
-        Retrieve a checkout session by its ID (for polling payment status after
-        QR code expiry or page reload).
+        Retrieve a checkout session by its ID (for polling payment status after QR code
+        expiry or page reload).
       parameters:
         - name: sessionId
           in: path
@@ -238,9 +238,9 @@ paths:
       operationId: create-offline-payment
       summary: Create offline payment
       description: |-
-        Record an offline payment (bank transfer, enterprise remittance) for a
-        customer. The payment is held for reconciliation before being applied to a
-        receivable period.
+        Record an offline payment (bank transfer, enterprise remittance) for a customer.
+        The payment is held for reconciliation before being applied to a receivable
+        period.
       parameters:
         - name: customerId
           in: path
@@ -3917,8 +3917,8 @@ paths:
       description: |-
         Create a new order (plan purchase, subscription renewal, or wallet top-up).
 
-        Returns HTTP 201 on first creation. Replaying the same idempotency key
-        returns the stored order with HTTP 200.
+        Returns HTTP 201 on first creation. Replaying the same idempotency key returns
+        the stored order with HTTP 200.
       responses:
         '200':
           description: Order response.
@@ -3983,8 +3983,8 @@ paths:
       operationId: create-checkout-session
       summary: Create checkout session
       description: |-
-        Create a checkout session for an order, initiating a payment attempt with
-        the specified provider.
+        Create a checkout session for an order, initiating a payment attempt with the
+        specified provider.
       parameters:
         - name: orderId
           in: path
@@ -4020,8 +4020,8 @@ paths:
       operationId: alipay-payment-callback
       summary: Alipay callback
       description: |-
-        Alipay payment callback. OpenMeter verifies the signature, confirms
-        the payment fact, and fulfills the order.
+        Alipay payment callback. OpenMeter verifies the signature, confirms the payment
+        fact, and fulfills the order.
       responses:
         '200':
           description: ProviderCallbackAck response.
@@ -4049,8 +4049,8 @@ paths:
       operationId: wechat-payment-callback
       summary: WeChat Pay callback
       description: |-
-        WeChat Pay payment callback. OpenMeter verifies the signature, confirms
-        the payment fact, and fulfills the order.
+        WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
+        payment fact, and fulfills the order.
       responses:
         '200':
           description: ProviderCallbackAck response.
@@ -10319,8 +10319,8 @@ components:
       format: int64
       minimum: 0
       description: |-
-        Integer amount in the smallest currency unit (e.g. CNY fen, USD cents).
-        Used for all payment, order, refund and invoice monetary fields.
+        Integer amount in the smallest currency unit (e.g. CNY fen, USD cents). Used for
+        all payment, order, refund and invoice monetary fields.
     CommerceLedgerProvenance:
       type: object
       required:
@@ -10336,8 +10336,8 @@ components:
           type: integer
           format: int32
           description: |-
-            Settlement priority (0 = plan credit, 10 = gift, 20 = recharge,
-            30 = enterprise receivable).
+            Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise
+            receivable).
         source:
           allOf:
             - $ref: '#/components/schemas/CommerceWalletBucketSource'
@@ -10513,8 +10513,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/CommercePlanRef'
           description: |-
-            For `plan_purchase` or `subscription_renewal`: the plan and billing period
-            being purchased.
+            For `plan_purchase` or `subscription_renewal`: the plan and billing period being
+            purchased.
         recharge_product_id:
           allOf:
             - $ref: '#/components/schemas/ULID'
@@ -10586,8 +10586,8 @@ components:
           type: string
       additionalProperties: false
       description: |-
-        A lightweight reference to a plan in the product catalog, embedded in order
-        and catalog responses without duplicating the full plan definition.
+        A lightweight reference to a plan in the product catalog, embedded in order and
+        catalog responses without duplicating the full plan definition.
     CommerceProviderCallbackAck:
       type: object
       required:
@@ -10715,8 +10715,8 @@ components:
           description: Sort order for display.
       additionalProperties: false
       description: |-
-        A recharge product (SKU) available for purchase. Each product defines a
-        credit package and its retail price in integer fen.
+        A recharge product (SKU) available for purchase. Each product defines a credit
+        package and its retail price in integer fen.
     CommerceRechargeProductList:
       type: object
       required:
@@ -10796,8 +10796,8 @@ components:
           readOnly: true
       additionalProperties: false
       description: |-
-        A refund request, progressing through the billing fence and provider
-        processing before the ledger is reversed.
+        A refund request, progressing through the billing fence and provider processing
+        before the ledger is reversed.
     CommerceRefundCreate:
       type: object
       required:
@@ -10919,8 +10919,8 @@ components:
         A single credit bucket in a customer's Wallet. Each bucket represents credits
         from one funding source with its own balance and expiration rules.
 
-        The Wallet is a read-only aggregation over the immutable Credit Ledger; it
-        never holds a mutable second balance.
+        The Wallet is a read-only aggregation over the immutable Credit Ledger; it never
+        holds a mutable second balance.
     CommerceWalletBucketSource:
       type: string
       enum:
@@ -10929,8 +10929,8 @@ components:
         - recharge
         - enterprise_receivable
       description: |-
-        The origin of a Wallet credit bucket. Determines consumption priority and
-        refund eligibility.
+        The origin of a Wallet credit bucket. Determines consumption priority and refund
+        eligibility.
 
         - `plan`: Credits granted from a subscription plan, consumed first.
         - `gift`: Promotional or compensatory credits.

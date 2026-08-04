@@ -106,7 +106,6 @@ export type {
   QueryFilterBoolean,
   PagePaginationQuery,
   PublicLabels,
-  CommerceProviderCallbackBody,
   SystemAccountAccessToken,
   PersonalAccessToken,
   KonnectAccessToken,
