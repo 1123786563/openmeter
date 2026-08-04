@@ -26,6 +26,7 @@ DROP TABLE IF EXISTS "ai_usage_ratecard_entries";
 
 -- drop "ai_usage_outboxes"
 DROP INDEX IF EXISTS "aiusageoutbox_namespace_customer_id";
+DROP INDEX IF EXISTS "aiusageoutbox_namespace_published_dead_lettered_leased_until";
 DROP INDEX IF EXISTS "aiusageoutbox_namespace_published";
 DROP INDEX IF EXISTS "aiusageoutbox_namespace";
 DROP INDEX IF EXISTS "aiusageoutbox_id";

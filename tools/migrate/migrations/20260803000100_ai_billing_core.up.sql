@@ -128,6 +128,11 @@ CREATE TABLE "ai_usage_outboxes" (
   "payload" jsonb NOT NULL,
   "published" boolean DEFAULT false,
   "published_at" timestamptz NULL,
+  "owner" character varying DEFAULT '',
+  "claim_count" bigint DEFAULT 0,
+  "leased_until" timestamptz NULL,
+  "dead_lettered" boolean DEFAULT false,
+  "dead_letter_reason" character varying DEFAULT '',
   "ai_usage_batch_outbox_events" character(26) NULL,
   PRIMARY KEY ("id")
 );
@@ -135,6 +140,7 @@ CREATE UNIQUE INDEX "aiusageoutbox_id" ON "ai_usage_outboxes" ("id");
 CREATE INDEX "aiusageoutbox_namespace" ON "ai_usage_outboxes" ("namespace");
 CREATE INDEX "aiusageoutbox_namespace_published" ON "ai_usage_outboxes" ("namespace", "published");
 CREATE INDEX "aiusageoutbox_namespace_customer_id" ON "ai_usage_outboxes" ("namespace", "customer_id");
+CREATE INDEX "aiusageoutbox_namespace_published_dead_lettered_leased_until" ON "ai_usage_outboxes" ("namespace", "published", "dead_lettered", "leased_until");
 ALTER TABLE "ai_usage_outboxes" ADD CONSTRAINT "ai_usage_outboxes_ai_usage_batches_outbox_events" FOREIGN KEY ("ai_usage_batch_outbox_events") REFERENCES "ai_usage_batches" ("id") ON DELETE NO ACTION;
 
 -- create "ai_usage_ratecard_entries" table

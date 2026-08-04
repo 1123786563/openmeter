@@ -96,6 +96,11 @@ func getTx(ctx context.Context, creator Creator) (context.Context, Driver, error
 // Manages the transaction based on the behavior of the callback
 func manage[R any](ctx context.Context, tx Driver, cb func(ctx context.Context, tx Driver) (R, error)) (R, error) {
 	var def R
+	// resolved is set on every normal exit path. When the callback calls
+	// runtime.Goexit (e.g. via testing.T.FailNow), recover() returns nil so the
+	// panic branch is skipped — the deferred check below is the last chance to
+	// roll back, preventing a leaked transaction and its awaitDone goroutine.
+	resolved := false
 	defer func() {
 		if r := recover(); r != nil {
 			pMsg := fmt.Sprintf("%v:\n%s", r, debug.Stack())
@@ -104,10 +109,15 @@ func manage[R any](ctx context.Context, tx Driver, cb func(ctx context.Context, 
 			_ = tx.Rollback()
 			panic(pMsg)
 		}
+		if !resolved {
+			// Callback terminated without committing or rolling back (Goexit).
+			_ = tx.Rollback()
+		}
 	}()
 
 	err := tx.SavePoint()
 	if err != nil {
+		resolved = true
 		return def, err
 	}
 
@@ -118,6 +128,7 @@ func manage[R any](ctx context.Context, tx Driver, cb func(ctx context.Context, 
 			err = errors.Join(err, rerr)
 		}
 
+		resolved = true
 		return def, err
 	}
 
@@ -127,8 +138,10 @@ func manage[R any](ctx context.Context, tx Driver, cb func(ctx context.Context, 
 		if rerr := tx.Rollback(); rerr != nil {
 			err = errors.Join(err, rerr)
 		}
+		resolved = true
 		return def, err
 	}
 
+	resolved = true
 	return result, nil
 }
