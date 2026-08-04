@@ -45,6 +45,7 @@ type noopCreditBalanceReader struct{}
 func (noopCreditBalanceReader) ReadBalance(context.Context, string, string, time.Time) (CreditBalanceView, error) {
 	return CreditBalanceView{}, models.NewGenericNotImplementedError(nil)
 }
+
 func (noopCreditBalanceReader) ListTransactions(context.Context, string, string, Pagination) ([]CreditTransactionView, error) {
 	return nil, models.NewGenericNotImplementedError(nil)
 }

@@ -3,10 +3,9 @@ package server
 import (
 	"net/http"
 
+	api "github.com/openmeterio/openmeter/api/v3"
 	"github.com/openmeterio/openmeter/api/v3/apierrors"
 	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
-
-	api "github.com/openmeterio/openmeter/api/v3"
 	"github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"
 	currencieshandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
 	chargeshandler "github.com/openmeterio/openmeter/api/v3/handlers/customers/charges"

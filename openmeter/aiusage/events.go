@@ -18,7 +18,7 @@ const (
 	EventCreditBalanceChanged = "credit.balance.changed"
 
 	// EventRuntimeAuthorizationUpdated is emitted when a new signed runtime
-	// authorization package is generated, signalling consumers to refresh their
+	// authorization package is generated, signaling consumers to refresh their
 	// cached authorization snapshot.
 	EventRuntimeAuthorizationUpdated = "runtime_authorization.updated"
 )

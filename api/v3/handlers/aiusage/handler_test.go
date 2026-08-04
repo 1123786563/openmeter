@@ -148,7 +148,7 @@ func validBatchBody(idempotencyKey, payloadHash string) api.AIUsageUsageBatchCre
 		ReservationId:             "res-1",
 		SubjectKey:                "subj-1",
 		TenantSeq:                 1,
-		OccurredAt:                api.DateTime(time.Now().UTC()),
+		OccurredAt:                time.Now().UTC(),
 		Lines: []api.AIUsageUsageLineCreate{
 			{
 				ResourceCode:       "llm_input_tokens",
@@ -433,7 +433,7 @@ func TestWorkerStartCancelTerminatesWithin5Seconds(t *testing.T) {
 
 	select {
 	case err := <-done:
-		// Expected: the group exits because the context was cancelled.
+		// Expected: the group exits because the context was canceled.
 		_ = err
 	case <-time.After(5 * time.Second):
 		t.Fatal("worker lifecycle did not terminate within 5 seconds")

@@ -16,14 +16,14 @@ import (
 
 type (
 	GetAiUsageBatchParams struct {
-		BatchID string
+		BatchID    string
 		CustomerID string
 	}
 
 	GetAiUsageBatchRequest struct {
-		Namespace string
+		Namespace  string
 		CustomerID string
-		BatchID   string
+		BatchID    string
 	}
 
 	GetAiUsageBatchResponse = api.AIUsageUsageBatch
@@ -95,7 +95,7 @@ func (h *handler) GetAiUsageCreditBalance() GetAiUsageCreditBalanceHandler {
 
 			at := time.Now()
 			if params.Timestamp != nil {
-				at = time.Time(*params.Timestamp)
+				at = *params.Timestamp
 			}
 
 			return GetAiUsageCreditBalanceRequest{Namespace: ns, CustomerID: params.CustomerID, At: at}, nil

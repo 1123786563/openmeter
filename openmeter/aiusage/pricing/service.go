@@ -31,7 +31,7 @@ func NewService(rates RateEntryProvider) *Service {
 
 // Resolve normalizes, rates, and accumulates usage lines into a ResolvedBatch.
 //
-// Behaviour:
+// Behavior:
 //   - Homogeneous lines (same resource+provider+model) are merged before rating.
 //   - Each line is rated via CeilCredits(quantity, creditsPerUnit, unitSize).
 //   - BYOK provider-managed tokens: CustomerCredits=0 AND ProviderCost=0.

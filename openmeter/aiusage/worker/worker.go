@@ -229,7 +229,7 @@ func (w *Worker) Stop() {
 	w.mu.Unlock()
 }
 
-// run is the main poll loop. It exits when ctx is cancelled or Stop is called.
+// run is the main poll loop. It exits when ctx is canceled or Stop is called.
 func (w *Worker) run(ctx context.Context) {
 	defer close(w.doneCh)
 

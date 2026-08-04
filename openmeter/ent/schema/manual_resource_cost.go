@@ -6,7 +6,6 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
-
 	"github.com/alpacahq/alpacadecimal"
 
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"

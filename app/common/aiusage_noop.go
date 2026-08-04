@@ -54,5 +54,7 @@ func (noopCoveredSeqReader) ReadCoveredSeq(_ context.Context, _, _ string) (int6
 }
 
 // Unused import guard — keeps slog referenced for future logging additions.
-var _ *slog.Logger
-var _ time.Duration
+var (
+	_ *slog.Logger
+	_ time.Duration
+)

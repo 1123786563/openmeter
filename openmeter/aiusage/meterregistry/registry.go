@@ -93,9 +93,9 @@ func DefaultResourceSchemas() ResourceSchemaSet {
 }
 
 type registry struct {
-	mu       sync.RWMutex
-	schemas  map[aiusage.ResourceCode]ResourceSchema
-	manager  MeterManager
+	mu      sync.RWMutex
+	schemas map[aiusage.ResourceCode]ResourceSchema
+	manager MeterManager
 }
 
 // New creates a Registry backed by the given MeterManager.

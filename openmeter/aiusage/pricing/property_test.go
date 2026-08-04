@@ -90,7 +90,7 @@ func FuzzResolveNeverPanics(f *testing.F) {
 	f.Add(int64(1))
 	f.Add(int64(500))
 	f.Add(int64(1000))
-	f.Add(int64(-1))          // invalid — should be handled gracefully
+	f.Add(int64(-1)) // invalid — should be handled gracefully
 	f.Add(int64(math.MaxInt64))
 
 	f.Fuzz(func(t *testing.T, qty int64) {

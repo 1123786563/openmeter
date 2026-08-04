@@ -104,7 +104,7 @@ func TestResolveTableCases(t *testing.T) {
 			wantErr: aiusage.ErrCreditOverflow,
 		},
 		{
-			name: "two 500-token lines equal one 1000-token line",
+			name:     "two 500-token lines equal one 1000-token line",
 			provider: true,
 			lines: []aiusage.UsageLineInput{
 				{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 500, Provider: "openai", Model: "gpt-test"},
@@ -135,9 +135,9 @@ func TestResolveTableCases(t *testing.T) {
 			wantLines:   1,
 		},
 		{
-			name:    "ambiguous rate: two equally specific entries",
+			name:     "ambiguous rate: two equally specific entries",
 			provider: true,
-			lines:   []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-test"}},
+			lines:    []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 1000, Provider: "openai", Model: "gpt-test"}},
 			rates: []RateEntry{
 				{ResourceCode: aiusage.ResourceLLMInputTokens, Provider: "openai", Model: "gpt-test", CreditsPerUnit: 2, UnitSize: 1000, EffectiveFrom: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
 				{ResourceCode: aiusage.ResourceLLMInputTokens, Provider: "openai", Model: "gpt-test", CreditsPerUnit: 3, UnitSize: 1000, EffectiveFrom: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -145,17 +145,17 @@ func TestResolveTableCases(t *testing.T) {
 			wantErr: aiusage.ErrAmbiguousRate,
 		},
 		{
-			name:    "missing rate for provider-managed resource",
+			name:     "missing rate for provider-managed resource",
 			provider: true,
-			lines:   []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMOutputTokens, Quantity: 100, Provider: "openai", Model: "gpt-test"}},
-			wantErr: aiusage.ErrRateMissing,
+			lines:    []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMOutputTokens, Quantity: 100, Provider: "openai", Model: "gpt-test"}},
+			wantErr:  aiusage.ErrRateMissing,
 		},
 		{
-			name:    "bundle mode with lines is rejected",
+			name:     "bundle mode with lines is rejected",
 			provider: true,
-			mode:    aiusage.BillingModeBundle,
-			lines:   []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 100, Provider: "openai", Model: "gpt-test"}},
-			wantErr: aiusage.ErrBillingModeConflict,
+			mode:     aiusage.BillingModeBundle,
+			lines:    []aiusage.UsageLineInput{{ResourceCode: aiusage.ResourceLLMInputTokens, Quantity: 100, Provider: "openai", Model: "gpt-test"}},
+			wantErr:  aiusage.ErrBillingModeConflict,
 		},
 		{
 			name:        "platform resource under provider-managed still charges",

@@ -228,16 +228,16 @@ func (b AIUsageBatch) Validate() error {
 
 // CostSnapshot is the provider cost for a resource (typically in USD).
 type CostSnapshot struct {
-	Currency string            `json:"currency"`
+	Currency string                `json:"currency"`
 	Amount   alpacadecimal.Decimal `json:"amount"`
-	Source   string            `json:"source"`
+	Source   string                `json:"source"`
 }
 
 // SalesSnapshot is the customer-facing price (typically in CNY for display).
 type SalesSnapshot struct {
-	Currency        string            `json:"currency"`
+	Currency        string                `json:"currency"`
 	Amount          alpacadecimal.Decimal `json:"amount"`
-	RateCardVersion string            `json:"rate_card_version"`
+	RateCardVersion string                `json:"rate_card_version"`
 }
 
 // RatingSnapshot captures the cost and sales price resolution for one line item.
@@ -252,9 +252,9 @@ type RatingSnapshot struct {
 
 // LedgerEntryRef references a grant that was burned during settlement.
 type LedgerEntryRef struct {
-	GrantID  string  `json:"grant_id"`
-	Amount   int64   `json:"amount"`
-	Priority uint8   `json:"priority"`
+	GrantID  string `json:"grant_id"`
+	Amount   int64  `json:"amount"`
+	Priority uint8  `json:"priority"`
 }
 
 // LedgerProvenance links an allocation back to the original ledger transaction
@@ -309,10 +309,10 @@ func (s SettlementScope) Validate() error {
 
 // Allocation records the Credit deduction from a single funding source (grant).
 type Allocation struct {
-	GrantID       string        `json:"grant_id"`
-	Amount        int64         `json:"amount"`
-	Priority      uint8         `json:"priority"`
-	FundingSource FundingSource `json:"funding_source"`
+	GrantID       string           `json:"grant_id"`
+	Amount        int64            `json:"amount"`
+	Priority      uint8            `json:"priority"`
+	FundingSource FundingSource    `json:"funding_source"`
 	Ledger        LedgerProvenance `json:"ledger,omitempty"`
 }
 
@@ -406,18 +406,18 @@ type Batch struct {
 type IngestBatchInput struct {
 	ProviderManaged bool `json:"provider_managed"`
 
-	Namespace      string           `json:"namespace"`
-	CustomerID     string           `json:"customer_id"`
-	SubjectID      string           `json:"subject_id"`
-	UsageBatchID   string           `json:"usage_batch_id"`
-	TenantSeq      int64            `json:"tenant_seq"`
-	OccurredAt     time.Time        `json:"occurred_at"`
-	ReservationID  *string          `json:"reservation_id,omitempty"`
-	CeilingCredits *int64           `json:"ceiling_credits,omitempty"`
-	RateVersion    string           `json:"rate_version"`
-	BillingMode    BillingMode      `json:"billing_mode"`
-	PayloadHash    string           `json:"payload_hash"`
-	LineItems      []UsageLineItem  `json:"line_items"`
+	Namespace      string          `json:"namespace"`
+	CustomerID     string          `json:"customer_id"`
+	SubjectID      string          `json:"subject_id"`
+	UsageBatchID   string          `json:"usage_batch_id"`
+	TenantSeq      int64           `json:"tenant_seq"`
+	OccurredAt     time.Time       `json:"occurred_at"`
+	ReservationID  *string         `json:"reservation_id,omitempty"`
+	CeilingCredits *int64          `json:"ceiling_credits,omitempty"`
+	RateVersion    string          `json:"rate_version"`
+	BillingMode    BillingMode     `json:"billing_mode"`
+	PayloadHash    string          `json:"payload_hash"`
+	LineItems      []UsageLineItem `json:"line_items"`
 }
 
 // UsageLineInput is a normalized usage line for pricing resolution.

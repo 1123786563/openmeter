@@ -4,10 +4,10 @@
 // allocations back into aiusage.Allocation records with full ledger provenance.
 //
 // The collector handles all source selection: querying live FBO balance,
-// prioritising by credit-priority -> feature-restriction -> expiry -> cursor
+// prioritizing by credit-priority -> feature-restriction -> expiry -> cursor
 // (the within-category burn order), locking accounts, managing breakage, and
 // committing the ledger transaction group. The settlement service does NOT
-// scan grant balances or synthesise provenance.
+// scan grant balances or synthesize provenance.
 package settlement
 
 import (
@@ -206,7 +206,7 @@ func (s *service) AllocateAndBook(ctx context.Context, _ adapter.TxAdapter, in S
 
 // Correct reverses a previously settled batch by calling the collector's
 // CorrectCollectedAccrued with the original allocation provenance. This
-// unwinds the actual original ledger entries rather than synthesising reversals.
+// unwinds the actual original ledger entries rather than synthesizing reversals.
 func (s *service) Correct(ctx context.Context, _ adapter.TxAdapter, in CorrectionInput) ([]aiusage.Allocation, error) {
 	ctx, span := s.tracer.Start(ctx, "settlement.Correct")
 	defer span.End()

@@ -64,12 +64,15 @@ type mockTxAdapter struct{}
 func (mockTxAdapter) GetBatchByIdempotencyKey(_ context.Context, _, _, _ string) (*aiusage.AIUsageBatch, error) {
 	return nil, nil
 }
+
 func (mockTxAdapter) CreateSettledBatch(_ context.Context, _ aiusage.SettledBatch) (*aiusage.AIUsageBatch, bool, error) {
 	return nil, true, nil
 }
+
 func (mockTxAdapter) AdvanceWatermark(_ context.Context, _, _ string, _ int64) (int64, error) {
 	return 0, nil
 }
+
 func (mockTxAdapter) AppendOutbox(_ context.Context, _, _, _ string, _ []aiusage.OutboxEvent, _ string) error {
 	return nil
 }
@@ -278,7 +281,7 @@ func TestCorrect_ReversesAllocations(t *testing.T) {
 		CustomerID:          "cust-1",
 		SubjectID:           "subj-1",
 		OriginalBatchID:     "batch-001",
-		BookedAt:             now(),
+		BookedAt:            now(),
 		OriginalAllocations: originalAllocs,
 		ChargeID:            "charge-ai",
 		Currency:            usdCurrency(),
@@ -444,7 +447,7 @@ func TestCorrect_SkipsMissingProvenance(t *testing.T) {
 		Namespace:           "ns-1",
 		CustomerID:          "cust-1",
 		OriginalBatchID:     "batch-001",
-		BookedAt:             now(),
+		BookedAt:            now(),
 		OriginalAllocations: []aiusage.Allocation{{GrantID: "g1", Amount: 10}},
 	})
 	require.NoError(t, err)

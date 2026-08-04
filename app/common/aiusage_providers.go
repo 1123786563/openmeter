@@ -15,12 +15,12 @@ import (
 	aiusageservice "github.com/openmeterio/openmeter/openmeter/aiusage/service"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagewatermark"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/currencyx"
 )
 
 // =========================================================================
@@ -407,7 +407,7 @@ func (p *dbSnapshotVersionProvider) Next(ctx context.Context) (int64, error) {
 
 	// Add a high offset so the version never collides with covered_seq values
 	// and is strictly increasing across restarts.
-	return maxSeq + int64(time.Now().Unix()), nil
+	return maxSeq + time.Now().Unix(), nil
 }
 
 // =========================================================================

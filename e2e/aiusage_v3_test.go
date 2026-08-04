@@ -77,8 +77,8 @@ func fundWKC(t *testing.T, c *v3Client, customerID string, amount int64) {
 
 	_, err := c.Customers.Credits.Grants.Create(t.Context(), customerID, v3sdk.CreateCreditGrantRequest{
 		Name:          "WKC prepaid funding",
-		Amount:        v3sdk.Numeric(strconv.FormatInt(amount, 10)),
-		Currency:      v3sdk.BillingCurrencyCode("CNY"),
+		Amount:        strconv.FormatInt(amount, 10),
+		Currency:      "CNY",
 		FundingMethod: v3sdk.CreditFundingMethodNone,
 	})
 	c.requireStatus(http.StatusCreated, err)
@@ -99,7 +99,7 @@ func computePayloadHash(batch v3sdk.AIUsageUsageBatchCreate) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// withHash finalises a batch request by computing and setting the payload_hash.
+// withHash finalizes a batch request by computing and setting the payload_hash.
 func withHash(batch v3sdk.AIUsageUsageBatchCreate) v3sdk.AIUsageUsageBatchCreate {
 	batch.PayloadHash = computePayloadHash(batch)
 	return batch
@@ -382,7 +382,7 @@ func TestV3AIUsageClosedLoop(t *testing.T) {
 		_, err = c.Customers.Credits.Adjustments.Create(t.Context(), customer.ID, v3sdk.CreateCreditAdjustmentRequest{
 			Name:        "AI usage correction for batch " + settled.ID,
 			Description: ptrTo("Reverses the 9-credit charge from batch " + settled.ID),
-			Currency:    v3sdk.BillingCurrencyCode("CNY"),
+			Currency:    "CNY",
 			Amount:      v3sdk.Numeric("9"),
 		})
 		c.requireStatus(http.StatusCreated, err)
@@ -409,7 +409,7 @@ func TestV3AIUsageClosedLoop(t *testing.T) {
 		_, err := c.Customers.Credits.Grants.Create(t.Context(), customer.ID, v3sdk.CreateCreditGrantRequest{
 			Name:          "Enterprise receivable line",
 			Amount:        v3sdk.Numeric("0"),
-			Currency:      v3sdk.BillingCurrencyCode("CNY"),
+			Currency:      "CNY",
 			FundingMethod: v3sdk.CreditFundingMethodExternal,
 			Priority:      ptrTo(int16(30)),
 		})

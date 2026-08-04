@@ -18,7 +18,7 @@ func fromAPIBatchCreate(namespace string, body api.AIUsageUsageBatchCreate) aius
 		SubjectID:       body.SubjectKey,
 		UsageBatchID:    body.IdempotencyKey,
 		TenantSeq:       body.TenantSeq,
-		OccurredAt:      time.Time(body.OccurredAt),
+		OccurredAt:      body.OccurredAt,
 		ReservationID:   &reservationID,
 		CeilingCredits:  &ceiling,
 		RateVersion:     body.RatePackageVersion,
@@ -56,7 +56,7 @@ func toAPIBatch(
 		BillingCustomerId:         input.CustomerID,
 		SubjectKey:                input.SubjectID,
 		TenantSeq:                 input.TenantSeq,
-		OccurredAt:                api.DateTime(input.OccurredAt),
+		OccurredAt:                input.OccurredAt,
 		ReservationId:             ptrStringVal(input.ReservationID),
 		RatePackageVersion:        input.RateVersion,
 		BillingMode:               api.AIUsageBillingMode(input.BillingMode),
@@ -64,7 +64,7 @@ func toAPIBatch(
 		Status:                    api.AIUsageBatchStatus(result.Status),
 		TotalCredits:              result.TotalCredits,
 		CoveredTenantSeq:          result.CoveredTenantSeq,
-		CreatedAt:                 api.DateTime(createdAt),
+		CreatedAt:                 createdAt,
 		ReservationCeilingCredits: ptrInt64Val(input.CeilingCredits),
 	}
 
@@ -98,12 +98,12 @@ func toAPIBatchFromDomain(batch *aiusage.AIUsageBatch) api.AIUsageUsageBatch {
 		BillingCustomerId:         batch.CustomerID,
 		SubjectKey:                batch.SubjectID,
 		TenantSeq:                 batch.TenantSeq,
-		OccurredAt:                api.DateTime(batch.OccurredAt),
+		OccurredAt:                batch.OccurredAt,
 		ReservationId:             ptrStringVal(batch.ReservationID),
 		RatePackageVersion:        batch.RateVersion,
 		BillingMode:               api.AIUsageBillingMode(batch.BillingMode),
 		Status:                    api.AIUsageBatchStatus(batch.Status),
-		CreatedAt:                 api.DateTime(batch.CreatedAt),
+		CreatedAt:                 batch.CreatedAt,
 		ReservationCeilingCredits: ptrInt64Val(batch.CeilingCredits),
 	}
 
@@ -126,7 +126,7 @@ func toAPIBatchFromDomain(batch *aiusage.AIUsageBatch) api.AIUsageUsageBatch {
 func toAPIRuntimeAuthorization(view authorizationPackageView, now time.Time) api.AIUsageRuntimeAuthorization {
 	resp := api.AIUsageRuntimeAuthorization{
 		ContractVersion:  view.ContractVersion,
-		RetrievedAt:      api.DateTime(now),
+		RetrievedAt:      now,
 		Authorized:       view.Authorized,
 		AvailableCredits: view.AvailableCredits,
 		CoveredTenantSeq: view.CoveredTenantSeq,
@@ -143,7 +143,7 @@ func toAPIRuntimeAuthorization(view authorizationPackageView, now time.Time) api
 
 func costSnapshotToAPI(snap aiusage.CostSnapshot) *api.AIUsageCostSnapshot {
 	return &api.AIUsageCostSnapshot{
-		Currency: api.BillingCurrencyCode(snap.Currency),
+		Currency: snap.Currency,
 		Amount:   snap.Amount.String(),
 		Source:   snap.Source,
 	}
@@ -151,7 +151,7 @@ func costSnapshotToAPI(snap aiusage.CostSnapshot) *api.AIUsageCostSnapshot {
 
 func salesSnapshotToAPI(snap aiusage.SalesSnapshot) *api.AIUsageSalesSnapshot {
 	return &api.AIUsageSalesSnapshot{
-		Currency:        api.BillingCurrencyCode(snap.Currency),
+		Currency:        snap.Currency,
 		Amount:          snap.Amount.String(),
 		RateCardVersion: snap.RateCardVersion,
 	}

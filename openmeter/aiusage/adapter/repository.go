@@ -178,17 +178,17 @@ func (r *repository) mapBatchToResult(ent *db.AIUsageBatch) *aiusage.BatchSettle
 
 func (r *repository) mapEntityToBatch(ent *db.AIUsageBatch) *aiusage.AIUsageBatch {
 	batch := &aiusage.AIUsageBatch{
-		Namespace:      ent.Namespace,
-		CustomerID:     ent.CustomerID,
-		SubjectID:      ent.SubjectID,
-		UsageBatchID:   ent.UsageBatchID,
-		TenantSeq:      ent.TenantSeq,
-		OccurredAt:     ent.OccurredAt,
-		RateVersion:    ent.RateVersion,
-		BillingMode:    aiusage.BillingMode(ent.BillingMode),
-		PayloadHash:    ent.PayloadHash,
-		Status:         aiusage.BatchStatus(ent.Status),
-		LineItems:      []aiusage.UsageLineItem{},
+		Namespace:    ent.Namespace,
+		CustomerID:   ent.CustomerID,
+		SubjectID:    ent.SubjectID,
+		UsageBatchID: ent.UsageBatchID,
+		TenantSeq:    ent.TenantSeq,
+		OccurredAt:   ent.OccurredAt,
+		RateVersion:  ent.RateVersion,
+		BillingMode:  aiusage.BillingMode(ent.BillingMode),
+		PayloadHash:  ent.PayloadHash,
+		Status:       aiusage.BatchStatus(ent.Status),
+		LineItems:    []aiusage.UsageLineItem{},
 	}
 
 	if ent.ReservationID != nil {

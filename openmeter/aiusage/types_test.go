@@ -19,17 +19,17 @@ func validLineItem() UsageLineItem {
 
 func validBatch() AIUsageBatch {
 	return AIUsageBatch{
-		Namespace:      "ns-1",
-		CustomerID:     "cust-1",
-		SubjectID:      "subj-1",
-		UsageBatchID:   "batch-01J0K3X9FHTC6QZ4D2N9R7YBPW",
-		TenantSeq:      1,
-		OccurredAt:     time.Now(),
-		RateVersion:    "v1",
-		BillingMode:    BillingModeComponent,
-		PayloadHash:    "abc123",
-		Status:         BatchStatusPending,
-		LineItems:      []UsageLineItem{validLineItem()},
+		Namespace:    "ns-1",
+		CustomerID:   "cust-1",
+		SubjectID:    "subj-1",
+		UsageBatchID: "batch-01J0K3X9FHTC6QZ4D2N9R7YBPW",
+		TenantSeq:    1,
+		OccurredAt:   time.Now(),
+		RateVersion:  "v1",
+		BillingMode:  BillingModeComponent,
+		PayloadHash:  "abc123",
+		Status:       BatchStatusPending,
+		LineItems:    []UsageLineItem{validLineItem()},
 	}
 }
 

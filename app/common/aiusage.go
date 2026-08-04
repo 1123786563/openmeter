@@ -7,9 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"go.opentelemetry.io/otel/trace"
-
 	"github.com/google/wire"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
@@ -371,4 +370,3 @@ var (
 	_ aiusageservice.AllocationFetcher       = (*dbAllocationFetcher)(nil)
 	_ worker.OutboxRepository                = (*entOutboxRepository)(nil)
 )
-
