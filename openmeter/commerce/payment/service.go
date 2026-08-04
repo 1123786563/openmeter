@@ -32,7 +32,8 @@ type AttemptRepository interface {
 	// GetAttemptByIdempotencyKey looks up an attempt by its idempotency key.
 	GetAttemptByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*PaymentAttempt, error)
 
-	// GetAttemptByProviderOrder looks up an attempt by provider + provider order ID.
+	// GetAttemptByProviderOrder looks up an attempt by namespace + provider +
+	// provider order ID. The namespace must always be scoped — never empty.
 	GetAttemptByProviderOrder(ctx context.Context, namespace string, provider Provider, providerOrderID string) (*PaymentAttempt, error)
 
 	// UpdateAttemptStatus atomically updates the attempt status with optimistic
@@ -68,6 +69,48 @@ type OrderStatusUpdater interface {
 	GetOrder(ctx context.Context, namespace, id string) (*commerce.Order, error)
 }
 
+// PaidTransitionInput carries everything needed for the atomic paid transition:
+// inserting the payment fact, moving the order to paid, creating the fulfillment
+// request, and writing an outbox record — all within one database transaction.
+type PaidTransitionInput struct {
+	Namespace      string
+	Attempt        *PaymentAttempt
+	Fact           PaymentFactRecord
+	FulfillmentReq FulfillmentRequestCreate
+}
+
+// FulfillmentRequestCreate is the fulfillment request to create inside the same
+// transaction as the paid transition.
+type FulfillmentRequestCreate struct {
+	OrderID    string
+	CustomerID string
+}
+
+// OutboxRecord is a durable record written within the paid transition
+// transaction so a worker can pick up the fulfillment request even if the
+// process crashes immediately after commit.
+type OutboxRecord struct {
+	AggregateType string // e.g. "commerce_order"
+	AggregateID   string // e.g. the order ID
+	EventType     string // e.g. "order.paid"
+	Payload       map[string]any
+}
+
+// PaidTransitionResult holds the outputs of the atomic paid transition.
+type PaidTransitionResult struct {
+	Order       *commerce.Order
+	Fact        *PaymentFactRecord
+	AlreadyPaid bool
+}
+
+// PaidTxRunner executes the paid transition — insert fact, move order to paid,
+// create fulfillment request, write outbox — within one database transaction.
+// If any step fails the entire transition rolls back. The implementation joins
+// a single Ent transaction and propagates it through context.
+type PaidTxRunner interface {
+	RunPaidTransition(ctx context.Context, in PaidTransitionInput) (PaidTransitionResult, error)
+}
+
 // ---------------------------------------------------------------------------
 // Domain types
 // ---------------------------------------------------------------------------
@@ -83,22 +126,26 @@ const (
 	AttemptStatusClosed    AttemptStatus = "closed"
 )
 
-// PaymentAttempt tracks one attempt to pay an order through a provider.
+// PaymentAttempt tracks one attempt to pay an order through a provider. The
+// MerchantID and ApplicationID fields capture the expected provider identity so
+// callbacks can be validated against them (I2).
 type PaymentAttempt struct {
-	ID                string
-	Namespace         string
-	OrderID           string
-	CustomerID        string
-	Provider          Provider
-	ProviderOrderID   string
-	ProviderPaymentID string
-	Status            AttemptStatus
-	ProviderSessionID string
-	IdempotencyKey    string
-	AmountMinor       int64
-	Currency          string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                    string
+	Namespace             string
+	OrderID               string
+	CustomerID            string
+	Provider              Provider
+	ProviderOrderID       string
+	ProviderPaymentID     string
+	Status                AttemptStatus
+	ProviderSessionID     string
+	IdempotencyKey        string
+	AmountMinor           int64
+	Currency              string
+	ExpectedMerchantID    string // expected merchant ID from provider config
+	ExpectedApplicationID string // expected app ID from provider config
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 // PaymentFactRecord is the persisted form of a verified PaymentFact, linked to
@@ -124,13 +171,15 @@ type PaymentFactRecord struct {
 
 // CreateAttemptInput creates a new payment attempt.
 type CreateAttemptInput struct {
-	Namespace      string
-	OrderID        string
-	CustomerID     string
-	Provider       Provider
-	IdempotencyKey string
-	AmountMinor    int64
-	Currency       string
+	Namespace             string
+	OrderID               string
+	CustomerID            string
+	Provider              Provider
+	IdempotencyKey        string
+	AmountMinor           int64
+	Currency              string
+	ExpectedMerchantID    string
+	ExpectedApplicationID string
 }
 
 // ---------------------------------------------------------------------------
@@ -145,11 +194,14 @@ type Service interface {
 	GetAttempt(ctx context.Context, namespace, id string) (*PaymentAttempt, error)
 	InitiateCheckout(ctx context.Context, namespace, attemptID string) (CheckoutResult, error)
 
-	// HandleCallback is the entry point for provider callbacks. It verifies the
+	// HandleCallback is the entry point for provider callbacks. The namespace
+	// parameter scopes the attempt lookup — callbacks are always tenant-scoped
+	// because the callback URL is registered per-tenant. It verifies the
 	// signature, deduplicates, checks the fact against the attempt's order
-	// (amount, currency, identity), persists the fact, and transitions the order
-	// to paid. Repeated callbacks return the original result.
-	HandleCallback(ctx context.Context, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error)
+	// (amount, currency, merchant, application identity), persists the fact,
+	// and transitions the order to paid. Repeated callbacks return the original
+	// result.
+	HandleCallback(ctx context.Context, namespace string, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error)
 
 	// ConfirmPayment queries the provider directly (callback-lost recovery).
 	ConfirmPayment(ctx context.Context, namespace, attemptID string) (CallbackResult, error)
@@ -173,6 +225,7 @@ type Config struct {
 	Attempts  AttemptRepository
 	Facts     FactRepository
 	Orders    OrderStatusUpdater
+	TxRunner  PaidTxRunner // optional: if nil, falls back to sequential calls
 	Providers map[Provider]ProviderAdapter
 	Logger    *slog.Logger
 }
@@ -181,6 +234,7 @@ type service struct {
 	attempts  AttemptRepository
 	facts     FactRepository
 	orders    OrderStatusUpdater
+	txRunner  PaidTxRunner
 	providers map[Provider]ProviderAdapter
 	logger    *slog.Logger
 }
@@ -207,6 +261,7 @@ func New(cfg Config) (Service, error) {
 		attempts:  cfg.Attempts,
 		facts:     cfg.Facts,
 		orders:    cfg.Orders,
+		txRunner:  cfg.TxRunner,
 		providers: cfg.Providers,
 		logger:    logger,
 	}, nil
@@ -226,17 +281,19 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 
 	now := clock.Now()
 	attempt := PaymentAttempt{
-		ID:             ulid.Make().String(),
-		Namespace:      in.Namespace,
-		OrderID:        in.OrderID,
-		CustomerID:     in.CustomerID,
-		Provider:       in.Provider,
-		Status:         AttemptStatusCreated,
-		IdempotencyKey: in.IdempotencyKey,
-		AmountMinor:    in.AmountMinor,
-		Currency:       in.Currency,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:                    ulid.Make().String(),
+		Namespace:             in.Namespace,
+		OrderID:               in.OrderID,
+		CustomerID:            in.CustomerID,
+		Provider:              in.Provider,
+		Status:                AttemptStatusCreated,
+		IdempotencyKey:        in.IdempotencyKey,
+		AmountMinor:           in.AmountMinor,
+		Currency:              in.Currency,
+		ExpectedMerchantID:    in.ExpectedMerchantID,
+		ExpectedApplicationID: in.ExpectedApplicationID,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 
 	return s.attempts.CreateAttempt(ctx, attempt)
@@ -294,7 +351,10 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 
 // HandleCallback processes a provider callback: verify signature, deduplicate,
 // match against the order, persist fact, transition to paid.
-func (s *service) HandleCallback(ctx context.Context, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error) {
+//
+// The namespace parameter scopes the attempt lookup. Payment callback URLs are
+// registered per-tenant, so the HTTP handler always knows the namespace.
+func (s *service) HandleCallback(ctx context.Context, namespace string, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error) {
 	provider, ok := s.providers[providerName]
 	if !ok {
 		return CallbackResult{}, fmt.Errorf("payment: provider %s not configured", providerName)
@@ -306,7 +366,7 @@ func (s *service) HandleCallback(ctx context.Context, providerName Provider, hea
 		return CallbackResult{}, err
 	}
 
-	return s.applyPaymentFact(ctx, pf)
+	return s.applyPaymentFact(ctx, namespace, pf)
 }
 
 // ConfirmPayment queries the provider directly (callback-lost recovery).
@@ -330,23 +390,26 @@ func (s *service) ConfirmPayment(ctx context.Context, namespace, attemptID strin
 		return CallbackResult{}, fmt.Errorf("payment: provider query payment: %w", err)
 	}
 
-	return s.applyPaymentFact(ctx, pf)
+	return s.applyPaymentFact(ctx, attempt.Namespace, pf)
 }
 
 // applyPaymentFact is the core atom: deduplicate the fact, match it against the
 // attempt/order, persist it, and transition the order to paid. This method is
 // idempotent: repeated callbacks with the same fact converge to one paid order.
-func (s *service) applyPaymentFact(ctx context.Context, pf PaymentFact) (CallbackResult, error) {
-	// Locate the attempt by provider order ID.
-	attempt, err := s.attempts.GetAttemptByProviderOrder(ctx, "", pf.Provider, pf.ProviderOrderID)
+//
+// The namespace parameter scopes the attempt lookup — it is always provided by
+// the caller and never empty.
+func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf PaymentFact) (CallbackResult, error) {
+	// Locate the attempt by namespace + provider + provider order ID.
+	attempt, err := s.attempts.GetAttemptByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: locate attempt by provider order %s: %w", pf.ProviderOrderID, err)
+		return CallbackResult{}, fmt.Errorf("payment: locate attempt by provider order %s in namespace %s: %w", pf.ProviderOrderID, namespace, err)
 	}
 
 	// Dedup by raw hash: if we've already seen this exact callback, return
 	// the original result.
 	if pf.RawHash != "" {
-		existing, err := s.facts.GetFactByRawHash(ctx, attempt.Namespace, pf.RawHash)
+		existing, err := s.facts.GetFactByRawHash(ctx, namespace, pf.RawHash)
 		if err == nil && existing != nil {
 			return CallbackResult{Attempt: attempt, Fact: existing, AlreadyPaid: attempt.Status == AttemptStatusSucceeded}, nil
 		}
@@ -354,90 +417,130 @@ func (s *service) applyPaymentFact(ctx context.Context, pf PaymentFact) (Callbac
 
 	// Dedup by provider event ID (each provider event should be processed once).
 	if pf.ProviderEventID != "" {
-		existing, err := s.facts.GetFactByProviderEvent(ctx, attempt.Namespace, pf.Provider, pf.ProviderEventID)
+		existing, err := s.facts.GetFactByProviderEvent(ctx, namespace, pf.Provider, pf.ProviderEventID)
 		if err == nil && existing != nil {
 			return CallbackResult{Attempt: attempt, Fact: existing, AlreadyPaid: attempt.Status == AttemptStatusSucceeded}, nil
 		}
 	}
 
 	// Check for contradictory success facts on the same provider order.
-	existingFacts, _ := s.facts.GetFactsByProviderOrder(ctx, attempt.Namespace, pf.Provider, pf.ProviderOrderID)
+	existingFacts, _ := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
 	if err := checkContradiction(existingFacts, pf); err != nil {
 		return CallbackResult{}, err
 	}
 
-	// Match the fact against the attempt's order: amount, currency, identity.
-	if err := s.matchFactToOrder(ctx, attempt, pf); err != nil {
+	// Match the fact against the attempt: amount, currency, merchant, application.
+	if err := matchFactToAttempt(attempt, pf); err != nil {
 		return CallbackResult{}, err
 	}
 
-	// Persist the immutable PaymentFact record.
+	// Build the immutable PaymentFact record.
 	record := PaymentFactRecord{
-		ID:              ulid.Make().String(),
-		Namespace:       attempt.Namespace,
-		AttemptID:       attempt.ID,
-		Provider:        pf.Provider,
-		ProviderOrderID: pf.ProviderOrderID,
-		ProviderEventID: pf.ProviderEventID,
-		MerchantID:      pf.MerchantID,
-		ApplicationID:   pf.ApplicationID,
-		AmountMinor:     pf.AmountMinor,
-		Currency:        pf.Currency,
-		Success:         pf.Success,
-		RawHash:         pf.RawHash,
-		Timestamp:       pf.Timestamp,
-		SignedPayload:   pf.SignedPayload,
-		CreatedAt:       clock.Now(),
-	}
-	saved, _, err := s.facts.InsertFact(ctx, record)
-	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+		ID:                ulid.Make().String(),
+		Namespace:         namespace,
+		AttemptID:         attempt.ID,
+		Provider:          pf.Provider,
+		ProviderOrderID:   pf.ProviderOrderID,
+		ProviderPaymentID: pf.ProviderPaymentID,
+		ProviderEventID:   pf.ProviderEventID,
+		MerchantID:        pf.MerchantID,
+		ApplicationID:     pf.ApplicationID,
+		AmountMinor:       pf.AmountMinor,
+		Currency:          pf.Currency,
+		Success:           pf.Success,
+		RawHash:           pf.RawHash,
+		Timestamp:         pf.Timestamp,
+		SignedPayload:     pf.SignedPayload,
+		CreatedAt:         clock.Now(),
 	}
 
 	// Only successful facts transition the order to paid.
 	if !pf.Success {
 		// Record the fact but don't transition. The order stays in its current state.
+		saved, _, err := s.facts.InsertFact(ctx, record)
+		if err != nil {
+			return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+		}
 		return CallbackResult{Attempt: attempt, Fact: saved}, nil
 	}
 
-	// Transition the attempt to succeeded and the order to paid.
-	// If the order is already paid or fulfilled, this is an idempotent replay.
-	order, _ := s.orders.GetOrder(ctx, attempt.Namespace, attempt.OrderID)
+	// Check if the order is already paid or fulfilled (idempotent replay).
+	order, _ := s.orders.GetOrder(ctx, namespace, attempt.OrderID)
 	if order != nil && (order.Status == commerce.OrderStatusPaid || order.Status == commerce.OrderStatusFulfilled) {
-		// Already paid — return without error (idempotent).
+		// Still persist the fact if it hasn't been seen.
+		saved, _, _ := s.facts.InsertFact(ctx, record)
 		return CallbackResult{Attempt: attempt, Fact: saved, AlreadyPaid: true}, nil
 	}
 
-	// Atomically: attempt -> succeeded. This is best-effort under concurrency;
-	// the authoritative gate is the order status transition below. A failure
-	// here means a concurrent callback already moved the attempt forward.
-	if _, err := s.attempts.UpdateAttemptStatus(ctx, attempt.Namespace, attempt.ID, attempt.Status, AttemptStatusSucceeded); err != nil {
+	// Atomically: attempt -> succeeded (best-effort under concurrency).
+	if _, err := s.attempts.UpdateAttemptStatus(ctx, namespace, attempt.ID, attempt.Status, AttemptStatusSucceeded); err != nil {
 		s.logger.InfoContext(ctx, "payment: attempt status update (may be concurrent)", "error", err)
 	}
 
-	// Transition order to paid. The OrderStatusUpdater uses optimistic
-	// concurrency: only one call succeeds (awaiting_payment -> paid).
-	if _, err := s.orders.UpdateOrderStatus(ctx, attempt.Namespace, attempt.OrderID, commerce.OrderStatusAwaitingPayment, commerce.OrderStatusPaid); err != nil {
-		// If it fails, the order may already be paid (concurrent) or in a
-		// different state. Either way, we've persisted the fact.
+	// Transition order to paid within a single transaction. If a TxRunner is
+	// configured, it wraps: insert fact + order awaiting_payment -> paid +
+	// create fulfillment request + write outbox. If no TxRunner, fall back to
+	// sequential calls (used by tests and the mock path).
+	if s.txRunner != nil {
+		result, err := s.txRunner.RunPaidTransition(ctx, PaidTransitionInput{
+			Namespace: namespace,
+			Attempt:   attempt,
+			Fact:      record,
+			FulfillmentReq: FulfillmentRequestCreate{
+				OrderID:    attempt.OrderID,
+				CustomerID: attempt.CustomerID,
+			},
+		})
+		if err != nil {
+			s.logger.InfoContext(ctx, "payment: tx paid transition (may be concurrent or already paid)", "order_id", attempt.OrderID, "error", err)
+		}
+
+		// Reload attempt for the result.
+		attempt, _ = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
+		fact := result.Fact
+		if fact == nil {
+			fact = &record
+		}
+		return CallbackResult{Attempt: attempt, Fact: fact, AlreadyPaid: result.AlreadyPaid}, nil
+	}
+
+	// Fallback: sequential calls (no transaction boundary). Used when TxRunner
+	// is not wired (e.g. unit tests with mocks).
+	saved, _, err := s.facts.InsertFact(ctx, record)
+	if err != nil {
+		return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+	}
+
+	if _, err := s.orders.UpdateOrderStatus(ctx, namespace, attempt.OrderID, commerce.OrderStatusAwaitingPayment, commerce.OrderStatusPaid); err != nil {
 		s.logger.InfoContext(ctx, "payment: order transition to paid returned (may be concurrent or already paid)", "order_id", attempt.OrderID, "error", err)
 	}
 
 	// Reload attempt for the result.
-	attempt, _ = s.attempts.GetAttempt(ctx, attempt.Namespace, attempt.ID)
+	attempt, _ = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 
 	return CallbackResult{Attempt: attempt, Fact: saved}, nil
 }
 
-// matchFactToOrder verifies the payment fact matches the attempt's order:
-// amount, currency must be identical. This prevents a valid-signature callback
-// for a different order from being applied.
-func (s *service) matchFactToOrder(ctx context.Context, attempt *PaymentAttempt, pf PaymentFact) error {
+// matchFactToAttempt verifies the payment fact matches the attempt:
+// amount, currency, and provider identity (merchant + application). This
+// prevents a valid-signature callback for a different merchant or application
+// from being applied to this attempt's order.
+func matchFactToAttempt(attempt *PaymentAttempt, pf PaymentFact) error {
 	if pf.AmountMinor != attempt.AmountMinor {
 		return fmt.Errorf("%w: amount mismatch (fact=%d, attempt=%d)", ErrPaymentFactMismatch, pf.AmountMinor, attempt.AmountMinor)
 	}
 	if pf.Currency != "" && attempt.Currency != "" && pf.Currency != attempt.Currency {
 		return fmt.Errorf("%w: currency mismatch (fact=%s, attempt=%s)", ErrPaymentFactMismatch, pf.Currency, attempt.Currency)
+	}
+	// Validate merchant identity (I2): if the attempt has an expected merchant
+	// ID, the fact must match it.
+	if attempt.ExpectedMerchantID != "" && pf.MerchantID != "" && attempt.ExpectedMerchantID != pf.MerchantID {
+		return fmt.Errorf("%w: merchant mismatch (fact=%s, attempt=%s)", ErrPaymentFactMismatch, pf.MerchantID, attempt.ExpectedMerchantID)
+	}
+	// Validate application identity (I2): if the attempt has an expected app ID,
+	// the fact must match it.
+	if attempt.ExpectedApplicationID != "" && pf.ApplicationID != "" && attempt.ExpectedApplicationID != pf.ApplicationID {
+		return fmt.Errorf("%w: application mismatch (fact=%s, attempt=%s)", ErrPaymentFactMismatch, pf.ApplicationID, attempt.ExpectedApplicationID)
 	}
 	return nil
 }

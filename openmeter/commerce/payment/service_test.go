@@ -190,7 +190,8 @@ func (m *mockOrderStatusUpdater) GetOrder(_ context.Context, namespace, id strin
 	if !ok {
 		return nil, commerce.ErrOrderNotFound
 	}
-	return o, nil
+	cp := *o
+	return &cp, nil
 }
 
 func (m *mockOrderStatusUpdater) UpdateOrderStatus(_ context.Context, namespace, id string, expectedFrom, to commerce.OrderStatus) (*commerce.Order, error) {
@@ -208,7 +209,8 @@ func (m *mockOrderStatusUpdater) UpdateOrderStatus(_ context.Context, namespace,
 	if to == commerce.OrderStatusPaid {
 		m.paidN.Add(1)
 	}
-	return o, nil
+	cp := *o
+	return &cp, nil
 }
 
 // mockProvider is a test ProviderAdapter that returns a configured PaymentFact.
@@ -329,7 +331,7 @@ func TestHandleCallbackValidPayment(t *testing.T) {
 		}, nil
 	}
 
-	result, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-1"))
+	result, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-1"))
 	if err != nil {
 		t.Fatalf("callback should succeed: %v", err)
 	}
@@ -382,7 +384,7 @@ func TestHandleCallbackDuplicateEventId(t *testing.T) {
 	}
 
 	// First callback.
-	_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, body)
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,7 +392,7 @@ func TestHandleCallbackDuplicateEventId(t *testing.T) {
 	firstInserts := h.facts.insertN.Load()
 
 	// Duplicate callback (same raw hash + event ID).
-	result, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, body)
+	result, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -421,7 +423,7 @@ func TestHandleCallbackWrongAmount(t *testing.T) {
 		}, nil
 	}
 
-	_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-3"))
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-3"))
 	if err == nil {
 		t.Fatal("wrong amount should fail")
 	}
@@ -449,7 +451,7 @@ func TestHandleCallbackWrongCurrency(t *testing.T) {
 		}, nil
 	}
 
-	_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-4"))
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-4"))
 	if err == nil {
 		t.Fatal("wrong currency should fail")
 	}
@@ -476,7 +478,7 @@ func TestHandleCallbackContradictoryFact(t *testing.T) {
 		}, nil
 	}
 
-	_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-5a"))
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-5a"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,7 +496,7 @@ func TestHandleCallbackContradictoryFact(t *testing.T) {
 		}, nil
 	}
 
-	_, err = h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-5b"))
+	_, err = h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-5b"))
 	if err == nil {
 		t.Fatal("contradictory fact should fail")
 	}
@@ -509,7 +511,7 @@ func TestHandleCallbackInvalidSignature(t *testing.T) {
 		return PaymentFact{}, ErrInvalidSignature
 	}
 
-	_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, []byte("body-6"))
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-6"))
 	if err == nil {
 		t.Fatal("invalid signature should fail")
 	}
@@ -621,7 +623,7 @@ func TestConcurrentCallbacks(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := h.svc.HandleCallback(context.Background(), ProviderWeChat, nil, body)
+			_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, body)
 			if err == nil {
 				successCount.Add(1)
 			}
@@ -765,5 +767,165 @@ func TestHashRawBody(t *testing.T) {
 	}
 	if len(h1) != 64 {
 		t.Fatalf("sha256 hex should be 64 chars, got %d", len(h1))
+	}
+}
+
+// TestHandleCallbackMerchantMismatch verifies that a callback with a different
+// merchant ID than expected is rejected (I2).
+func TestHandleCallbackMerchantMismatch(t *testing.T) {
+	h := newTestHarness(t)
+	_, _ = h.setupPaidOrder("ns", "cust", "order-20", "PROV-ORDER-20", 100)
+
+	// Set expected merchant on the attempt.
+	h.attempts.mu.Lock()
+	for _, a := range h.attempts.attempts {
+		if a.ID == "att-order-20" {
+			a.ExpectedMerchantID = "EXPECTED_MERCHANT"
+		}
+	}
+	h.attempts.mu.Unlock()
+
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		return PaymentFact{
+			Provider:        ProviderWeChat,
+			ProviderOrderID: "PROV-ORDER-20",
+			MerchantID:      "DIFFERENT_MERCHANT", // mismatch!
+			AmountMinor:     100,
+			Currency:        "CNY",
+			Success:         true,
+			RawHash:         HashRawBody(body),
+		}, nil
+	}
+
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-20"))
+	if err == nil {
+		t.Fatal("merchant mismatch should fail")
+	}
+}
+
+// TestHandleCallbackApplicationMismatch verifies that a callback with a different
+// application ID than expected is rejected (I2).
+func TestHandleCallbackApplicationMismatch(t *testing.T) {
+	h := newTestHarness(t)
+	_, _ = h.setupPaidOrder("ns", "cust", "order-21", "PROV-ORDER-21", 100)
+
+	// Set expected app ID on the attempt.
+	h.attempts.mu.Lock()
+	for _, a := range h.attempts.attempts {
+		if a.ID == "att-order-21" {
+			a.ExpectedApplicationID = "EXPECTED_APP"
+		}
+	}
+	h.attempts.mu.Unlock()
+
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		return PaymentFact{
+			Provider:        ProviderWeChat,
+			ProviderOrderID: "PROV-ORDER-21",
+			ApplicationID:   "DIFFERENT_APP", // mismatch!
+			AmountMinor:     100,
+			Currency:        "CNY",
+			Success:         true,
+			RawHash:         HashRawBody(body),
+		}, nil
+	}
+
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-21"))
+	if err == nil {
+		t.Fatal("application mismatch should fail")
+	}
+}
+
+// TestHandleCallbackMerchantMatch verifies that a callback with matching merchant
+// and application IDs succeeds (I2 positive case).
+func TestHandleCallbackMerchantMatch(t *testing.T) {
+	h := newTestHarness(t)
+	_, _ = h.setupPaidOrder("ns", "cust", "order-22", "PROV-ORDER-22", 100)
+
+	// Set expected merchant and app on the attempt.
+	h.attempts.mu.Lock()
+	for _, a := range h.attempts.attempts {
+		if a.ID == "att-order-22" {
+			a.ExpectedMerchantID = "MERCHANT_OK"
+			a.ExpectedApplicationID = "APP_OK"
+		}
+	}
+	h.attempts.mu.Unlock()
+
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		return PaymentFact{
+			Provider:        ProviderWeChat,
+			ProviderOrderID: "PROV-ORDER-22",
+			MerchantID:      "MERCHANT_OK", // matches
+			ApplicationID:   "APP_OK",      // matches
+			AmountMinor:     100,
+			Currency:        "CNY",
+			Success:         true,
+			RawHash:         HashRawBody(body),
+		}, nil
+	}
+
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-22"))
+	if err != nil {
+		t.Fatalf("matching merchant/app should succeed: %v", err)
+	}
+
+	order, _ := h.orders.GetOrder(context.Background(), "ns", "order-22")
+	if order.Status != commerce.OrderStatusPaid {
+		t.Errorf("order status = %s, want paid", order.Status)
+	}
+}
+
+// TestCrashAfterPaymentFactInsert verifies that if a crash occurs after the
+// PaymentFact is inserted but before the order transitions to paid, a retry
+// converges correctly — the fact is deduped and the order is transitioned.
+// This exercises the I5 crash boundary at the payment fact insertion point.
+func TestCrashAfterPaymentFactInsert(t *testing.T) {
+	h := newTestHarness(t)
+	_, _ = h.setupPaidOrder("ns", "cust", "order-crash-fact", "PROV-CRASH-FACT", 200)
+
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		return PaymentFact{
+			Provider:        ProviderWeChat,
+			ProviderOrderID: "PROV-CRASH-FACT",
+			ProviderEventID: "EVENT-CRASH-FACT",
+			AmountMinor:     200,
+			Currency:        "CNY",
+			Success:         true,
+			RawHash:         HashRawBody(body),
+		}, nil
+	}
+
+	// First callback: succeeds — fact inserted, order -> paid.
+	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-crash-fact"))
+	if err != nil {
+		t.Fatalf("first callback should succeed: %v", err)
+	}
+
+	// Verify order is paid.
+	order, _ := h.orders.GetOrder(context.Background(), "ns", "order-crash-fact")
+	if order.Status != commerce.OrderStatusPaid {
+		t.Fatalf("order status = %s, want paid", order.Status)
+	}
+
+	// Simulate a crash between fact insert and fulfillment request creation.
+	// On restart, a second callback for the same event arrives. The fact is
+	// deduped (same raw hash), the order is already paid (AlreadyPaid=true).
+	result, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-crash-fact"))
+	if err != nil {
+		t.Fatalf("duplicate callback should succeed: %v", err)
+	}
+	if !result.AlreadyPaid {
+		t.Error("duplicate callback should report AlreadyPaid")
+	}
+
+	// Exactly one fact should be persisted.
+	if h.facts.insertN.Load() != 1 {
+		t.Errorf("expected exactly 1 fact, got %d", h.facts.insertN.Load())
+	}
+
+	// Exactly one paid transition.
+	if h.orders.paidN.Load() != 1 {
+		t.Errorf("expected exactly 1 paid transition, got %d", h.orders.paidN.Load())
 	}
 }

@@ -23,6 +23,11 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 )
 
+// ProcessingLeaseTimeout is how long a processing record can be stuck before
+// another worker may re-claim it. This prevents stuck records when a worker
+// crashes mid-processing (I4).
+const ProcessingLeaseTimeout = 60 * time.Second
+
 // ---------------------------------------------------------------------------
 // Repository interfaces
 // ---------------------------------------------------------------------------
@@ -40,7 +45,8 @@ type Repository interface {
 	GetFulfillmentByOrder(ctx context.Context, namespace, orderID string) (*FulfillmentRecord, error)
 
 	// ClaimForProcessing atomically transitions a fulfillment from pending ->
-	// processing. Returns ErrAlreadyProcessing if another worker has it.
+	// processing and records the claim timestamp. Records already in processing
+	// state are eligible for re-claim after the lease timeout elapses (I4).
 	ClaimForProcessing(ctx context.Context, namespace, id string) (*FulfillmentRecord, error)
 
 	// MarkFulfilled marks a fulfillment as succeeded. This is the point at which
@@ -143,7 +149,9 @@ type FulfillmentRequest struct {
 	CustomerID string
 }
 
-// FulfillmentRecord is the persisted fulfillment state.
+// FulfillmentRecord is the persisted fulfillment state. The ClaimedAt field
+// records when a worker started processing — records stuck in processing past
+// the lease timeout become eligible for re-claim (I4).
 type FulfillmentRecord struct {
 	ID             string
 	Namespace      string
@@ -154,6 +162,7 @@ type FulfillmentRecord struct {
 	CreditsGranted int64
 	FulfilledAt    *time.Time
 	FailureReason  *string
+	ClaimedAt      *time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -169,8 +178,12 @@ type FulfillmentResult struct {
 var ErrAlreadyFulfilled = errors.New("fulfillment: order already fulfilled")
 
 // ErrAlreadyProcessing is returned when a fulfillment is being processed by
-// another worker.
+// another worker and the lease has not expired.
 var ErrAlreadyProcessing = errors.New("fulfillment: already being processed")
+
+// ErrOrderNotPaid is returned when ProcessOne encounters an order that is not
+// in the paid or fulfilled state (I3).
+var ErrOrderNotPaid = errors.New("fulfillment: order is not in paid state")
 
 // ---------------------------------------------------------------------------
 // Service
@@ -266,13 +279,15 @@ func (s *service) RequestFulfillment(ctx context.Context, namespace, orderID str
 
 // ProcessOne processes a single fulfillment request. The flow is:
 //
-//  1. Claim the fulfillment (pending -> processing). If already fulfilled, return.
-//  2. Fetch the order; verify it is in paid state.
-//  3. Mark the commercial invoice paid (idempotent).
-//  4. Grant credits or renew subscription based on order kind.
-//  5. Mark the fulfillment fulfilled (unique constraint enforces exactly-once).
-//  6. Transition the order to fulfilled.
-//  7. Notify.
+//  1. Check current state. If already fulfilled, return (idempotent success).
+//  2. Claim for processing (pending/failed -> processing). If another worker
+//     has it and the lease hasn't expired, return.
+//  3. Fetch the order; verify it is in the paid state (I3).
+//  4. Mark the commercial invoice paid (idempotent).
+//  5. Grant credits or renew subscription based on order kind.
+//  6. Mark the fulfillment fulfilled (unique constraint enforces exactly-once).
+//  7. Transition the order to fulfilled.
+//  8. Notify.
 //
 // If a crash occurs at any step, the worker restarts and reprocesses. The
 // unique index on (order, status='fulfilled') guarantees only one fulfillment
@@ -290,7 +305,7 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 	}
 
 	// Claim for processing (pending/failed -> processing). If another worker
-	// has it, skip (return the current state).
+	// has it and the lease hasn't expired, skip (return the current state).
 	rec, err = s.repo.ClaimForProcessing(ctx, namespace, fulfillmentID)
 	if err != nil {
 		if errors.Is(err, ErrAlreadyProcessing) {
@@ -302,11 +317,18 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 	// Fetch the order.
 	order, err := s.orders.GetOrder(ctx, namespace, rec.OrderID)
 	if err != nil {
-		s.repo.MarkFailed(ctx, namespace, fulfillmentID, "get order: "+err.Error())
+		s.markFailed(ctx, namespace, fulfillmentID, "get order: "+err.Error())
 		return nil, fmt.Errorf("fulfillment: get order: %w", err)
 	}
 
-	// The order must be in paid state (paid does not imply fulfilled).
+	// I3: Guard — the order must be in paid or fulfilled state. An order in any
+	// other state (created, awaiting_payment, cancelled) is not ready for
+	// fulfillment.
+	if order.Status != commerce.OrderStatusPaid && order.Status != commerce.OrderStatusFulfilled {
+		s.markFailed(ctx, namespace, fulfillmentID, fmt.Sprintf("order status is %s, expected paid", order.Status))
+		return nil, fmt.Errorf("%w: status=%s", ErrOrderNotPaid, order.Status)
+	}
+
 	// If already fulfilled, the unique index would have prevented a duplicate
 	// fulfillment record, but we check defensively.
 	if order.Status == commerce.OrderStatusFulfilled {
@@ -338,16 +360,27 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 	}
 
 	if err != nil {
-		s.repo.MarkFailed(ctx, namespace, fulfillmentID, err.Error())
+		s.markFailed(ctx, namespace, fulfillmentID, err.Error())
 		return nil, fmt.Errorf("fulfillment: grant step: %w", err)
 	}
 
 	// Step 3: Mark fulfillment fulfilled. The unique index enforces exactly-once.
 	rec, err = s.repo.MarkFulfilled(ctx, namespace, fulfillmentID, result)
 	if err != nil {
-		// If it's a unique violation, the order is already fulfilled by a
-		// concurrent/duplicate worker. That's success.
+		// C1: If MarkFulfilled failed, rec may be nil. Log the error and reload
+		// the record from the store. A unique-constraint violation here means a
+		// concurrent worker already fulfilled this order — that's success.
 		s.logger.InfoContext(ctx, "fulfillment: mark fulfilled (may be concurrent)", "error", err)
+		rec, reloadErr := s.repo.GetFulfillment(ctx, namespace, fulfillmentID)
+		if reloadErr != nil {
+			return nil, fmt.Errorf("fulfillment: mark fulfilled failed (%w) and reload failed: %w", err, reloadErr)
+		}
+		// If the record is now fulfilled by a concurrent worker, treat as success.
+		if rec.Status == FulfillmentStatusFulfilled {
+			return rec, nil
+		}
+		// Otherwise the failure was real — return the error.
+		return rec, fmt.Errorf("fulfillment: mark fulfilled: %w", err)
 	}
 
 	// Step 4: Transition the order to fulfilled.
@@ -365,6 +398,14 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 
 	// Reload final state.
 	return s.repo.GetFulfillment(ctx, namespace, fulfillmentID)
+}
+
+// markFailed marks a fulfillment as failed and logs if the mark itself errors
+// (M5 — never silently swallow the error).
+func (s *service) markFailed(ctx context.Context, namespace, id, reason string) {
+	if _, err := s.repo.MarkFailed(ctx, namespace, id, reason); err != nil {
+		s.logger.ErrorContext(ctx, "fulfillment: MarkFailed itself failed", "id", id, "error", err)
+	}
 }
 
 // ProcessPending processes all pending fulfillments. Returns the count processed.
@@ -462,5 +503,5 @@ func totalOrderCredits(order *commerce.Order) int64 {
 	return total
 }
 
-// Compile-time checks.
+// Compile-time check.
 var _ Service = (*service)(nil)

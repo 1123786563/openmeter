@@ -89,6 +89,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 		ProviderOrderID:   values.Get("out_trade_no"),
 		ProviderPaymentID: values.Get("trade_no"),
 		ApplicationID:     values.Get("app_id"),
+		MerchantID:        values.Get("seller_id"),
 		AmountMinor:       parseAmount(values.Get("total_amount")),
 		Currency:          "CNY", // Alipay domestic is always CNY
 		Success:           values.Get("trade_status") == "TRADE_SUCCESS" || values.Get("trade_status") == "TRADE_FINISHED",

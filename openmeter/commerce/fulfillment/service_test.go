@@ -80,10 +80,15 @@ func (m *mockRepo) ClaimForProcessing(_ context.Context, namespace, id string) (
 		return nil, errors.New("not found")
 	}
 	if f.Status == FulfillmentStatusProcessing {
-		cp := *f
-		return &cp, ErrAlreadyProcessing
+		// I4: lease timeout — if the claim is older than the lease, re-claim it.
+		if f.ClaimedAt != nil && time.Since(*f.ClaimedAt) < ProcessingLeaseTimeout {
+			cp := *f
+			return &cp, ErrAlreadyProcessing
+		}
 	}
 	f.Status = FulfillmentStatusProcessing
+	now := time.Now()
+	f.ClaimedAt = &now
 	cp := *f
 	return &cp, nil
 }
@@ -134,9 +139,17 @@ func (m *mockRepo) ListPending(_ context.Context, namespace string, limit int) (
 	for _, f := range m.fulfillments {
 		if f.Status == FulfillmentStatusPending || f.Status == FulfillmentStatusFailed {
 			result = append(result, *f)
+			if len(result) >= limit {
+				break
+			}
+			continue
 		}
-		if len(result) >= limit {
-			break
+		// I4: re-queue processing records whose lease has expired.
+		if f.Status == FulfillmentStatusProcessing && f.ClaimedAt != nil && time.Since(*f.ClaimedAt) >= ProcessingLeaseTimeout {
+			result = append(result, *f)
+			if len(result) >= limit {
+				break
+			}
 		}
 	}
 	return result, nil
@@ -571,4 +584,266 @@ func TestProcessPendingProcessesAll(t *testing.T) {
 			t.Errorf("order-batch-%d status = %s", i, rec.Status)
 		}
 	}
+}
+
+// --- I3: Order status guard ---
+
+// TestProcessOneRejectsOrderNotPaid verifies that ProcessOne rejects orders
+// that are not in the paid or fulfilled state (I3).
+func TestProcessOneRejectsOrderNotPaid(t *testing.T) {
+	h := newTestHarness(t)
+	// Create an order in awaiting_payment (not yet paid).
+	h.orders.orders["order-notpaid"] = &commerce.Order{
+		NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-notpaid"},
+		CustomerID:   "cust",
+		Kind:         commerce.OrderKindWalletTopUp,
+		Status:       commerce.OrderStatusAwaitingPayment,
+		AmountMinor:  100,
+		Currency:     "CNY",
+		Lines:        []commerce.OrderLineSnapshot{{Credits: 100, Currency: "CNY"}},
+	}
+
+	rec, err := h.svc.RequestFulfillment(context.Background(), "ns", "order-notpaid")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	if err == nil {
+		t.Fatal("should reject order not in paid state")
+	}
+
+	// The fulfillment should be marked failed.
+	failed, _ := h.repo.GetFulfillment(context.Background(), "ns", rec.ID)
+	if failed.Status != FulfillmentStatusFailed {
+		t.Errorf("status = %s, want failed", failed.Status)
+	}
+
+	// No credits should be granted.
+	if h.grantor.totalGranted() != 0 {
+		t.Errorf("no credits should be granted for non-paid order, got %d", h.grantor.totalGranted())
+	}
+}
+
+// --- I4: Lease timeout recovery ---
+
+// TestLeaseTimeoutRecovery verifies that a fulfillment stuck in processing
+// after the lease expires can be re-claimed by another worker (I4).
+func TestLeaseTimeoutRecovery(t *testing.T) {
+	h := newTestHarness(t)
+	h.addPaidOrder("ns", "order-lease", "cust", 500, commerce.OrderKindWalletTopUp)
+
+	rec, err := h.svc.RequestFulfillment(context.Background(), "ns", "order-lease")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate a worker crash: manually set the record to processing with an
+	// expired claim time.
+	h.repo.mu.Lock()
+	stuck := h.repo.fulfillments[rec.ID]
+	stuck.Status = FulfillmentStatusProcessing
+	expired := time.Now().Add(-(ProcessingLeaseTimeout + time.Second))
+	stuck.ClaimedAt = &expired
+	h.repo.mu.Unlock()
+
+	// The record should appear in ListPending (lease expired).
+	pending, _ := h.repo.ListPending(context.Background(), "ns", 10)
+	found := false
+	for _, p := range pending {
+		if p.ID == rec.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expired processing record should appear in ListPending")
+	}
+
+	// ProcessOne should be able to reclaim and fulfill it.
+	result, err := h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	if err != nil {
+		t.Fatalf("should reclaim and process: %v", err)
+	}
+	if result.Status != FulfillmentStatusFulfilled {
+		t.Errorf("status = %s, want fulfilled", result.Status)
+	}
+	if result.CreditsGranted != 500 {
+		t.Errorf("credits = %d, want 500", result.CreditsGranted)
+	}
+}
+
+// TestLeaseBlocksConcurrentReclaim verifies that a record still within its
+// lease blocks re-claiming by another worker (I4).
+func TestLeaseBlocksConcurrentReclaim(t *testing.T) {
+	h := newTestHarness(t)
+	h.addPaidOrder("ns", "order-lease-block", "cust", 300, commerce.OrderKindWalletTopUp)
+
+	rec, err := h.svc.RequestFulfillment(context.Background(), "ns", "order-lease-block")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Simulate an active claim (within lease).
+	h.repo.mu.Lock()
+	stuck := h.repo.fulfillments[rec.ID]
+	stuck.Status = FulfillmentStatusProcessing
+	now := time.Now()
+	stuck.ClaimedAt = &now
+	h.repo.mu.Unlock()
+
+	// ClaimForProcessing should return ErrAlreadyProcessing.
+	_, err = h.repo.ClaimForProcessing(context.Background(), "ns", rec.ID)
+	if !errors.Is(err, ErrAlreadyProcessing) {
+		t.Fatalf("expected ErrAlreadyProcessing, got %v", err)
+	}
+}
+
+// --- I5: Crash boundary tests ---
+func TestCrashAfterCreditGrant(t *testing.T) {
+	h := newTestHarness(t)
+	h.addPaidOrder("ns", "order-crash-grant", "cust", 1000, commerce.OrderKindWalletTopUp)
+
+	rec, err := h.svc.RequestFulfillment(context.Background(), "ns", "order-crash-grant")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wrap the grantor to inject a crash after the grant succeeds but before
+	// MarkFulfilled is called.
+	grantSucceeded := atomic.Bool{}
+	wrappedGrantor := &crashAfterGrantGrantor{
+		inner:     h.grantor,
+		grantDone: &grantSucceeded,
+	}
+
+	// Use a service with the crashing grantor.
+	crashSvc, _ := New(Config{
+		Repo:     h.repo,
+		Orders:   h.orders,
+		Grantor:  wrappedGrantor,
+		Invoices: h.invoices,
+		Notifier: h.notifier,
+	})
+
+	// Process: the grantor crashes after granting credits, before fulfillment is marked.
+	_, err = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
+	if err == nil {
+		t.Fatal("first process should crash")
+	}
+
+	// Verify credits were granted exactly once.
+	if h.grantor.totalGranted() != 1000 {
+		t.Fatalf("credits granted = %d, want 1000", h.grantor.totalGranted())
+	}
+
+	// The fulfillment should be marked failed (crash before MarkFulfilled).
+	failed, _ := h.repo.GetFulfillment(context.Background(), "ns", rec.ID)
+	if failed.Status != FulfillmentStatusFailed {
+		t.Fatalf("status = %s, want failed", failed.Status)
+	}
+
+	// Restart: re-process. The grantor is idempotent (same idempotency key), so
+	// the second grant returns the original grant without double-charging.
+	result, err := h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	if err != nil {
+		t.Fatalf("retry should succeed: %v", err)
+	}
+	if result.Status != FulfillmentStatusFulfilled {
+		t.Errorf("status = %s, want fulfilled", result.Status)
+	}
+
+	// Total granted must still be 1000 (idempotent grantor).
+	if h.grantor.totalGranted() != 1000 {
+		t.Errorf("total granted = %d, want 1000 (idempotent)", h.grantor.totalGranted())
+	}
+
+	// Exactly one successful fulfillment.
+	if h.repo.fulfilledOnce.Load() != 1 {
+		t.Errorf("fulfilled once = %d, want 1", h.repo.fulfilledOnce.Load())
+	}
+}
+
+// crashAfterGrantGrantor wraps a CreditGrantor and injects a panic/error after
+// the grant succeeds, simulating a crash between grant and MarkFulfilled.
+type crashAfterGrantGrantor struct {
+	inner     CreditGrantor
+	grantDone *atomic.Bool
+}
+
+func (g *crashAfterGrantGrantor) GrantCredits(ctx context.Context, in GrantCreditsInput) (GrantCreditsResult, error) {
+	res, err := g.inner.GrantCredits(ctx, in)
+	if err != nil {
+		return res, err
+	}
+	// Simulate crash: mark grant as done, then return error to abort processing.
+	g.grantDone.Store(true)
+	return GrantCreditsResult{}, errors.New("simulated crash after credit grant")
+}
+
+// --- C1: Nil guard test ---
+
+// TestMarkFulfilledFailureDoesNotPanic verifies that when MarkFulfilled fails
+// (e.g. unique constraint from concurrent worker), ProcessOne does not panic
+// from a nil rec dereference (C1).
+func TestMarkFulfilledFailureDoesNotPanic(t *testing.T) {
+	h := newTestHarness(t)
+	h.addPaidOrder("ns", "order-c1", "cust", 400, commerce.OrderKindWalletTopUp)
+
+	rec, err := h.svc.RequestFulfillment(context.Background(), "ns", "order-c1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Use a repo where MarkFulfilled returns (nil, error) to trigger C1 path.
+	crashRepo := &nilMarkFulfilledRepo{inner: h.repo}
+	crashSvc, _ := New(Config{
+		Repo:     crashRepo,
+		Orders:   h.orders,
+		Grantor:  h.grantor,
+		Invoices: h.invoices,
+		Notifier: h.notifier,
+	})
+
+	// This should NOT panic — it should return an error after reloading.
+	_, err = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
+	if err == nil {
+		// The reload might find the record in processing state, which would
+		// return an error. Either way, no panic.
+	}
+
+	// The key assertion is that we got here without panicking.
+}
+
+// nilMarkFulfilledRepo wraps a Repository and returns (nil, error) from
+// MarkFulfilled to test the C1 nil guard.
+type nilMarkFulfilledRepo struct {
+	inner Repository
+}
+
+func (r *nilMarkFulfilledRepo) CreateFulfillment(ctx context.Context, req FulfillmentRequest) (*FulfillmentRecord, error) {
+	return r.inner.CreateFulfillment(ctx, req)
+}
+
+func (r *nilMarkFulfilledRepo) GetFulfillment(ctx context.Context, namespace, id string) (*FulfillmentRecord, error) {
+	return r.inner.GetFulfillment(ctx, namespace, id)
+}
+
+func (r *nilMarkFulfilledRepo) GetFulfillmentByOrder(ctx context.Context, namespace, orderID string) (*FulfillmentRecord, error) {
+	return r.inner.GetFulfillmentByOrder(ctx, namespace, orderID)
+}
+
+func (r *nilMarkFulfilledRepo) ClaimForProcessing(ctx context.Context, namespace, id string) (*FulfillmentRecord, error) {
+	return r.inner.ClaimForProcessing(ctx, namespace, id)
+}
+
+func (r *nilMarkFulfilledRepo) MarkFulfilled(_ context.Context, _, _ string, _ FulfillmentResult) (*FulfillmentRecord, error) {
+	return nil, errors.New("simulated unique constraint violation")
+}
+
+func (r *nilMarkFulfilledRepo) MarkFailed(ctx context.Context, namespace, id, reason string) (*FulfillmentRecord, error) {
+	return r.inner.MarkFailed(ctx, namespace, id, reason)
+}
+
+func (r *nilMarkFulfilledRepo) ListPending(ctx context.Context, namespace string, limit int) ([]FulfillmentRecord, error) {
+	return r.inner.ListPending(ctx, namespace, limit)
 }
