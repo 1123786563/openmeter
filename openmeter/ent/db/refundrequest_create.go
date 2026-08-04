@@ -139,6 +139,146 @@ func (_c *RefundRequestCreate) SetIdempotencyKey(v string) *RefundRequestCreate 
 	return _c
 }
 
+// SetCreditQuantum sets the "credit_quantum" field.
+func (_c *RefundRequestCreate) SetCreditQuantum(v int64) *RefundRequestCreate {
+	_c.mutation.SetCreditQuantum(v)
+	return _c
+}
+
+// SetNillableCreditQuantum sets the "credit_quantum" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableCreditQuantum(v *int64) *RefundRequestCreate {
+	if v != nil {
+		_c.SetCreditQuantum(*v)
+	}
+	return _c
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (_c *RefundRequestCreate) SetRefundQuantumFen(v int64) *RefundRequestCreate {
+	_c.mutation.SetRefundQuantumFen(v)
+	return _c
+}
+
+// SetNillableRefundQuantumFen sets the "refund_quantum_fen" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableRefundQuantumFen(v *int64) *RefundRequestCreate {
+	if v != nil {
+		_c.SetRefundQuantumFen(*v)
+	}
+	return _c
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (_c *RefundRequestCreate) SetReservedCredits(v int64) *RefundRequestCreate {
+	_c.mutation.SetReservedCredits(v)
+	return _c
+}
+
+// SetNillableReservedCredits sets the "reserved_credits" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableReservedCredits(v *int64) *RefundRequestCreate {
+	if v != nil {
+		_c.SetReservedCredits(*v)
+	}
+	return _c
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (_c *RefundRequestCreate) SetRefundFen(v int64) *RefundRequestCreate {
+	_c.mutation.SetRefundFen(v)
+	return _c
+}
+
+// SetNillableRefundFen sets the "refund_fen" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableRefundFen(v *int64) *RefundRequestCreate {
+	if v != nil {
+		_c.SetRefundFen(*v)
+	}
+	return _c
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (_c *RefundRequestCreate) SetRemainderCredits(v int64) *RefundRequestCreate {
+	_c.mutation.SetRemainderCredits(v)
+	return _c
+}
+
+// SetNillableRemainderCredits sets the "remainder_credits" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableRemainderCredits(v *int64) *RefundRequestCreate {
+	if v != nil {
+		_c.SetRemainderCredits(*v)
+	}
+	return _c
+}
+
+// SetProviderName sets the "provider_name" field.
+func (_c *RefundRequestCreate) SetProviderName(v string) *RefundRequestCreate {
+	_c.mutation.SetProviderName(v)
+	return _c
+}
+
+// SetNillableProviderName sets the "provider_name" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableProviderName(v *string) *RefundRequestCreate {
+	if v != nil {
+		_c.SetProviderName(*v)
+	}
+	return _c
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (_c *RefundRequestCreate) SetProviderRefundID(v string) *RefundRequestCreate {
+	_c.mutation.SetProviderRefundID(v)
+	return _c
+}
+
+// SetNillableProviderRefundID sets the "provider_refund_id" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableProviderRefundID(v *string) *RefundRequestCreate {
+	if v != nil {
+		_c.SetProviderRefundID(*v)
+	}
+	return _c
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (_c *RefundRequestCreate) SetFenceSequence(v string) *RefundRequestCreate {
+	_c.mutation.SetFenceSequence(v)
+	return _c
+}
+
+// SetNillableFenceSequence sets the "fence_sequence" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableFenceSequence(v *string) *RefundRequestCreate {
+	if v != nil {
+		_c.SetFenceSequence(*v)
+	}
+	return _c
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (_c *RefundRequestCreate) SetSnapshotVersion(v string) *RefundRequestCreate {
+	_c.mutation.SetSnapshotVersion(v)
+	return _c
+}
+
+// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableSnapshotVersion(v *string) *RefundRequestCreate {
+	if v != nil {
+		_c.SetSnapshotVersion(*v)
+	}
+	return _c
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (_c *RefundRequestCreate) SetFailureReason(v string) *RefundRequestCreate {
+	_c.mutation.SetFailureReason(v)
+	return _c
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_c *RefundRequestCreate) SetNillableFailureReason(v *string) *RefundRequestCreate {
+	if v != nil {
+		_c.SetFailureReason(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *RefundRequestCreate) SetID(v string) *RefundRequestCreate {
 	_c.mutation.SetID(v)
@@ -230,6 +370,42 @@ func (_c *RefundRequestCreate) defaults() {
 		v := refundrequest.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.CreditQuantum(); !ok {
+		v := refundrequest.DefaultCreditQuantum
+		_c.mutation.SetCreditQuantum(v)
+	}
+	if _, ok := _c.mutation.RefundQuantumFen(); !ok {
+		v := refundrequest.DefaultRefundQuantumFen
+		_c.mutation.SetRefundQuantumFen(v)
+	}
+	if _, ok := _c.mutation.ReservedCredits(); !ok {
+		v := refundrequest.DefaultReservedCredits
+		_c.mutation.SetReservedCredits(v)
+	}
+	if _, ok := _c.mutation.RefundFen(); !ok {
+		v := refundrequest.DefaultRefundFen
+		_c.mutation.SetRefundFen(v)
+	}
+	if _, ok := _c.mutation.RemainderCredits(); !ok {
+		v := refundrequest.DefaultRemainderCredits
+		_c.mutation.SetRemainderCredits(v)
+	}
+	if _, ok := _c.mutation.ProviderName(); !ok {
+		v := refundrequest.DefaultProviderName
+		_c.mutation.SetProviderName(v)
+	}
+	if _, ok := _c.mutation.ProviderRefundID(); !ok {
+		v := refundrequest.DefaultProviderRefundID
+		_c.mutation.SetProviderRefundID(v)
+	}
+	if _, ok := _c.mutation.FenceSequence(); !ok {
+		v := refundrequest.DefaultFenceSequence
+		_c.mutation.SetFenceSequence(v)
+	}
+	if _, ok := _c.mutation.SnapshotVersion(); !ok {
+		v := refundrequest.DefaultSnapshotVersion
+		_c.mutation.SetSnapshotVersion(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := refundrequest.DefaultID()
 		_c.mutation.SetID(v)
@@ -289,6 +465,21 @@ func (_c *RefundRequestCreate) check() error {
 		if err := refundrequest.IdempotencyKeyValidator(v); err != nil {
 			return &ValidationError{Name: "idempotency_key", err: fmt.Errorf(`db: validator failed for field "RefundRequest.idempotency_key": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.CreditQuantum(); !ok {
+		return &ValidationError{Name: "credit_quantum", err: errors.New(`db: missing required field "RefundRequest.credit_quantum"`)}
+	}
+	if _, ok := _c.mutation.RefundQuantumFen(); !ok {
+		return &ValidationError{Name: "refund_quantum_fen", err: errors.New(`db: missing required field "RefundRequest.refund_quantum_fen"`)}
+	}
+	if _, ok := _c.mutation.ReservedCredits(); !ok {
+		return &ValidationError{Name: "reserved_credits", err: errors.New(`db: missing required field "RefundRequest.reserved_credits"`)}
+	}
+	if _, ok := _c.mutation.RefundFen(); !ok {
+		return &ValidationError{Name: "refund_fen", err: errors.New(`db: missing required field "RefundRequest.refund_fen"`)}
+	}
+	if _, ok := _c.mutation.RemainderCredits(); !ok {
+		return &ValidationError{Name: "remainder_credits", err: errors.New(`db: missing required field "RefundRequest.remainder_credits"`)}
 	}
 	if len(_c.mutation.OrderIDs()) == 0 {
 		return &ValidationError{Name: "order", err: errors.New(`db: missing required edge "RefundRequest.order"`)}
@@ -368,6 +559,46 @@ func (_c *RefundRequestCreate) createSpec() (*RefundRequest, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.IdempotencyKey(); ok {
 		_spec.SetField(refundrequest.FieldIdempotencyKey, field.TypeString, value)
 		_node.IdempotencyKey = value
+	}
+	if value, ok := _c.mutation.CreditQuantum(); ok {
+		_spec.SetField(refundrequest.FieldCreditQuantum, field.TypeInt64, value)
+		_node.CreditQuantum = value
+	}
+	if value, ok := _c.mutation.RefundQuantumFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundQuantumFen, field.TypeInt64, value)
+		_node.RefundQuantumFen = value
+	}
+	if value, ok := _c.mutation.ReservedCredits(); ok {
+		_spec.SetField(refundrequest.FieldReservedCredits, field.TypeInt64, value)
+		_node.ReservedCredits = value
+	}
+	if value, ok := _c.mutation.RefundFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundFen, field.TypeInt64, value)
+		_node.RefundFen = value
+	}
+	if value, ok := _c.mutation.RemainderCredits(); ok {
+		_spec.SetField(refundrequest.FieldRemainderCredits, field.TypeInt64, value)
+		_node.RemainderCredits = value
+	}
+	if value, ok := _c.mutation.ProviderName(); ok {
+		_spec.SetField(refundrequest.FieldProviderName, field.TypeString, value)
+		_node.ProviderName = value
+	}
+	if value, ok := _c.mutation.ProviderRefundID(); ok {
+		_spec.SetField(refundrequest.FieldProviderRefundID, field.TypeString, value)
+		_node.ProviderRefundID = value
+	}
+	if value, ok := _c.mutation.FenceSequence(); ok {
+		_spec.SetField(refundrequest.FieldFenceSequence, field.TypeString, value)
+		_node.FenceSequence = value
+	}
+	if value, ok := _c.mutation.SnapshotVersion(); ok {
+		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
+		_node.SnapshotVersion = value
+	}
+	if value, ok := _c.mutation.FailureReason(); ok {
+		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)
+		_node.FailureReason = &value
 	}
 	if nodes := _c.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -514,6 +745,186 @@ func (u *RefundRequestUpsert) ClearReason() *RefundRequestUpsert {
 	return u
 }
 
+// SetCreditQuantum sets the "credit_quantum" field.
+func (u *RefundRequestUpsert) SetCreditQuantum(v int64) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldCreditQuantum, v)
+	return u
+}
+
+// UpdateCreditQuantum sets the "credit_quantum" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateCreditQuantum() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldCreditQuantum)
+	return u
+}
+
+// AddCreditQuantum adds v to the "credit_quantum" field.
+func (u *RefundRequestUpsert) AddCreditQuantum(v int64) *RefundRequestUpsert {
+	u.Add(refundrequest.FieldCreditQuantum, v)
+	return u
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (u *RefundRequestUpsert) SetRefundQuantumFen(v int64) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldRefundQuantumFen, v)
+	return u
+}
+
+// UpdateRefundQuantumFen sets the "refund_quantum_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateRefundQuantumFen() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldRefundQuantumFen)
+	return u
+}
+
+// AddRefundQuantumFen adds v to the "refund_quantum_fen" field.
+func (u *RefundRequestUpsert) AddRefundQuantumFen(v int64) *RefundRequestUpsert {
+	u.Add(refundrequest.FieldRefundQuantumFen, v)
+	return u
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (u *RefundRequestUpsert) SetReservedCredits(v int64) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldReservedCredits, v)
+	return u
+}
+
+// UpdateReservedCredits sets the "reserved_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateReservedCredits() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldReservedCredits)
+	return u
+}
+
+// AddReservedCredits adds v to the "reserved_credits" field.
+func (u *RefundRequestUpsert) AddReservedCredits(v int64) *RefundRequestUpsert {
+	u.Add(refundrequest.FieldReservedCredits, v)
+	return u
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (u *RefundRequestUpsert) SetRefundFen(v int64) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldRefundFen, v)
+	return u
+}
+
+// UpdateRefundFen sets the "refund_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateRefundFen() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldRefundFen)
+	return u
+}
+
+// AddRefundFen adds v to the "refund_fen" field.
+func (u *RefundRequestUpsert) AddRefundFen(v int64) *RefundRequestUpsert {
+	u.Add(refundrequest.FieldRefundFen, v)
+	return u
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (u *RefundRequestUpsert) SetRemainderCredits(v int64) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldRemainderCredits, v)
+	return u
+}
+
+// UpdateRemainderCredits sets the "remainder_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateRemainderCredits() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldRemainderCredits)
+	return u
+}
+
+// AddRemainderCredits adds v to the "remainder_credits" field.
+func (u *RefundRequestUpsert) AddRemainderCredits(v int64) *RefundRequestUpsert {
+	u.Add(refundrequest.FieldRemainderCredits, v)
+	return u
+}
+
+// SetProviderName sets the "provider_name" field.
+func (u *RefundRequestUpsert) SetProviderName(v string) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldProviderName, v)
+	return u
+}
+
+// UpdateProviderName sets the "provider_name" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateProviderName() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldProviderName)
+	return u
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (u *RefundRequestUpsert) ClearProviderName() *RefundRequestUpsert {
+	u.SetNull(refundrequest.FieldProviderName)
+	return u
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (u *RefundRequestUpsert) SetProviderRefundID(v string) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldProviderRefundID, v)
+	return u
+}
+
+// UpdateProviderRefundID sets the "provider_refund_id" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateProviderRefundID() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldProviderRefundID)
+	return u
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (u *RefundRequestUpsert) ClearProviderRefundID() *RefundRequestUpsert {
+	u.SetNull(refundrequest.FieldProviderRefundID)
+	return u
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (u *RefundRequestUpsert) SetFenceSequence(v string) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldFenceSequence, v)
+	return u
+}
+
+// UpdateFenceSequence sets the "fence_sequence" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateFenceSequence() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldFenceSequence)
+	return u
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (u *RefundRequestUpsert) ClearFenceSequence() *RefundRequestUpsert {
+	u.SetNull(refundrequest.FieldFenceSequence)
+	return u
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (u *RefundRequestUpsert) SetSnapshotVersion(v string) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldSnapshotVersion, v)
+	return u
+}
+
+// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateSnapshotVersion() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldSnapshotVersion)
+	return u
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (u *RefundRequestUpsert) ClearSnapshotVersion() *RefundRequestUpsert {
+	u.SetNull(refundrequest.FieldSnapshotVersion)
+	return u
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (u *RefundRequestUpsert) SetFailureReason(v string) *RefundRequestUpsert {
+	u.Set(refundrequest.FieldFailureReason, v)
+	return u
+}
+
+// UpdateFailureReason sets the "failure_reason" field to the value that was provided on create.
+func (u *RefundRequestUpsert) UpdateFailureReason() *RefundRequestUpsert {
+	u.SetExcluded(refundrequest.FieldFailureReason)
+	return u
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (u *RefundRequestUpsert) ClearFailureReason() *RefundRequestUpsert {
+	u.SetNull(refundrequest.FieldFailureReason)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -650,6 +1061,216 @@ func (u *RefundRequestUpsertOne) UpdateReason() *RefundRequestUpsertOne {
 func (u *RefundRequestUpsertOne) ClearReason() *RefundRequestUpsertOne {
 	return u.Update(func(s *RefundRequestUpsert) {
 		s.ClearReason()
+	})
+}
+
+// SetCreditQuantum sets the "credit_quantum" field.
+func (u *RefundRequestUpsertOne) SetCreditQuantum(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetCreditQuantum(v)
+	})
+}
+
+// AddCreditQuantum adds v to the "credit_quantum" field.
+func (u *RefundRequestUpsertOne) AddCreditQuantum(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddCreditQuantum(v)
+	})
+}
+
+// UpdateCreditQuantum sets the "credit_quantum" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateCreditQuantum() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateCreditQuantum()
+	})
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (u *RefundRequestUpsertOne) SetRefundQuantumFen(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRefundQuantumFen(v)
+	})
+}
+
+// AddRefundQuantumFen adds v to the "refund_quantum_fen" field.
+func (u *RefundRequestUpsertOne) AddRefundQuantumFen(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRefundQuantumFen(v)
+	})
+}
+
+// UpdateRefundQuantumFen sets the "refund_quantum_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateRefundQuantumFen() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRefundQuantumFen()
+	})
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (u *RefundRequestUpsertOne) SetReservedCredits(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetReservedCredits(v)
+	})
+}
+
+// AddReservedCredits adds v to the "reserved_credits" field.
+func (u *RefundRequestUpsertOne) AddReservedCredits(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddReservedCredits(v)
+	})
+}
+
+// UpdateReservedCredits sets the "reserved_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateReservedCredits() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateReservedCredits()
+	})
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (u *RefundRequestUpsertOne) SetRefundFen(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRefundFen(v)
+	})
+}
+
+// AddRefundFen adds v to the "refund_fen" field.
+func (u *RefundRequestUpsertOne) AddRefundFen(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRefundFen(v)
+	})
+}
+
+// UpdateRefundFen sets the "refund_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateRefundFen() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRefundFen()
+	})
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (u *RefundRequestUpsertOne) SetRemainderCredits(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRemainderCredits(v)
+	})
+}
+
+// AddRemainderCredits adds v to the "remainder_credits" field.
+func (u *RefundRequestUpsertOne) AddRemainderCredits(v int64) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRemainderCredits(v)
+	})
+}
+
+// UpdateRemainderCredits sets the "remainder_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateRemainderCredits() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRemainderCredits()
+	})
+}
+
+// SetProviderName sets the "provider_name" field.
+func (u *RefundRequestUpsertOne) SetProviderName(v string) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetProviderName(v)
+	})
+}
+
+// UpdateProviderName sets the "provider_name" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateProviderName() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateProviderName()
+	})
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (u *RefundRequestUpsertOne) ClearProviderName() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearProviderName()
+	})
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (u *RefundRequestUpsertOne) SetProviderRefundID(v string) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetProviderRefundID(v)
+	})
+}
+
+// UpdateProviderRefundID sets the "provider_refund_id" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateProviderRefundID() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateProviderRefundID()
+	})
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (u *RefundRequestUpsertOne) ClearProviderRefundID() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearProviderRefundID()
+	})
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (u *RefundRequestUpsertOne) SetFenceSequence(v string) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetFenceSequence(v)
+	})
+}
+
+// UpdateFenceSequence sets the "fence_sequence" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateFenceSequence() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateFenceSequence()
+	})
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (u *RefundRequestUpsertOne) ClearFenceSequence() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearFenceSequence()
+	})
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (u *RefundRequestUpsertOne) SetSnapshotVersion(v string) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetSnapshotVersion(v)
+	})
+}
+
+// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateSnapshotVersion() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateSnapshotVersion()
+	})
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (u *RefundRequestUpsertOne) ClearSnapshotVersion() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearSnapshotVersion()
+	})
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (u *RefundRequestUpsertOne) SetFailureReason(v string) *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetFailureReason(v)
+	})
+}
+
+// UpdateFailureReason sets the "failure_reason" field to the value that was provided on create.
+func (u *RefundRequestUpsertOne) UpdateFailureReason() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateFailureReason()
+	})
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (u *RefundRequestUpsertOne) ClearFailureReason() *RefundRequestUpsertOne {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearFailureReason()
 	})
 }
 
@@ -956,6 +1577,216 @@ func (u *RefundRequestUpsertBulk) UpdateReason() *RefundRequestUpsertBulk {
 func (u *RefundRequestUpsertBulk) ClearReason() *RefundRequestUpsertBulk {
 	return u.Update(func(s *RefundRequestUpsert) {
 		s.ClearReason()
+	})
+}
+
+// SetCreditQuantum sets the "credit_quantum" field.
+func (u *RefundRequestUpsertBulk) SetCreditQuantum(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetCreditQuantum(v)
+	})
+}
+
+// AddCreditQuantum adds v to the "credit_quantum" field.
+func (u *RefundRequestUpsertBulk) AddCreditQuantum(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddCreditQuantum(v)
+	})
+}
+
+// UpdateCreditQuantum sets the "credit_quantum" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateCreditQuantum() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateCreditQuantum()
+	})
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (u *RefundRequestUpsertBulk) SetRefundQuantumFen(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRefundQuantumFen(v)
+	})
+}
+
+// AddRefundQuantumFen adds v to the "refund_quantum_fen" field.
+func (u *RefundRequestUpsertBulk) AddRefundQuantumFen(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRefundQuantumFen(v)
+	})
+}
+
+// UpdateRefundQuantumFen sets the "refund_quantum_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateRefundQuantumFen() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRefundQuantumFen()
+	})
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (u *RefundRequestUpsertBulk) SetReservedCredits(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetReservedCredits(v)
+	})
+}
+
+// AddReservedCredits adds v to the "reserved_credits" field.
+func (u *RefundRequestUpsertBulk) AddReservedCredits(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddReservedCredits(v)
+	})
+}
+
+// UpdateReservedCredits sets the "reserved_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateReservedCredits() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateReservedCredits()
+	})
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (u *RefundRequestUpsertBulk) SetRefundFen(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRefundFen(v)
+	})
+}
+
+// AddRefundFen adds v to the "refund_fen" field.
+func (u *RefundRequestUpsertBulk) AddRefundFen(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRefundFen(v)
+	})
+}
+
+// UpdateRefundFen sets the "refund_fen" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateRefundFen() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRefundFen()
+	})
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (u *RefundRequestUpsertBulk) SetRemainderCredits(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetRemainderCredits(v)
+	})
+}
+
+// AddRemainderCredits adds v to the "remainder_credits" field.
+func (u *RefundRequestUpsertBulk) AddRemainderCredits(v int64) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.AddRemainderCredits(v)
+	})
+}
+
+// UpdateRemainderCredits sets the "remainder_credits" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateRemainderCredits() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateRemainderCredits()
+	})
+}
+
+// SetProviderName sets the "provider_name" field.
+func (u *RefundRequestUpsertBulk) SetProviderName(v string) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetProviderName(v)
+	})
+}
+
+// UpdateProviderName sets the "provider_name" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateProviderName() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateProviderName()
+	})
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (u *RefundRequestUpsertBulk) ClearProviderName() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearProviderName()
+	})
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (u *RefundRequestUpsertBulk) SetProviderRefundID(v string) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetProviderRefundID(v)
+	})
+}
+
+// UpdateProviderRefundID sets the "provider_refund_id" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateProviderRefundID() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateProviderRefundID()
+	})
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (u *RefundRequestUpsertBulk) ClearProviderRefundID() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearProviderRefundID()
+	})
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (u *RefundRequestUpsertBulk) SetFenceSequence(v string) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetFenceSequence(v)
+	})
+}
+
+// UpdateFenceSequence sets the "fence_sequence" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateFenceSequence() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateFenceSequence()
+	})
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (u *RefundRequestUpsertBulk) ClearFenceSequence() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearFenceSequence()
+	})
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (u *RefundRequestUpsertBulk) SetSnapshotVersion(v string) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetSnapshotVersion(v)
+	})
+}
+
+// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateSnapshotVersion() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateSnapshotVersion()
+	})
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (u *RefundRequestUpsertBulk) ClearSnapshotVersion() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearSnapshotVersion()
+	})
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (u *RefundRequestUpsertBulk) SetFailureReason(v string) *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.SetFailureReason(v)
+	})
+}
+
+// UpdateFailureReason sets the "failure_reason" field to the value that was provided on create.
+func (u *RefundRequestUpsertBulk) UpdateFailureReason() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.UpdateFailureReason()
+	})
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (u *RefundRequestUpsertBulk) ClearFailureReason() *RefundRequestUpsertBulk {
+	return u.Update(func(s *RefundRequestUpsert) {
+		s.ClearFailureReason()
 	})
 }
 

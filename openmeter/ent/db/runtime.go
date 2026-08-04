@@ -3735,6 +3735,42 @@ func init() {
 	refundrequestDescIdempotencyKey := refundrequestFields[6].Descriptor()
 	// refundrequest.IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
 	refundrequest.IdempotencyKeyValidator = refundrequestDescIdempotencyKey.Validators[0].(func(string) error)
+	// refundrequestDescCreditQuantum is the schema descriptor for credit_quantum field.
+	refundrequestDescCreditQuantum := refundrequestFields[7].Descriptor()
+	// refundrequest.DefaultCreditQuantum holds the default value on creation for the credit_quantum field.
+	refundrequest.DefaultCreditQuantum = refundrequestDescCreditQuantum.Default.(int64)
+	// refundrequestDescRefundQuantumFen is the schema descriptor for refund_quantum_fen field.
+	refundrequestDescRefundQuantumFen := refundrequestFields[8].Descriptor()
+	// refundrequest.DefaultRefundQuantumFen holds the default value on creation for the refund_quantum_fen field.
+	refundrequest.DefaultRefundQuantumFen = refundrequestDescRefundQuantumFen.Default.(int64)
+	// refundrequestDescReservedCredits is the schema descriptor for reserved_credits field.
+	refundrequestDescReservedCredits := refundrequestFields[9].Descriptor()
+	// refundrequest.DefaultReservedCredits holds the default value on creation for the reserved_credits field.
+	refundrequest.DefaultReservedCredits = refundrequestDescReservedCredits.Default.(int64)
+	// refundrequestDescRefundFen is the schema descriptor for refund_fen field.
+	refundrequestDescRefundFen := refundrequestFields[10].Descriptor()
+	// refundrequest.DefaultRefundFen holds the default value on creation for the refund_fen field.
+	refundrequest.DefaultRefundFen = refundrequestDescRefundFen.Default.(int64)
+	// refundrequestDescRemainderCredits is the schema descriptor for remainder_credits field.
+	refundrequestDescRemainderCredits := refundrequestFields[11].Descriptor()
+	// refundrequest.DefaultRemainderCredits holds the default value on creation for the remainder_credits field.
+	refundrequest.DefaultRemainderCredits = refundrequestDescRemainderCredits.Default.(int64)
+	// refundrequestDescProviderName is the schema descriptor for provider_name field.
+	refundrequestDescProviderName := refundrequestFields[12].Descriptor()
+	// refundrequest.DefaultProviderName holds the default value on creation for the provider_name field.
+	refundrequest.DefaultProviderName = refundrequestDescProviderName.Default.(string)
+	// refundrequestDescProviderRefundID is the schema descriptor for provider_refund_id field.
+	refundrequestDescProviderRefundID := refundrequestFields[13].Descriptor()
+	// refundrequest.DefaultProviderRefundID holds the default value on creation for the provider_refund_id field.
+	refundrequest.DefaultProviderRefundID = refundrequestDescProviderRefundID.Default.(string)
+	// refundrequestDescFenceSequence is the schema descriptor for fence_sequence field.
+	refundrequestDescFenceSequence := refundrequestFields[14].Descriptor()
+	// refundrequest.DefaultFenceSequence holds the default value on creation for the fence_sequence field.
+	refundrequest.DefaultFenceSequence = refundrequestDescFenceSequence.Default.(string)
+	// refundrequestDescSnapshotVersion is the schema descriptor for snapshot_version field.
+	refundrequestDescSnapshotVersion := refundrequestFields[15].Descriptor()
+	// refundrequest.DefaultSnapshotVersion holds the default value on creation for the snapshot_version field.
+	refundrequest.DefaultSnapshotVersion = refundrequestDescSnapshotVersion.Default.(string)
 	// refundrequestDescID is the schema descriptor for id field.
 	refundrequestDescID := refundrequestMixinFields0[0].Descriptor()
 	// refundrequest.DefaultID holds the default value on creation for the id field.

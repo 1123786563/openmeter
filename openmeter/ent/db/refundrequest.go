@@ -40,6 +40,26 @@ type RefundRequest struct {
 	Reason *string `json:"reason,omitempty"`
 	// IdempotencyKey holds the value of the "idempotency_key" field.
 	IdempotencyKey string `json:"idempotency_key,omitempty"`
+	// CreditQuantum holds the value of the "credit_quantum" field.
+	CreditQuantum int64 `json:"credit_quantum,omitempty"`
+	// RefundQuantumFen holds the value of the "refund_quantum_fen" field.
+	RefundQuantumFen int64 `json:"refund_quantum_fen,omitempty"`
+	// ReservedCredits holds the value of the "reserved_credits" field.
+	ReservedCredits int64 `json:"reserved_credits,omitempty"`
+	// RefundFen holds the value of the "refund_fen" field.
+	RefundFen int64 `json:"refund_fen,omitempty"`
+	// RemainderCredits holds the value of the "remainder_credits" field.
+	RemainderCredits int64 `json:"remainder_credits,omitempty"`
+	// ProviderName holds the value of the "provider_name" field.
+	ProviderName string `json:"provider_name,omitempty"`
+	// ProviderRefundID holds the value of the "provider_refund_id" field.
+	ProviderRefundID string `json:"provider_refund_id,omitempty"`
+	// FenceSequence holds the value of the "fence_sequence" field.
+	FenceSequence string `json:"fence_sequence,omitempty"`
+	// SnapshotVersion holds the value of the "snapshot_version" field.
+	SnapshotVersion string `json:"snapshot_version,omitempty"`
+	// FailureReason holds the value of the "failure_reason" field.
+	FailureReason *string `json:"failure_reason,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RefundRequestQuery when eager-loading is set.
 	Edges        RefundRequestEdges `json:"edges"`
@@ -82,9 +102,9 @@ func (*RefundRequest) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case refundrequest.FieldAmountCents:
+		case refundrequest.FieldAmountCents, refundrequest.FieldCreditQuantum, refundrequest.FieldRefundQuantumFen, refundrequest.FieldReservedCredits, refundrequest.FieldRefundFen, refundrequest.FieldRemainderCredits:
 			values[i] = new(sql.NullInt64)
-		case refundrequest.FieldID, refundrequest.FieldNamespace, refundrequest.FieldCommerceOrderID, refundrequest.FieldCustomerID, refundrequest.FieldCurrency, refundrequest.FieldStatus, refundrequest.FieldReason, refundrequest.FieldIdempotencyKey:
+		case refundrequest.FieldID, refundrequest.FieldNamespace, refundrequest.FieldCommerceOrderID, refundrequest.FieldCustomerID, refundrequest.FieldCurrency, refundrequest.FieldStatus, refundrequest.FieldReason, refundrequest.FieldIdempotencyKey, refundrequest.FieldProviderName, refundrequest.FieldProviderRefundID, refundrequest.FieldFenceSequence, refundrequest.FieldSnapshotVersion, refundrequest.FieldFailureReason:
 			values[i] = new(sql.NullString)
 		case refundrequest.FieldCreatedAt, refundrequest.FieldUpdatedAt, refundrequest.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -177,6 +197,67 @@ func (_m *RefundRequest) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.IdempotencyKey = value.String
 			}
+		case refundrequest.FieldCreditQuantum:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credit_quantum", values[i])
+			} else if value.Valid {
+				_m.CreditQuantum = value.Int64
+			}
+		case refundrequest.FieldRefundQuantumFen:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field refund_quantum_fen", values[i])
+			} else if value.Valid {
+				_m.RefundQuantumFen = value.Int64
+			}
+		case refundrequest.FieldReservedCredits:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field reserved_credits", values[i])
+			} else if value.Valid {
+				_m.ReservedCredits = value.Int64
+			}
+		case refundrequest.FieldRefundFen:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field refund_fen", values[i])
+			} else if value.Valid {
+				_m.RefundFen = value.Int64
+			}
+		case refundrequest.FieldRemainderCredits:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field remainder_credits", values[i])
+			} else if value.Valid {
+				_m.RemainderCredits = value.Int64
+			}
+		case refundrequest.FieldProviderName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_name", values[i])
+			} else if value.Valid {
+				_m.ProviderName = value.String
+			}
+		case refundrequest.FieldProviderRefundID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_refund_id", values[i])
+			} else if value.Valid {
+				_m.ProviderRefundID = value.String
+			}
+		case refundrequest.FieldFenceSequence:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field fence_sequence", values[i])
+			} else if value.Valid {
+				_m.FenceSequence = value.String
+			}
+		case refundrequest.FieldSnapshotVersion:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field snapshot_version", values[i])
+			} else if value.Valid {
+				_m.SnapshotVersion = value.String
+			}
+		case refundrequest.FieldFailureReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field failure_reason", values[i])
+			} else if value.Valid {
+				_m.FailureReason = new(string)
+				*_m.FailureReason = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -259,6 +340,38 @@ func (_m *RefundRequest) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("idempotency_key=")
 	builder.WriteString(_m.IdempotencyKey)
+	builder.WriteString(", ")
+	builder.WriteString("credit_quantum=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CreditQuantum))
+	builder.WriteString(", ")
+	builder.WriteString("refund_quantum_fen=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RefundQuantumFen))
+	builder.WriteString(", ")
+	builder.WriteString("reserved_credits=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ReservedCredits))
+	builder.WriteString(", ")
+	builder.WriteString("refund_fen=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RefundFen))
+	builder.WriteString(", ")
+	builder.WriteString("remainder_credits=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RemainderCredits))
+	builder.WriteString(", ")
+	builder.WriteString("provider_name=")
+	builder.WriteString(_m.ProviderName)
+	builder.WriteString(", ")
+	builder.WriteString("provider_refund_id=")
+	builder.WriteString(_m.ProviderRefundID)
+	builder.WriteString(", ")
+	builder.WriteString("fence_sequence=")
+	builder.WriteString(_m.FenceSequence)
+	builder.WriteString(", ")
+	builder.WriteString("snapshot_version=")
+	builder.WriteString(_m.SnapshotVersion)
+	builder.WriteString(", ")
+	if v := _m.FailureReason; v != nil {
+		builder.WriteString("failure_reason=")
+		builder.WriteString(*v)
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

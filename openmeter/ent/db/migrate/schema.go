@@ -6349,6 +6349,16 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending_fence", "provider_processing", "ledger_reversing", "fulfilled", "failed"}, Default: "pending_fence"},
 		{Name: "reason", Type: field.TypeString, Nullable: true},
 		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "credit_quantum", Type: field.TypeInt64, Default: 10},
+		{Name: "refund_quantum_fen", Type: field.TypeInt64, Default: 1},
+		{Name: "reserved_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "refund_fen", Type: field.TypeInt64, Default: 0},
+		{Name: "remainder_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "provider_name", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "provider_refund_id", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "fence_sequence", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "snapshot_version", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
 		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
 	// RefundRequestsTable holds the schema information for the "refund_requests" table.
@@ -6359,7 +6369,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "refund_requests_commerce_orders_refund_requests",
-				Columns:    []*schema.Column{RefundRequestsColumns[11]},
+				Columns:    []*schema.Column{RefundRequestsColumns[21]},
 				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -6383,7 +6393,7 @@ var (
 			{
 				Name:    "refundrequest_namespace_commerce_order_id",
 				Unique:  false,
-				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[11]},
+				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[21]},
 			},
 			{
 				Name:    "refundrequest_namespace_customer_id_status",

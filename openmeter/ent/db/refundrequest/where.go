@@ -115,6 +115,56 @@ func IdempotencyKey(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldEQ(FieldIdempotencyKey, v))
 }
 
+// CreditQuantum applies equality check predicate on the "credit_quantum" field. It's identical to CreditQuantumEQ.
+func CreditQuantum(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldCreditQuantum, v))
+}
+
+// RefundQuantumFen applies equality check predicate on the "refund_quantum_fen" field. It's identical to RefundQuantumFenEQ.
+func RefundQuantumFen(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRefundQuantumFen, v))
+}
+
+// ReservedCredits applies equality check predicate on the "reserved_credits" field. It's identical to ReservedCreditsEQ.
+func ReservedCredits(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldReservedCredits, v))
+}
+
+// RefundFen applies equality check predicate on the "refund_fen" field. It's identical to RefundFenEQ.
+func RefundFen(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRefundFen, v))
+}
+
+// RemainderCredits applies equality check predicate on the "remainder_credits" field. It's identical to RemainderCreditsEQ.
+func RemainderCredits(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRemainderCredits, v))
+}
+
+// ProviderName applies equality check predicate on the "provider_name" field. It's identical to ProviderNameEQ.
+func ProviderName(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldProviderName, v))
+}
+
+// ProviderRefundID applies equality check predicate on the "provider_refund_id" field. It's identical to ProviderRefundIDEQ.
+func ProviderRefundID(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldProviderRefundID, v))
+}
+
+// FenceSequence applies equality check predicate on the "fence_sequence" field. It's identical to FenceSequenceEQ.
+func FenceSequence(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldFenceSequence, v))
+}
+
+// SnapshotVersion applies equality check predicate on the "snapshot_version" field. It's identical to SnapshotVersionEQ.
+func SnapshotVersion(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldSnapshotVersion, v))
+}
+
+// FailureReason applies equality check predicate on the "failure_reason" field. It's identical to FailureReasonEQ.
+func FailureReason(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldFailureReason, v))
+}
+
 // NamespaceEQ applies the EQ predicate on the "namespace" field.
 func NamespaceEQ(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldEQ(FieldNamespace, v))
@@ -703,6 +753,581 @@ func IdempotencyKeyEqualFold(v string) predicate.RefundRequest {
 // IdempotencyKeyContainsFold applies the ContainsFold predicate on the "idempotency_key" field.
 func IdempotencyKeyContainsFold(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldContainsFold(FieldIdempotencyKey, v))
+}
+
+// CreditQuantumEQ applies the EQ predicate on the "credit_quantum" field.
+func CreditQuantumEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldCreditQuantum, v))
+}
+
+// CreditQuantumNEQ applies the NEQ predicate on the "credit_quantum" field.
+func CreditQuantumNEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldCreditQuantum, v))
+}
+
+// CreditQuantumIn applies the In predicate on the "credit_quantum" field.
+func CreditQuantumIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldCreditQuantum, vs...))
+}
+
+// CreditQuantumNotIn applies the NotIn predicate on the "credit_quantum" field.
+func CreditQuantumNotIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldCreditQuantum, vs...))
+}
+
+// CreditQuantumGT applies the GT predicate on the "credit_quantum" field.
+func CreditQuantumGT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldCreditQuantum, v))
+}
+
+// CreditQuantumGTE applies the GTE predicate on the "credit_quantum" field.
+func CreditQuantumGTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldCreditQuantum, v))
+}
+
+// CreditQuantumLT applies the LT predicate on the "credit_quantum" field.
+func CreditQuantumLT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldCreditQuantum, v))
+}
+
+// CreditQuantumLTE applies the LTE predicate on the "credit_quantum" field.
+func CreditQuantumLTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldCreditQuantum, v))
+}
+
+// RefundQuantumFenEQ applies the EQ predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRefundQuantumFen, v))
+}
+
+// RefundQuantumFenNEQ applies the NEQ predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenNEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldRefundQuantumFen, v))
+}
+
+// RefundQuantumFenIn applies the In predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldRefundQuantumFen, vs...))
+}
+
+// RefundQuantumFenNotIn applies the NotIn predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenNotIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldRefundQuantumFen, vs...))
+}
+
+// RefundQuantumFenGT applies the GT predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenGT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldRefundQuantumFen, v))
+}
+
+// RefundQuantumFenGTE applies the GTE predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenGTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldRefundQuantumFen, v))
+}
+
+// RefundQuantumFenLT applies the LT predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenLT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldRefundQuantumFen, v))
+}
+
+// RefundQuantumFenLTE applies the LTE predicate on the "refund_quantum_fen" field.
+func RefundQuantumFenLTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldRefundQuantumFen, v))
+}
+
+// ReservedCreditsEQ applies the EQ predicate on the "reserved_credits" field.
+func ReservedCreditsEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldReservedCredits, v))
+}
+
+// ReservedCreditsNEQ applies the NEQ predicate on the "reserved_credits" field.
+func ReservedCreditsNEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldReservedCredits, v))
+}
+
+// ReservedCreditsIn applies the In predicate on the "reserved_credits" field.
+func ReservedCreditsIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldReservedCredits, vs...))
+}
+
+// ReservedCreditsNotIn applies the NotIn predicate on the "reserved_credits" field.
+func ReservedCreditsNotIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldReservedCredits, vs...))
+}
+
+// ReservedCreditsGT applies the GT predicate on the "reserved_credits" field.
+func ReservedCreditsGT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldReservedCredits, v))
+}
+
+// ReservedCreditsGTE applies the GTE predicate on the "reserved_credits" field.
+func ReservedCreditsGTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldReservedCredits, v))
+}
+
+// ReservedCreditsLT applies the LT predicate on the "reserved_credits" field.
+func ReservedCreditsLT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldReservedCredits, v))
+}
+
+// ReservedCreditsLTE applies the LTE predicate on the "reserved_credits" field.
+func ReservedCreditsLTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldReservedCredits, v))
+}
+
+// RefundFenEQ applies the EQ predicate on the "refund_fen" field.
+func RefundFenEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRefundFen, v))
+}
+
+// RefundFenNEQ applies the NEQ predicate on the "refund_fen" field.
+func RefundFenNEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldRefundFen, v))
+}
+
+// RefundFenIn applies the In predicate on the "refund_fen" field.
+func RefundFenIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldRefundFen, vs...))
+}
+
+// RefundFenNotIn applies the NotIn predicate on the "refund_fen" field.
+func RefundFenNotIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldRefundFen, vs...))
+}
+
+// RefundFenGT applies the GT predicate on the "refund_fen" field.
+func RefundFenGT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldRefundFen, v))
+}
+
+// RefundFenGTE applies the GTE predicate on the "refund_fen" field.
+func RefundFenGTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldRefundFen, v))
+}
+
+// RefundFenLT applies the LT predicate on the "refund_fen" field.
+func RefundFenLT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldRefundFen, v))
+}
+
+// RefundFenLTE applies the LTE predicate on the "refund_fen" field.
+func RefundFenLTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldRefundFen, v))
+}
+
+// RemainderCreditsEQ applies the EQ predicate on the "remainder_credits" field.
+func RemainderCreditsEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldRemainderCredits, v))
+}
+
+// RemainderCreditsNEQ applies the NEQ predicate on the "remainder_credits" field.
+func RemainderCreditsNEQ(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldRemainderCredits, v))
+}
+
+// RemainderCreditsIn applies the In predicate on the "remainder_credits" field.
+func RemainderCreditsIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldRemainderCredits, vs...))
+}
+
+// RemainderCreditsNotIn applies the NotIn predicate on the "remainder_credits" field.
+func RemainderCreditsNotIn(vs ...int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldRemainderCredits, vs...))
+}
+
+// RemainderCreditsGT applies the GT predicate on the "remainder_credits" field.
+func RemainderCreditsGT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldRemainderCredits, v))
+}
+
+// RemainderCreditsGTE applies the GTE predicate on the "remainder_credits" field.
+func RemainderCreditsGTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldRemainderCredits, v))
+}
+
+// RemainderCreditsLT applies the LT predicate on the "remainder_credits" field.
+func RemainderCreditsLT(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldRemainderCredits, v))
+}
+
+// RemainderCreditsLTE applies the LTE predicate on the "remainder_credits" field.
+func RemainderCreditsLTE(v int64) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldRemainderCredits, v))
+}
+
+// ProviderNameEQ applies the EQ predicate on the "provider_name" field.
+func ProviderNameEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldProviderName, v))
+}
+
+// ProviderNameNEQ applies the NEQ predicate on the "provider_name" field.
+func ProviderNameNEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldProviderName, v))
+}
+
+// ProviderNameIn applies the In predicate on the "provider_name" field.
+func ProviderNameIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldProviderName, vs...))
+}
+
+// ProviderNameNotIn applies the NotIn predicate on the "provider_name" field.
+func ProviderNameNotIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldProviderName, vs...))
+}
+
+// ProviderNameGT applies the GT predicate on the "provider_name" field.
+func ProviderNameGT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldProviderName, v))
+}
+
+// ProviderNameGTE applies the GTE predicate on the "provider_name" field.
+func ProviderNameGTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldProviderName, v))
+}
+
+// ProviderNameLT applies the LT predicate on the "provider_name" field.
+func ProviderNameLT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldProviderName, v))
+}
+
+// ProviderNameLTE applies the LTE predicate on the "provider_name" field.
+func ProviderNameLTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldProviderName, v))
+}
+
+// ProviderNameContains applies the Contains predicate on the "provider_name" field.
+func ProviderNameContains(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContains(FieldProviderName, v))
+}
+
+// ProviderNameHasPrefix applies the HasPrefix predicate on the "provider_name" field.
+func ProviderNameHasPrefix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasPrefix(FieldProviderName, v))
+}
+
+// ProviderNameHasSuffix applies the HasSuffix predicate on the "provider_name" field.
+func ProviderNameHasSuffix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasSuffix(FieldProviderName, v))
+}
+
+// ProviderNameIsNil applies the IsNil predicate on the "provider_name" field.
+func ProviderNameIsNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIsNull(FieldProviderName))
+}
+
+// ProviderNameNotNil applies the NotNil predicate on the "provider_name" field.
+func ProviderNameNotNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotNull(FieldProviderName))
+}
+
+// ProviderNameEqualFold applies the EqualFold predicate on the "provider_name" field.
+func ProviderNameEqualFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEqualFold(FieldProviderName, v))
+}
+
+// ProviderNameContainsFold applies the ContainsFold predicate on the "provider_name" field.
+func ProviderNameContainsFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContainsFold(FieldProviderName, v))
+}
+
+// ProviderRefundIDEQ applies the EQ predicate on the "provider_refund_id" field.
+func ProviderRefundIDEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDNEQ applies the NEQ predicate on the "provider_refund_id" field.
+func ProviderRefundIDNEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDIn applies the In predicate on the "provider_refund_id" field.
+func ProviderRefundIDIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldProviderRefundID, vs...))
+}
+
+// ProviderRefundIDNotIn applies the NotIn predicate on the "provider_refund_id" field.
+func ProviderRefundIDNotIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldProviderRefundID, vs...))
+}
+
+// ProviderRefundIDGT applies the GT predicate on the "provider_refund_id" field.
+func ProviderRefundIDGT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDGTE applies the GTE predicate on the "provider_refund_id" field.
+func ProviderRefundIDGTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDLT applies the LT predicate on the "provider_refund_id" field.
+func ProviderRefundIDLT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDLTE applies the LTE predicate on the "provider_refund_id" field.
+func ProviderRefundIDLTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDContains applies the Contains predicate on the "provider_refund_id" field.
+func ProviderRefundIDContains(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContains(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDHasPrefix applies the HasPrefix predicate on the "provider_refund_id" field.
+func ProviderRefundIDHasPrefix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasPrefix(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDHasSuffix applies the HasSuffix predicate on the "provider_refund_id" field.
+func ProviderRefundIDHasSuffix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasSuffix(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDIsNil applies the IsNil predicate on the "provider_refund_id" field.
+func ProviderRefundIDIsNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIsNull(FieldProviderRefundID))
+}
+
+// ProviderRefundIDNotNil applies the NotNil predicate on the "provider_refund_id" field.
+func ProviderRefundIDNotNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotNull(FieldProviderRefundID))
+}
+
+// ProviderRefundIDEqualFold applies the EqualFold predicate on the "provider_refund_id" field.
+func ProviderRefundIDEqualFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEqualFold(FieldProviderRefundID, v))
+}
+
+// ProviderRefundIDContainsFold applies the ContainsFold predicate on the "provider_refund_id" field.
+func ProviderRefundIDContainsFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContainsFold(FieldProviderRefundID, v))
+}
+
+// FenceSequenceEQ applies the EQ predicate on the "fence_sequence" field.
+func FenceSequenceEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldFenceSequence, v))
+}
+
+// FenceSequenceNEQ applies the NEQ predicate on the "fence_sequence" field.
+func FenceSequenceNEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldFenceSequence, v))
+}
+
+// FenceSequenceIn applies the In predicate on the "fence_sequence" field.
+func FenceSequenceIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldFenceSequence, vs...))
+}
+
+// FenceSequenceNotIn applies the NotIn predicate on the "fence_sequence" field.
+func FenceSequenceNotIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldFenceSequence, vs...))
+}
+
+// FenceSequenceGT applies the GT predicate on the "fence_sequence" field.
+func FenceSequenceGT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldFenceSequence, v))
+}
+
+// FenceSequenceGTE applies the GTE predicate on the "fence_sequence" field.
+func FenceSequenceGTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldFenceSequence, v))
+}
+
+// FenceSequenceLT applies the LT predicate on the "fence_sequence" field.
+func FenceSequenceLT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldFenceSequence, v))
+}
+
+// FenceSequenceLTE applies the LTE predicate on the "fence_sequence" field.
+func FenceSequenceLTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldFenceSequence, v))
+}
+
+// FenceSequenceContains applies the Contains predicate on the "fence_sequence" field.
+func FenceSequenceContains(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContains(FieldFenceSequence, v))
+}
+
+// FenceSequenceHasPrefix applies the HasPrefix predicate on the "fence_sequence" field.
+func FenceSequenceHasPrefix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasPrefix(FieldFenceSequence, v))
+}
+
+// FenceSequenceHasSuffix applies the HasSuffix predicate on the "fence_sequence" field.
+func FenceSequenceHasSuffix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasSuffix(FieldFenceSequence, v))
+}
+
+// FenceSequenceIsNil applies the IsNil predicate on the "fence_sequence" field.
+func FenceSequenceIsNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIsNull(FieldFenceSequence))
+}
+
+// FenceSequenceNotNil applies the NotNil predicate on the "fence_sequence" field.
+func FenceSequenceNotNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotNull(FieldFenceSequence))
+}
+
+// FenceSequenceEqualFold applies the EqualFold predicate on the "fence_sequence" field.
+func FenceSequenceEqualFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEqualFold(FieldFenceSequence, v))
+}
+
+// FenceSequenceContainsFold applies the ContainsFold predicate on the "fence_sequence" field.
+func FenceSequenceContainsFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContainsFold(FieldFenceSequence, v))
+}
+
+// SnapshotVersionEQ applies the EQ predicate on the "snapshot_version" field.
+func SnapshotVersionEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionNEQ applies the NEQ predicate on the "snapshot_version" field.
+func SnapshotVersionNEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionIn applies the In predicate on the "snapshot_version" field.
+func SnapshotVersionIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldSnapshotVersion, vs...))
+}
+
+// SnapshotVersionNotIn applies the NotIn predicate on the "snapshot_version" field.
+func SnapshotVersionNotIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldSnapshotVersion, vs...))
+}
+
+// SnapshotVersionGT applies the GT predicate on the "snapshot_version" field.
+func SnapshotVersionGT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionGTE applies the GTE predicate on the "snapshot_version" field.
+func SnapshotVersionGTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionLT applies the LT predicate on the "snapshot_version" field.
+func SnapshotVersionLT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionLTE applies the LTE predicate on the "snapshot_version" field.
+func SnapshotVersionLTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionContains applies the Contains predicate on the "snapshot_version" field.
+func SnapshotVersionContains(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContains(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionHasPrefix applies the HasPrefix predicate on the "snapshot_version" field.
+func SnapshotVersionHasPrefix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasPrefix(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionHasSuffix applies the HasSuffix predicate on the "snapshot_version" field.
+func SnapshotVersionHasSuffix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasSuffix(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionIsNil applies the IsNil predicate on the "snapshot_version" field.
+func SnapshotVersionIsNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIsNull(FieldSnapshotVersion))
+}
+
+// SnapshotVersionNotNil applies the NotNil predicate on the "snapshot_version" field.
+func SnapshotVersionNotNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotNull(FieldSnapshotVersion))
+}
+
+// SnapshotVersionEqualFold applies the EqualFold predicate on the "snapshot_version" field.
+func SnapshotVersionEqualFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEqualFold(FieldSnapshotVersion, v))
+}
+
+// SnapshotVersionContainsFold applies the ContainsFold predicate on the "snapshot_version" field.
+func SnapshotVersionContainsFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContainsFold(FieldSnapshotVersion, v))
+}
+
+// FailureReasonEQ applies the EQ predicate on the "failure_reason" field.
+func FailureReasonEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEQ(FieldFailureReason, v))
+}
+
+// FailureReasonNEQ applies the NEQ predicate on the "failure_reason" field.
+func FailureReasonNEQ(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNEQ(FieldFailureReason, v))
+}
+
+// FailureReasonIn applies the In predicate on the "failure_reason" field.
+func FailureReasonIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIn(FieldFailureReason, vs...))
+}
+
+// FailureReasonNotIn applies the NotIn predicate on the "failure_reason" field.
+func FailureReasonNotIn(vs ...string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotIn(FieldFailureReason, vs...))
+}
+
+// FailureReasonGT applies the GT predicate on the "failure_reason" field.
+func FailureReasonGT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGT(FieldFailureReason, v))
+}
+
+// FailureReasonGTE applies the GTE predicate on the "failure_reason" field.
+func FailureReasonGTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldGTE(FieldFailureReason, v))
+}
+
+// FailureReasonLT applies the LT predicate on the "failure_reason" field.
+func FailureReasonLT(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLT(FieldFailureReason, v))
+}
+
+// FailureReasonLTE applies the LTE predicate on the "failure_reason" field.
+func FailureReasonLTE(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldLTE(FieldFailureReason, v))
+}
+
+// FailureReasonContains applies the Contains predicate on the "failure_reason" field.
+func FailureReasonContains(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContains(FieldFailureReason, v))
+}
+
+// FailureReasonHasPrefix applies the HasPrefix predicate on the "failure_reason" field.
+func FailureReasonHasPrefix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasPrefix(FieldFailureReason, v))
+}
+
+// FailureReasonHasSuffix applies the HasSuffix predicate on the "failure_reason" field.
+func FailureReasonHasSuffix(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldHasSuffix(FieldFailureReason, v))
+}
+
+// FailureReasonIsNil applies the IsNil predicate on the "failure_reason" field.
+func FailureReasonIsNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldIsNull(FieldFailureReason))
+}
+
+// FailureReasonNotNil applies the NotNil predicate on the "failure_reason" field.
+func FailureReasonNotNil() predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldNotNull(FieldFailureReason))
+}
+
+// FailureReasonEqualFold applies the EqualFold predicate on the "failure_reason" field.
+func FailureReasonEqualFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldEqualFold(FieldFailureReason, v))
+}
+
+// FailureReasonContainsFold applies the ContainsFold predicate on the "failure_reason" field.
+func FailureReasonContainsFold(v string) predicate.RefundRequest {
+	return predicate.RefundRequest(sql.FieldContainsFold(FieldFailureReason, v))
 }
 
 // HasOrder applies the HasEdge predicate on the "order" edge.

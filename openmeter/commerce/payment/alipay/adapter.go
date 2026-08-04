@@ -169,6 +169,39 @@ func (a *Adapter) QueryRefund(_ context.Context, providerRefundID string) (payme
 	}, nil
 }
 
+// VerifyRefundCallback verifies an Alipay refund callback signature and extracts
+// the verified fields into a RefundFact. Uses the same RSA2 verification scheme
+// as payment callbacks: signature over sorted key=value pairs (excluding sign
+// and sign_type).
+func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header, body []byte) (payment.RefundFact, error) {
+	values, err := url.ParseQuery(string(body))
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("alipay: parse refund callback: %w", err)
+	}
+
+	signB64 := values.Get("sign")
+	if signB64 == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: missing sign field", payment.ErrInvalidSignature)
+	}
+
+	message := buildSignContent(values)
+	if err := a.verifySignature(ctx, []byte(message), signB64); err != nil {
+		return payment.RefundFact{}, err
+	}
+
+	return payment.RefundFact{
+		Provider:         payment.ProviderAlipay,
+		ProviderRefundID: values.Get("trade_no"),
+		ProviderOrderID:  values.Get("out_trade_no"),
+		AmountMinor:      parseAmount(values.Get("refund_fee")),
+		Currency:         "CNY",
+		Success:          true,
+		RawHash:          hashBody(body),
+		Timestamp:        parseAlipayTime(values.Get("gmt_refund")),
+		SignedPayload:    valuesToMap(values),
+	}, nil
+}
+
 // --- Helpers ---
 
 // buildSignContent constructs the canonical signature message from sorted

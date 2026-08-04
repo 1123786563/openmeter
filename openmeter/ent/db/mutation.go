@@ -133599,29 +133599,44 @@ func (m *RefundFactMutation) ResetEdge(name string) error {
 // RefundRequestMutation represents an operation that mutates the RefundRequest nodes in the graph.
 type RefundRequestMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *string
-	namespace       *string
-	created_at      *time.Time
-	updated_at      *time.Time
-	deleted_at      *time.Time
-	customer_id     *string
-	amount_cents    *int64
-	addamount_cents *int64
-	currency        *string
-	status          *refundrequest.Status
-	reason          *string
-	idempotency_key *string
-	clearedFields   map[string]struct{}
-	_order          *string
-	cleared_order   bool
-	facts           map[string]struct{}
-	removedfacts    map[string]struct{}
-	clearedfacts    bool
-	done            bool
-	oldValue        func(context.Context) (*RefundRequest, error)
-	predicates      []predicate.RefundRequest
+	op                    Op
+	typ                   string
+	id                    *string
+	namespace             *string
+	created_at            *time.Time
+	updated_at            *time.Time
+	deleted_at            *time.Time
+	customer_id           *string
+	amount_cents          *int64
+	addamount_cents       *int64
+	currency              *string
+	status                *refundrequest.Status
+	reason                *string
+	idempotency_key       *string
+	credit_quantum        *int64
+	addcredit_quantum     *int64
+	refund_quantum_fen    *int64
+	addrefund_quantum_fen *int64
+	reserved_credits      *int64
+	addreserved_credits   *int64
+	refund_fen            *int64
+	addrefund_fen         *int64
+	remainder_credits     *int64
+	addremainder_credits  *int64
+	provider_name         *string
+	provider_refund_id    *string
+	fence_sequence        *string
+	snapshot_version      *string
+	failure_reason        *string
+	clearedFields         map[string]struct{}
+	_order                *string
+	cleared_order         bool
+	facts                 map[string]struct{}
+	removedfacts          map[string]struct{}
+	clearedfacts          bool
+	done                  bool
+	oldValue              func(context.Context) (*RefundRequest, error)
+	predicates            []predicate.RefundRequest
 }
 
 var _ ent.Mutation = (*RefundRequestMutation)(nil)
@@ -134170,6 +134185,531 @@ func (m *RefundRequestMutation) ResetIdempotencyKey() {
 	m.idempotency_key = nil
 }
 
+// SetCreditQuantum sets the "credit_quantum" field.
+func (m *RefundRequestMutation) SetCreditQuantum(i int64) {
+	m.credit_quantum = &i
+	m.addcredit_quantum = nil
+}
+
+// CreditQuantum returns the value of the "credit_quantum" field in the mutation.
+func (m *RefundRequestMutation) CreditQuantum() (r int64, exists bool) {
+	v := m.credit_quantum
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreditQuantum returns the old "credit_quantum" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldCreditQuantum(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreditQuantum is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreditQuantum requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreditQuantum: %w", err)
+	}
+	return oldValue.CreditQuantum, nil
+}
+
+// AddCreditQuantum adds i to the "credit_quantum" field.
+func (m *RefundRequestMutation) AddCreditQuantum(i int64) {
+	if m.addcredit_quantum != nil {
+		*m.addcredit_quantum += i
+	} else {
+		m.addcredit_quantum = &i
+	}
+}
+
+// AddedCreditQuantum returns the value that was added to the "credit_quantum" field in this mutation.
+func (m *RefundRequestMutation) AddedCreditQuantum() (r int64, exists bool) {
+	v := m.addcredit_quantum
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreditQuantum resets all changes to the "credit_quantum" field.
+func (m *RefundRequestMutation) ResetCreditQuantum() {
+	m.credit_quantum = nil
+	m.addcredit_quantum = nil
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (m *RefundRequestMutation) SetRefundQuantumFen(i int64) {
+	m.refund_quantum_fen = &i
+	m.addrefund_quantum_fen = nil
+}
+
+// RefundQuantumFen returns the value of the "refund_quantum_fen" field in the mutation.
+func (m *RefundRequestMutation) RefundQuantumFen() (r int64, exists bool) {
+	v := m.refund_quantum_fen
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRefundQuantumFen returns the old "refund_quantum_fen" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldRefundQuantumFen(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRefundQuantumFen is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRefundQuantumFen requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRefundQuantumFen: %w", err)
+	}
+	return oldValue.RefundQuantumFen, nil
+}
+
+// AddRefundQuantumFen adds i to the "refund_quantum_fen" field.
+func (m *RefundRequestMutation) AddRefundQuantumFen(i int64) {
+	if m.addrefund_quantum_fen != nil {
+		*m.addrefund_quantum_fen += i
+	} else {
+		m.addrefund_quantum_fen = &i
+	}
+}
+
+// AddedRefundQuantumFen returns the value that was added to the "refund_quantum_fen" field in this mutation.
+func (m *RefundRequestMutation) AddedRefundQuantumFen() (r int64, exists bool) {
+	v := m.addrefund_quantum_fen
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRefundQuantumFen resets all changes to the "refund_quantum_fen" field.
+func (m *RefundRequestMutation) ResetRefundQuantumFen() {
+	m.refund_quantum_fen = nil
+	m.addrefund_quantum_fen = nil
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (m *RefundRequestMutation) SetReservedCredits(i int64) {
+	m.reserved_credits = &i
+	m.addreserved_credits = nil
+}
+
+// ReservedCredits returns the value of the "reserved_credits" field in the mutation.
+func (m *RefundRequestMutation) ReservedCredits() (r int64, exists bool) {
+	v := m.reserved_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservedCredits returns the old "reserved_credits" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldReservedCredits(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservedCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservedCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservedCredits: %w", err)
+	}
+	return oldValue.ReservedCredits, nil
+}
+
+// AddReservedCredits adds i to the "reserved_credits" field.
+func (m *RefundRequestMutation) AddReservedCredits(i int64) {
+	if m.addreserved_credits != nil {
+		*m.addreserved_credits += i
+	} else {
+		m.addreserved_credits = &i
+	}
+}
+
+// AddedReservedCredits returns the value that was added to the "reserved_credits" field in this mutation.
+func (m *RefundRequestMutation) AddedReservedCredits() (r int64, exists bool) {
+	v := m.addreserved_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReservedCredits resets all changes to the "reserved_credits" field.
+func (m *RefundRequestMutation) ResetReservedCredits() {
+	m.reserved_credits = nil
+	m.addreserved_credits = nil
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (m *RefundRequestMutation) SetRefundFen(i int64) {
+	m.refund_fen = &i
+	m.addrefund_fen = nil
+}
+
+// RefundFen returns the value of the "refund_fen" field in the mutation.
+func (m *RefundRequestMutation) RefundFen() (r int64, exists bool) {
+	v := m.refund_fen
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRefundFen returns the old "refund_fen" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldRefundFen(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRefundFen is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRefundFen requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRefundFen: %w", err)
+	}
+	return oldValue.RefundFen, nil
+}
+
+// AddRefundFen adds i to the "refund_fen" field.
+func (m *RefundRequestMutation) AddRefundFen(i int64) {
+	if m.addrefund_fen != nil {
+		*m.addrefund_fen += i
+	} else {
+		m.addrefund_fen = &i
+	}
+}
+
+// AddedRefundFen returns the value that was added to the "refund_fen" field in this mutation.
+func (m *RefundRequestMutation) AddedRefundFen() (r int64, exists bool) {
+	v := m.addrefund_fen
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRefundFen resets all changes to the "refund_fen" field.
+func (m *RefundRequestMutation) ResetRefundFen() {
+	m.refund_fen = nil
+	m.addrefund_fen = nil
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (m *RefundRequestMutation) SetRemainderCredits(i int64) {
+	m.remainder_credits = &i
+	m.addremainder_credits = nil
+}
+
+// RemainderCredits returns the value of the "remainder_credits" field in the mutation.
+func (m *RefundRequestMutation) RemainderCredits() (r int64, exists bool) {
+	v := m.remainder_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRemainderCredits returns the old "remainder_credits" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldRemainderCredits(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRemainderCredits is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRemainderCredits requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRemainderCredits: %w", err)
+	}
+	return oldValue.RemainderCredits, nil
+}
+
+// AddRemainderCredits adds i to the "remainder_credits" field.
+func (m *RefundRequestMutation) AddRemainderCredits(i int64) {
+	if m.addremainder_credits != nil {
+		*m.addremainder_credits += i
+	} else {
+		m.addremainder_credits = &i
+	}
+}
+
+// AddedRemainderCredits returns the value that was added to the "remainder_credits" field in this mutation.
+func (m *RefundRequestMutation) AddedRemainderCredits() (r int64, exists bool) {
+	v := m.addremainder_credits
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRemainderCredits resets all changes to the "remainder_credits" field.
+func (m *RefundRequestMutation) ResetRemainderCredits() {
+	m.remainder_credits = nil
+	m.addremainder_credits = nil
+}
+
+// SetProviderName sets the "provider_name" field.
+func (m *RefundRequestMutation) SetProviderName(s string) {
+	m.provider_name = &s
+}
+
+// ProviderName returns the value of the "provider_name" field in the mutation.
+func (m *RefundRequestMutation) ProviderName() (r string, exists bool) {
+	v := m.provider_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderName returns the old "provider_name" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldProviderName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderName: %w", err)
+	}
+	return oldValue.ProviderName, nil
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (m *RefundRequestMutation) ClearProviderName() {
+	m.provider_name = nil
+	m.clearedFields[refundrequest.FieldProviderName] = struct{}{}
+}
+
+// ProviderNameCleared returns if the "provider_name" field was cleared in this mutation.
+func (m *RefundRequestMutation) ProviderNameCleared() bool {
+	_, ok := m.clearedFields[refundrequest.FieldProviderName]
+	return ok
+}
+
+// ResetProviderName resets all changes to the "provider_name" field.
+func (m *RefundRequestMutation) ResetProviderName() {
+	m.provider_name = nil
+	delete(m.clearedFields, refundrequest.FieldProviderName)
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (m *RefundRequestMutation) SetProviderRefundID(s string) {
+	m.provider_refund_id = &s
+}
+
+// ProviderRefundID returns the value of the "provider_refund_id" field in the mutation.
+func (m *RefundRequestMutation) ProviderRefundID() (r string, exists bool) {
+	v := m.provider_refund_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderRefundID returns the old "provider_refund_id" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldProviderRefundID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderRefundID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderRefundID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderRefundID: %w", err)
+	}
+	return oldValue.ProviderRefundID, nil
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (m *RefundRequestMutation) ClearProviderRefundID() {
+	m.provider_refund_id = nil
+	m.clearedFields[refundrequest.FieldProviderRefundID] = struct{}{}
+}
+
+// ProviderRefundIDCleared returns if the "provider_refund_id" field was cleared in this mutation.
+func (m *RefundRequestMutation) ProviderRefundIDCleared() bool {
+	_, ok := m.clearedFields[refundrequest.FieldProviderRefundID]
+	return ok
+}
+
+// ResetProviderRefundID resets all changes to the "provider_refund_id" field.
+func (m *RefundRequestMutation) ResetProviderRefundID() {
+	m.provider_refund_id = nil
+	delete(m.clearedFields, refundrequest.FieldProviderRefundID)
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (m *RefundRequestMutation) SetFenceSequence(s string) {
+	m.fence_sequence = &s
+}
+
+// FenceSequence returns the value of the "fence_sequence" field in the mutation.
+func (m *RefundRequestMutation) FenceSequence() (r string, exists bool) {
+	v := m.fence_sequence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFenceSequence returns the old "fence_sequence" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldFenceSequence(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFenceSequence is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFenceSequence requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFenceSequence: %w", err)
+	}
+	return oldValue.FenceSequence, nil
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (m *RefundRequestMutation) ClearFenceSequence() {
+	m.fence_sequence = nil
+	m.clearedFields[refundrequest.FieldFenceSequence] = struct{}{}
+}
+
+// FenceSequenceCleared returns if the "fence_sequence" field was cleared in this mutation.
+func (m *RefundRequestMutation) FenceSequenceCleared() bool {
+	_, ok := m.clearedFields[refundrequest.FieldFenceSequence]
+	return ok
+}
+
+// ResetFenceSequence resets all changes to the "fence_sequence" field.
+func (m *RefundRequestMutation) ResetFenceSequence() {
+	m.fence_sequence = nil
+	delete(m.clearedFields, refundrequest.FieldFenceSequence)
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (m *RefundRequestMutation) SetSnapshotVersion(s string) {
+	m.snapshot_version = &s
+}
+
+// SnapshotVersion returns the value of the "snapshot_version" field in the mutation.
+func (m *RefundRequestMutation) SnapshotVersion() (r string, exists bool) {
+	v := m.snapshot_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSnapshotVersion returns the old "snapshot_version" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldSnapshotVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSnapshotVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSnapshotVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSnapshotVersion: %w", err)
+	}
+	return oldValue.SnapshotVersion, nil
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (m *RefundRequestMutation) ClearSnapshotVersion() {
+	m.snapshot_version = nil
+	m.clearedFields[refundrequest.FieldSnapshotVersion] = struct{}{}
+}
+
+// SnapshotVersionCleared returns if the "snapshot_version" field was cleared in this mutation.
+func (m *RefundRequestMutation) SnapshotVersionCleared() bool {
+	_, ok := m.clearedFields[refundrequest.FieldSnapshotVersion]
+	return ok
+}
+
+// ResetSnapshotVersion resets all changes to the "snapshot_version" field.
+func (m *RefundRequestMutation) ResetSnapshotVersion() {
+	m.snapshot_version = nil
+	delete(m.clearedFields, refundrequest.FieldSnapshotVersion)
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (m *RefundRequestMutation) SetFailureReason(s string) {
+	m.failure_reason = &s
+}
+
+// FailureReason returns the value of the "failure_reason" field in the mutation.
+func (m *RefundRequestMutation) FailureReason() (r string, exists bool) {
+	v := m.failure_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFailureReason returns the old "failure_reason" field's value of the RefundRequest entity.
+// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RefundRequestMutation) OldFailureReason(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFailureReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFailureReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFailureReason: %w", err)
+	}
+	return oldValue.FailureReason, nil
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (m *RefundRequestMutation) ClearFailureReason() {
+	m.failure_reason = nil
+	m.clearedFields[refundrequest.FieldFailureReason] = struct{}{}
+}
+
+// FailureReasonCleared returns if the "failure_reason" field was cleared in this mutation.
+func (m *RefundRequestMutation) FailureReasonCleared() bool {
+	_, ok := m.clearedFields[refundrequest.FieldFailureReason]
+	return ok
+}
+
+// ResetFailureReason resets all changes to the "failure_reason" field.
+func (m *RefundRequestMutation) ResetFailureReason() {
+	m.failure_reason = nil
+	delete(m.clearedFields, refundrequest.FieldFailureReason)
+}
+
 // SetOrderID sets the "order" edge to the CommerceOrder entity by id.
 func (m *RefundRequestMutation) SetOrderID(id string) {
 	m._order = &id
@@ -134298,7 +134838,7 @@ func (m *RefundRequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RefundRequestMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 21)
 	if m.namespace != nil {
 		fields = append(fields, refundrequest.FieldNamespace)
 	}
@@ -134332,6 +134872,36 @@ func (m *RefundRequestMutation) Fields() []string {
 	if m.idempotency_key != nil {
 		fields = append(fields, refundrequest.FieldIdempotencyKey)
 	}
+	if m.credit_quantum != nil {
+		fields = append(fields, refundrequest.FieldCreditQuantum)
+	}
+	if m.refund_quantum_fen != nil {
+		fields = append(fields, refundrequest.FieldRefundQuantumFen)
+	}
+	if m.reserved_credits != nil {
+		fields = append(fields, refundrequest.FieldReservedCredits)
+	}
+	if m.refund_fen != nil {
+		fields = append(fields, refundrequest.FieldRefundFen)
+	}
+	if m.remainder_credits != nil {
+		fields = append(fields, refundrequest.FieldRemainderCredits)
+	}
+	if m.provider_name != nil {
+		fields = append(fields, refundrequest.FieldProviderName)
+	}
+	if m.provider_refund_id != nil {
+		fields = append(fields, refundrequest.FieldProviderRefundID)
+	}
+	if m.fence_sequence != nil {
+		fields = append(fields, refundrequest.FieldFenceSequence)
+	}
+	if m.snapshot_version != nil {
+		fields = append(fields, refundrequest.FieldSnapshotVersion)
+	}
+	if m.failure_reason != nil {
+		fields = append(fields, refundrequest.FieldFailureReason)
+	}
 	return fields
 }
 
@@ -134362,6 +134932,26 @@ func (m *RefundRequestMutation) Field(name string) (ent.Value, bool) {
 		return m.Reason()
 	case refundrequest.FieldIdempotencyKey:
 		return m.IdempotencyKey()
+	case refundrequest.FieldCreditQuantum:
+		return m.CreditQuantum()
+	case refundrequest.FieldRefundQuantumFen:
+		return m.RefundQuantumFen()
+	case refundrequest.FieldReservedCredits:
+		return m.ReservedCredits()
+	case refundrequest.FieldRefundFen:
+		return m.RefundFen()
+	case refundrequest.FieldRemainderCredits:
+		return m.RemainderCredits()
+	case refundrequest.FieldProviderName:
+		return m.ProviderName()
+	case refundrequest.FieldProviderRefundID:
+		return m.ProviderRefundID()
+	case refundrequest.FieldFenceSequence:
+		return m.FenceSequence()
+	case refundrequest.FieldSnapshotVersion:
+		return m.SnapshotVersion()
+	case refundrequest.FieldFailureReason:
+		return m.FailureReason()
 	}
 	return nil, false
 }
@@ -134393,6 +134983,26 @@ func (m *RefundRequestMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldReason(ctx)
 	case refundrequest.FieldIdempotencyKey:
 		return m.OldIdempotencyKey(ctx)
+	case refundrequest.FieldCreditQuantum:
+		return m.OldCreditQuantum(ctx)
+	case refundrequest.FieldRefundQuantumFen:
+		return m.OldRefundQuantumFen(ctx)
+	case refundrequest.FieldReservedCredits:
+		return m.OldReservedCredits(ctx)
+	case refundrequest.FieldRefundFen:
+		return m.OldRefundFen(ctx)
+	case refundrequest.FieldRemainderCredits:
+		return m.OldRemainderCredits(ctx)
+	case refundrequest.FieldProviderName:
+		return m.OldProviderName(ctx)
+	case refundrequest.FieldProviderRefundID:
+		return m.OldProviderRefundID(ctx)
+	case refundrequest.FieldFenceSequence:
+		return m.OldFenceSequence(ctx)
+	case refundrequest.FieldSnapshotVersion:
+		return m.OldSnapshotVersion(ctx)
+	case refundrequest.FieldFailureReason:
+		return m.OldFailureReason(ctx)
 	}
 	return nil, fmt.Errorf("unknown RefundRequest field %s", name)
 }
@@ -134479,6 +135089,76 @@ func (m *RefundRequestMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIdempotencyKey(v)
 		return nil
+	case refundrequest.FieldCreditQuantum:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreditQuantum(v)
+		return nil
+	case refundrequest.FieldRefundQuantumFen:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRefundQuantumFen(v)
+		return nil
+	case refundrequest.FieldReservedCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservedCredits(v)
+		return nil
+	case refundrequest.FieldRefundFen:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRefundFen(v)
+		return nil
+	case refundrequest.FieldRemainderCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRemainderCredits(v)
+		return nil
+	case refundrequest.FieldProviderName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderName(v)
+		return nil
+	case refundrequest.FieldProviderRefundID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderRefundID(v)
+		return nil
+	case refundrequest.FieldFenceSequence:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFenceSequence(v)
+		return nil
+	case refundrequest.FieldSnapshotVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSnapshotVersion(v)
+		return nil
+	case refundrequest.FieldFailureReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFailureReason(v)
+		return nil
 	}
 	return fmt.Errorf("unknown RefundRequest field %s", name)
 }
@@ -134490,6 +135170,21 @@ func (m *RefundRequestMutation) AddedFields() []string {
 	if m.addamount_cents != nil {
 		fields = append(fields, refundrequest.FieldAmountCents)
 	}
+	if m.addcredit_quantum != nil {
+		fields = append(fields, refundrequest.FieldCreditQuantum)
+	}
+	if m.addrefund_quantum_fen != nil {
+		fields = append(fields, refundrequest.FieldRefundQuantumFen)
+	}
+	if m.addreserved_credits != nil {
+		fields = append(fields, refundrequest.FieldReservedCredits)
+	}
+	if m.addrefund_fen != nil {
+		fields = append(fields, refundrequest.FieldRefundFen)
+	}
+	if m.addremainder_credits != nil {
+		fields = append(fields, refundrequest.FieldRemainderCredits)
+	}
 	return fields
 }
 
@@ -134500,6 +135195,16 @@ func (m *RefundRequestMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case refundrequest.FieldAmountCents:
 		return m.AddedAmountCents()
+	case refundrequest.FieldCreditQuantum:
+		return m.AddedCreditQuantum()
+	case refundrequest.FieldRefundQuantumFen:
+		return m.AddedRefundQuantumFen()
+	case refundrequest.FieldReservedCredits:
+		return m.AddedReservedCredits()
+	case refundrequest.FieldRefundFen:
+		return m.AddedRefundFen()
+	case refundrequest.FieldRemainderCredits:
+		return m.AddedRemainderCredits()
 	}
 	return nil, false
 }
@@ -134516,6 +135221,41 @@ func (m *RefundRequestMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddAmountCents(v)
 		return nil
+	case refundrequest.FieldCreditQuantum:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreditQuantum(v)
+		return nil
+	case refundrequest.FieldRefundQuantumFen:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRefundQuantumFen(v)
+		return nil
+	case refundrequest.FieldReservedCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReservedCredits(v)
+		return nil
+	case refundrequest.FieldRefundFen:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRefundFen(v)
+		return nil
+	case refundrequest.FieldRemainderCredits:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRemainderCredits(v)
+		return nil
 	}
 	return fmt.Errorf("unknown RefundRequest numeric field %s", name)
 }
@@ -134529,6 +135269,21 @@ func (m *RefundRequestMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(refundrequest.FieldReason) {
 		fields = append(fields, refundrequest.FieldReason)
+	}
+	if m.FieldCleared(refundrequest.FieldProviderName) {
+		fields = append(fields, refundrequest.FieldProviderName)
+	}
+	if m.FieldCleared(refundrequest.FieldProviderRefundID) {
+		fields = append(fields, refundrequest.FieldProviderRefundID)
+	}
+	if m.FieldCleared(refundrequest.FieldFenceSequence) {
+		fields = append(fields, refundrequest.FieldFenceSequence)
+	}
+	if m.FieldCleared(refundrequest.FieldSnapshotVersion) {
+		fields = append(fields, refundrequest.FieldSnapshotVersion)
+	}
+	if m.FieldCleared(refundrequest.FieldFailureReason) {
+		fields = append(fields, refundrequest.FieldFailureReason)
 	}
 	return fields
 }
@@ -134549,6 +135304,21 @@ func (m *RefundRequestMutation) ClearField(name string) error {
 		return nil
 	case refundrequest.FieldReason:
 		m.ClearReason()
+		return nil
+	case refundrequest.FieldProviderName:
+		m.ClearProviderName()
+		return nil
+	case refundrequest.FieldProviderRefundID:
+		m.ClearProviderRefundID()
+		return nil
+	case refundrequest.FieldFenceSequence:
+		m.ClearFenceSequence()
+		return nil
+	case refundrequest.FieldSnapshotVersion:
+		m.ClearSnapshotVersion()
+		return nil
+	case refundrequest.FieldFailureReason:
+		m.ClearFailureReason()
 		return nil
 	}
 	return fmt.Errorf("unknown RefundRequest nullable field %s", name)
@@ -134590,6 +135360,36 @@ func (m *RefundRequestMutation) ResetField(name string) error {
 		return nil
 	case refundrequest.FieldIdempotencyKey:
 		m.ResetIdempotencyKey()
+		return nil
+	case refundrequest.FieldCreditQuantum:
+		m.ResetCreditQuantum()
+		return nil
+	case refundrequest.FieldRefundQuantumFen:
+		m.ResetRefundQuantumFen()
+		return nil
+	case refundrequest.FieldReservedCredits:
+		m.ResetReservedCredits()
+		return nil
+	case refundrequest.FieldRefundFen:
+		m.ResetRefundFen()
+		return nil
+	case refundrequest.FieldRemainderCredits:
+		m.ResetRemainderCredits()
+		return nil
+	case refundrequest.FieldProviderName:
+		m.ResetProviderName()
+		return nil
+	case refundrequest.FieldProviderRefundID:
+		m.ResetProviderRefundID()
+		return nil
+	case refundrequest.FieldFenceSequence:
+		m.ResetFenceSequence()
+		return nil
+	case refundrequest.FieldSnapshotVersion:
+		m.ResetSnapshotVersion()
+		return nil
+	case refundrequest.FieldFailureReason:
+		m.ResetFailureReason()
 		return nil
 	}
 	return fmt.Errorf("unknown RefundRequest field %s", name)

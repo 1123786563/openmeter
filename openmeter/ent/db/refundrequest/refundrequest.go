@@ -37,6 +37,26 @@ const (
 	FieldReason = "reason"
 	// FieldIdempotencyKey holds the string denoting the idempotency_key field in the database.
 	FieldIdempotencyKey = "idempotency_key"
+	// FieldCreditQuantum holds the string denoting the credit_quantum field in the database.
+	FieldCreditQuantum = "credit_quantum"
+	// FieldRefundQuantumFen holds the string denoting the refund_quantum_fen field in the database.
+	FieldRefundQuantumFen = "refund_quantum_fen"
+	// FieldReservedCredits holds the string denoting the reserved_credits field in the database.
+	FieldReservedCredits = "reserved_credits"
+	// FieldRefundFen holds the string denoting the refund_fen field in the database.
+	FieldRefundFen = "refund_fen"
+	// FieldRemainderCredits holds the string denoting the remainder_credits field in the database.
+	FieldRemainderCredits = "remainder_credits"
+	// FieldProviderName holds the string denoting the provider_name field in the database.
+	FieldProviderName = "provider_name"
+	// FieldProviderRefundID holds the string denoting the provider_refund_id field in the database.
+	FieldProviderRefundID = "provider_refund_id"
+	// FieldFenceSequence holds the string denoting the fence_sequence field in the database.
+	FieldFenceSequence = "fence_sequence"
+	// FieldSnapshotVersion holds the string denoting the snapshot_version field in the database.
+	FieldSnapshotVersion = "snapshot_version"
+	// FieldFailureReason holds the string denoting the failure_reason field in the database.
+	FieldFailureReason = "failure_reason"
 	// EdgeOrder holds the string denoting the order edge name in mutations.
 	EdgeOrder = "order"
 	// EdgeFacts holds the string denoting the facts edge name in mutations.
@@ -73,6 +93,16 @@ var Columns = []string{
 	FieldStatus,
 	FieldReason,
 	FieldIdempotencyKey,
+	FieldCreditQuantum,
+	FieldRefundQuantumFen,
+	FieldReservedCredits,
+	FieldRefundFen,
+	FieldRemainderCredits,
+	FieldProviderName,
+	FieldProviderRefundID,
+	FieldFenceSequence,
+	FieldSnapshotVersion,
+	FieldFailureReason,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -102,6 +132,24 @@ var (
 	DefaultCurrency string
 	// IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
 	IdempotencyKeyValidator func(string) error
+	// DefaultCreditQuantum holds the default value on creation for the "credit_quantum" field.
+	DefaultCreditQuantum int64
+	// DefaultRefundQuantumFen holds the default value on creation for the "refund_quantum_fen" field.
+	DefaultRefundQuantumFen int64
+	// DefaultReservedCredits holds the default value on creation for the "reserved_credits" field.
+	DefaultReservedCredits int64
+	// DefaultRefundFen holds the default value on creation for the "refund_fen" field.
+	DefaultRefundFen int64
+	// DefaultRemainderCredits holds the default value on creation for the "remainder_credits" field.
+	DefaultRemainderCredits int64
+	// DefaultProviderName holds the default value on creation for the "provider_name" field.
+	DefaultProviderName string
+	// DefaultProviderRefundID holds the default value on creation for the "provider_refund_id" field.
+	DefaultProviderRefundID string
+	// DefaultFenceSequence holds the default value on creation for the "fence_sequence" field.
+	DefaultFenceSequence string
+	// DefaultSnapshotVersion holds the default value on creation for the "snapshot_version" field.
+	DefaultSnapshotVersion string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -196,6 +244,56 @@ func ByReason(opts ...sql.OrderTermOption) OrderOption {
 // ByIdempotencyKey orders the results by the idempotency_key field.
 func ByIdempotencyKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIdempotencyKey, opts...).ToFunc()
+}
+
+// ByCreditQuantum orders the results by the credit_quantum field.
+func ByCreditQuantum(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditQuantum, opts...).ToFunc()
+}
+
+// ByRefundQuantumFen orders the results by the refund_quantum_fen field.
+func ByRefundQuantumFen(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRefundQuantumFen, opts...).ToFunc()
+}
+
+// ByReservedCredits orders the results by the reserved_credits field.
+func ByReservedCredits(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReservedCredits, opts...).ToFunc()
+}
+
+// ByRefundFen orders the results by the refund_fen field.
+func ByRefundFen(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRefundFen, opts...).ToFunc()
+}
+
+// ByRemainderCredits orders the results by the remainder_credits field.
+func ByRemainderCredits(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRemainderCredits, opts...).ToFunc()
+}
+
+// ByProviderName orders the results by the provider_name field.
+func ByProviderName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderName, opts...).ToFunc()
+}
+
+// ByProviderRefundID orders the results by the provider_refund_id field.
+func ByProviderRefundID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderRefundID, opts...).ToFunc()
+}
+
+// ByFenceSequence orders the results by the fence_sequence field.
+func ByFenceSequence(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFenceSequence, opts...).ToFunc()
+}
+
+// BySnapshotVersion orders the results by the snapshot_version field.
+func BySnapshotVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSnapshotVersion, opts...).ToFunc()
+}
+
+// ByFailureReason orders the results by the failure_reason field.
+func ByFailureReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFailureReason, opts...).ToFunc()
 }
 
 // ByOrderField orders the results by order field.

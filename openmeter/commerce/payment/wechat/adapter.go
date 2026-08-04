@@ -198,6 +198,60 @@ func (a *Adapter) Refund(_ context.Context, input payment.RefundInput) (payment.
 	}, nil
 }
 
+// VerifyRefundCallback verifies a WeChat Pay refund callback signature and
+// extracts the verified fields into a RefundFact. The signature verification
+// uses the same scheme as payment callbacks: RSA-SHA256 over the canonical
+// message (timestamp + nonce + body). The raw body hash is retained for
+// deduplication without persisting sensitive material.
+func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header, body []byte) (payment.RefundFact, error) {
+	timestamp := headers.Get("Wechatpay-Timestamp")
+	nonce := headers.Get("Wechatpay-Nonce")
+	signatureB64 := headers.Get("Wechatpay-Signature")
+
+	if timestamp == "" || nonce == "" || signatureB64 == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: missing required Wechatpay headers", payment.ErrInvalidSignature)
+	}
+
+	message := timestamp + "\n" + nonce + "\n" + string(body) + "\n"
+	if err := a.verifySignature(ctx, headers.Get("Wechatpay-Serial"), []byte(message), signatureB64); err != nil {
+		return payment.RefundFact{}, err
+	}
+
+	payload, err := payment.ExtractSignedPayload(body)
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("wechat: parse refund callback: %w", err)
+	}
+
+	refundID := ""
+	if v, ok := payload["refund_id"].(string); ok {
+		refundID = v
+	}
+	orderID := ""
+	if v, ok := payload["out_trade_no"].(string); ok {
+		orderID = v
+	}
+
+	ts, _ := strconv.ParseInt(timestamp, 10, 64)
+
+	return payment.RefundFact{
+		Provider:         payment.ProviderWeChat,
+		ProviderRefundID: refundID,
+		ProviderOrderID:  orderID,
+		Success:          strRefundVal(payload, "refund_status") == "SUCCESS",
+		RawHash:          hashBody(body),
+		Timestamp:        time.Unix(ts, 0),
+		SignedPayload:    payload,
+	}, nil
+}
+
+// strRefundVal extracts a string value from a map, returning "" if absent.
+func strRefundVal(m map[string]any, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
 // --- Helpers ---
 
 // parseRSAPublicKey parses a PEM-encoded RSA public key (PKCS1 or PKIX).

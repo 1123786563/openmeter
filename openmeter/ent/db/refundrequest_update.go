@@ -89,6 +89,211 @@ func (_u *RefundRequestUpdate) ClearReason() *RefundRequestUpdate {
 	return _u
 }
 
+// SetCreditQuantum sets the "credit_quantum" field.
+func (_u *RefundRequestUpdate) SetCreditQuantum(v int64) *RefundRequestUpdate {
+	_u.mutation.ResetCreditQuantum()
+	_u.mutation.SetCreditQuantum(v)
+	return _u
+}
+
+// SetNillableCreditQuantum sets the "credit_quantum" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableCreditQuantum(v *int64) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetCreditQuantum(*v)
+	}
+	return _u
+}
+
+// AddCreditQuantum adds value to the "credit_quantum" field.
+func (_u *RefundRequestUpdate) AddCreditQuantum(v int64) *RefundRequestUpdate {
+	_u.mutation.AddCreditQuantum(v)
+	return _u
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (_u *RefundRequestUpdate) SetRefundQuantumFen(v int64) *RefundRequestUpdate {
+	_u.mutation.ResetRefundQuantumFen()
+	_u.mutation.SetRefundQuantumFen(v)
+	return _u
+}
+
+// SetNillableRefundQuantumFen sets the "refund_quantum_fen" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableRefundQuantumFen(v *int64) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetRefundQuantumFen(*v)
+	}
+	return _u
+}
+
+// AddRefundQuantumFen adds value to the "refund_quantum_fen" field.
+func (_u *RefundRequestUpdate) AddRefundQuantumFen(v int64) *RefundRequestUpdate {
+	_u.mutation.AddRefundQuantumFen(v)
+	return _u
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (_u *RefundRequestUpdate) SetReservedCredits(v int64) *RefundRequestUpdate {
+	_u.mutation.ResetReservedCredits()
+	_u.mutation.SetReservedCredits(v)
+	return _u
+}
+
+// SetNillableReservedCredits sets the "reserved_credits" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableReservedCredits(v *int64) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetReservedCredits(*v)
+	}
+	return _u
+}
+
+// AddReservedCredits adds value to the "reserved_credits" field.
+func (_u *RefundRequestUpdate) AddReservedCredits(v int64) *RefundRequestUpdate {
+	_u.mutation.AddReservedCredits(v)
+	return _u
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (_u *RefundRequestUpdate) SetRefundFen(v int64) *RefundRequestUpdate {
+	_u.mutation.ResetRefundFen()
+	_u.mutation.SetRefundFen(v)
+	return _u
+}
+
+// SetNillableRefundFen sets the "refund_fen" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableRefundFen(v *int64) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetRefundFen(*v)
+	}
+	return _u
+}
+
+// AddRefundFen adds value to the "refund_fen" field.
+func (_u *RefundRequestUpdate) AddRefundFen(v int64) *RefundRequestUpdate {
+	_u.mutation.AddRefundFen(v)
+	return _u
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (_u *RefundRequestUpdate) SetRemainderCredits(v int64) *RefundRequestUpdate {
+	_u.mutation.ResetRemainderCredits()
+	_u.mutation.SetRemainderCredits(v)
+	return _u
+}
+
+// SetNillableRemainderCredits sets the "remainder_credits" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableRemainderCredits(v *int64) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetRemainderCredits(*v)
+	}
+	return _u
+}
+
+// AddRemainderCredits adds value to the "remainder_credits" field.
+func (_u *RefundRequestUpdate) AddRemainderCredits(v int64) *RefundRequestUpdate {
+	_u.mutation.AddRemainderCredits(v)
+	return _u
+}
+
+// SetProviderName sets the "provider_name" field.
+func (_u *RefundRequestUpdate) SetProviderName(v string) *RefundRequestUpdate {
+	_u.mutation.SetProviderName(v)
+	return _u
+}
+
+// SetNillableProviderName sets the "provider_name" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableProviderName(v *string) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetProviderName(*v)
+	}
+	return _u
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (_u *RefundRequestUpdate) ClearProviderName() *RefundRequestUpdate {
+	_u.mutation.ClearProviderName()
+	return _u
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (_u *RefundRequestUpdate) SetProviderRefundID(v string) *RefundRequestUpdate {
+	_u.mutation.SetProviderRefundID(v)
+	return _u
+}
+
+// SetNillableProviderRefundID sets the "provider_refund_id" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableProviderRefundID(v *string) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetProviderRefundID(*v)
+	}
+	return _u
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (_u *RefundRequestUpdate) ClearProviderRefundID() *RefundRequestUpdate {
+	_u.mutation.ClearProviderRefundID()
+	return _u
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (_u *RefundRequestUpdate) SetFenceSequence(v string) *RefundRequestUpdate {
+	_u.mutation.SetFenceSequence(v)
+	return _u
+}
+
+// SetNillableFenceSequence sets the "fence_sequence" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableFenceSequence(v *string) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetFenceSequence(*v)
+	}
+	return _u
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (_u *RefundRequestUpdate) ClearFenceSequence() *RefundRequestUpdate {
+	_u.mutation.ClearFenceSequence()
+	return _u
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (_u *RefundRequestUpdate) SetSnapshotVersion(v string) *RefundRequestUpdate {
+	_u.mutation.SetSnapshotVersion(v)
+	return _u
+}
+
+// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableSnapshotVersion(v *string) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetSnapshotVersion(*v)
+	}
+	return _u
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (_u *RefundRequestUpdate) ClearSnapshotVersion() *RefundRequestUpdate {
+	_u.mutation.ClearSnapshotVersion()
+	return _u
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (_u *RefundRequestUpdate) SetFailureReason(v string) *RefundRequestUpdate {
+	_u.mutation.SetFailureReason(v)
+	return _u
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_u *RefundRequestUpdate) SetNillableFailureReason(v *string) *RefundRequestUpdate {
+	if v != nil {
+		_u.SetFailureReason(*v)
+	}
+	return _u
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (_u *RefundRequestUpdate) ClearFailureReason() *RefundRequestUpdate {
+	_u.mutation.ClearFailureReason()
+	return _u
+}
+
 // AddFactIDs adds the "facts" edge to the RefundFact entity by IDs.
 func (_u *RefundRequestUpdate) AddFactIDs(ids ...string) *RefundRequestUpdate {
 	_u.mutation.AddFactIDs(ids...)
@@ -208,6 +413,66 @@ func (_u *RefundRequestUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(refundrequest.FieldReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.CreditQuantum(); ok {
+		_spec.SetField(refundrequest.FieldCreditQuantum, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCreditQuantum(); ok {
+		_spec.AddField(refundrequest.FieldCreditQuantum, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RefundQuantumFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundQuantumFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRefundQuantumFen(); ok {
+		_spec.AddField(refundrequest.FieldRefundQuantumFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ReservedCredits(); ok {
+		_spec.SetField(refundrequest.FieldReservedCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedReservedCredits(); ok {
+		_spec.AddField(refundrequest.FieldReservedCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RefundFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRefundFen(); ok {
+		_spec.AddField(refundrequest.FieldRefundFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RemainderCredits(); ok {
+		_spec.SetField(refundrequest.FieldRemainderCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRemainderCredits(); ok {
+		_spec.AddField(refundrequest.FieldRemainderCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ProviderName(); ok {
+		_spec.SetField(refundrequest.FieldProviderName, field.TypeString, value)
+	}
+	if _u.mutation.ProviderNameCleared() {
+		_spec.ClearField(refundrequest.FieldProviderName, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderRefundID(); ok {
+		_spec.SetField(refundrequest.FieldProviderRefundID, field.TypeString, value)
+	}
+	if _u.mutation.ProviderRefundIDCleared() {
+		_spec.ClearField(refundrequest.FieldProviderRefundID, field.TypeString)
+	}
+	if value, ok := _u.mutation.FenceSequence(); ok {
+		_spec.SetField(refundrequest.FieldFenceSequence, field.TypeString, value)
+	}
+	if _u.mutation.FenceSequenceCleared() {
+		_spec.ClearField(refundrequest.FieldFenceSequence, field.TypeString)
+	}
+	if value, ok := _u.mutation.SnapshotVersion(); ok {
+		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
+	}
+	if _u.mutation.SnapshotVersionCleared() {
+		_spec.ClearField(refundrequest.FieldSnapshotVersion, field.TypeString)
+	}
+	if value, ok := _u.mutation.FailureReason(); ok {
+		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)
+	}
+	if _u.mutation.FailureReasonCleared() {
+		_spec.ClearField(refundrequest.FieldFailureReason, field.TypeString)
 	}
 	if _u.mutation.FactsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -331,6 +596,211 @@ func (_u *RefundRequestUpdateOne) SetNillableReason(v *string) *RefundRequestUpd
 // ClearReason clears the value of the "reason" field.
 func (_u *RefundRequestUpdateOne) ClearReason() *RefundRequestUpdateOne {
 	_u.mutation.ClearReason()
+	return _u
+}
+
+// SetCreditQuantum sets the "credit_quantum" field.
+func (_u *RefundRequestUpdateOne) SetCreditQuantum(v int64) *RefundRequestUpdateOne {
+	_u.mutation.ResetCreditQuantum()
+	_u.mutation.SetCreditQuantum(v)
+	return _u
+}
+
+// SetNillableCreditQuantum sets the "credit_quantum" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableCreditQuantum(v *int64) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetCreditQuantum(*v)
+	}
+	return _u
+}
+
+// AddCreditQuantum adds value to the "credit_quantum" field.
+func (_u *RefundRequestUpdateOne) AddCreditQuantum(v int64) *RefundRequestUpdateOne {
+	_u.mutation.AddCreditQuantum(v)
+	return _u
+}
+
+// SetRefundQuantumFen sets the "refund_quantum_fen" field.
+func (_u *RefundRequestUpdateOne) SetRefundQuantumFen(v int64) *RefundRequestUpdateOne {
+	_u.mutation.ResetRefundQuantumFen()
+	_u.mutation.SetRefundQuantumFen(v)
+	return _u
+}
+
+// SetNillableRefundQuantumFen sets the "refund_quantum_fen" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableRefundQuantumFen(v *int64) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetRefundQuantumFen(*v)
+	}
+	return _u
+}
+
+// AddRefundQuantumFen adds value to the "refund_quantum_fen" field.
+func (_u *RefundRequestUpdateOne) AddRefundQuantumFen(v int64) *RefundRequestUpdateOne {
+	_u.mutation.AddRefundQuantumFen(v)
+	return _u
+}
+
+// SetReservedCredits sets the "reserved_credits" field.
+func (_u *RefundRequestUpdateOne) SetReservedCredits(v int64) *RefundRequestUpdateOne {
+	_u.mutation.ResetReservedCredits()
+	_u.mutation.SetReservedCredits(v)
+	return _u
+}
+
+// SetNillableReservedCredits sets the "reserved_credits" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableReservedCredits(v *int64) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetReservedCredits(*v)
+	}
+	return _u
+}
+
+// AddReservedCredits adds value to the "reserved_credits" field.
+func (_u *RefundRequestUpdateOne) AddReservedCredits(v int64) *RefundRequestUpdateOne {
+	_u.mutation.AddReservedCredits(v)
+	return _u
+}
+
+// SetRefundFen sets the "refund_fen" field.
+func (_u *RefundRequestUpdateOne) SetRefundFen(v int64) *RefundRequestUpdateOne {
+	_u.mutation.ResetRefundFen()
+	_u.mutation.SetRefundFen(v)
+	return _u
+}
+
+// SetNillableRefundFen sets the "refund_fen" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableRefundFen(v *int64) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetRefundFen(*v)
+	}
+	return _u
+}
+
+// AddRefundFen adds value to the "refund_fen" field.
+func (_u *RefundRequestUpdateOne) AddRefundFen(v int64) *RefundRequestUpdateOne {
+	_u.mutation.AddRefundFen(v)
+	return _u
+}
+
+// SetRemainderCredits sets the "remainder_credits" field.
+func (_u *RefundRequestUpdateOne) SetRemainderCredits(v int64) *RefundRequestUpdateOne {
+	_u.mutation.ResetRemainderCredits()
+	_u.mutation.SetRemainderCredits(v)
+	return _u
+}
+
+// SetNillableRemainderCredits sets the "remainder_credits" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableRemainderCredits(v *int64) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetRemainderCredits(*v)
+	}
+	return _u
+}
+
+// AddRemainderCredits adds value to the "remainder_credits" field.
+func (_u *RefundRequestUpdateOne) AddRemainderCredits(v int64) *RefundRequestUpdateOne {
+	_u.mutation.AddRemainderCredits(v)
+	return _u
+}
+
+// SetProviderName sets the "provider_name" field.
+func (_u *RefundRequestUpdateOne) SetProviderName(v string) *RefundRequestUpdateOne {
+	_u.mutation.SetProviderName(v)
+	return _u
+}
+
+// SetNillableProviderName sets the "provider_name" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableProviderName(v *string) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetProviderName(*v)
+	}
+	return _u
+}
+
+// ClearProviderName clears the value of the "provider_name" field.
+func (_u *RefundRequestUpdateOne) ClearProviderName() *RefundRequestUpdateOne {
+	_u.mutation.ClearProviderName()
+	return _u
+}
+
+// SetProviderRefundID sets the "provider_refund_id" field.
+func (_u *RefundRequestUpdateOne) SetProviderRefundID(v string) *RefundRequestUpdateOne {
+	_u.mutation.SetProviderRefundID(v)
+	return _u
+}
+
+// SetNillableProviderRefundID sets the "provider_refund_id" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableProviderRefundID(v *string) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetProviderRefundID(*v)
+	}
+	return _u
+}
+
+// ClearProviderRefundID clears the value of the "provider_refund_id" field.
+func (_u *RefundRequestUpdateOne) ClearProviderRefundID() *RefundRequestUpdateOne {
+	_u.mutation.ClearProviderRefundID()
+	return _u
+}
+
+// SetFenceSequence sets the "fence_sequence" field.
+func (_u *RefundRequestUpdateOne) SetFenceSequence(v string) *RefundRequestUpdateOne {
+	_u.mutation.SetFenceSequence(v)
+	return _u
+}
+
+// SetNillableFenceSequence sets the "fence_sequence" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableFenceSequence(v *string) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetFenceSequence(*v)
+	}
+	return _u
+}
+
+// ClearFenceSequence clears the value of the "fence_sequence" field.
+func (_u *RefundRequestUpdateOne) ClearFenceSequence() *RefundRequestUpdateOne {
+	_u.mutation.ClearFenceSequence()
+	return _u
+}
+
+// SetSnapshotVersion sets the "snapshot_version" field.
+func (_u *RefundRequestUpdateOne) SetSnapshotVersion(v string) *RefundRequestUpdateOne {
+	_u.mutation.SetSnapshotVersion(v)
+	return _u
+}
+
+// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableSnapshotVersion(v *string) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetSnapshotVersion(*v)
+	}
+	return _u
+}
+
+// ClearSnapshotVersion clears the value of the "snapshot_version" field.
+func (_u *RefundRequestUpdateOne) ClearSnapshotVersion() *RefundRequestUpdateOne {
+	_u.mutation.ClearSnapshotVersion()
+	return _u
+}
+
+// SetFailureReason sets the "failure_reason" field.
+func (_u *RefundRequestUpdateOne) SetFailureReason(v string) *RefundRequestUpdateOne {
+	_u.mutation.SetFailureReason(v)
+	return _u
+}
+
+// SetNillableFailureReason sets the "failure_reason" field if the given value is not nil.
+func (_u *RefundRequestUpdateOne) SetNillableFailureReason(v *string) *RefundRequestUpdateOne {
+	if v != nil {
+		_u.SetFailureReason(*v)
+	}
+	return _u
+}
+
+// ClearFailureReason clears the value of the "failure_reason" field.
+func (_u *RefundRequestUpdateOne) ClearFailureReason() *RefundRequestUpdateOne {
+	_u.mutation.ClearFailureReason()
 	return _u
 }
 
@@ -483,6 +953,66 @@ func (_u *RefundRequestUpdateOne) sqlSave(ctx context.Context) (_node *RefundReq
 	}
 	if _u.mutation.ReasonCleared() {
 		_spec.ClearField(refundrequest.FieldReason, field.TypeString)
+	}
+	if value, ok := _u.mutation.CreditQuantum(); ok {
+		_spec.SetField(refundrequest.FieldCreditQuantum, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCreditQuantum(); ok {
+		_spec.AddField(refundrequest.FieldCreditQuantum, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RefundQuantumFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundQuantumFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRefundQuantumFen(); ok {
+		_spec.AddField(refundrequest.FieldRefundQuantumFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ReservedCredits(); ok {
+		_spec.SetField(refundrequest.FieldReservedCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedReservedCredits(); ok {
+		_spec.AddField(refundrequest.FieldReservedCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RefundFen(); ok {
+		_spec.SetField(refundrequest.FieldRefundFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRefundFen(); ok {
+		_spec.AddField(refundrequest.FieldRefundFen, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RemainderCredits(); ok {
+		_spec.SetField(refundrequest.FieldRemainderCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedRemainderCredits(); ok {
+		_spec.AddField(refundrequest.FieldRemainderCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.ProviderName(); ok {
+		_spec.SetField(refundrequest.FieldProviderName, field.TypeString, value)
+	}
+	if _u.mutation.ProviderNameCleared() {
+		_spec.ClearField(refundrequest.FieldProviderName, field.TypeString)
+	}
+	if value, ok := _u.mutation.ProviderRefundID(); ok {
+		_spec.SetField(refundrequest.FieldProviderRefundID, field.TypeString, value)
+	}
+	if _u.mutation.ProviderRefundIDCleared() {
+		_spec.ClearField(refundrequest.FieldProviderRefundID, field.TypeString)
+	}
+	if value, ok := _u.mutation.FenceSequence(); ok {
+		_spec.SetField(refundrequest.FieldFenceSequence, field.TypeString, value)
+	}
+	if _u.mutation.FenceSequenceCleared() {
+		_spec.ClearField(refundrequest.FieldFenceSequence, field.TypeString)
+	}
+	if value, ok := _u.mutation.SnapshotVersion(); ok {
+		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
+	}
+	if _u.mutation.SnapshotVersionCleared() {
+		_spec.ClearField(refundrequest.FieldSnapshotVersion, field.TypeString)
+	}
+	if value, ok := _u.mutation.FailureReason(); ok {
+		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)
+	}
+	if _u.mutation.FailureReasonCleared() {
+		_spec.ClearField(refundrequest.FieldFailureReason, field.TypeString)
 	}
 	if _u.mutation.FactsCleared() {
 		edge := &sqlgraph.EdgeSpec{

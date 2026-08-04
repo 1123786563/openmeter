@@ -13,6 +13,9 @@ import (
 // RefundRequest tracks a customer-initiated refund. The status flows through
 // a state machine: pending_fence -> provider_processing -> ledger_reversing ->
 // fulfilled (or failed at any stage). amount_cents and currency are immutable.
+// The quantum fields (credit_quantum, refund_quantum_fen) persist the exact
+// Credit-to-money ratio for every refund. reserved_credits is the Credits fenced
+// for this refund; remainder_credits is the sub-quantum Credit left available.
 type RefundRequest struct {
 	ent.Schema
 }
@@ -38,6 +41,28 @@ func (RefundRequest) Fields() []ent.Field {
 			Default("pending_fence"),
 		field.String("reason").Optional().Nillable(),
 		field.String("idempotency_key").NotEmpty().Immutable(),
+
+		// Persisted quantum for every refund (10 Credit : 1 fen).
+		field.Int64("credit_quantum").Default(10),
+		field.Int64("refund_quantum_fen").Default(1),
+
+		// Computed during the reserve step.
+		field.Int64("reserved_credits").Default(0),
+		field.Int64("refund_fen").Default(0),
+		field.Int64("remainder_credits").Default(0),
+
+		// Provider details.
+		field.String("provider_name").Optional().Default(""),
+		field.String("provider_refund_id").Optional().Default(""),
+
+		// Fence details.
+		field.String("fence_sequence").Optional().Default(""),
+
+		// Snapshot version.
+		field.String("snapshot_version").Optional().Default(""),
+
+		// Failure detail.
+		field.String("failure_reason").Optional().Nillable(),
 	}
 }
 

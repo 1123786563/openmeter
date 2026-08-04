@@ -6446,6 +6446,76 @@ func (u *RefundRequestUpdateOne) SetOrClearReason(value *string) *RefundRequestU
 	return u.SetReason(*value)
 }
 
+func (u *RefundRequestUpdate) SetOrClearProviderName(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearProviderName()
+	}
+	return u.SetProviderName(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearProviderName(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearProviderName()
+	}
+	return u.SetProviderName(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearProviderRefundID(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearProviderRefundID()
+	}
+	return u.SetProviderRefundID(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearProviderRefundID(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearProviderRefundID()
+	}
+	return u.SetProviderRefundID(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearFenceSequence(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearFenceSequence()
+	}
+	return u.SetFenceSequence(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearFenceSequence(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearFenceSequence()
+	}
+	return u.SetFenceSequence(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearSnapshotVersion()
+	}
+	return u.SetSnapshotVersion(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearSnapshotVersion()
+	}
+	return u.SetSnapshotVersion(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearFailureReason(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearFailureReason(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
+}
+
 func (u *SubjectUpdate) SetOrClearDeletedAt(value *time.Time) *SubjectUpdate {
 	if value == nil {
 		return u.ClearDeletedAt()
