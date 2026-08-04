@@ -308,8 +308,8 @@ CREATE TRIGGER commerce_refund_sum_check
     BEFORE INSERT ON refund_requests
     FOR EACH ROW EXECUTE FUNCTION commerce_check_refund_sum();
 
--- create "commerce_outbox" table (transactional outbox for domain events)
-CREATE TABLE "commerce_outbox" (
+-- create "commerce_outboxes" table (transactional outbox for domain events)
+CREATE TABLE "commerce_outboxes" (
   "id" character(26) NOT NULL,
   "namespace" character varying NOT NULL,
   "created_at" timestamptz NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE "commerce_outbox" (
   "published_at" timestamptz NULL,
   PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "commerceoutbox_id" ON "commerce_outbox" ("id");
-CREATE INDEX "commerceoutbox_namespace" ON "commerce_outbox" ("namespace");
-CREATE INDEX "commerceoutbox_namespace_published" ON "commerce_outbox" ("namespace", "published");
-CREATE INDEX "commerceoutbox_namespace_aggregate_id" ON "commerce_outbox" ("namespace", "aggregate_id");
+CREATE UNIQUE INDEX "commerceoutbox_id" ON "commerce_outboxes" ("id");
+CREATE INDEX "commerceoutbox_namespace" ON "commerce_outboxes" ("namespace");
+CREATE INDEX "commerceoutbox_namespace_published" ON "commerce_outboxes" ("namespace", "published");
+CREATE INDEX "commerceoutbox_namespace_aggregate_id" ON "commerce_outboxes" ("namespace", "aggregate_id");
