@@ -34,3 +34,6 @@ api/v3/templates/chi-middleware.tmpl
 # CodeGraph
 .codegraph/
 server
+
+# SDD worktrees
+.worktrees/
