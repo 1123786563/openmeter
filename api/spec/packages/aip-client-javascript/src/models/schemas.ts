@@ -1229,6 +1229,90 @@ export const aiUsageCreditTransactionType = z
     'The type of a credit movement on the AI Usage integer credit ledger.',
   )
 
+export const commerceWalletBucketSource = z
+  .enum(['plan', 'gift', 'recharge', 'enterprise_receivable'])
+
+  .describe(
+    'The origin of a Wallet credit bucket. Determines consumption priority and refund eligibility. - `plan`: Credits granted from a subscription plan, consumed first. - `gift`: Promotional or compensatory credits. - `recharge`: Credits purchased via top-up; only unspent recharge credits are refundable. - `enterprise_receivable`: Post-pay credits backed by an enterprise contract credit line.',
+  )
+
+export const commerceWalletTransactionKind = z
+  .enum(['funded', 'consumed', 'expired', 'refunded', 'adjusted'])
+
+  .describe(
+    'The kind of a Wallet transaction movement. - `funded`: Credits added to the wallet. - `consumed`: Credits deducted by usage settlement. - `expired`: Credits removed due to expiration. - `refunded`: Credits reversed via a refund. - `adjusted`: Manual adjustment by an operator.',
+  )
+
+export const commerceFenAmount = z.coerce
+  .bigint()
+  .nonnegative()
+  .lte(9223372036854775807n)
+
+  .describe(
+    'Integer amount in the smallest currency unit (e.g. CNY fen, USD cents). Used for all payment, order, refund and invoice monetary fields.',
+  )
+
+export const commerceOrderKind = z
+  .enum(['plan_purchase', 'subscription_renewal', 'wallet_top_up'])
+
+  .describe(
+    'The business type of an order. - `plan_purchase`: Initial subscription purchase. - `subscription_renewal`: Renewal of an existing subscription. - `wallet_top_up`: Prepaid credit recharge.',
+  )
+
+export const commerceOrderStatus = z
+  .enum([
+    'created',
+    'awaiting_payment',
+    'paid',
+    'fulfilled',
+    'cancelled',
+    'expired',
+    'refund_pending',
+    'partially_refunded',
+    'refunded',
+  ])
+  .describe('The lifecycle status of an order.')
+
+export const commercePaymentProvider = z
+  .enum(['wechat', 'alipay', 'offline'])
+
+  .describe(
+    'The payment channel that processed (or will process) a payment. - `wechat`: WeChat Pay. - `alipay`: Alipay. - `offline`: Offline bank transfer or enterprise remittance.',
+  )
+
+export const commercePaymentAttemptStatus = z
+  .enum(['created', 'pending', 'succeeded', 'failed', 'closed'])
+  .describe('The lifecycle status of a payment attempt.')
+
+export const commerceRefundStatus = z
+  .enum([
+    'pending_fence',
+    'provider_processing',
+    'ledger_reversing',
+    'fulfilled',
+    'failed',
+  ])
+
+  .describe(
+    'The lifecycle status of a refund request. The refund progresses through a billing fence before the ledger is reversed: - `pending_fence`: Waiting for the billing fence to clear pending usage. - `provider_processing`: The payment provider is processing the refund. - `ledger_reversing`: Ledger entries are being reversed. - `fulfilled`: Refund completed; credits and funds reversed. - `failed`: The refund could not be completed.',
+  )
+
+export const commerceProviderCallbackAck = z
+  .object({
+    ack: z.string().describe('Provider-specific acknowledgment text.'),
+  })
+
+  .describe(
+    'Acknowledgment returned to a payment provider callback. The body is a provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay "success").',
+  )
+
+export const commerceReceivablePeriodStatus = z
+  .enum(['open', 'closed', 'partially_paid', 'paid', 'overdue'])
+
+  .describe(
+    'The lifecycle status of an enterprise receivable period (monthly settlement).',
+  )
+
 export const queryFilterInteger = z
   .object({
     eq: z
@@ -1968,6 +2052,17 @@ export const updateResourceReference = z
   })
   .describe('TaxCode reference.')
 
+export const commercePlanRef = z
+  .object({
+    planId: ulid,
+    planKey: z.string(),
+    planVersion: z.string(),
+  })
+
+  .describe(
+    'A lightweight reference to a plan in the product catalog, embedded in order and catalog responses without duplicating the full plan definition.',
+  )
+
 export const aiUsageLedgerEntryRef = z
   .object({
     grantId: ulid,
@@ -1978,6 +2073,15 @@ export const aiUsageLedgerEntryRef = z
     priority: z.number().int().gte(-2147483648).lte(2147483647),
   })
   .describe('A reference to a credit grant that was burned during settlement.')
+
+export const commerceSubscriptionRef = z
+  .object({
+    subscriptionId: ulid,
+  })
+
+  .describe(
+    'A lightweight reference to a subscription, embedded in order responses.',
+  )
 
 export const dateTimeFieldFilter = z
   .union([
@@ -2265,6 +2369,38 @@ export const aiUsageCreditBalance = z
   .describe(
     'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
   )
+
+export const commerceExternalInvoiceUpdate = z
+  .object({
+    idempotencyKey: z
+      .string()
+      .describe('Client-generated idempotency key for the update.'),
+    invoiceNumber: z.string().describe('External invoice number or reference.'),
+    invoiceUrl: z
+      .string()
+      .optional()
+      .describe('URL or identifier of the external invoice document.'),
+    issuer: z
+      .string()
+      .optional()
+      .describe('The invoicing party or tax service.'),
+    issuedAt: dateTime.optional(),
+  })
+
+  .describe(
+    'Request body for attaching or updating an external invoice reference on a receivable period (e.g. a VAT invoice number from the external tax service).',
+  )
+
+export const commerceExternalInvoice = z
+  .object({
+    receivablePeriodId: ulid,
+    invoiceNumber: z.string(),
+    invoiceUrl: z.string().optional(),
+    issuer: z.string().optional(),
+    issuedAt: dateTime.optional(),
+    updatedAt: dateTime,
+  })
+  .describe('External invoice metadata attached to a receivable period.')
 
 export const resource = z
   .object({
@@ -3476,6 +3612,287 @@ export const aiUsageCreditTransaction = z
     'An immutable credit movement on the AI Usage integer credit ledger.',
   )
 
+export const commerceWalletBucket = z
+  .object({
+    source: commerceWalletBucketSource,
+    availableCredits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Credits currently available for consumption.'),
+    expiresAt: dateTime.optional(),
+    refundableCredits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+
+      .describe(
+        'Credits that are refundable (only present for recharge-source buckets). Represents the unspent portion of purchased credits.',
+      ),
+  })
+
+  .describe(
+    "A single credit bucket in a customer's Wallet. Each bucket represents credits from one funding source with its own balance and expiration rules. The Wallet is a read-only aggregation over the immutable Credit Ledger; it never holds a mutable second balance.",
+  )
+
+export const commerceLedgerProvenance = z
+  .object({
+    grantId: ulid,
+    priority: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+
+      .describe(
+        'Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise receivable).',
+      ),
+    source: commerceWalletBucketSource,
+  })
+
+  .describe(
+    'Immutable ledger provenance attached to a Wallet transaction. Records the underlying ledger entry that backs the credit movement, without exposing internal Ent IDs.',
+  )
+
+export const commerceRechargeProduct = z
+  .object({
+    id: ulid,
+    name: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    priceFen: commerceFenAmount,
+    currency: currencyCode,
+    active: z
+      .boolean()
+      .describe('Whether this product is currently available for purchase.'),
+    displayOrder: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+  })
+
+  .describe(
+    'A recharge product (SKU) available for purchase. Each product defines a credit package and its retail price in integer fen.',
+  )
+
+export const commerceRefundCreate = z
+  .object({
+    idempotencyKey: z.string().describe('Client-generated idempotency key.'),
+    billingCustomerId: ulid,
+    orderId: ulid,
+    amountFen: commerceFenAmount,
+    reason: z.string().describe('The reason for the refund.'),
+  })
+
+  .describe(
+    'Request body for creating a refund. Refunds are only permitted for unspent recharge-source credits. The system enforces a billing fence before reversing any ledger entries.',
+  )
+
+export const commerceOfflinePaymentCreate = z
+  .object({
+    idempotencyKey: z.string().describe('Client-generated idempotency key.'),
+    amountFen: commerceFenAmount,
+    currency: currencyCode,
+    receivablePeriodId: ulid.optional(),
+    externalReference: z
+      .string()
+
+      .describe(
+        'External reference (bank transfer number, remittance advice).',
+      ),
+    receivedAt: dateTime,
+    note: z.string().optional().describe('Optional note from the submitter.'),
+  })
+
+  .describe(
+    "Request body for recording an offline payment (bank transfer, enterprise remittance) against a customer's account.",
+  )
+
+export const commerceOfflinePayment = z
+  .object({
+    id: ulid,
+    idempotencyKey: z.string(),
+    amountFen: commerceFenAmount,
+    currency: currencyCode,
+    receivablePeriodId: ulid.optional(),
+    externalReference: z.string(),
+    receivedAt: dateTime,
+    note: z.string().optional(),
+    reconciled: z
+      .boolean()
+      .describe('Whether this payment has been reconciled and applied.'),
+    createdAt: dateTime,
+  })
+
+  .describe('An offline payment record pending reconciliation and application.')
+
+export const commerceRechargeProductWithBonus = z
+  .object({
+    id: ulid,
+    name: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    priceFen: commerceFenAmount,
+    currency: currencyCode,
+    active: z
+      .boolean()
+      .describe('Whether this product is currently available for purchase.'),
+    displayOrder: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+    bonusCredits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+      .describe('Bonus gift credits granted on purchase, if any.'),
+  })
+
+  .describe(
+    'A recharge product with promotional bonus credits (e.g. "buy 1000 get 100 extra"). Bonus credits are granted as a separate gift-source bucket.',
+  )
+
+export const commerceCheckoutSessionCreate = z
+  .object({
+    idempotencyKey: z
+      .string()
+      .describe('Client-generated idempotency key for the checkout attempt.'),
+    provider: commercePaymentProvider,
+    externalReference: z
+      .string()
+      .optional()
+
+      .describe(
+        'For offline payments: the external reference (e.g. bank transfer number).',
+      ),
+  })
+  .describe('Request body for creating a checkout session for an order.')
+
+export const commerceCheckoutSession = z
+  .object({
+    id: ulid,
+    orderId: ulid,
+    provider: commercePaymentProvider,
+    status: commercePaymentAttemptStatus,
+    paymentUrl: z
+      .string()
+      .optional()
+
+      .describe(
+        'Provider-specific payment URL or QR code payload (e.g. WeChat code_url).',
+      ),
+    providerOrderId: z
+      .string()
+      .optional()
+      .describe('External provider order identifier.'),
+    externalReference: z
+      .string()
+      .optional()
+      .describe('For offline: the external payment reference.'),
+    createdAt: dateTime,
+    expiresAt: dateTime.optional(),
+  })
+
+  .describe(
+    'A checkout session for an order, representing a single payment attempt.',
+  )
+
+export const commercePaymentFact = z
+  .object({
+    id: ulid,
+    orderId: ulid,
+    checkoutSessionId: ulid,
+    provider: commercePaymentProvider,
+    amountFen: commerceFenAmount,
+    currency: currencyCode,
+    providerTransactionId: z
+      .string()
+      .describe('External provider transaction identifier.'),
+    providerOrderId: z.string().describe('External provider order identifier.'),
+    status: commercePaymentAttemptStatus,
+    createdAt: dateTime,
+    settledAt: dateTime.optional(),
+  })
+
+  .describe(
+    'A verified payment fact from a payment provider. Represents a confirmed monetary transfer without exposing raw credentials.',
+  )
+
+export const commerceRefund = z
+  .object({
+    id: ulid,
+    idempotencyKey: z
+      .string()
+      .describe('The idempotency key from the create request.'),
+    billingCustomerId: ulid,
+    orderId: ulid,
+    amountFen: commerceFenAmount,
+    creditsReversed: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Credits being reversed.'),
+    reason: z.string(),
+    provider: commercePaymentProvider,
+    status: commerceRefundStatus,
+    providerRefundId: z
+      .string()
+      .optional()
+      .describe('External provider refund identifier.'),
+    businessTrackingNumber: z
+      .string()
+      .optional()
+      .describe('Human-readable business tracking number.'),
+    createdAt: dateTime,
+    updatedAt: dateTime,
+    fulfilledAt: dateTime.optional(),
+  })
+
+  .describe(
+    'A refund request, progressing through the billing fence and provider processing before the ledger is reversed.',
+  )
+
+export const commerceReceivablePeriod = z
+  .object({
+    id: ulid,
+    customerId: ulid,
+    periodStart: dateTime,
+    periodEnd: dateTime,
+    creditsConsumed: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Total credits consumed during this period.'),
+    amountDueFen: commerceFenAmount,
+    amountPaidFen: commerceFenAmount,
+    currency: currencyCode,
+    status: commerceReceivablePeriodStatus,
+    createdAt: dateTime,
+    closedAt: dateTime.optional(),
+  })
+
+  .describe(
+    'An enterprise receivable period representing one monthly settlement cycle. Enterprise customers with approved contracts can consume on credit and settle via offline payments against these periods.',
+  )
+
 export const appCustomerData = z
   .object({
     stripe: appCustomerDataStripe.optional(),
@@ -3907,6 +4324,60 @@ export const updateRateCardTaxConfig = z
     code: updateResourceReference,
   })
   .describe('The tax config of the rate card.')
+
+export const commerceOrderCreate = z
+  .object({
+    idempotencyKey: z
+      .string()
+
+      .describe(
+        'Client-generated idempotency key. Replaying the same key returns the stored order; a different payload for the same key returns HTTP 409.',
+      ),
+    billingCustomerId: ulid,
+    kind: commerceOrderKind,
+    plan: commercePlanRef.optional(),
+    rechargeProductId: ulid.optional(),
+    currency: currencyCode,
+  })
+  .describe('Request body for creating a new order.')
+
+export const commerceOrder = z
+  .object({
+    id: ulid,
+    idempotencyKey: z
+      .string()
+      .describe('The idempotency key from the create request.'),
+    billingCustomerId: ulid,
+    kind: commerceOrderKind,
+    plan: commercePlanRef.optional(),
+    rechargeProductId: ulid.optional(),
+    currency: currencyCode,
+    amountFen: commerceFenAmount,
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+
+      .describe(
+        'Credits that will be granted on fulfillment (for top-up and plan orders).',
+      ),
+    status: commerceOrderStatus,
+    businessTrackingNumber: z
+      .string()
+      .optional()
+
+      .describe(
+        'Human-readable business tracking number shown to the customer.',
+      ),
+    createdAt: dateTime,
+    updatedAt: dateTime,
+    expiredAt: dateTime.optional(),
+  })
+
+  .describe(
+    'A commerce order representing a purchase intent (plan, renewal, or top-up).',
+  )
 
 export const listEventsParamsFilter = z
   .object({
@@ -4539,6 +5010,39 @@ export const governanceFeatureAccess = z
 export const aiCreditTransactionPaginatedResponse = z
   .object({
     data: z.array(aiUsageCreditTransaction),
+    meta: cursorMeta,
+  })
+  .describe('Cursor paginated response.')
+
+export const commerceWalletTransaction = z
+  .object({
+    id: ulid,
+    kind: commerceWalletTransactionKind,
+    amount: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+
+      .describe(
+        'Signed credit amount. Positive adds balance, negative reduces it.',
+      ),
+    provenance: commerceLedgerProvenance,
+    occurredAt: dateTime,
+  })
+
+  .describe(
+    'An immutable credit movement on the Wallet, projected from the Credit Ledger. Every transaction carries immutable ledger provenance and a timestamp.',
+  )
+
+export const commerceRechargeProductList = z
+  .object({
+    products: z.array(commerceRechargeProduct),
+  })
+  .describe('Response body for listing recharge products.')
+
+export const receivablePeriodPaginatedResponse = z
+  .object({
+    data: z.array(commerceReceivablePeriod),
     meta: cursorMeta,
   })
   .describe('Cursor paginated response.')
@@ -5256,6 +5760,31 @@ export const governanceQueryResult = z
     updatedAt: dateTime,
   })
   .describe('Access evaluation result for a single resolved customer.')
+
+export const commerceWallet = z
+  .object({
+    customerId: ulid,
+    contractVersion: z
+      .string()
+      .describe('Phase 2 contract version for client compatibility detection.'),
+    totalAvailableCredits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Total available credits across all buckets.'),
+    buckets: z
+      .array(commerceWalletBucket)
+      .describe('Individual credit buckets, ordered by consumption priority.'),
+    transactions: z
+      .array(commerceWalletTransaction)
+      .optional()
+      .describe('Recent wallet transactions (most recent first).'),
+    retrievedAt: dateTime,
+  })
+
+  .describe(
+    'The aggregate Wallet view for a customer, combining all credit buckets and recent transactions.',
+  )
 
 export const aiUsageUsageBatch = z
   .object({
@@ -7366,6 +7895,90 @@ export const listAiUsageCreditTransactionsResponse = z.object({
   meta: cursorMeta,
 })
 
+export const getCustomerWalletPathParams = z.object({
+  customerId: ulid,
+})
+
+export const getCustomerWalletResponse = commerceWallet
+
+export const listRechargeProductsQueryParams = z.object({
+  currency: currencyCode.optional(),
+})
+
+export const listRechargeProductsResponse = commerceRechargeProductList
+
+export const createOrderBody = commerceOrderCreate
+
+export const createOrderResponse = commerceOrder
+
+export const getOrderPathParams = z.object({
+  orderId: ulid,
+})
+
+export const getOrderResponse = commerceOrder
+
+export const createCheckoutSessionPathParams = z.object({
+  orderId: ulid,
+})
+
+export const createCheckoutSessionBody = commerceCheckoutSessionCreate
+
+export const createCheckoutSessionResponse = commerceCheckoutSession
+
+export const getCheckoutSessionPathParams = z.object({
+  sessionId: ulid,
+})
+
+export const getCheckoutSessionResponse = commerceCheckoutSession
+
+export const createRefundBody = commerceRefundCreate
+
+export const createRefundResponse = commerceRefund
+
+export const getRefundPathParams = z.object({
+  refundId: ulid,
+})
+
+export const getRefundResponse = commerceRefund
+
+export const wechatPaymentCallbackBody = z.string()
+
+export const wechatPaymentCallbackResponse = commerceProviderCallbackAck
+
+export const alipayPaymentCallbackBody = z.string()
+
+export const alipayPaymentCallbackResponse = commerceProviderCallbackAck
+
+export const listReceivablePeriodsPathParams = z.object({
+  customerId: ulid,
+})
+
+export const listReceivablePeriodsQueryParams = z.object({
+  page: cursorPaginationQueryPage.optional(),
+})
+
+export const listReceivablePeriodsResponse = z.object({
+  data: z.array(commerceReceivablePeriod),
+  meta: cursorMeta,
+})
+
+export const createOfflinePaymentPathParams = z.object({
+  customerId: ulid,
+})
+
+export const createOfflinePaymentBody = commerceOfflinePaymentCreate
+
+export const createOfflinePaymentResponse = commerceOfflinePayment
+
+export const updateExternalInvoicePathParams = z.object({
+  customerId: ulid,
+  periodId: ulid,
+})
+
+export const updateExternalInvoiceBody = commerceExternalInvoiceUpdate
+
+export const updateExternalInvoiceResponse = commerceExternalInvoice
+
 export const labelsWire = z
   .record(z.string(), z.string())
 
@@ -8587,6 +9200,90 @@ export const aiUsageCreditTransactionTypeWire = z
     'The type of a credit movement on the AI Usage integer credit ledger.',
   )
 
+export const commerceWalletBucketSourceWire = z
+  .enum(['plan', 'gift', 'recharge', 'enterprise_receivable'])
+
+  .describe(
+    'The origin of a Wallet credit bucket. Determines consumption priority and refund eligibility. - `plan`: Credits granted from a subscription plan, consumed first. - `gift`: Promotional or compensatory credits. - `recharge`: Credits purchased via top-up; only unspent recharge credits are refundable. - `enterprise_receivable`: Post-pay credits backed by an enterprise contract credit line.',
+  )
+
+export const commerceWalletTransactionKindWire = z
+  .enum(['funded', 'consumed', 'expired', 'refunded', 'adjusted'])
+
+  .describe(
+    'The kind of a Wallet transaction movement. - `funded`: Credits added to the wallet. - `consumed`: Credits deducted by usage settlement. - `expired`: Credits removed due to expiration. - `refunded`: Credits reversed via a refund. - `adjusted`: Manual adjustment by an operator.',
+  )
+
+export const commerceFenAmountWire = z.coerce
+  .bigint()
+  .nonnegative()
+  .lte(9223372036854775807n)
+
+  .describe(
+    'Integer amount in the smallest currency unit (e.g. CNY fen, USD cents). Used for all payment, order, refund and invoice monetary fields.',
+  )
+
+export const commerceOrderKindWire = z
+  .enum(['plan_purchase', 'subscription_renewal', 'wallet_top_up'])
+
+  .describe(
+    'The business type of an order. - `plan_purchase`: Initial subscription purchase. - `subscription_renewal`: Renewal of an existing subscription. - `wallet_top_up`: Prepaid credit recharge.',
+  )
+
+export const commerceOrderStatusWire = z
+  .enum([
+    'created',
+    'awaiting_payment',
+    'paid',
+    'fulfilled',
+    'cancelled',
+    'expired',
+    'refund_pending',
+    'partially_refunded',
+    'refunded',
+  ])
+  .describe('The lifecycle status of an order.')
+
+export const commercePaymentProviderWire = z
+  .enum(['wechat', 'alipay', 'offline'])
+
+  .describe(
+    'The payment channel that processed (or will process) a payment. - `wechat`: WeChat Pay. - `alipay`: Alipay. - `offline`: Offline bank transfer or enterprise remittance.',
+  )
+
+export const commercePaymentAttemptStatusWire = z
+  .enum(['created', 'pending', 'succeeded', 'failed', 'closed'])
+  .describe('The lifecycle status of a payment attempt.')
+
+export const commerceRefundStatusWire = z
+  .enum([
+    'pending_fence',
+    'provider_processing',
+    'ledger_reversing',
+    'fulfilled',
+    'failed',
+  ])
+
+  .describe(
+    'The lifecycle status of a refund request. The refund progresses through a billing fence before the ledger is reversed: - `pending_fence`: Waiting for the billing fence to clear pending usage. - `provider_processing`: The payment provider is processing the refund. - `ledger_reversing`: Ledger entries are being reversed. - `fulfilled`: Refund completed; credits and funds reversed. - `failed`: The refund could not be completed.',
+  )
+
+export const commerceProviderCallbackAckWire = z
+  .strictObject({
+    ack: z.string().describe('Provider-specific acknowledgment text.'),
+  })
+
+  .describe(
+    'Acknowledgment returned to a payment provider callback. The body is a provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay "success").',
+  )
+
+export const commerceReceivablePeriodStatusWire = z
+  .enum(['open', 'closed', 'partially_paid', 'paid', 'overdue'])
+
+  .describe(
+    'The lifecycle status of an enterprise receivable period (monthly settlement).',
+  )
+
 export const queryFilterIntegerWire = z
   .strictObject({
     eq: z
@@ -9326,6 +10023,17 @@ export const updateResourceReferenceWire = z
   })
   .describe('TaxCode reference.')
 
+export const commercePlanRefWire = z
+  .strictObject({
+    plan_id: ulidWire,
+    plan_key: z.string(),
+    plan_version: z.string(),
+  })
+
+  .describe(
+    'A lightweight reference to a plan in the product catalog, embedded in order and catalog responses without duplicating the full plan definition.',
+  )
+
 export const aiUsageLedgerEntryRefWire = z
   .strictObject({
     grant_id: ulidWire,
@@ -9336,6 +10044,15 @@ export const aiUsageLedgerEntryRefWire = z
     priority: z.number().int().gte(-2147483648).lte(2147483647),
   })
   .describe('A reference to a credit grant that was burned during settlement.')
+
+export const commerceSubscriptionRefWire = z
+  .strictObject({
+    subscription_id: ulidWire,
+  })
+
+  .describe(
+    'A lightweight reference to a subscription, embedded in order responses.',
+  )
 
 export const dateTimeFieldFilterWire = z
   .union([
@@ -9622,6 +10339,40 @@ export const aiUsageCreditBalanceWire = z
   .describe(
     'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
   )
+
+export const commerceExternalInvoiceUpdateWire = z
+  .strictObject({
+    idempotency_key: z
+      .string()
+      .describe('Client-generated idempotency key for the update.'),
+    invoice_number: z
+      .string()
+      .describe('External invoice number or reference.'),
+    invoice_url: z
+      .string()
+      .optional()
+      .describe('URL or identifier of the external invoice document.'),
+    issuer: z
+      .string()
+      .optional()
+      .describe('The invoicing party or tax service.'),
+    issued_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'Request body for attaching or updating an external invoice reference on a receivable period (e.g. a VAT invoice number from the external tax service).',
+  )
+
+export const commerceExternalInvoiceWire = z
+  .strictObject({
+    receivable_period_id: ulidWire,
+    invoice_number: z.string(),
+    invoice_url: z.string().optional(),
+    issuer: z.string().optional(),
+    issued_at: dateTimeWire.optional(),
+    updated_at: dateTimeWire,
+  })
+  .describe('External invoice metadata attached to a receivable period.')
 
 export const resourceWire = z
   .strictObject({
@@ -10816,6 +11567,289 @@ export const aiUsageCreditTransactionWire = z
     'An immutable credit movement on the AI Usage integer credit ledger.',
   )
 
+export const commerceWalletBucketWire = z
+  .strictObject({
+    source: commerceWalletBucketSourceWire,
+    available_credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Credits currently available for consumption.'),
+    expires_at: dateTimeWire.optional(),
+    refundable_credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+
+      .describe(
+        'Credits that are refundable (only present for recharge-source buckets). Represents the unspent portion of purchased credits.',
+      ),
+  })
+
+  .describe(
+    "A single credit bucket in a customer's Wallet. Each bucket represents credits from one funding source with its own balance and expiration rules. The Wallet is a read-only aggregation over the immutable Credit Ledger; it never holds a mutable second balance.",
+  )
+
+export const commerceLedgerProvenanceWire = z
+  .strictObject({
+    grant_id: ulidWire,
+    priority: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+
+      .describe(
+        'Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise receivable).',
+      ),
+    source: commerceWalletBucketSourceWire,
+  })
+
+  .describe(
+    'Immutable ledger provenance attached to a Wallet transaction. Records the underlying ledger entry that backs the credit movement, without exposing internal Ent IDs.',
+  )
+
+export const commerceRechargeProductWire = z
+  .strictObject({
+    id: ulidWire,
+    name: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    price_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    active: z
+      .boolean()
+      .describe('Whether this product is currently available for purchase.'),
+    display_order: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+  })
+
+  .describe(
+    'A recharge product (SKU) available for purchase. Each product defines a credit package and its retail price in integer fen.',
+  )
+
+export const commerceRefundCreateWire = z
+  .strictObject({
+    idempotency_key: z.string().describe('Client-generated idempotency key.'),
+    billing_customer_id: ulidWire,
+    order_id: ulidWire,
+    amount_fen: commerceFenAmountWire,
+    reason: z.string().describe('The reason for the refund.'),
+  })
+
+  .describe(
+    'Request body for creating a refund. Refunds are only permitted for unspent recharge-source credits. The system enforces a billing fence before reversing any ledger entries.',
+  )
+
+export const commerceOfflinePaymentCreateWire = z
+  .strictObject({
+    idempotency_key: z.string().describe('Client-generated idempotency key.'),
+    amount_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    receivable_period_id: ulidWire.optional(),
+    external_reference: z
+      .string()
+
+      .describe(
+        'External reference (bank transfer number, remittance advice).',
+      ),
+    received_at: dateTimeWire,
+    note: z.string().optional().describe('Optional note from the submitter.'),
+  })
+
+  .describe(
+    "Request body for recording an offline payment (bank transfer, enterprise remittance) against a customer's account.",
+  )
+
+export const commerceOfflinePaymentWire = z
+  .strictObject({
+    id: ulidWire,
+    idempotency_key: z.string(),
+    amount_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    receivable_period_id: ulidWire.optional(),
+    external_reference: z.string(),
+    received_at: dateTimeWire,
+    note: z.string().optional(),
+    reconciled: z
+      .boolean()
+      .describe('Whether this payment has been reconciled and applied.'),
+    created_at: dateTimeWire,
+  })
+
+  .describe('An offline payment record pending reconciliation and application.')
+
+export const commerceRechargeProductWithBonusWire = z
+  .strictObject({
+    id: ulidWire,
+    name: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    price_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    active: z
+      .boolean()
+      .describe('Whether this product is currently available for purchase.'),
+    display_order: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+    bonus_credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+      .describe('Bonus gift credits granted on purchase, if any.'),
+  })
+
+  .describe(
+    'A recharge product with promotional bonus credits (e.g. "buy 1000 get 100 extra"). Bonus credits are granted as a separate gift-source bucket.',
+  )
+
+export const commerceCheckoutSessionCreateWire = z
+  .strictObject({
+    idempotency_key: z
+      .string()
+      .describe('Client-generated idempotency key for the checkout attempt.'),
+    provider: commercePaymentProviderWire,
+    external_reference: z
+      .string()
+      .optional()
+
+      .describe(
+        'For offline payments: the external reference (e.g. bank transfer number).',
+      ),
+  })
+  .describe('Request body for creating a checkout session for an order.')
+
+export const commerceCheckoutSessionWire = z
+  .strictObject({
+    id: ulidWire,
+    order_id: ulidWire,
+    provider: commercePaymentProviderWire,
+    status: commercePaymentAttemptStatusWire,
+    payment_url: z
+      .string()
+      .optional()
+
+      .describe(
+        'Provider-specific payment URL or QR code payload (e.g. WeChat code_url).',
+      ),
+    provider_order_id: z
+      .string()
+      .optional()
+      .describe('External provider order identifier.'),
+    external_reference: z
+      .string()
+      .optional()
+      .describe('For offline: the external payment reference.'),
+    created_at: dateTimeWire,
+    expires_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'A checkout session for an order, representing a single payment attempt.',
+  )
+
+export const commercePaymentFactWire = z
+  .strictObject({
+    id: ulidWire,
+    order_id: ulidWire,
+    checkout_session_id: ulidWire,
+    provider: commercePaymentProviderWire,
+    amount_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    provider_transaction_id: z
+      .string()
+      .describe('External provider transaction identifier.'),
+    provider_order_id: z
+      .string()
+      .describe('External provider order identifier.'),
+    status: commercePaymentAttemptStatusWire,
+    created_at: dateTimeWire,
+    settled_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'A verified payment fact from a payment provider. Represents a confirmed monetary transfer without exposing raw credentials.',
+  )
+
+export const commerceRefundWire = z
+  .strictObject({
+    id: ulidWire,
+    idempotency_key: z
+      .string()
+      .describe('The idempotency key from the create request.'),
+    billing_customer_id: ulidWire,
+    order_id: ulidWire,
+    amount_fen: commerceFenAmountWire,
+    credits_reversed: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Credits being reversed.'),
+    reason: z.string(),
+    provider: commercePaymentProviderWire,
+    status: commerceRefundStatusWire,
+    provider_refund_id: z
+      .string()
+      .optional()
+      .describe('External provider refund identifier.'),
+    business_tracking_number: z
+      .string()
+      .optional()
+      .describe('Human-readable business tracking number.'),
+    created_at: dateTimeWire,
+    updated_at: dateTimeWire,
+    fulfilled_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'A refund request, progressing through the billing fence and provider processing before the ledger is reversed.',
+  )
+
+export const commerceReceivablePeriodWire = z
+  .strictObject({
+    id: ulidWire,
+    customer_id: ulidWire,
+    period_start: dateTimeWire,
+    period_end: dateTimeWire,
+    credits_consumed: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Total credits consumed during this period.'),
+    amount_due_fen: commerceFenAmountWire,
+    amount_paid_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    status: commerceReceivablePeriodStatusWire,
+    created_at: dateTimeWire,
+    closed_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'An enterprise receivable period representing one monthly settlement cycle. Enterprise customers with approved contracts can consume on credit and settle via offline payments against these periods.',
+  )
+
 export const appCustomerDataWire = z
   .strictObject({
     stripe: appCustomerDataStripeWire.optional(),
@@ -11247,6 +12281,60 @@ export const updateRateCardTaxConfigWire = z
     code: updateResourceReferenceWire,
   })
   .describe('The tax config of the rate card.')
+
+export const commerceOrderCreateWire = z
+  .strictObject({
+    idempotency_key: z
+      .string()
+
+      .describe(
+        'Client-generated idempotency key. Replaying the same key returns the stored order; a different payload for the same key returns HTTP 409.',
+      ),
+    billing_customer_id: ulidWire,
+    kind: commerceOrderKindWire,
+    plan: commercePlanRefWire.optional(),
+    recharge_product_id: ulidWire.optional(),
+    currency: currencyCodeWire,
+  })
+  .describe('Request body for creating a new order.')
+
+export const commerceOrderWire = z
+  .strictObject({
+    id: ulidWire,
+    idempotency_key: z
+      .string()
+      .describe('The idempotency key from the create request.'),
+    billing_customer_id: ulidWire,
+    kind: commerceOrderKindWire,
+    plan: commercePlanRefWire.optional(),
+    recharge_product_id: ulidWire.optional(),
+    currency: currencyCodeWire,
+    amount_fen: commerceFenAmountWire,
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .optional()
+
+      .describe(
+        'Credits that will be granted on fulfillment (for top-up and plan orders).',
+      ),
+    status: commerceOrderStatusWire,
+    business_tracking_number: z
+      .string()
+      .optional()
+
+      .describe(
+        'Human-readable business tracking number shown to the customer.',
+      ),
+    created_at: dateTimeWire,
+    updated_at: dateTimeWire,
+    expired_at: dateTimeWire.optional(),
+  })
+
+  .describe(
+    'A commerce order representing a purchase intent (plan, renewal, or top-up).',
+  )
 
 export const listEventsParamsFilterWire = z
   .strictObject({
@@ -11881,6 +12969,39 @@ export const governanceFeatureAccessWire = z
 export const aiCreditTransactionPaginatedResponseWire = z
   .strictObject({
     data: z.array(aiUsageCreditTransactionWire),
+    meta: cursorMetaWire,
+  })
+  .describe('Cursor paginated response.')
+
+export const commerceWalletTransactionWire = z
+  .strictObject({
+    id: ulidWire,
+    kind: commerceWalletTransactionKindWire,
+    amount: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+
+      .describe(
+        'Signed credit amount. Positive adds balance, negative reduces it.',
+      ),
+    provenance: commerceLedgerProvenanceWire,
+    occurred_at: dateTimeWire,
+  })
+
+  .describe(
+    'An immutable credit movement on the Wallet, projected from the Credit Ledger. Every transaction carries immutable ledger provenance and a timestamp.',
+  )
+
+export const commerceRechargeProductListWire = z
+  .strictObject({
+    products: z.array(commerceRechargeProductWire),
+  })
+  .describe('Response body for listing recharge products.')
+
+export const receivablePeriodPaginatedResponseWire = z
+  .strictObject({
+    data: z.array(commerceReceivablePeriodWire),
     meta: cursorMetaWire,
   })
   .describe('Cursor paginated response.')
@@ -12598,6 +13719,31 @@ export const governanceQueryResultWire = z
     updated_at: dateTimeWire,
   })
   .describe('Access evaluation result for a single resolved customer.')
+
+export const commerceWalletWire = z
+  .strictObject({
+    customer_id: ulidWire,
+    contract_version: z
+      .string()
+      .describe('Phase 2 contract version for client compatibility detection.'),
+    total_available_credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Total available credits across all buckets.'),
+    buckets: z
+      .array(commerceWalletBucketWire)
+      .describe('Individual credit buckets, ordered by consumption priority.'),
+    transactions: z
+      .array(commerceWalletTransactionWire)
+      .optional()
+      .describe('Recent wallet transactions (most recent first).'),
+    retrieved_at: dateTimeWire,
+  })
+
+  .describe(
+    'The aggregate Wallet view for a customer, combining all credit buckets and recent transactions.',
+  )
 
 export const aiUsageUsageBatchWire = z
   .strictObject({
@@ -14785,3 +15931,87 @@ export const listAiUsageCreditTransactionsResponseWire = z.strictObject({
   data: z.array(aiUsageCreditTransactionWire),
   meta: cursorMetaWire,
 })
+
+export const getCustomerWalletPathParamsWire = z.object({
+  customerId: ulidWire,
+})
+
+export const getCustomerWalletResponseWire = commerceWalletWire
+
+export const listRechargeProductsQueryParamsWire = z.object({
+  currency: currencyCodeWire.optional(),
+})
+
+export const listRechargeProductsResponseWire = commerceRechargeProductListWire
+
+export const createOrderBodyWire = commerceOrderCreateWire
+
+export const createOrderResponseWire = commerceOrderWire
+
+export const getOrderPathParamsWire = z.object({
+  orderId: ulidWire,
+})
+
+export const getOrderResponseWire = commerceOrderWire
+
+export const createCheckoutSessionPathParamsWire = z.object({
+  orderId: ulidWire,
+})
+
+export const createCheckoutSessionBodyWire = commerceCheckoutSessionCreateWire
+
+export const createCheckoutSessionResponseWire = commerceCheckoutSessionWire
+
+export const getCheckoutSessionPathParamsWire = z.object({
+  sessionId: ulidWire,
+})
+
+export const getCheckoutSessionResponseWire = commerceCheckoutSessionWire
+
+export const createRefundBodyWire = commerceRefundCreateWire
+
+export const createRefundResponseWire = commerceRefundWire
+
+export const getRefundPathParamsWire = z.object({
+  refundId: ulidWire,
+})
+
+export const getRefundResponseWire = commerceRefundWire
+
+export const wechatPaymentCallbackBodyWire = z.string()
+
+export const wechatPaymentCallbackResponseWire = commerceProviderCallbackAckWire
+
+export const alipayPaymentCallbackBodyWire = z.string()
+
+export const alipayPaymentCallbackResponseWire = commerceProviderCallbackAckWire
+
+export const listReceivablePeriodsPathParamsWire = z.object({
+  customerId: ulidWire,
+})
+
+export const listReceivablePeriodsQueryParamsWire = z.object({
+  page: cursorPaginationQueryPageWire.optional(),
+})
+
+export const listReceivablePeriodsResponseWire = z.strictObject({
+  data: z.array(commerceReceivablePeriodWire),
+  meta: cursorMetaWire,
+})
+
+export const createOfflinePaymentPathParamsWire = z.object({
+  customerId: ulidWire,
+})
+
+export const createOfflinePaymentBodyWire = commerceOfflinePaymentCreateWire
+
+export const createOfflinePaymentResponseWire = commerceOfflinePaymentWire
+
+export const updateExternalInvoicePathParamsWire = z.object({
+  customerId: ulidWire,
+  periodId: ulidWire,
+})
+
+export const updateExternalInvoiceBodyWire = commerceExternalInvoiceUpdateWire
+
+export const updateExternalInvoiceResponseWire = commerceExternalInvoiceWire

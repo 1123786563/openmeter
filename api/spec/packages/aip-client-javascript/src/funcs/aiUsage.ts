@@ -24,10 +24,10 @@ import type {
  *
  * Submit a Canonical AI Usage Batch for settlement.
  *
- * The first submit for a given `idempotency_key` returns HTTP 201 with the
- * settled batch. An identical replay (same `idempotency_key` and
- * `payload_hash`) returns HTTP 200 with the stored result. A replay with the
- * same `idempotency_key` but a different `payload_hash` returns HTTP 409.
+ * The first submit for a given `idempotency_key` returns HTTP 201 with the settled
+ * batch. An identical replay (same `idempotency_key` and `payload_hash`) returns
+ * HTTP 200 with the stored result. A replay with the same `idempotency_key` but a
+ * different `payload_hash` returns HTTP 409.
  *
  * POST /ai-usage-batches
  */
@@ -98,8 +98,8 @@ export function getAiUsageBatch(
  *
  * Check whether a customer is authorized to consume AI resources.
  *
- * Returns the current integer credit balance, reservation ceiling, and the
- * covered tenant sequence watermark.
+ * Returns the current integer credit balance, reservation ceiling, and the covered
+ * tenant sequence watermark.
  *
  * GET /customers/{customerId}/runtime-authorization
  */
@@ -155,8 +155,8 @@ export function getCustomerRuntimeAuthorization(
 /**
  * Get AI usage credit balance
  *
- * Get a customer's credit balance for AI usage. Returns the same balance
- * model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
+ * Get a customer's credit balance for AI usage. Returns the same balance model as
+ * the OpenMeter Credits endpoint but scoped to the AI Usage route.
  *
  * GET /customers/{customerId}/credit-balance
  */
@@ -206,9 +206,8 @@ export function getAiUsageCreditBalance(
 /**
  * List AI usage credit transactions
  *
- * List credit transactions for a customer's AI usage. Returns the same
- * transaction model as the OpenMeter Credits endpoint but scoped to the AI
- * Usage route.
+ * List credit transactions for a customer's AI usage. Returns the same transaction
+ * model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
  *
  * GET /customers/{customerId}/credit-transactions
  */

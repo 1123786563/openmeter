@@ -126,6 +126,14 @@ type Tx struct {
 	ChargeUsageBasedRuns *ChargeUsageBasedRunsClient
 	// ChargesSearchV1 is the client for interacting with the ChargesSearchV1 builders.
 	ChargesSearchV1 *ChargesSearchV1Client
+	// CommerceOrder is the client for interacting with the CommerceOrder builders.
+	CommerceOrder *CommerceOrderClient
+	// CommerceOrderLine is the client for interacting with the CommerceOrderLine builders.
+	CommerceOrderLine *CommerceOrderLineClient
+	// CommerceOutbox is the client for interacting with the CommerceOutbox builders.
+	CommerceOutbox *CommerceOutboxClient
+	// CommerceProduct is the client for interacting with the CommerceProduct builders.
+	CommerceProduct *CommerceProductClient
 	// CreditRealizationLineage is the client for interacting with the CreditRealizationLineage builders.
 	CreditRealizationLineage *CreditRealizationLineageClient
 	// CreditRealizationLineageSegment is the client for interacting with the CreditRealizationLineageSegment builders.
@@ -142,8 +150,12 @@ type Tx struct {
 	CustomerSubjects *CustomerSubjectsClient
 	// Entitlement is the client for interacting with the Entitlement builders.
 	Entitlement *EntitlementClient
+	// ExternalInvoiceRef is the client for interacting with the ExternalInvoiceRef builders.
+	ExternalInvoiceRef *ExternalInvoiceRefClient
 	// Feature is the client for interacting with the Feature builders.
 	Feature *FeatureClient
+	// Fulfillment is the client for interacting with the Fulfillment builders.
+	Fulfillment *FulfillmentClient
 	// Grant is the client for interacting with the Grant builders.
 	Grant *GrantClient
 	// LLMCostPrice is the client for interacting with the LLMCostPrice builders.
@@ -178,8 +190,14 @@ type Tx struct {
 	NotificationEventDeliveryStatus *NotificationEventDeliveryStatusClient
 	// NotificationRule is the client for interacting with the NotificationRule builders.
 	NotificationRule *NotificationRuleClient
+	// OfflinePayment is the client for interacting with the OfflinePayment builders.
+	OfflinePayment *OfflinePaymentClient
 	// OrganizationDefaultTaxCodes is the client for interacting with the OrganizationDefaultTaxCodes builders.
 	OrganizationDefaultTaxCodes *OrganizationDefaultTaxCodesClient
+	// PaymentAttempt is the client for interacting with the PaymentAttempt builders.
+	PaymentAttempt *PaymentAttemptClient
+	// PaymentFact is the client for interacting with the PaymentFact builders.
+	PaymentFact *PaymentFactClient
 	// Plan is the client for interacting with the Plan builders.
 	Plan *PlanClient
 	// PlanAddon is the client for interacting with the PlanAddon builders.
@@ -188,6 +206,14 @@ type Tx struct {
 	PlanPhase *PlanPhaseClient
 	// PlanRateCard is the client for interacting with the PlanRateCard builders.
 	PlanRateCard *PlanRateCardClient
+	// ReceivableAccount is the client for interacting with the ReceivableAccount builders.
+	ReceivableAccount *ReceivableAccountClient
+	// ReceivablePeriod is the client for interacting with the ReceivablePeriod builders.
+	ReceivablePeriod *ReceivablePeriodClient
+	// RefundFact is the client for interacting with the RefundFact builders.
+	RefundFact *RefundFactClient
+	// RefundRequest is the client for interacting with the RefundRequest builders.
+	RefundRequest *RefundRequestClient
 	// Subject is the client for interacting with the Subject builders.
 	Subject *SubjectClient
 	// Subscription is the client for interacting with the Subscription builders.
@@ -393,6 +419,10 @@ func (tx *Tx) init() {
 	tx.ChargeUsageBasedRunPayment = NewChargeUsageBasedRunPaymentClient(tx.config)
 	tx.ChargeUsageBasedRuns = NewChargeUsageBasedRunsClient(tx.config)
 	tx.ChargesSearchV1 = NewChargesSearchV1Client(tx.config)
+	tx.CommerceOrder = NewCommerceOrderClient(tx.config)
+	tx.CommerceOrderLine = NewCommerceOrderLineClient(tx.config)
+	tx.CommerceOutbox = NewCommerceOutboxClient(tx.config)
+	tx.CommerceProduct = NewCommerceProductClient(tx.config)
 	tx.CreditRealizationLineage = NewCreditRealizationLineageClient(tx.config)
 	tx.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(tx.config)
 	tx.CurrencyCostBasis = NewCurrencyCostBasisClient(tx.config)
@@ -401,7 +431,9 @@ func (tx *Tx) init() {
 	tx.CustomerAIRatePackage = NewCustomerAIRatePackageClient(tx.config)
 	tx.CustomerSubjects = NewCustomerSubjectsClient(tx.config)
 	tx.Entitlement = NewEntitlementClient(tx.config)
+	tx.ExternalInvoiceRef = NewExternalInvoiceRefClient(tx.config)
 	tx.Feature = NewFeatureClient(tx.config)
+	tx.Fulfillment = NewFulfillmentClient(tx.config)
 	tx.Grant = NewGrantClient(tx.config)
 	tx.LLMCostPrice = NewLLMCostPriceClient(tx.config)
 	tx.LedgerAccount = NewLedgerAccountClient(tx.config)
@@ -419,11 +451,18 @@ func (tx *Tx) init() {
 	tx.NotificationEvent = NewNotificationEventClient(tx.config)
 	tx.NotificationEventDeliveryStatus = NewNotificationEventDeliveryStatusClient(tx.config)
 	tx.NotificationRule = NewNotificationRuleClient(tx.config)
+	tx.OfflinePayment = NewOfflinePaymentClient(tx.config)
 	tx.OrganizationDefaultTaxCodes = NewOrganizationDefaultTaxCodesClient(tx.config)
+	tx.PaymentAttempt = NewPaymentAttemptClient(tx.config)
+	tx.PaymentFact = NewPaymentFactClient(tx.config)
 	tx.Plan = NewPlanClient(tx.config)
 	tx.PlanAddon = NewPlanAddonClient(tx.config)
 	tx.PlanPhase = NewPlanPhaseClient(tx.config)
 	tx.PlanRateCard = NewPlanRateCardClient(tx.config)
+	tx.ReceivableAccount = NewReceivableAccountClient(tx.config)
+	tx.ReceivablePeriod = NewReceivablePeriodClient(tx.config)
+	tx.RefundFact = NewRefundFactClient(tx.config)
+	tx.RefundRequest = NewRefundRequestClient(tx.config)
 	tx.Subject = NewSubjectClient(tx.config)
 	tx.Subscription = NewSubscriptionClient(tx.config)
 	tx.SubscriptionAddon = NewSubscriptionAddonClient(tx.config)

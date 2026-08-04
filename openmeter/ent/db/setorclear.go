@@ -4304,6 +4304,118 @@ func (u *ChargeUsageBasedRunsUpdateOne) SetOrClearLineID(value *string) *ChargeU
 	return u.SetLineID(*value)
 }
 
+func (u *CommerceOrderUpdate) SetOrClearDeletedAt(value *time.Time) *CommerceOrderUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CommerceOrderUpdateOne) SetOrClearDeletedAt(value *time.Time) *CommerceOrderUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CommerceOrderUpdate) SetOrClearDescription(value *string) *CommerceOrderUpdate {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CommerceOrderUpdateOne) SetOrClearDescription(value *string) *CommerceOrderUpdateOne {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CommerceOrderLineUpdate) SetOrClearSnapshotData(value *map[string]interface{}) *CommerceOrderLineUpdate {
+	if value == nil {
+		return u.ClearSnapshotData()
+	}
+	return u.SetSnapshotData(*value)
+}
+
+func (u *CommerceOrderLineUpdateOne) SetOrClearSnapshotData(value *map[string]interface{}) *CommerceOrderLineUpdateOne {
+	if value == nil {
+		return u.ClearSnapshotData()
+	}
+	return u.SetSnapshotData(*value)
+}
+
+func (u *CommerceOutboxUpdate) SetOrClearPublishedAt(value *time.Time) *CommerceOutboxUpdate {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *CommerceOutboxUpdateOne) SetOrClearPublishedAt(value *time.Time) *CommerceOutboxUpdateOne {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *CommerceProductUpdate) SetOrClearAnnotations(value *models.Annotations) *CommerceProductUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *CommerceProductUpdateOne) SetOrClearAnnotations(value *models.Annotations) *CommerceProductUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *CommerceProductUpdate) SetOrClearDeletedAt(value *time.Time) *CommerceProductUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CommerceProductUpdateOne) SetOrClearDeletedAt(value *time.Time) *CommerceProductUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CommerceProductUpdate) SetOrClearDescription(value *string) *CommerceProductUpdate {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CommerceProductUpdateOne) SetOrClearDescription(value *string) *CommerceProductUpdateOne {
+	if value == nil {
+		return u.ClearDescription()
+	}
+	return u.SetDescription(*value)
+}
+
+func (u *CommerceProductUpdate) SetOrClearMetadata(value *map[string]interface{}) *CommerceProductUpdate {
+	if value == nil {
+		return u.ClearMetadata()
+	}
+	return u.SetMetadata(*value)
+}
+
+func (u *CommerceProductUpdateOne) SetOrClearMetadata(value *map[string]interface{}) *CommerceProductUpdateOne {
+	if value == nil {
+		return u.ClearMetadata()
+	}
+	return u.SetMetadata(*value)
+}
+
 func (u *CreditRealizationLineageSegmentUpdate) SetOrClearBackingTransactionGroupID(value *string) *CreditRealizationLineageSegmentUpdate {
 	if value == nil {
 		return u.ClearBackingTransactionGroupID()
@@ -4794,6 +4906,34 @@ func (u *EntitlementUpdateOne) SetOrClearAnnotations(value *models.Annotations) 
 	return u.SetAnnotations(*value)
 }
 
+func (u *ExternalInvoiceRefUpdate) SetOrClearDeletedAt(value *time.Time) *ExternalInvoiceRefUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ExternalInvoiceRefUpdateOne) SetOrClearDeletedAt(value *time.Time) *ExternalInvoiceRefUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ExternalInvoiceRefUpdate) SetOrClearInvoiceURL(value *string) *ExternalInvoiceRefUpdate {
+	if value == nil {
+		return u.ClearInvoiceURL()
+	}
+	return u.SetInvoiceURL(*value)
+}
+
+func (u *ExternalInvoiceRefUpdateOne) SetOrClearInvoiceURL(value *string) *ExternalInvoiceRefUpdateOne {
+	if value == nil {
+		return u.ClearInvoiceURL()
+	}
+	return u.SetInvoiceURL(*value)
+}
+
 func (u *FeatureUpdate) SetOrClearDeletedAt(value *time.Time) *FeatureUpdate {
 	if value == nil {
 		return u.ClearDeletedAt()
@@ -4988,6 +5128,76 @@ func (u *FeatureUpdateOne) SetOrClearArchivedAt(value *time.Time) *FeatureUpdate
 		return u.ClearArchivedAt()
 	}
 	return u.SetArchivedAt(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearDeletedAt(value *time.Time) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearDeletedAt(value *time.Time) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearClaimedAt(value *time.Time) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearClaimedAt()
+	}
+	return u.SetClaimedAt(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearClaimedAt(value *time.Time) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearClaimedAt()
+	}
+	return u.SetClaimedAt(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearGrantID(value *string) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearGrantID()
+	}
+	return u.SetGrantID(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearGrantID(value *string) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearGrantID()
+	}
+	return u.SetGrantID(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearFulfilledAt(value *time.Time) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearFulfilledAt()
+	}
+	return u.SetFulfilledAt(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearFulfilledAt(value *time.Time) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearFulfilledAt()
+	}
+	return u.SetFulfilledAt(*value)
+}
+
+func (u *FulfillmentUpdate) SetOrClearFailureReason(value *string) *FulfillmentUpdate {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
+}
+
+func (u *FulfillmentUpdateOne) SetOrClearFailureReason(value *string) *FulfillmentUpdateOne {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
 }
 
 func (u *GrantUpdate) SetOrClearAnnotations(value *models.Annotations) *GrantUpdate {
@@ -5690,6 +5900,48 @@ func (u *NotificationRuleUpdateOne) SetOrClearDisabled(value *bool) *Notificatio
 	return u.SetDisabled(*value)
 }
 
+func (u *OfflinePaymentUpdate) SetOrClearDeletedAt(value *time.Time) *OfflinePaymentUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *OfflinePaymentUpdateOne) SetOrClearDeletedAt(value *time.Time) *OfflinePaymentUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *OfflinePaymentUpdate) SetOrClearReference(value *string) *OfflinePaymentUpdate {
+	if value == nil {
+		return u.ClearReference()
+	}
+	return u.SetReference(*value)
+}
+
+func (u *OfflinePaymentUpdateOne) SetOrClearReference(value *string) *OfflinePaymentUpdateOne {
+	if value == nil {
+		return u.ClearReference()
+	}
+	return u.SetReference(*value)
+}
+
+func (u *OfflinePaymentUpdate) SetOrClearNote(value *string) *OfflinePaymentUpdate {
+	if value == nil {
+		return u.ClearNote()
+	}
+	return u.SetNote(*value)
+}
+
+func (u *OfflinePaymentUpdateOne) SetOrClearNote(value *string) *OfflinePaymentUpdateOne {
+	if value == nil {
+		return u.ClearNote()
+	}
+	return u.SetNote(*value)
+}
+
 func (u *OrganizationDefaultTaxCodesUpdate) SetOrClearDeletedAt(value *time.Time) *OrganizationDefaultTaxCodesUpdate {
 	if value == nil {
 		return u.ClearDeletedAt()
@@ -5702,6 +5954,62 @@ func (u *OrganizationDefaultTaxCodesUpdateOne) SetOrClearDeletedAt(value *time.T
 		return u.ClearDeletedAt()
 	}
 	return u.SetDeletedAt(*value)
+}
+
+func (u *PaymentAttemptUpdate) SetOrClearDeletedAt(value *time.Time) *PaymentAttemptUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *PaymentAttemptUpdateOne) SetOrClearDeletedAt(value *time.Time) *PaymentAttemptUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *PaymentAttemptUpdate) SetOrClearProviderOrderID(value *string) *PaymentAttemptUpdate {
+	if value == nil {
+		return u.ClearProviderOrderID()
+	}
+	return u.SetProviderOrderID(*value)
+}
+
+func (u *PaymentAttemptUpdateOne) SetOrClearProviderOrderID(value *string) *PaymentAttemptUpdateOne {
+	if value == nil {
+		return u.ClearProviderOrderID()
+	}
+	return u.SetProviderOrderID(*value)
+}
+
+func (u *PaymentAttemptUpdate) SetOrClearProviderPaymentID(value *string) *PaymentAttemptUpdate {
+	if value == nil {
+		return u.ClearProviderPaymentID()
+	}
+	return u.SetProviderPaymentID(*value)
+}
+
+func (u *PaymentAttemptUpdateOne) SetOrClearProviderPaymentID(value *string) *PaymentAttemptUpdateOne {
+	if value == nil {
+		return u.ClearProviderPaymentID()
+	}
+	return u.SetProviderPaymentID(*value)
+}
+
+func (u *PaymentAttemptUpdate) SetOrClearProviderSessionID(value *string) *PaymentAttemptUpdate {
+	if value == nil {
+		return u.ClearProviderSessionID()
+	}
+	return u.SetProviderSessionID(*value)
+}
+
+func (u *PaymentAttemptUpdateOne) SetOrClearProviderSessionID(value *string) *PaymentAttemptUpdateOne {
+	if value == nil {
+		return u.ClearProviderSessionID()
+	}
+	return u.SetProviderSessionID(*value)
 }
 
 func (u *PlanUpdate) SetOrClearMetadata(value *map[string]string) *PlanUpdate {
@@ -6094,6 +6402,146 @@ func (u *PlanRateCardUpdateOne) SetOrClearFeatureID(value *string) *PlanRateCard
 		return u.ClearFeatureID()
 	}
 	return u.SetFeatureID(*value)
+}
+
+func (u *ReceivableAccountUpdate) SetOrClearAnnotations(value *models.Annotations) *ReceivableAccountUpdate {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *ReceivableAccountUpdateOne) SetOrClearAnnotations(value *models.Annotations) *ReceivableAccountUpdateOne {
+	if value == nil {
+		return u.ClearAnnotations()
+	}
+	return u.SetAnnotations(*value)
+}
+
+func (u *ReceivableAccountUpdate) SetOrClearDeletedAt(value *time.Time) *ReceivableAccountUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ReceivableAccountUpdateOne) SetOrClearDeletedAt(value *time.Time) *ReceivableAccountUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ReceivablePeriodUpdate) SetOrClearDeletedAt(value *time.Time) *ReceivablePeriodUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *ReceivablePeriodUpdateOne) SetOrClearDeletedAt(value *time.Time) *ReceivablePeriodUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearDeletedAt(value *time.Time) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearDeletedAt(value *time.Time) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearReason(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearReason()
+	}
+	return u.SetReason(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearReason(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearReason()
+	}
+	return u.SetReason(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearProviderName(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearProviderName()
+	}
+	return u.SetProviderName(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearProviderName(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearProviderName()
+	}
+	return u.SetProviderName(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearProviderRefundID(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearProviderRefundID()
+	}
+	return u.SetProviderRefundID(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearProviderRefundID(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearProviderRefundID()
+	}
+	return u.SetProviderRefundID(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearFenceSequence(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearFenceSequence()
+	}
+	return u.SetFenceSequence(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearFenceSequence(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearFenceSequence()
+	}
+	return u.SetFenceSequence(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearSnapshotVersion()
+	}
+	return u.SetSnapshotVersion(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearSnapshotVersion()
+	}
+	return u.SetSnapshotVersion(*value)
+}
+
+func (u *RefundRequestUpdate) SetOrClearFailureReason(value *string) *RefundRequestUpdate {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
+}
+
+func (u *RefundRequestUpdateOne) SetOrClearFailureReason(value *string) *RefundRequestUpdateOne {
+	if value == nil {
+		return u.ClearFailureReason()
+	}
+	return u.SetFailureReason(*value)
 }
 
 func (u *SubjectUpdate) SetOrClearDeletedAt(value *time.Time) *SubjectUpdate {

@@ -3793,6 +3793,188 @@ var (
 			},
 		},
 	}
+	// CommerceOrdersColumns holds the columns for the "commerce_orders" table.
+	CommerceOrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "public_id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"plan_purchase", "subscription_renewal", "wallet_top_up"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"created", "awaiting_payment", "paid", "fulfilled", "cancelled", "expired", "refund_pending", "partially_refunded", "refunded"}, Default: "created"},
+		{Name: "total_cents", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+	}
+	// CommerceOrdersTable holds the schema information for the "commerce_orders" table.
+	CommerceOrdersTable = &schema.Table{
+		Name:       "commerce_orders",
+		Columns:    CommerceOrdersColumns,
+		PrimaryKey: []*schema.Column{CommerceOrdersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "commerceorder_id",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceOrdersColumns[0]},
+			},
+			{
+				Name:    "commerceorder_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOrdersColumns[1]},
+			},
+			{
+				Name:    "commerceorder_namespace_customer_id_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceOrdersColumns[1], CommerceOrdersColumns[6], CommerceOrdersColumns[11]},
+			},
+			{
+				Name:    "commerceorder_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOrdersColumns[1], CommerceOrdersColumns[6], CommerceOrdersColumns[8]},
+			},
+		},
+	}
+	// CommerceOrderLinesColumns holds the columns for the "commerce_order_lines" table.
+	CommerceOrderLinesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "product_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "product_sku", Type: field.TypeString, Default: ""},
+		{Name: "product_name", Type: field.TypeString, Default: ""},
+		{Name: "quantity", Type: field.TypeInt32},
+		{Name: "unit_price_cents", Type: field.TypeInt64},
+		{Name: "subtotal_cents", Type: field.TypeInt64},
+		{Name: "snapshot_data", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// CommerceOrderLinesTable holds the schema information for the "commerce_order_lines" table.
+	CommerceOrderLinesTable = &schema.Table{
+		Name:       "commerce_order_lines",
+		Columns:    CommerceOrderLinesColumns,
+		PrimaryKey: []*schema.Column{CommerceOrderLinesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "commerce_order_lines_commerce_orders_lines",
+				Columns:    []*schema.Column{CommerceOrderLinesColumns[9]},
+				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "commerceorderline_id",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceOrderLinesColumns[0]},
+			},
+			{
+				Name:    "commerceorderline_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOrderLinesColumns[1]},
+			},
+			{
+				Name:    "commerceorderline_namespace_product_id",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOrderLinesColumns[1], CommerceOrderLinesColumns[2]},
+			},
+		},
+	}
+	// CommerceOutboxesColumns holds the columns for the "commerce_outboxes" table.
+	CommerceOutboxesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "aggregate_type", Type: field.TypeString},
+		{Name: "aggregate_id", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "published", Type: field.TypeBool, Default: false},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+	}
+	// CommerceOutboxesTable holds the schema information for the "commerce_outboxes" table.
+	CommerceOutboxesTable = &schema.Table{
+		Name:       "commerce_outboxes",
+		Columns:    CommerceOutboxesColumns,
+		PrimaryKey: []*schema.Column{CommerceOutboxesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "commerceoutbox_id",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceOutboxesColumns[0]},
+			},
+			{
+				Name:    "commerceoutbox_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1]},
+			},
+			{
+				Name:    "commerceoutbox_namespace_published",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1], CommerceOutboxesColumns[7]},
+			},
+			{
+				Name:    "commerceoutbox_namespace_aggregate_id",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceOutboxesColumns[1], CommerceOutboxesColumns[4]},
+			},
+		},
+	}
+	// CommerceProductsColumns holds the columns for the "commerce_products" table.
+	CommerceProductsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "sku", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"plan_purchase", "subscription_renewal", "wallet_top_up"}},
+		{Name: "price_cents", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+	}
+	// CommerceProductsTable holds the schema information for the "commerce_products" table.
+	CommerceProductsTable = &schema.Table{
+		Name:       "commerce_products",
+		Columns:    CommerceProductsColumns,
+		PrimaryKey: []*schema.Column{CommerceProductsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "commerceproduct_id",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceProductsColumns[0]},
+			},
+			{
+				Name:    "commerceproduct_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceProductsColumns[1]},
+			},
+			{
+				Name:    "commerceproduct_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceProductsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "commerceproduct_namespace_sku",
+				Unique:  true,
+				Columns: []*schema.Column{CommerceProductsColumns[1], CommerceProductsColumns[6]},
+			},
+			{
+				Name:    "commerceproduct_namespace_kind",
+				Unique:  false,
+				Columns: []*schema.Column{CommerceProductsColumns[1], CommerceProductsColumns[8]},
+			},
+		},
+	}
 	// CreditRealizationLineagesColumns holds the columns for the "credit_realization_lineages" table.
 	CreditRealizationLineagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -4281,6 +4463,55 @@ var (
 			},
 		},
 	}
+	// ExternalInvoiceRefsColumns holds the columns for the "external_invoice_refs" table.
+	ExternalInvoiceRefsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "invoice_number", Type: field.TypeString},
+		{Name: "invoice_url", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"draft", "issued", "void", "paid"}, Default: "draft"},
+		{Name: "issued_at", Type: field.TypeTime, Nullable: true},
+		{Name: "receivable_period_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// ExternalInvoiceRefsTable holds the schema information for the "external_invoice_refs" table.
+	ExternalInvoiceRefsTable = &schema.Table{
+		Name:       "external_invoice_refs",
+		Columns:    ExternalInvoiceRefsColumns,
+		PrimaryKey: []*schema.Column{ExternalInvoiceRefsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "external_invoice_refs_receivable_periods_invoice_refs",
+				Columns:    []*schema.Column{ExternalInvoiceRefsColumns[9]},
+				RefColumns: []*schema.Column{ReceivablePeriodsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "externalinvoiceref_id",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalInvoiceRefsColumns[0]},
+			},
+			{
+				Name:    "externalinvoiceref_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{ExternalInvoiceRefsColumns[1]},
+			},
+			{
+				Name:    "externalinvoiceref_namespace_invoice_number",
+				Unique:  true,
+				Columns: []*schema.Column{ExternalInvoiceRefsColumns[1], ExternalInvoiceRefsColumns[5]},
+			},
+			{
+				Name:    "externalinvoiceref_namespace_receivable_period_id",
+				Unique:  false,
+				Columns: []*schema.Column{ExternalInvoiceRefsColumns[1], ExternalInvoiceRefsColumns[9]},
+			},
+		},
+	}
 	// FeaturesColumns holds the columns for the "features" table.
 	FeaturesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -4353,6 +4584,61 @@ var (
 				Annotation: &entsql.IndexAnnotation{
 					Where: "archived_at IS NULL",
 				},
+			},
+		},
+	}
+	// FulfillmentsColumns holds the columns for the "fulfillments" table.
+	FulfillmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "fulfilled", "failed"}, Default: "pending"},
+		{Name: "claimed_at", Type: field.TypeTime, Nullable: true},
+		{Name: "grant_id", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "credits_granted", Type: field.TypeInt64, Default: 0},
+		{Name: "fulfilled_at", Type: field.TypeTime, Nullable: true},
+		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
+		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// FulfillmentsTable holds the schema information for the "fulfillments" table.
+	FulfillmentsTable = &schema.Table{
+		Name:       "fulfillments",
+		Columns:    FulfillmentsColumns,
+		PrimaryKey: []*schema.Column{FulfillmentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "fulfillments_commerce_orders_fulfillments",
+				Columns:    []*schema.Column{FulfillmentsColumns[12]},
+				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "fulfillment_id",
+				Unique:  true,
+				Columns: []*schema.Column{FulfillmentsColumns[0]},
+			},
+			{
+				Name:    "fulfillment_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{FulfillmentsColumns[1]},
+			},
+			{
+				Name:    "fulfillment_namespace_commerce_order_id",
+				Unique:  true,
+				Columns: []*schema.Column{FulfillmentsColumns[1], FulfillmentsColumns[12]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status = 'fulfilled'",
+				},
+			},
+			{
+				Name:    "fulfillment_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{FulfillmentsColumns[1], FulfillmentsColumns[5], FulfillmentsColumns[6]},
 			},
 		},
 	}
@@ -5438,6 +5724,57 @@ var (
 			},
 		},
 	}
+	// OfflinePaymentsColumns holds the columns for the "offline_payments" table.
+	OfflinePaymentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "amount_cents", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "confirmed_by", Type: field.TypeString},
+		{Name: "confirmed_at", Type: field.TypeTime},
+		{Name: "reference", Type: field.TypeString, Nullable: true},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "receivable_account_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// OfflinePaymentsTable holds the schema information for the "offline_payments" table.
+	OfflinePaymentsTable = &schema.Table{
+		Name:       "offline_payments",
+		Columns:    OfflinePaymentsColumns,
+		PrimaryKey: []*schema.Column{OfflinePaymentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "offline_payments_receivable_accounts_offline_payments",
+				Columns:    []*schema.Column{OfflinePaymentsColumns[11]},
+				RefColumns: []*schema.Column{ReceivableAccountsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "offlinepayment_id",
+				Unique:  true,
+				Columns: []*schema.Column{OfflinePaymentsColumns[0]},
+			},
+			{
+				Name:    "offlinepayment_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{OfflinePaymentsColumns[1]},
+			},
+			{
+				Name:    "offlinepayment_namespace_receivable_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{OfflinePaymentsColumns[1], OfflinePaymentsColumns[11]},
+			},
+			{
+				Name:    "offlinepayment_namespace_confirmed_at",
+				Unique:  false,
+				Columns: []*schema.Column{OfflinePaymentsColumns[1], OfflinePaymentsColumns[8]},
+			},
+		},
+	}
 	// OrganizationDefaultTaxCodesColumns holds the columns for the "organization_default_tax_codes" table.
 	OrganizationDefaultTaxCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -5480,6 +5817,123 @@ var (
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},
+			},
+		},
+	}
+	// PaymentAttemptsColumns holds the columns for the "payment_attempts" table.
+	PaymentAttemptsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
+		{Name: "provider_order_id", Type: field.TypeString, Nullable: true},
+		{Name: "provider_payment_id", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"created", "pending", "succeeded", "failed", "closed"}, Default: "created"},
+		{Name: "provider_session_id", Type: field.TypeString, Nullable: true},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "amount_cents", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// PaymentAttemptsTable holds the schema information for the "payment_attempts" table.
+	PaymentAttemptsTable = &schema.Table{
+		Name:       "payment_attempts",
+		Columns:    PaymentAttemptsColumns,
+		PrimaryKey: []*schema.Column{PaymentAttemptsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_attempts_commerce_orders_payment_attempts",
+				Columns:    []*schema.Column{PaymentAttemptsColumns[14]},
+				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentattempt_id",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentAttemptsColumns[0]},
+			},
+			{
+				Name:    "paymentattempt_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1]},
+			},
+			{
+				Name:    "paymentattempt_namespace_customer_id_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[5], PaymentAttemptsColumns[11]},
+			},
+			{
+				Name:    "paymentattempt_namespace_provider_provider_order_id",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[6], PaymentAttemptsColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "provider_order_id IS NOT NULL",
+				},
+			},
+			{
+				Name:    "paymentattempt_namespace_provider_provider_payment_id",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[6], PaymentAttemptsColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "provider_payment_id IS NOT NULL",
+				},
+			},
+			{
+				Name:    "paymentattempt_namespace_commerce_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[14]},
+			},
+			{
+				Name:    "paymentattempt_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[5], PaymentAttemptsColumns[9]},
+			},
+		},
+	}
+	// PaymentFactsColumns holds the columns for the "payment_facts" table.
+	PaymentFactsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "raw_hash", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
+		{Name: "signed_payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "timestamp", Type: field.TypeTime},
+		{Name: "payment_attempt_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// PaymentFactsTable holds the schema information for the "payment_facts" table.
+	PaymentFactsTable = &schema.Table{
+		Name:       "payment_facts",
+		Columns:    PaymentFactsColumns,
+		PrimaryKey: []*schema.Column{PaymentFactsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "payment_facts_payment_attempts_facts",
+				Columns:    []*schema.Column{PaymentFactsColumns[7]},
+				RefColumns: []*schema.Column{PaymentAttemptsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "paymentfact_id",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentFactsColumns[0]},
+			},
+			{
+				Name:    "paymentfact_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentFactsColumns[1]},
+			},
+			{
+				Name:    "paymentfact_namespace_raw_hash",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentFactsColumns[1], PaymentFactsColumns[3]},
 			},
 		},
 	}
@@ -5791,6 +6245,206 @@ var (
 				Name:    "planratecard_custom_currency_id",
 				Unique:  false,
 				Columns: []*schema.Column{PlanRateCardsColumns[19]},
+			},
+		},
+	}
+	// ReceivableAccountsColumns holds the columns for the "receivable_accounts" table.
+	ReceivableAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "annotations", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "credit_limit_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "current_balance_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+	}
+	// ReceivableAccountsTable holds the schema information for the "receivable_accounts" table.
+	ReceivableAccountsTable = &schema.Table{
+		Name:       "receivable_accounts",
+		Columns:    ReceivableAccountsColumns,
+		PrimaryKey: []*schema.Column{ReceivableAccountsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "receivableaccount_id",
+				Unique:  true,
+				Columns: []*schema.Column{ReceivableAccountsColumns[0]},
+			},
+			{
+				Name:    "receivableaccount_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{ReceivableAccountsColumns[1]},
+			},
+			{
+				Name:    "receivableaccount_annotations",
+				Unique:  false,
+				Columns: []*schema.Column{ReceivableAccountsColumns[2]},
+				Annotation: &entsql.IndexAnnotation{
+					Types: map[string]string{
+						"postgres": "GIN",
+					},
+				},
+			},
+			{
+				Name:    "receivableaccount_namespace_customer_id",
+				Unique:  true,
+				Columns: []*schema.Column{ReceivableAccountsColumns[1], ReceivableAccountsColumns[6]},
+			},
+		},
+	}
+	// ReceivablePeriodsColumns holds the columns for the "receivable_periods" table.
+	ReceivablePeriodsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"open", "closed", "partially_paid", "paid", "overdue"}, Default: "open"},
+		{Name: "period_start", Type: field.TypeTime},
+		{Name: "period_end", Type: field.TypeTime},
+		{Name: "total_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "paid_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "receivable_account_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// ReceivablePeriodsTable holds the schema information for the "receivable_periods" table.
+	ReceivablePeriodsTable = &schema.Table{
+		Name:       "receivable_periods",
+		Columns:    ReceivablePeriodsColumns,
+		PrimaryKey: []*schema.Column{ReceivablePeriodsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "receivable_periods_receivable_accounts_periods",
+				Columns:    []*schema.Column{ReceivablePeriodsColumns[11]},
+				RefColumns: []*schema.Column{ReceivableAccountsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "receivableperiod_id",
+				Unique:  true,
+				Columns: []*schema.Column{ReceivablePeriodsColumns[0]},
+			},
+			{
+				Name:    "receivableperiod_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{ReceivablePeriodsColumns[1]},
+			},
+			{
+				Name:    "receivableperiod_namespace_receivable_account_id_period_start",
+				Unique:  true,
+				Columns: []*schema.Column{ReceivablePeriodsColumns[1], ReceivablePeriodsColumns[11], ReceivablePeriodsColumns[6]},
+			},
+			{
+				Name:    "receivableperiod_namespace_status",
+				Unique:  false,
+				Columns: []*schema.Column{ReceivablePeriodsColumns[1], ReceivablePeriodsColumns[5]},
+			},
+		},
+	}
+	// RefundFactsColumns holds the columns for the "refund_facts" table.
+	RefundFactsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "raw_hash", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
+		{Name: "signed_payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "timestamp", Type: field.TypeTime},
+		{Name: "refund_request_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// RefundFactsTable holds the schema information for the "refund_facts" table.
+	RefundFactsTable = &schema.Table{
+		Name:       "refund_facts",
+		Columns:    RefundFactsColumns,
+		PrimaryKey: []*schema.Column{RefundFactsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "refund_facts_refund_requests_facts",
+				Columns:    []*schema.Column{RefundFactsColumns[7]},
+				RefColumns: []*schema.Column{RefundRequestsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "refundfact_id",
+				Unique:  true,
+				Columns: []*schema.Column{RefundFactsColumns[0]},
+			},
+			{
+				Name:    "refundfact_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{RefundFactsColumns[1]},
+			},
+		},
+	}
+	// RefundRequestsColumns holds the columns for the "refund_requests" table.
+	RefundRequestsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "amount_cents", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending_fence", "provider_processing", "ledger_reversing", "fulfilled", "failed"}, Default: "pending_fence"},
+		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "credit_quantum", Type: field.TypeInt64, Default: 10},
+		{Name: "refund_quantum_fen", Type: field.TypeInt64, Default: 1},
+		{Name: "reserved_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "refund_fen", Type: field.TypeInt64, Default: 0},
+		{Name: "remainder_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "provider_name", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "provider_refund_id", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "fence_sequence", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "snapshot_version", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
+		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
+	}
+	// RefundRequestsTable holds the schema information for the "refund_requests" table.
+	RefundRequestsTable = &schema.Table{
+		Name:       "refund_requests",
+		Columns:    RefundRequestsColumns,
+		PrimaryKey: []*schema.Column{RefundRequestsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "refund_requests_commerce_orders_refund_requests",
+				Columns:    []*schema.Column{RefundRequestsColumns[21]},
+				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "refundrequest_id",
+				Unique:  true,
+				Columns: []*schema.Column{RefundRequestsColumns[0]},
+			},
+			{
+				Name:    "refundrequest_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{RefundRequestsColumns[1]},
+			},
+			{
+				Name:    "refundrequest_namespace_customer_id_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[5], RefundRequestsColumns[10]},
+			},
+			{
+				Name:    "refundrequest_namespace_commerce_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[21]},
+			},
+			{
+				Name:    "refundrequest_namespace_customer_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[5], RefundRequestsColumns[8]},
 			},
 		},
 	}
@@ -6430,6 +7084,10 @@ var (
 		ChargeUsageBasedRunInvoicedUsagesTable,
 		ChargeUsageBasedRunPaymentsTable,
 		ChargeUsageBasedRunsTable,
+		CommerceOrdersTable,
+		CommerceOrderLinesTable,
+		CommerceOutboxesTable,
+		CommerceProductsTable,
 		CreditRealizationLineagesTable,
 		CreditRealizationLineageSegmentsTable,
 		CurrencyCostBasesTable,
@@ -6438,7 +7096,9 @@ var (
 		CustomerAiRatePackagesTable,
 		CustomerSubjectsTable,
 		EntitlementsTable,
+		ExternalInvoiceRefsTable,
 		FeaturesTable,
+		FulfillmentsTable,
 		GrantsTable,
 		LlmCostPricesTable,
 		LedgerAccountsTable,
@@ -6456,11 +7116,18 @@ var (
 		NotificationEventsTable,
 		NotificationEventDeliveryStatusTable,
 		NotificationRulesTable,
+		OfflinePaymentsTable,
 		OrganizationDefaultTaxCodesTable,
+		PaymentAttemptsTable,
+		PaymentFactsTable,
 		PlansTable,
 		PlanAddonsTable,
 		PlanPhasesTable,
 		PlanRateCardsTable,
+		ReceivableAccountsTable,
+		ReceivablePeriodsTable,
+		RefundFactsTable,
+		RefundRequestsTable,
 		SubjectsTable,
 		SubscriptionsTable,
 		SubscriptionAddonsTable,
@@ -6671,12 +7338,14 @@ func init() {
 	ChargeUsageBasedRunsTable.ForeignKeys[1].RefTable = BillingInvoiceLinesTable
 	ChargeUsageBasedRunsTable.ForeignKeys[2].RefTable = ChargeUsageBasedTable
 	ChargeUsageBasedRunsTable.ForeignKeys[3].RefTable = FeaturesTable
+	CommerceOrderLinesTable.ForeignKeys[0].RefTable = CommerceOrdersTable
 	CreditRealizationLineagesTable.ForeignKeys[0].RefTable = ChargesTable
 	CreditRealizationLineageSegmentsTable.ForeignKeys[0].RefTable = CreditRealizationLineagesTable
 	CurrencyCostBasesTable.ForeignKeys[0].RefTable = CustomCurrenciesTable
 	CustomerSubjectsTable.ForeignKeys[0].RefTable = CustomersTable
 	EntitlementsTable.ForeignKeys[0].RefTable = CustomersTable
 	EntitlementsTable.ForeignKeys[1].RefTable = FeaturesTable
+	ExternalInvoiceRefsTable.ForeignKeys[0].RefTable = ReceivablePeriodsTable
 	FeaturesTable.ForeignKeys[0].RefTable = MetersTable
 	FeaturesTable.Annotation = &entsql.Annotation{}
 	FeaturesTable.Annotation.Checks = map[string]string{
@@ -6684,6 +7353,7 @@ func init() {
 		"unit_cost_llm_provider_mutual_exclusive":   "NOT (unit_cost_llm_provider_property IS NOT NULL AND unit_cost_llm_provider IS NOT NULL)",
 		"unit_cost_llm_token_type_mutual_exclusive": "NOT (unit_cost_llm_token_type_property IS NOT NULL AND unit_cost_llm_token_type IS NOT NULL)",
 	}
+	FulfillmentsTable.ForeignKeys[0].RefTable = CommerceOrdersTable
 	GrantsTable.ForeignKeys[0].RefTable = EntitlementsTable
 	LedgerBreakageRecordsTable.ForeignKeys[0].RefTable = LedgerBreakageRecordsTable
 	LedgerBreakageRecordsTable.ForeignKeys[1].RefTable = LedgerBreakageRecordsTable
@@ -6702,8 +7372,11 @@ func init() {
 	LedgerSubAccountRoutesTable.ForeignKeys[0].RefTable = LedgerAccountsTable
 	LedgerTransactionsTable.ForeignKeys[0].RefTable = LedgerTransactionGroupsTable
 	NotificationEventsTable.ForeignKeys[0].RefTable = NotificationRulesTable
+	OfflinePaymentsTable.ForeignKeys[0].RefTable = ReceivableAccountsTable
 	OrganizationDefaultTaxCodesTable.ForeignKeys[0].RefTable = TaxCodesTable
 	OrganizationDefaultTaxCodesTable.ForeignKeys[1].RefTable = TaxCodesTable
+	PaymentAttemptsTable.ForeignKeys[0].RefTable = CommerceOrdersTable
+	PaymentFactsTable.ForeignKeys[0].RefTable = PaymentAttemptsTable
 	PlansTable.ForeignKeys[0].RefTable = CustomCurrenciesTable
 	PlansTable.Annotation = &entsql.Annotation{}
 	PlansTable.Annotation.Checks = map[string]string{
@@ -6723,6 +7396,9 @@ func init() {
 		"plan_rate_card_currency_has_price":   "price IS NOT NULL OR currency IS NULL",
 		"plan_rate_card_currency_reference":   "(currency IS NULL AND custom_currency_id IS NULL) OR (currency IS NOT NULL AND char_length(currency) = 3 AND custom_currency_id IS NULL) OR (currency IS NOT NULL AND char_length(currency) > 3 AND custom_currency_id IS NOT NULL)",
 	}
+	ReceivablePeriodsTable.ForeignKeys[0].RefTable = ReceivableAccountsTable
+	RefundFactsTable.ForeignKeys[0].RefTable = RefundRequestsTable
+	RefundRequestsTable.ForeignKeys[0].RefTable = CommerceOrdersTable
 	SubscriptionsTable.ForeignKeys[0].RefTable = CustomersTable
 	SubscriptionsTable.ForeignKeys[1].RefTable = PlansTable
 	SubscriptionAddonsTable.ForeignKeys[0].RefTable = AddonsTable

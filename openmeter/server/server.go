@@ -16,6 +16,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/openmeterio/openmeter/api"
+	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
 	v3server "github.com/openmeterio/openmeter/api/v3/server"
 	appconfig "github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/portal/authenticator"
@@ -71,6 +72,10 @@ type Config struct {
 	PostAuthMiddlewares PostAuthMiddlewares
 	ResponseValidation  appconfig.ResponseValidationConfig
 	ClientIPMiddleware  server.MiddlewareFunc
+
+	// CommerceHandler is the optional Phase 2 commerce handler. When nil,
+	// commerce routes return 501 Not Implemented.
+	CommerceHandler commercehandler.Handler
 }
 
 func (c Config) Validate() error {
@@ -174,6 +179,7 @@ func NewServer(config *Config) (*Server, error) {
 		AIUsageEnabled:              config.RouterConfig.AIUsageEnabled,
 		AIUsageService:              config.RouterConfig.AIUsageService,
 		RuntimeAuthorizationService: config.RouterConfig.RuntimeAuthorizationService,
+		CommerceHandler:             config.CommerceHandler,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create v3 API: %w", err)

@@ -35,6 +35,7 @@ TypeSpec definitions and ships typed request and response models.
   - [Defaults](#defaults)
   - [Governance](#governance)
   - [AIUsage](#aiusage)
+  - [Commerce](#commerce)
 - [Error Handling](#error-handling)
 - [Pagination and Streaming](#pagination-and-streaming)
 
@@ -329,6 +330,24 @@ The full call path, HTTP route, and a short description are listed below.
 | `om.AIUsage.GetCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark. |
 | `om.AIUsage.GetCreditBalance` | `GET /customers/{customerId}/credit-balance` | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
 | `om.AIUsage.ListCreditTransactions` | `GET /customers/{customerId}/credit-transactions` | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
+
+### Commerce
+
+| Method | HTTP | Description |
+| --- | --- | --- |
+| `om.Commerce.GetCustomerWallet` | `GET /customers/{customerId}/wallet` | Get a customer's Wallet view, including all credit buckets and recent transactions. |
+| `om.Commerce.ListRechargeProducts` | `GET /recharge-products` | List all active recharge products available for purchase. |
+| `om.Commerce.CreateOrder` | `POST /orders` | Create a new order (plan purchase, subscription renewal, or wallet top-up). Returns HTTP 201 on first creation. Replaying the same idempotency key returns the stored order with HTTP 200. |
+| `om.Commerce.GetOrder` | `GET /orders/{orderId}` | Retrieve an order by its ID. |
+| `om.Commerce.CreateCheckoutSession` | `POST /orders/{orderId}/checkout-sessions` | Create a checkout session for an order, initiating a payment attempt with the specified provider. |
+| `om.Commerce.GetCheckoutSession` | `GET /checkout-sessions/{sessionId}` | Retrieve a checkout session by its ID (for polling payment status after QR code expiry or page reload). |
+| `om.Commerce.CreateRefund` | `POST /refunds` | Create a refund request for an order. |
+| `om.Commerce.GetRefund` | `GET /refunds/{refundId}` | Retrieve a refund by its ID. |
+| `om.Commerce.WechatPaymentCallback` | `POST /payment-providers/wechat/callback` | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
+| `om.Commerce.AlipayPaymentCallback` | `POST /payment-providers/alipay/callback` | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
+| `om.Commerce.ListReceivablePeriods` | `GET /customers/{customerId}/receivable-periods` | List receivable periods for a customer. |
+| `om.Commerce.CreateOfflinePayment` | `POST /customers/{customerId}/offline-payments` | Record an offline payment (bank transfer, enterprise remittance) for a customer. The payment is held for reconciliation before being applied to a receivable period. |
+| `om.Commerce.UpdateExternalInvoice` | `PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice` | Attach or update an external invoice reference on a receivable period. |
 
 ## Error Handling
 

@@ -413,12 +413,11 @@ export interface AiUsageUsageLineCreate {
   /**
    * Resource code identifying the billable resource type.
    *
-   * Valid codes include:
-   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
-   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
-   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
-   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
-   * `web_searches`, `agent_runs`.
+   * Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
+   * `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
+   * `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
+   * `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
+   * `mcp_tool_calls`, `web_searches`, `agent_runs`.
    */
   resourceCode: string
   /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */
@@ -429,15 +428,15 @@ export interface AiUsageUsageLineCreate {
    */
   provider?: string
   /**
-   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
-   * for provider-managed resources.
+   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
+   * provider-managed resources.
    */
   model?: string
   /** Optional resource-specific pricing dimensions (e.g. region, tier). */
   pricingDimensions?: Record<string, string>
   /**
-   * Stable zero-based position used for deterministic ceiling allocation when
-   * the batch total exceeds the reservation ceiling.
+   * Stable zero-based position used for deterministic ceiling allocation when the
+   * batch total exceeds the reservation ceiling.
    */
   canonicalLineIndex: number
 }
@@ -445,12 +444,22 @@ export interface AiUsageUsageLineCreate {
 /** Query parameters for the runtime authorization endpoint. */
 export interface AiUsageRuntimeAuthorizationQuery {
   /**
-   * The subject or tenant key that will produce the usage. Required to check
-   * the tenant's sequence watermark and reservation status.
+   * The subject or tenant key that will produce the usage. Required to check the
+   * tenant's sequence watermark and reservation status.
    */
   subjectKey?: string
   /** The reservation ID to check the ceiling against. */
   reservationId?: string
+}
+
+/**
+ * Acknowledgment returned to a payment provider callback. The body is a
+ * provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay
+ * "success").
+ */
+export interface CommerceProviderCallbackAck {
+  /** Provider-specific acknowledgment text. */
+  ack: string
 }
 
 /**
@@ -938,11 +947,26 @@ export interface UpdateResourceReference {
   id: string
 }
 
+/**
+ * A lightweight reference to a plan in the product catalog, embedded in order and
+ * catalog responses without duplicating the full plan definition.
+ */
+export interface CommercePlanRef {
+  planId: string
+  planKey: string
+  planVersion: string
+}
+
 /** A reference to a credit grant that was burned during settlement. */
 export interface AiUsageLedgerEntryRef {
   grantId: string
   amount: bigint
   priority: number
+}
+
+/** A lightweight reference to a subscription, embedded in order responses. */
+export interface CommerceSubscriptionRef {
+  subscriptionId: string
 }
 
 /** Metering event following the CloudEvents specification. */
@@ -1174,13 +1198,13 @@ export interface FeatureCostQueryRow {
  * Runtime authorization decision for a customer's AI usage.
  *
  * Returned before processing a usage batch to indicate whether the customer is
- * authorized to consume AI resources, along with their current credit balance
- * and reservation ceiling.
+ * authorized to consume AI resources, along with their current credit balance and
+ * reservation ceiling.
  */
 export interface AiUsageRuntimeAuthorization {
   /**
-   * The frozen Phase 1 contract version string (currently
-   * `weknora-billing-p1-v1`). Clients can use this to detect contract changes.
+   * The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`).
+   * Clients can use this to detect contract changes.
    */
   contractVersion: string
   /** The timestamp of the authorization check. */
@@ -1190,8 +1214,8 @@ export interface AiUsageRuntimeAuthorization {
   /** Available integer Credit balance for AI consumption. */
   availableCredits: bigint
   /**
-   * The reservation ceiling in Credits, if a reservation is active. When set,
-   * usage is capped at this amount per reservation period.
+   * The reservation ceiling in Credits, if a reservation is active. When set, usage
+   * is capped at this amount per reservation period.
    */
   reservationCeilingCredits?: bigint
   /**
@@ -1206,8 +1230,8 @@ export interface AiUsageRuntimeAuthorization {
 /**
  * Integer credit balance for AI usage, scoped to a single currency.
  *
- * Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as
- * signed 64-bit integers to avoid floating-point rounding in settlement.
+ * Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed
+ * 64-bit integers to avoid floating-point rounding in settlement.
  */
 export interface AiUsageCreditBalance {
   /** The timestamp of the balance retrieval. */
@@ -1218,6 +1242,33 @@ export interface AiUsageCreditBalance {
   settledCredits: bigint
   /** Credits granted but not yet written to the ledger. */
   pendingCredits: bigint
+}
+
+/**
+ * Request body for attaching or updating an external invoice reference on a
+ * receivable period (e.g. a VAT invoice number from the external tax service).
+ */
+export interface CommerceExternalInvoiceUpdate {
+  /** Client-generated idempotency key for the update. */
+  idempotencyKey: string
+  /** External invoice number or reference. */
+  invoiceNumber: string
+  /** URL or identifier of the external invoice document. */
+  invoiceUrl?: string
+  /** The invoicing party or tax service. */
+  issuer?: string
+  /** When the external invoice was issued. */
+  issuedAt?: Date
+}
+
+/** External invoice metadata attached to a receivable period. */
+export interface CommerceExternalInvoice {
+  receivablePeriodId: string
+  invoiceNumber: string
+  invoiceUrl?: string
+  issuer?: string
+  issuedAt?: Date
+  updatedAt: Date
 }
 
 /** Represents common fields of resources. */
@@ -2377,8 +2428,8 @@ export interface GovernanceQueryError {
 /**
  * Request body for submitting a Canonical AI Usage Batch.
  *
- * A batch represents one business action (a chat turn, an agent run, etc.) and
- * is the atomic unit of AI billing settlement.
+ * A batch represents one business action (a chat turn, an agent run, etc.) and is
+ * the atomic unit of AI billing settlement.
  */
 export interface AiUsageUsageBatchCreate {
   /**
@@ -2397,8 +2448,8 @@ export interface AiUsageUsageBatchCreate {
   /** The subject or tenant key that produced the usage. */
   subjectKey: string
   /**
-   * Monotonic per-tenant sequence number for watermark tracking. Must be
-   * strictly increasing within a tenant.
+   * Monotonic per-tenant sequence number for watermark tracking. Must be strictly
+   * increasing within a tenant.
    */
   tenantSeq: bigint
   /** When the business action occurred. Used for rate package version resolution. */
@@ -2406,8 +2457,8 @@ export interface AiUsageUsageBatchCreate {
   /** Links to the WeKnora runtime reservation, if any. */
   reservationId: string
   /**
-   * Caps the total Credit charge for this batch. The platform absorbs any
-   * excess above the ceiling.
+   * Caps the total Credit charge for this batch. The platform absorbs any excess
+   * above the ceiling.
    */
   reservationCeilingCredits: bigint
   /** Rate package version snapshot used for settlement. */
@@ -2420,8 +2471,8 @@ export interface AiUsageUsageBatchCreate {
    */
   providerManaged: boolean
   /**
-   * The individual resource consumption entries. Must contain at least one line
-   * for `component` billing mode.
+   * The individual resource consumption entries. Must contain at least one line for
+   * `component` billing mode.
    */
   lines: AiUsageUsageLineCreate[]
 }
@@ -2440,6 +2491,275 @@ export interface AiUsageCreditTransaction {
   availableBalanceBefore: bigint
   /** Available balance after this transaction. */
   availableBalanceAfter: bigint
+}
+
+/**
+ * A single credit bucket in a customer's Wallet. Each bucket represents credits
+ * from one funding source with its own balance and expiration rules.
+ *
+ * The Wallet is a read-only aggregation over the immutable Credit Ledger; it never
+ * holds a mutable second balance.
+ */
+export interface CommerceWalletBucket {
+  /** The funding source of this bucket. */
+  source: 'plan' | 'gift' | 'recharge' | 'enterprise_receivable'
+  /** Credits currently available for consumption. */
+  availableCredits: bigint
+  /** When this bucket's credits expire. Omitted if the bucket does not expire. */
+  expiresAt?: Date
+  /**
+   * Credits that are refundable (only present for recharge-source buckets).
+   * Represents the unspent portion of purchased credits.
+   */
+  refundableCredits?: bigint
+}
+
+/**
+ * Immutable ledger provenance attached to a Wallet transaction. Records the
+ * underlying ledger entry that backs the credit movement, without exposing
+ * internal Ent IDs.
+ */
+export interface CommerceLedgerProvenance {
+  /** Public identifier of the credit grant or ledger source. */
+  grantId: string
+  /**
+   * Settlement priority (0 = plan credit, 10 = gift, 20 = recharge, 30 = enterprise
+   * receivable).
+   */
+  priority: number
+  /** The credit source that funded this transaction. */
+  source: 'plan' | 'gift' | 'recharge' | 'enterprise_receivable'
+}
+
+/**
+ * A recharge product (SKU) available for purchase. Each product defines a credit
+ * package and its retail price in integer fen.
+ */
+export interface CommerceRechargeProduct {
+  /** Public identifier of the recharge product. */
+  id: string
+  /** Human-readable product name (e.g. "1,000 Points Pack"). */
+  name: string
+  /** Number of Credits granted on successful purchase. */
+  credits: bigint
+  /** Retail price in the smallest currency unit (fen). */
+  priceFen: bigint
+  /** Three-letter ISO 4217 currency code for the price. */
+  currency: string
+  /** Whether this product is currently available for purchase. */
+  active: boolean
+  /** Sort order for display. */
+  displayOrder?: number
+}
+
+/**
+ * Request body for creating a refund.
+ *
+ * Refunds are only permitted for unspent recharge-source credits. The system
+ * enforces a billing fence before reversing any ledger entries.
+ */
+export interface CommerceRefundCreate {
+  /** Client-generated idempotency key. */
+  idempotencyKey: string
+  /** The billing customer requesting the refund. */
+  billingCustomerId: string
+  /** The original order being refunded (must be a wallet_top_up). */
+  orderId: string
+  /**
+   * Refund amount in fen. Must not exceed the unspent portion of the original
+   * payment, in multiples of the credit quantum.
+   */
+  amountFen: bigint
+  /** The reason for the refund. */
+  reason: string
+}
+
+/**
+ * Request body for recording an offline payment (bank transfer, enterprise
+ * remittance) against a customer's account.
+ */
+export interface CommerceOfflinePaymentCreate {
+  /** Client-generated idempotency key. */
+  idempotencyKey: string
+  /** Payment amount in fen. */
+  amountFen: bigint
+  /** Currency of the payment. */
+  currency: string
+  /** The receivable period to apply this payment to, if applicable. */
+  receivablePeriodId?: string
+  /** External reference (bank transfer number, remittance advice). */
+  externalReference: string
+  /** When the payment was received. */
+  receivedAt: Date
+  /** Optional note from the submitter. */
+  note?: string
+}
+
+/** An offline payment record pending reconciliation and application. */
+export interface CommerceOfflinePayment {
+  /** Public identifier of the offline payment. */
+  id: string
+  idempotencyKey: string
+  amountFen: bigint
+  currency: string
+  receivablePeriodId?: string
+  externalReference: string
+  receivedAt: Date
+  note?: string
+  /** Whether this payment has been reconciled and applied. */
+  reconciled: boolean
+  createdAt: Date
+}
+
+/**
+ * A recharge product with promotional bonus credits (e.g. "buy 1000 get 100
+ * extra"). Bonus credits are granted as a separate gift-source bucket.
+ */
+export interface CommerceRechargeProductWithBonus {
+  /** Public identifier of the recharge product. */
+  id: string
+  /** Human-readable product name (e.g. "1,000 Points Pack"). */
+  name: string
+  /** Number of Credits granted on successful purchase. */
+  credits: bigint
+  /** Retail price in the smallest currency unit (fen). */
+  priceFen: bigint
+  /** Three-letter ISO 4217 currency code for the price. */
+  currency: string
+  /** Whether this product is currently available for purchase. */
+  active: boolean
+  /** Sort order for display. */
+  displayOrder?: number
+  /** Bonus gift credits granted on purchase, if any. */
+  bonusCredits?: bigint
+}
+
+/** Request body for creating a checkout session for an order. */
+export interface CommerceCheckoutSessionCreate {
+  /** Client-generated idempotency key for the checkout attempt. */
+  idempotencyKey: string
+  /** The payment channel to use for this checkout. */
+  provider: 'wechat' | 'alipay' | 'offline'
+  /** For offline payments: the external reference (e.g. bank transfer number). */
+  externalReference?: string
+}
+
+/** A checkout session for an order, representing a single payment attempt. */
+export interface CommerceCheckoutSession {
+  /** Public identifier of the checkout session. */
+  id: string
+  /** The order this checkout session belongs to. */
+  orderId: string
+  /** The payment channel for this attempt. */
+  provider: 'wechat' | 'alipay' | 'offline'
+  /** Current payment attempt status. */
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'closed'
+  /** Provider-specific payment URL or QR code payload (e.g. WeChat code_url). */
+  paymentUrl?: string
+  /** External provider order identifier. */
+  providerOrderId?: string
+  /** For offline: the external payment reference. */
+  externalReference?: string
+  /** When the checkout session was created. */
+  createdAt: Date
+  /** When the checkout session expires (QR code timeout). */
+  expiresAt?: Date
+}
+
+/**
+ * A verified payment fact from a payment provider. Represents a confirmed
+ * monetary transfer without exposing raw credentials.
+ */
+export interface CommercePaymentFact {
+  /** Public identifier of the payment fact. */
+  id: string
+  /** The order this payment belongs to. */
+  orderId: string
+  /** The checkout session associated with this payment. */
+  checkoutSessionId: string
+  /** The payment channel that processed this payment. */
+  provider: 'wechat' | 'alipay' | 'offline'
+  /** Confirmed amount in fen. */
+  amountFen: bigint
+  /** Currency of the payment. */
+  currency: string
+  /** External provider transaction identifier. */
+  providerTransactionId: string
+  /** External provider order identifier. */
+  providerOrderId: string
+  /** Current status of the payment attempt. */
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'closed'
+  /** When the payment fact was created. */
+  createdAt: Date
+  /** When the payment was confirmed by the provider. */
+  settledAt?: Date
+}
+
+/**
+ * A refund request, progressing through the billing fence and provider processing
+ * before the ledger is reversed.
+ */
+export interface CommerceRefund {
+  /** Public identifier of the refund. */
+  id: string
+  /** The idempotency key from the create request. */
+  idempotencyKey: string
+  billingCustomerId: string
+  orderId: string
+  /** Refund amount in fen. */
+  amountFen: bigint
+  /** Credits being reversed. */
+  creditsReversed: bigint
+  reason: string
+  /** The payment channel that will process the refund. */
+  provider: 'wechat' | 'alipay' | 'offline'
+  /** Current refund status. */
+  status:
+    | 'pending_fence'
+    | 'provider_processing'
+    | 'ledger_reversing'
+    | 'fulfilled'
+    | 'failed'
+  /** External provider refund identifier. */
+  providerRefundId?: string
+  /** Human-readable business tracking number. */
+  businessTrackingNumber?: string
+  /** When the refund was created. */
+  createdAt: Date
+  /** When the refund was last updated. */
+  updatedAt: Date
+  /** When the refund was fulfilled. */
+  fulfilledAt?: Date
+}
+
+/**
+ * An enterprise receivable period representing one monthly settlement cycle.
+ * Enterprise customers with approved contracts can consume on credit and settle
+ * via offline payments against these periods.
+ */
+export interface CommerceReceivablePeriod {
+  /** Public identifier of the receivable period. */
+  id: string
+  /** The billing customer this period belongs to. */
+  customerId: string
+  /** The start of the billing period (inclusive). */
+  periodStart: Date
+  /** The end of the billing period (exclusive). */
+  periodEnd: Date
+  /** Total credits consumed during this period. */
+  creditsConsumed: bigint
+  /** Total amount owed for this period in fen. */
+  amountDueFen: bigint
+  /** Amount already paid toward this period in fen. */
+  amountPaidFen: bigint
+  /** Currency for this period. */
+  currency: string
+  /** Current settlement status. */
+  status: 'open' | 'closed' | 'partially_paid' | 'paid' | 'overdue'
+  /** When the period was created. */
+  createdAt: Date
+  /** When the period was closed or settled. */
+  closedAt?: Date
 }
 
 /** App customer data. */
@@ -2955,6 +3275,64 @@ export interface InvoiceWorkflowAppsReferences {
 export interface UpdateRateCardTaxConfig {
   behavior?: 'inclusive' | 'exclusive'
   code: UpdateResourceReference
+}
+
+/** Request body for creating a new order. */
+export interface CommerceOrderCreate {
+  /**
+   * Client-generated idempotency key. Replaying the same key returns the stored
+   * order; a different payload for the same key returns HTTP 409.
+   */
+  idempotencyKey: string
+  /** The billing customer placing the order. */
+  billingCustomerId: string
+  /** The business type of the order. */
+  kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
+  /**
+   * For `plan_purchase` or `subscription_renewal`: the plan and billing period being
+   * purchased.
+   */
+  plan?: CommercePlanRef
+  /** For `wallet_top_up`: the recharge product being purchased. */
+  rechargeProductId?: string
+  /** The currency for this order (three-letter ISO 4217). */
+  currency: string
+}
+
+/** A commerce order representing a purchase intent (plan, renewal, or top-up). */
+export interface CommerceOrder {
+  /** Public identifier of the order. */
+  id: string
+  /** The idempotency key from the create request. */
+  idempotencyKey: string
+  billingCustomerId: string
+  kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
+  plan?: CommercePlanRef
+  rechargeProductId?: string
+  currency: string
+  /** Total order amount in fen (smallest currency unit). */
+  amountFen: bigint
+  /** Credits that will be granted on fulfillment (for top-up and plan orders). */
+  credits?: bigint
+  /** Current lifecycle status. */
+  status:
+    | 'created'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'fulfilled'
+    | 'cancelled'
+    | 'expired'
+    | 'refund_pending'
+    | 'partially_refunded'
+    | 'refunded'
+  /** Human-readable business tracking number shown to the customer. */
+  businessTrackingNumber?: string
+  /** When the order was created. */
+  createdAt: Date
+  /** When the order was last updated. */
+  updatedAt: Date
+  /** When the order expired or was cancelled. */
+  expiredAt?: Date
 }
 
 /** Filter options for listing ingested events. */
@@ -3601,6 +3979,34 @@ export interface AiCreditTransactionPaginatedResponse {
   meta: CursorMeta
 }
 
+/**
+ * An immutable credit movement on the Wallet, projected from the Credit Ledger.
+ * Every transaction carries immutable ledger provenance and a timestamp.
+ */
+export interface CommerceWalletTransaction {
+  /** Public identifier of the transaction. */
+  id: string
+  /** The type of credit movement. */
+  kind: 'funded' | 'consumed' | 'expired' | 'refunded' | 'adjusted'
+  /** Signed credit amount. Positive adds balance, negative reduces it. */
+  amount: bigint
+  /** Immutable ledger provenance linking this movement to its grant and source. */
+  provenance: CommerceLedgerProvenance
+  /** When the transaction occurred. */
+  occurredAt: Date
+}
+
+/** Response body for listing recharge products. */
+export interface CommerceRechargeProductList {
+  products: CommerceRechargeProduct[]
+}
+
+/** Cursor paginated response. */
+export interface ReceivablePeriodPaginatedResponse {
+  data: CommerceReceivablePeriod[]
+  meta: CursorMeta
+}
+
 /** Billing customer data. */
 export interface CustomerData {
   /**
@@ -3647,12 +4053,11 @@ export interface AiUsageUsageLine {
   /**
    * Resource code identifying the billable resource type.
    *
-   * Valid codes include:
-   * `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`,
-   * `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`,
-   * `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`,
-   * `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`,
-   * `web_searches`, `agent_runs`.
+   * Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
+   * `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
+   * `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
+   * `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
+   * `mcp_tool_calls`, `web_searches`, `agent_runs`.
    */
   resourceCode: string
   /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */
@@ -3663,15 +4068,15 @@ export interface AiUsageUsageLine {
    */
   provider?: string
   /**
-   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required
-   * for provider-managed resources.
+   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
+   * provider-managed resources.
    */
   model?: string
   /** Optional resource-specific pricing dimensions (e.g. region, tier). */
   pricingDimensions?: Record<string, string>
   /**
-   * Stable zero-based position used for deterministic ceiling allocation when
-   * the batch total exceeds the reservation ceiling.
+   * Stable zero-based position used for deterministic ceiling allocation when the
+   * batch total exceeds the reservation ceiling.
    */
   canonicalLineIndex: number
   /** Integer Credit charge for this line. */
@@ -3683,8 +4088,8 @@ export interface AiUsageUsageLine {
 }
 
 /**
- * A rating snapshot captures the cost and sales price resolution for one line
- * item within a settled batch.
+ * A rating snapshot captures the cost and sales price resolution for one line item
+ * within a settled batch.
  */
 export interface AiUsageRatingSnapshot {
   resourceCode: string
@@ -4412,6 +4817,25 @@ export interface GovernanceQueryResult {
    * this result.
    */
   updatedAt: Date
+}
+
+/**
+ * The aggregate Wallet view for a customer, combining all credit buckets and
+ * recent transactions.
+ */
+export interface CommerceWallet {
+  /** The billing customer this wallet belongs to. */
+  customerId: string
+  /** Phase 2 contract version for client compatibility detection. */
+  contractVersion: string
+  /** Total available credits across all buckets. */
+  totalAvailableCredits: bigint
+  /** Individual credit buckets, ordered by consumption priority. */
+  buckets: CommerceWalletBucket[]
+  /** Recent wallet transactions (most recent first). */
+  transactions?: CommerceWalletTransaction[]
+  /** When the wallet was retrieved. */
+  retrievedAt: Date
 }
 
 /** A settled AI Usage Batch with its rating and settlement results. */

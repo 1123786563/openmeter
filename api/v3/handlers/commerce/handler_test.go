@@ -1,0 +1,822 @@
+package commerce
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	api "github.com/openmeterio/openmeter/api/v3"
+	"github.com/openmeterio/openmeter/openmeter/commerce"
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
+	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
+)
+
+// ---------------------------------------------------------------------------
+// Mock implementations
+// ---------------------------------------------------------------------------
+
+type mockWallet struct {
+	wallet *commerce.Wallet
+	err    error
+}
+
+func (m *mockWallet) GetWallet(_ context.Context, _, _ string) (*commerce.Wallet, error) {
+	return m.wallet, m.err
+}
+
+type mockCatalog struct {
+	products []commerce.Product
+	product  *commerce.Product
+	err      error
+}
+
+func (m *mockCatalog) CreateProduct(_ context.Context, _ commerce.CreateProductInput) (*commerce.Product, error) {
+	return m.product, m.err
+}
+func (m *mockCatalog) GetProduct(_ context.Context, _, _ string) (*commerce.Product, error) {
+	return m.product, m.err
+}
+func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, _ bool) ([]commerce.Product, error) {
+	return m.products, m.err
+}
+func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductInput) (*commerce.Product, error) {
+	return m.product, m.err
+}
+
+type mockOrders struct {
+	order    *commerce.Order
+	created  bool
+	err      error
+	conflict bool
+}
+
+func (m *mockOrders) CreateOrder(_ context.Context, _ commerce.CreateOrderInput) (*commerce.Order, bool, error) {
+	return m.order, m.created, m.err
+}
+func (m *mockOrders) GetOrder(_ context.Context, _, _ string) (*commerce.Order, error) {
+	return m.order, m.err
+}
+func (m *mockOrders) TransitionStatus(_ context.Context, _, _ string, _ commerce.OrderStatus) (*commerce.Order, error) {
+	return m.order, m.err
+}
+
+type mockPayment struct {
+	attempt *payment.PaymentAttempt
+	err     error
+}
+
+func (m *mockPayment) CreateAttempt(_ context.Context, _ payment.CreateAttemptInput) (*payment.PaymentAttempt, bool, error) {
+	return m.attempt, false, m.err
+}
+func (m *mockPayment) GetAttempt(_ context.Context, _, _ string) (*payment.PaymentAttempt, error) {
+	return m.attempt, m.err
+}
+func (m *mockPayment) InitiateCheckout(_ context.Context, _, _ string) (payment.CheckoutResult, error) {
+	return payment.CheckoutResult{Attempt: m.attempt}, m.err
+}
+func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, _ []byte) (payment.CallbackResult, error) {
+	return payment.CallbackResult{}, m.err
+}
+func (m *mockPayment) ConfirmPayment(_ context.Context, _, _ string) (payment.CallbackResult, error) {
+	return payment.CallbackResult{}, m.err
+}
+
+type mockRefund struct {
+	rec     *refund.RefundRequest
+	created bool
+	err     error
+}
+
+func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput) (*refund.RefundRequest, bool, error) {
+	return m.rec, m.created, m.err
+}
+func (m *mockRefund) GetRefund(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
+	return m.rec, m.err
+}
+func (m *mockRefund) ProcessOne(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
+	return m.rec, m.err
+}
+func (m *mockRefund) ApplyRefundCallback(_ context.Context, _ string, _ payment.RefundFact) (*refund.RefundRequest, error) {
+	return m.rec, m.err
+}
+
+func testHandler(svc Services) Handler {
+	return New(func(_ context.Context) (string, error) {
+		return "test-ns", nil
+	}, svc)
+}
+
+func doRequest(t *testing.T, h http.Handler, method, path string, body any, pathValues map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatalf("encode body: %v", err)
+		}
+	}
+	req := httptest.NewRequest(method, path, &buf)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range pathValues {
+		req.SetPathValue(k, v)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+// ---------------------------------------------------------------------------
+// Wallet tests
+// ---------------------------------------------------------------------------
+
+func TestGetCustomerWallet_Success(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID:            "cust-1",
+			ContractVersion:       commerce.ContractVersion,
+			TotalAvailableCredits: 1000,
+			Buckets:               []commerce.WalletBucket{},
+			RetrievedAt:           now,
+		}},
+	})
+	rr := doRequest(t, h.GetCustomerWallet(), http.MethodGet, "/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var wallet api.CommerceWallet
+	if err := json.NewDecoder(rr.Body).Decode(&wallet); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if wallet.CustomerId != "cust-1" {
+		t.Errorf("expected cust-1, got %s", wallet.CustomerId)
+	}
+	if wallet.ContractVersion != commerce.ContractVersion {
+		t.Errorf("contract version mismatch")
+	}
+}
+
+func TestGetCustomerWallet_NotFound(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{err: commerce.ErrOrderNotFound},
+	})
+	rr := doRequest(t, h.GetCustomerWallet(), http.MethodGet, "/customers/other/wallet", nil,
+		map[string]string{"customerId": "other"})
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+func TestGetCustomerWallet_MissingCustomerId(t *testing.T) {
+	h := testHandler(Services{Wallet: &mockWallet{}})
+	rr := doRequest(t, h.GetCustomerWallet(), http.MethodGet, "/customers//wallet", nil, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for missing customerId, got %d", rr.Code)
+	}
+}
+
+func TestWalletResponse_NoSecretFields(t *testing.T) {
+	rc := int64(500)
+	w := &commerce.Wallet{
+		CustomerID:            "cust-1",
+		ContractVersion:       commerce.ContractVersion,
+		TotalAvailableCredits: 1000,
+		Buckets: []commerce.WalletBucket{
+			{Source: commerce.BucketSourceRecharge, AvailableCredits: 500, RefundableCredits: &rc},
+		},
+	}
+	apiWallet := toAPIWallet(w)
+	data, _ := json.Marshal(apiWallet)
+	body := string(data)
+	for _, secret := range []string{"api_key", "token", "secret", "app_secret"} {
+		if containsStr(body, secret) {
+			t.Errorf("wallet response contains forbidden field: %s", secret)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Catalog tests
+// ---------------------------------------------------------------------------
+
+func TestListRechargeProducts_Success(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{products: []commerce.Product{
+			{DisplayName: "100 Credits", AmountMinor: 1000, Currency: "CNY", Credits: 100, Active: true},
+		}},
+	})
+	rr := doRequest(t, h.ListRechargeProducts(), http.MethodGet, "/recharge-products", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var list api.CommerceRechargeProductList
+	if err := json.NewDecoder(rr.Body).Decode(&list); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(list.Products) != 1 {
+		t.Fatalf("expected 1 product, got %d", len(list.Products))
+	}
+	if list.Products[0].PriceFen != 1000 {
+		t.Errorf("expected 1000, got %d", list.Products[0].PriceFen)
+	}
+}
+
+func TestListRechargeProducts_CurrencyFilter(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{products: []commerce.Product{
+			{DisplayName: "CNY Pack", AmountMinor: 1000, Currency: "CNY", Credits: 100, Active: true},
+			{DisplayName: "USD Pack", AmountMinor: 100, Currency: "USD", Credits: 100, Active: true},
+		}},
+	})
+	rr := doRequest(t, h.ListRechargeProducts(), http.MethodGet, "/recharge-products?currency=CNY", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	var list api.CommerceRechargeProductList
+	_ = json.NewDecoder(rr.Body).Decode(&list)
+	if len(list.Products) != 1 {
+		t.Errorf("expected 1 product after filter, got %d", len(list.Products))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Order tests
+// ---------------------------------------------------------------------------
+
+func TestCreateOrder_Success(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{
+			order: &commerce.Order{
+				PublicID:    "ord-1",
+				CustomerID:  "cust-1",
+				Kind:        commerce.OrderKindWalletTopUp,
+				Status:      commerce.OrderStatusCreated,
+				AmountMinor: 1000,
+				Currency:    "CNY",
+			},
+			created: true,
+		},
+	})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "cust-1",
+		Kind:              api.CommerceOrderKindWalletTopUp,
+		Currency:          "CNY",
+		IdempotencyKey:    "idem-1",
+	}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrder_IdempotentReplay(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{
+			order: &commerce.Order{
+				PublicID:   "ord-1",
+				CustomerID: "cust-1",
+				Kind:       commerce.OrderKindWalletTopUp,
+				Status:     commerce.OrderStatusCreated,
+			},
+			created: false,
+		},
+	})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "cust-1",
+		Kind:              api.CommerceOrderKindWalletTopUp,
+		Currency:          "CNY",
+		IdempotencyKey:    "idem-1",
+	}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 on idempotent replay, got %d", rr.Code)
+	}
+}
+
+func TestGetOrder_NotFound(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{err: commerce.ErrOrderNotFound},
+	})
+	rr := doRequest(t, h.GetOrder(), http.MethodGet, "/orders/nonexistent", nil,
+		map[string]string{"orderId": "nonexistent"})
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Payment callback tests
+// ---------------------------------------------------------------------------
+
+func TestPaymentCallback_NoNamespace(t *testing.T) {
+	h := New(func(_ context.Context) (string, error) {
+		return "", errors.New("no namespace")
+	}, Services{Payment: &mockPayment{}})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 when namespace unresolvable, got %d", rr.Code)
+	}
+}
+
+func TestPaymentCallback_Success(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var ack api.CommerceProviderCallbackAck
+	if err := json.NewDecoder(rr.Body).Decode(&ack); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if ack.Ack == "" {
+		t.Error("expected non-empty ack")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Refund tests
+// ---------------------------------------------------------------------------
+
+func TestCreateRefund_Success(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Refund: &mockRefund{
+			rec: &refund.RefundRequest{
+				ID:              "ref-1",
+				CommerceOrderID: "ord-1",
+				CustomerID:      "cust-1",
+				Status:          refund.RefundStatusPendingFence,
+				CreatedAt:       now,
+				UpdatedAt:       now,
+			},
+			created: true,
+		},
+	})
+	body := api.CommerceRefundCreate{
+		BillingCustomerId: "cust-1",
+		OrderId:           "ord-1",
+		AmountFen:         500,
+		Reason:            "customer request",
+		IdempotencyKey:    "idem-ref-1",
+	}
+	rr := doRequest(t, h.CreateRefund(), http.MethodPost, "/refunds", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestGetRefund_Success(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Refund: &mockRefund{
+			rec: &refund.RefundRequest{
+				ID:              "ref-1",
+				CommerceOrderID: "ord-1",
+				CustomerID:      "cust-1",
+				Status:          refund.RefundStatusFulfilled,
+				CreatedAt:       now,
+				UpdatedAt:       now,
+			},
+		},
+	})
+	rr := doRequest(t, h.GetRefund(), http.MethodGet, "/refunds/ref-1", nil,
+		map[string]string{"refundId": "ref-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Enterprise tests
+// ---------------------------------------------------------------------------
+
+func TestListReceivablePeriods_Success(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.ListReceivablePeriods(), http.MethodGet, "/customers/cust-1/receivable-periods", nil,
+		map[string]string{"customerId": "cust-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp api.ReceivablePeriodPaginatedResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Data) != 0 {
+		t.Errorf("expected 0 periods, got %d", len(resp.Data))
+	}
+}
+
+func TestUpdateExternalInvoice_Success(t *testing.T) {
+	h := testHandler(Services{})
+	issuedAt := api.DateTime(time.Now().UTC())
+	body := api.CommerceExternalInvoiceUpdate{
+		InvoiceNumber:  "INV-001",
+		IdempotencyKey: "idem-inv-1",
+		IssuedAt:       &issuedAt,
+	}
+	rr := doRequest(t, h.UpdateExternalInvoice(), http.MethodPut, "/customers/cust-1/receivable-periods/per-1/external-invoice", body,
+		map[string]string{"customerId": "cust-1", "periodId": "per-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp api.CommerceExternalInvoice
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp.InvoiceNumber != "INV-001" {
+		t.Errorf("expected INV-001, got %s", resp.InvoiceNumber)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Idempotency conflict test (Important #5)
+// ---------------------------------------------------------------------------
+
+func TestCreateOrder_IdempotencyConflict_409(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{
+			err: commerce.ErrOrderIdempotencyConflict,
+		},
+	})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "cust-1",
+		Kind:              api.CommerceOrderKindWalletTopUp,
+		Currency:          "CNY",
+		IdempotencyKey:    "idem-conflict",
+	}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected 409 for idempotency conflict, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Catalog mutation tests (Important #6)
+// ---------------------------------------------------------------------------
+
+func TestCreateProduct_Success(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{
+			product: &commerce.Product{
+				DisplayName: "100 Credits",
+				SKU:         "SKU-100",
+				Kind:        commerce.ProductKindWalletTopUp,
+				Credits:     100,
+				AmountMinor: 1000,
+				Currency:    "CNY",
+				Active:      true,
+			},
+		},
+	})
+	body := map[string]any{
+		"sku":          "SKU-100",
+		"display_name": "100 Credits",
+		"kind":         "wallet_top_up",
+		"credits":      100,
+		"amount_fen":   1000,
+		"currency":     "CNY",
+	}
+	rr := doRequest(t, h.CreateProduct(), http.MethodPost, "/recharge-products", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var prod api.CommerceRechargeProduct
+	if err := json.NewDecoder(rr.Body).Decode(&prod); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if prod.PriceFen != 1000 {
+		t.Errorf("expected price 1000, got %d", prod.PriceFen)
+	}
+}
+
+func TestCreateProduct_SKUConflict(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{err: commerce.ErrSKUNotUnique},
+	})
+	body := map[string]any{
+		"sku":          "SKU-DUP",
+		"display_name": "Dup",
+		"kind":         "wallet_top_up",
+		"credits":      50,
+		"amount_fen":   500,
+		"currency":     "CNY",
+	}
+	rr := doRequest(t, h.CreateProduct(), http.MethodPost, "/recharge-products", body, nil)
+	if rr.Code != http.StatusConflict {
+		t.Errorf("expected 409 for duplicate SKU, got %d", rr.Code)
+	}
+}
+
+func TestUpdateProduct_Success(t *testing.T) {
+	active := true
+	h := testHandler(Services{
+		Catalog: &mockCatalog{
+			product: &commerce.Product{
+				DisplayName: "Updated Name",
+				AmountMinor: 2000,
+				Currency:    "CNY",
+				Active:      true,
+			},
+		},
+	})
+	body := map[string]any{
+		"display_name": "Updated Name",
+		"amount_fen":   2000,
+		"active":       active,
+	}
+	rr := doRequest(t, h.UpdateProduct(), http.MethodPut, "/recharge-products/prod-1", body,
+		map[string]string{"productId": "prod-1"})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var prod api.CommerceRechargeProduct
+	if err := json.NewDecoder(rr.Body).Decode(&prod); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if prod.PriceFen != 2000 {
+		t.Errorf("expected price 2000, got %d", prod.PriceFen)
+	}
+}
+
+func TestUpdateProduct_NotFound(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{err: commerce.ErrProductNotFound},
+	})
+	body := map[string]any{"display_name": "x"}
+	rr := doRequest(t, h.UpdateProduct(), http.MethodPut, "/recharge-products/none", body,
+		map[string]string{"productId": "none"})
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Nil-service 501 tests (Critical #2 verification)
+// ---------------------------------------------------------------------------
+
+func TestCreateCheckoutSession_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.CreateCheckoutSession(), http.MethodPost, "/orders/ord-1/checkout", nil,
+		map[string]string{"orderId": "ord-1"})
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment service, got %d", rr.Code)
+	}
+}
+
+func TestCreateRefund_NilRefund_501(t *testing.T) {
+	h := testHandler(Services{})
+	body := api.CommerceRefundCreate{
+		BillingCustomerId: "cust-1",
+		OrderId:           "ord-1",
+		AmountFen:         500,
+		IdempotencyKey:    "idem-r1",
+	}
+	rr := doRequest(t, h.CreateRefund(), http.MethodPost, "/refunds", body, nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil refund service, got %d", rr.Code)
+	}
+}
+
+func TestAlipayCallback_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment callback, got %d", rr.Code)
+	}
+}
+
+func TestWechatCallback_NilPayment_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil payment callback, got %d", rr.Code)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Payment callback transient error test (Important #3)
+// ---------------------------------------------------------------------------
+
+func TestPaymentCallback_TransientError_500(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: errors.New("database connection lost")},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 on transient error, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestPaymentCallback_SignatureRejection_200(t *testing.T) {
+	// Signature verification failures are ValidationIssues — definitive, so ACK (200)
+	h := testHandler(Services{
+		Payment: &mockPayment{err: commerce.ErrOrderNotFound},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 on definitive rejection, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func containsStr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
+// RBAC ownership check tests (C4)
+// ---------------------------------------------------------------------------
+
+// doRequestWithAuth is like doRequest but injects auth context values.
+func doRequestWithAuth(t *testing.T, h http.Handler, method, path string, body any, pathValues map[string]string, authCustomerID string, isAdmin bool) *httptest.ResponseRecorder {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatalf("encode body: %v", err)
+		}
+	}
+	req := httptest.NewRequest(method, path, &buf)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for k, v := range pathValues {
+		req.SetPathValue(k, v)
+	}
+	ctx := req.Context()
+	if authCustomerID != "" || authCustomerID == "" && isAdmin {
+		ctx = WithAuthCustomerID(ctx, authCustomerID)
+	}
+	ctx = WithAuthAdmin(ctx, isAdmin)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	return rr
+}
+
+// TestGetCustomerWallet_OwnershipForbidden verifies that an authenticated
+// non-admin customer gets 403 when trying to read another customer's wallet.
+func TestGetCustomerWallet_OwnershipForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	// Authenticated as cust-2, trying to read cust-1's wallet.
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"cust-2", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer access, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// TestGetCustomerWallet_OwnershipAllowed verifies that the authenticated
+// customer can read their own wallet.
+func TestGetCustomerWallet_OwnershipAllowed(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"cust-1", false)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 for own wallet, got %d", rr.Code)
+	}
+}
+
+// TestGetCustomerWallet_AdminCanReadAny verifies that an admin can read any
+// customer's wallet.
+func TestGetCustomerWallet_AdminCanReadAny(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{
+			CustomerID: "cust-1",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"},
+		"admin-user", true)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 for admin reading any wallet, got %d", rr.Code)
+	}
+}
+
+// TestGetOrder_OwnershipForbidden verifies cross-customer order access is denied.
+func TestGetOrder_OwnershipForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Orders: &mockOrders{order: &commerce.Order{
+			CustomerID: "cust-owner",
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetOrder(), http.MethodGet,
+		"/orders/ord-1", nil,
+		map[string]string{"orderId": "ord-1"},
+		"cust-other", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer order access, got %d", rr.Code)
+	}
+}
+
+// TestCreateProduct_NonAdminForbidden verifies that a non-admin cannot create
+// catalog products.
+func TestCreateProduct_NonAdminForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{}},
+	})
+	body := map[string]any{
+		"sku": "SKU-X", "display_name": "X", "kind": "wallet_top_up",
+		"credits": 100, "amount_fen": 1000, "currency": "CNY",
+	}
+	rr := doRequestWithAuth(t, h.CreateProduct(), http.MethodPost,
+		"/recharge-products", body, nil,
+		"regular-customer", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for non-admin creating product, got %d", rr.Code)
+	}
+}
+
+// TestCreateProduct_AdminAllowed verifies that an admin can create products.
+func TestCreateProduct_AdminAllowed(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{
+			DisplayName: "X", SKU: "SKU-X", Active: true,
+		}},
+	})
+	body := map[string]any{
+		"sku": "SKU-X", "display_name": "X", "kind": "wallet_top_up",
+		"credits": 100, "amount_fen": 1000, "currency": "CNY",
+	}
+	rr := doRequestWithAuth(t, h.CreateProduct(), http.MethodPost,
+		"/recharge-products", body, nil,
+		"admin-user", true)
+	if rr.Code != http.StatusCreated {
+		t.Errorf("expected 201 for admin creating product, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// TestUpdateProduct_NonAdminForbidden verifies that a non-admin cannot update
+// catalog products.
+func TestUpdateProduct_NonAdminForbidden(t *testing.T) {
+	h := testHandler(Services{
+		Catalog: &mockCatalog{product: &commerce.Product{}},
+	})
+	body := map[string]any{"display_name": "updated"}
+	rr := doRequestWithAuth(t, h.UpdateProduct(), http.MethodPut,
+		"/recharge-products/prod-1", body,
+		map[string]string{"productId": "prod-1"},
+		"regular-customer", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for non-admin updating product, got %d", rr.Code)
+	}
+}
+
+// TestGetRefund_OwnershipForbidden verifies cross-customer refund access is denied.
+func TestGetRefund_OwnershipForbidden(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Refund: &mockRefund{rec: &refund.RefundRequest{
+			ID: "ref-1", CustomerID: "cust-owner", Status: refund.RefundStatusFulfilled,
+			CreatedAt: now, UpdatedAt: now,
+		}},
+	})
+	rr := doRequestWithAuth(t, h.GetRefund(), http.MethodGet,
+		"/refunds/ref-1", nil,
+		map[string]string{"refundId": "ref-1"},
+		"cust-other", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer refund access, got %d", rr.Code)
+	}
+}
+
+// TestRBAC_NoAuthContext_Permissive verifies that when no auth context is set
+// (no middleware wired), the handler is permissive (dev / single-tenant mode).
+func TestRBAC_NoAuthContext_Permissive(t *testing.T) {
+	h := testHandler(Services{
+		Wallet: &mockWallet{wallet: &commerce.Wallet{CustomerID: "cust-1"}},
+	})
+	// No auth context injected — should pass.
+	rr := doRequest(t, h.GetCustomerWallet(), http.MethodGet,
+		"/customers/cust-1/wallet", nil,
+		map[string]string{"customerId": "cust-1"})
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 with no auth context (permissive), got %d", rr.Code)
+	}
+}

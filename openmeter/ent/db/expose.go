@@ -201,6 +201,14 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		ChargesSearchV1: NewChargesSearchV1Client(config),
 
+		CommerceOrder: NewCommerceOrderClient(config),
+
+		CommerceOrderLine: NewCommerceOrderLineClient(config),
+
+		CommerceOutbox: NewCommerceOutboxClient(config),
+
+		CommerceProduct: NewCommerceProductClient(config),
+
 		CreditRealizationLineage: NewCreditRealizationLineageClient(config),
 
 		CreditRealizationLineageSegment: NewCreditRealizationLineageSegmentClient(config),
@@ -217,7 +225,11 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		Entitlement: NewEntitlementClient(config),
 
+		ExternalInvoiceRef: NewExternalInvoiceRefClient(config),
+
 		Feature: NewFeatureClient(config),
+
+		Fulfillment: NewFulfillmentClient(config),
 
 		Grant: NewGrantClient(config),
 
@@ -253,7 +265,13 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		NotificationRule: NewNotificationRuleClient(config),
 
+		OfflinePayment: NewOfflinePaymentClient(config),
+
 		OrganizationDefaultTaxCodes: NewOrganizationDefaultTaxCodesClient(config),
+
+		PaymentAttempt: NewPaymentAttemptClient(config),
+
+		PaymentFact: NewPaymentFactClient(config),
 
 		Plan: NewPlanClient(config),
 
@@ -262,6 +280,14 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 		PlanPhase: NewPlanPhaseClient(config),
 
 		PlanRateCard: NewPlanRateCardClient(config),
+
+		ReceivableAccount: NewReceivableAccountClient(config),
+
+		ReceivablePeriod: NewReceivablePeriodClient(config),
+
+		RefundFact: NewRefundFactClient(config),
+
+		RefundRequest: NewRefundRequestClient(config),
 
 		Subject: NewSubjectClient(config),
 

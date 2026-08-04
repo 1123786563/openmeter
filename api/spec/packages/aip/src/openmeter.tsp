@@ -17,6 +17,7 @@ import "./defaults/index.tsp";
 import "./governance/index.tsp";
 import "./invoices/index.tsp";
 import "./aiusage/index.tsp";
+import "./commerce/index.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;
@@ -72,6 +73,7 @@ using TypeSpec.OpenAPI;
   #{ description: Shared.GovernanceDescription }
 )
 @tagMetadata(Shared.AIUsageTag, #{ description: Shared.AIUsageDescription })
+@tagMetadata(Shared.CommerceTag, #{ description: Shared.CommerceDescription })
 namespace OpenMeter;
 
 @route("/openmeter/events")
@@ -235,3 +237,54 @@ interface AIUsageCustomerCreditBalanceEndpoints
 @tag(Shared.AIUsageTag)
 interface AIUsageCustomerCreditTransactionEndpoints
   extends AIUsage.CreditTransactionOperations {}
+
+@route("/customers/{customerId}/wallet")
+@tag(Shared.CommerceTag)
+interface CustomerWalletEndpoints extends Commerce.WalletOperations {}
+
+@route("/recharge-products")
+@tag(Shared.CommerceTag)
+interface RechargeProductsEndpoints extends Commerce.CatalogOperations {}
+
+@route("/orders")
+@tag(Shared.CommerceTag)
+interface OrdersEndpoints extends Commerce.OrderOperations {}
+
+@route("/orders/{orderId}/checkout-sessions")
+@tag(Shared.CommerceTag)
+interface CheckoutSessionCreateEndpoints
+  extends Commerce.CheckoutSessionCreateOperations {}
+
+@route("/checkout-sessions/{sessionId}")
+@tag(Shared.CommerceTag)
+interface CheckoutSessionEndpoints
+  extends Commerce.CheckoutSessionGetOperations {}
+
+@route("/refunds")
+@tag(Shared.CommerceTag)
+interface RefundsEndpoints extends Commerce.RefundOperations {}
+
+@route("/payment-providers/wechat/callback")
+@tag(Shared.CommerceTag)
+interface WechatPaymentCallbackEndpoints
+  extends Commerce.WechatCallbackOperations {}
+
+@route("/payment-providers/alipay/callback")
+@tag(Shared.CommerceTag)
+interface AlipayPaymentCallbackEndpoints
+  extends Commerce.AlipayCallbackOperations {}
+
+@route("/customers/{customerId}/receivable-periods")
+@tag(Shared.CommerceTag)
+interface CustomerReceivablePeriodsEndpoints
+  extends Commerce.EnterpriseReceivableOperations {}
+
+@route("/customers/{customerId}/offline-payments")
+@tag(Shared.CommerceTag)
+interface CustomerOfflinePaymentsEndpoints
+  extends Commerce.OfflinePaymentOperations {}
+
+@route("/customers/{customerId}/receivable-periods/{periodId}/external-invoice")
+@tag(Shared.CommerceTag)
+interface CustomerExternalInvoiceEndpoints
+  extends Commerce.ExternalInvoiceOperations {}

@@ -2415,6 +2415,66 @@ func (e *ChargeUsageBasedRuns) GetTotal() alpacadecimal.Decimal {
 	return e.Total
 }
 
+func (e *CommerceOrder) GetID() string {
+	return e.ID
+}
+
+func (e *CommerceOrder) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CommerceOrder) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *CommerceOrder) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *CommerceOrder) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *CommerceOrderLine) GetID() string {
+	return e.ID
+}
+
+func (e *CommerceOrderLine) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CommerceOutbox) GetID() string {
+	return e.ID
+}
+
+func (e *CommerceOutbox) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CommerceProduct) GetID() string {
+	return e.ID
+}
+
+func (e *CommerceProduct) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CommerceProduct) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *CommerceProduct) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *CommerceProduct) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *CommerceProduct) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
 func (e *CreditRealizationLineage) GetID() string {
 	return e.ID
 }
@@ -2583,6 +2643,26 @@ func (e *Entitlement) GetDeletedAt() *time.Time {
 	return e.DeletedAt
 }
 
+func (e *ExternalInvoiceRef) GetID() string {
+	return e.ID
+}
+
+func (e *ExternalInvoiceRef) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *ExternalInvoiceRef) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *ExternalInvoiceRef) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *ExternalInvoiceRef) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
 func (e *Feature) GetID() string {
 	return e.ID
 }
@@ -2601,6 +2681,26 @@ func (e *Feature) GetDeletedAt() *time.Time {
 
 func (e *Feature) GetMetadata() map[string]string {
 	return e.Metadata
+}
+
+func (e *Fulfillment) GetID() string {
+	return e.ID
+}
+
+func (e *Fulfillment) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *Fulfillment) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *Fulfillment) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *Fulfillment) GetDeletedAt() *time.Time {
+	return e.DeletedAt
 }
 
 func (e *Grant) GetID() string {
@@ -2999,6 +3099,26 @@ func (e *NotificationRule) GetMetadata() map[string]string {
 	return e.Metadata
 }
 
+func (e *OfflinePayment) GetID() string {
+	return e.ID
+}
+
+func (e *OfflinePayment) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *OfflinePayment) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *OfflinePayment) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *OfflinePayment) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
 func (e *OrganizationDefaultTaxCodes) GetID() string {
 	return e.ID
 }
@@ -3013,6 +3133,34 @@ func (e *OrganizationDefaultTaxCodes) GetUpdatedAt() time.Time {
 
 func (e *OrganizationDefaultTaxCodes) GetDeletedAt() *time.Time {
 	return e.DeletedAt
+}
+
+func (e *PaymentAttempt) GetID() string {
+	return e.ID
+}
+
+func (e *PaymentAttempt) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *PaymentAttempt) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *PaymentAttempt) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *PaymentAttempt) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *PaymentFact) GetID() string {
+	return e.ID
+}
+
+func (e *PaymentFact) GetNamespace() string {
+	return e.Namespace
 }
 
 func (e *Plan) GetID() string {
@@ -3157,6 +3305,78 @@ func (e *PlanRateCard) GetTaxCodeID() *string {
 
 func (e *PlanRateCard) GetTaxBehavior() *productcatalog.TaxBehavior {
 	return e.TaxBehavior
+}
+
+func (e *ReceivableAccount) GetID() string {
+	return e.ID
+}
+
+func (e *ReceivableAccount) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *ReceivableAccount) GetAnnotations() models.Annotations {
+	return e.Annotations
+}
+
+func (e *ReceivableAccount) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *ReceivableAccount) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *ReceivableAccount) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *ReceivablePeriod) GetID() string {
+	return e.ID
+}
+
+func (e *ReceivablePeriod) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *ReceivablePeriod) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *ReceivablePeriod) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *ReceivablePeriod) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *RefundFact) GetID() string {
+	return e.ID
+}
+
+func (e *RefundFact) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *RefundRequest) GetID() string {
+	return e.ID
+}
+
+func (e *RefundRequest) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *RefundRequest) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *RefundRequest) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *RefundRequest) GetDeletedAt() *time.Time {
+	return e.DeletedAt
 }
 
 func (e *Subject) GetID() string {

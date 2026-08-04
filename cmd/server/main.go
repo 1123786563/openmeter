@@ -154,6 +154,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Wire Phase 2 commerce services (catalog, orders, wallet, fulfillment,
+	// reconciliation) and worker manager from the Ent client.
+	commerceWiring, err := wireCommerce(app.EntClient, app.NamespaceManager.GetDefaultNamespace(), logger)
+	if err != nil {
+		logger.Error("failed to wire commerce services", "error", err)
+		os.Exit(1)
+	}
+
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{
 			NamespaceDecoder:            namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace()),
@@ -208,6 +216,7 @@ func main() {
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
 		ResponseValidation:  conf.Server.ResponseValidation,
 		ClientIPMiddleware:  pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
+		CommerceHandler:     commerceWiring.Handler,
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
@@ -333,6 +342,25 @@ func main() {
 	{
 		workerRun, workerStop := common.AIUsageWorkerGroup(ctx, app.AIUsageWorker)
 		group.Add(workerRun, workerStop)
+	}
+
+	// Commerce worker lifecycle
+	{
+		commerceWorkerRun := func() error {
+			if commerceWiring.WorkerManager != nil {
+				commerceWiring.WorkerManager.Start(ctx)
+				logger.Info("commerce workers started", "runners", commerceWiring.WorkerManager.RunnerNames())
+			}
+			<-ctx.Done()
+			return ctx.Err()
+		}
+		commerceWorkerStop := func(_ error) {
+			if commerceWiring.WorkerManager != nil {
+				commerceWiring.WorkerManager.Stop()
+				logger.Info("commerce workers stopped")
+			}
+		}
+		group.Add(commerceWorkerRun, commerceWorkerStop)
 	}
 
 	// Setup signal handler

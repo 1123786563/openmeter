@@ -15,6 +15,7 @@ import { Addons } from './addons.js'
 import { PlanAddons } from './planAddons.js'
 import { Defaults } from './defaults.js'
 import { AIUsage } from './aiUsage.js'
+import { Commerce } from './commerce.js'
 import { Internal } from './internal.js'
 
 export class OpenMeter extends Client {
@@ -86,6 +87,11 @@ export class OpenMeter extends Client {
   private _aiUsage?: AIUsage
   get aiUsage(): AIUsage {
     return (this._aiUsage ??= new AIUsage(this))
+  }
+
+  private _commerce?: Commerce
+  get commerce(): Commerce {
+    return (this._commerce ??= new Commerce(this))
   }
 
   private _internal?: Internal

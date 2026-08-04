@@ -69,6 +69,10 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruninvoicedusage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedrunpayment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/chargeusagebasedruns"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
@@ -77,8 +81,10 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
 
 	dbfeature "github.com/openmeterio/openmeter/openmeter/ent/db/feature"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/fulfillment"
 
 	dbgrant "github.com/openmeterio/openmeter/openmeter/ent/db/grant"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgeraccount"
@@ -98,11 +104,18 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationevent"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationeventdeliverystatus"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationrule"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/offlinepayment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/organizationdefaulttaxcodes"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/plan"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/planaddon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/planphase"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/planratecard"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/receivableaccount"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/receivableperiod"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundfact"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/subject"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/subscription"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/subscriptionaddon"
@@ -229,6 +242,10 @@ func checkColumn(t, c string) error {
 			chargeusagebasedrunpayment.Table:                       chargeusagebasedrunpayment.ValidColumn,
 			chargeusagebasedruns.Table:                             chargeusagebasedruns.ValidColumn,
 			chargessearchv1.Table:                                  chargessearchv1.ValidColumn,
+			commerceorder.Table:                                    commerceorder.ValidColumn,
+			commerceorderline.Table:                                commerceorderline.ValidColumn,
+			commerceoutbox.Table:                                   commerceoutbox.ValidColumn,
+			commerceproduct.Table:                                  commerceproduct.ValidColumn,
 			creditrealizationlineage.Table:                         creditrealizationlineage.ValidColumn,
 			creditrealizationlineagesegment.Table:                  creditrealizationlineagesegment.ValidColumn,
 			currencycostbasis.Table:                                currencycostbasis.ValidColumn,
@@ -237,7 +254,9 @@ func checkColumn(t, c string) error {
 			customerairatepackage.Table:                            customerairatepackage.ValidColumn,
 			customersubjects.Table:                                 customersubjects.ValidColumn,
 			entitlement.Table:                                      entitlement.ValidColumn,
+			externalinvoiceref.Table:                               externalinvoiceref.ValidColumn,
 			dbfeature.Table:                                        dbfeature.ValidColumn,
+			fulfillment.Table:                                      fulfillment.ValidColumn,
 			dbgrant.Table:                                          dbgrant.ValidColumn,
 			llmcostprice.Table:                                     llmcostprice.ValidColumn,
 			ledgeraccount.Table:                                    ledgeraccount.ValidColumn,
@@ -255,11 +274,18 @@ func checkColumn(t, c string) error {
 			notificationevent.Table:                                notificationevent.ValidColumn,
 			notificationeventdeliverystatus.Table:                  notificationeventdeliverystatus.ValidColumn,
 			notificationrule.Table:                                 notificationrule.ValidColumn,
+			offlinepayment.Table:                                   offlinepayment.ValidColumn,
 			organizationdefaulttaxcodes.Table:                      organizationdefaulttaxcodes.ValidColumn,
+			paymentattempt.Table:                                   paymentattempt.ValidColumn,
+			paymentfact.Table:                                      paymentfact.ValidColumn,
 			plan.Table:                                             plan.ValidColumn,
 			planaddon.Table:                                        planaddon.ValidColumn,
 			planphase.Table:                                        planphase.ValidColumn,
 			planratecard.Table:                                     planratecard.ValidColumn,
+			receivableaccount.Table:                                receivableaccount.ValidColumn,
+			receivableperiod.Table:                                 receivableperiod.ValidColumn,
+			refundfact.Table:                                       refundfact.ValidColumn,
+			refundrequest.Table:                                    refundrequest.ValidColumn,
 			subject.Table:                                          subject.ValidColumn,
 			subscription.Table:                                     subscription.ValidColumn,
 			subscriptionaddon.Table:                                subscriptionaddon.ValidColumn,
