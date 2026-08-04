@@ -231,12 +231,23 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 		orderID = v
 	}
 
+	// Extract the refund amount. WeChat nests it under amount.refund (in fen).
+	var refundAmount int64
+	if amt, ok := payload["amount"].(map[string]any); ok {
+		refundAmount = intVal(amt, "refund")
+	}
+	if refundAmount == 0 {
+		// Fallback: some payloads use amount_refund at top level.
+		refundAmount = intVal(payload, "amount_refund")
+	}
+
 	ts, _ := strconv.ParseInt(timestamp, 10, 64)
 
 	return payment.RefundFact{
 		Provider:         payment.ProviderWeChat,
 		ProviderRefundID: refundID,
 		ProviderOrderID:  orderID,
+		AmountMinor:      refundAmount,
 		Success:          strRefundVal(payload, "refund_status") == "SUCCESS",
 		RawHash:          hashBody(body),
 		Timestamp:        time.Unix(ts, 0),

@@ -155,6 +155,7 @@ type Repository interface {
 	CreateRefund(ctx context.Context, req RefundRequest) (*RefundRequest, bool, error)
 	GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error)
 	GetRefundByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*RefundRequest, error)
+	GetRefundByProviderRefundID(ctx context.Context, namespace, providerRefundID string) (*RefundRequest, error)
 	TransitionStatus(ctx context.Context, namespace, id string, expectedFrom, to RefundStatus) (*RefundRequest, error)
 	SaveQuantum(ctx context.Context, namespace, id string, q QuantumReservation) (*RefundRequest, error)
 	SetProviderRefundID(ctx context.Context, namespace, id, providerName, providerRefundID string) (*RefundRequest, error)
@@ -296,6 +297,11 @@ type Service interface {
 	CreateRefund(ctx context.Context, in CreateRefundInput) (*RefundRequest, bool, error)
 	ProcessOne(ctx context.Context, namespace, refundID string) (*RefundRequest, error)
 	GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error)
+
+	// ApplyRefundCallback ingests a verified provider refund callback fact and
+	// drives the refund to completion. Idempotent on RawHash. The refund is
+	// located by its provider refund ID (set during submission).
+	ApplyRefundCallback(ctx context.Context, namespace string, fact payment.RefundFact) (*RefundRequest, error)
 }
 
 // Config wires the refund service.
@@ -433,8 +439,12 @@ func (s *service) processPendingFence(ctx context.Context, rec *RefundRequest) (
 	// Step 3: Under the fence, recompute unused paid Credit and reserve.
 	rec, err = s.reserveAndSubmit(ctx, rec)
 	if err != nil {
-		// Only release if NOT already terminal (failRefund releases on failure).
-		if rec != nil && !rec.Status.IsTerminal() {
+		// Once the refund has entered provider_processing, reserved credits are
+		// fenced and must NOT be released on transient errors — only failRefund
+		// (definitive failure) or fulfilled release the fence.
+		// For pre-provider_processing failures (reserve failures), the fence is
+		// still safe to release.
+		if rec != nil && rec.Status == RefundStatusPendingFence {
 			s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, fenceRes.Sequence)
 		}
 		return rec, err
@@ -535,7 +545,15 @@ func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*Re
 	// Handle the submission status.
 	switch sub.Status {
 	case "success", "succeeded":
-		return s.handleProviderSuccess(ctx, rec)
+		// The submission confirmed success — synthesize a fact from the submission.
+		// AmountMinor is 0 here; money validation only applies when the fact
+		// reports a positive amount (from a query/callback with verified data).
+		return s.handleProviderSuccess(ctx, rec, payment.RefundFact{
+			Provider:         provider.Name(),
+			ProviderRefundID: sub.ProviderRefundID,
+			Success:          true,
+			AmountMinor:      0,
+		})
 	case "failed", "rejected":
 		reason := "provider rejected the refund"
 		rec = s.failRefund(ctx, rec, reason)
@@ -567,7 +585,7 @@ func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequ
 	s.persistRefundFact(ctx, rec, fact)
 
 	if fact.Success {
-		return s.handleProviderSuccess(ctx, rec)
+		return s.handleProviderSuccess(ctx, rec, fact)
 	}
 
 	// Definitive failure (verified fact with non-empty hash).
@@ -582,8 +600,18 @@ func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequ
 }
 
 // handleProviderSuccess transitions to ledger_reversing and performs reversal.
-func (s *service) handleProviderSuccess(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
-	rec, err := s.repo.TransitionStatus(ctx, rec.Namespace, rec.ID, rec.Status, RefundStatusLedgerReversing)
+func (s *service) handleProviderSuccess(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) (*RefundRequest, error) {
+	// Validate provider-refunded money covers the reserved amount. Money cannot
+	// exceed the remaining Provider-refunded money (global constraint). If the
+	// provider reports an amount and it doesn't cover rec.RefundFen, the refund
+	// is rejected.
+	if fact.AmountMinor > 0 && fact.AmountMinor < rec.RefundFen {
+		reason := fmt.Sprintf("provider refunded %d fen but %d was reserved", fact.AmountMinor, rec.RefundFen)
+		rec = s.failRefund(ctx, rec, reason)
+		return rec, fmt.Errorf("refund: %s", reason)
+	}
+
+	rec, err := s.repo.TransitionStatus(ctx, rec.Namespace, rec.ID, RefundStatusProviderProcessing, RefundStatusLedgerReversing)
 	if err != nil {
 		return rec, fmt.Errorf("refund: transition to ledger_reversing: %w", err)
 	}
@@ -653,6 +681,76 @@ func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest
 // GetRefund retrieves a refund by ID.
 func (s *service) GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error) {
 	return s.repo.GetRefund(ctx, namespace, id)
+}
+
+// ApplyRefundCallback ingests a verified provider refund callback fact and drives
+// the refund to completion. The callback is located by its provider refund ID
+// (set during submission). This is the async callback entry point — Brief Step 4.
+//
+// The fact must already be signature-verified by the provider adapter. This
+// method:
+//  1. Locates the refund by provider refund ID.
+//  2. Persists the fact (dedup on RawHash).
+//  3. If success: validates money, transitions to ledger_reversing, reverses
+//     credit, publishes snapshot, marks fulfilled, releases fence.
+//  4. If definitive failure: marks failed, releases fence.
+//  5. If unknown: retains fence and returns current state.
+func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fact payment.RefundFact) (*RefundRequest, error) {
+	rec, err := s.repo.GetRefundByProviderRefundID(ctx, namespace, fact.ProviderRefundID)
+	if err != nil {
+		return nil, fmt.Errorf("refund: locate refund by provider refund id %s: %w", fact.ProviderRefundID, err)
+	}
+
+	// Dedup: persist the fact. If we've already seen it, return the current state.
+	_, inserted, err := s.repo.AppendFact(ctx, RefundFactRecord{
+		ID:               rec.ID + "-fact-" + fact.ProviderRefundID,
+		Namespace:        namespace,
+		RefundRequestID:  rec.ID,
+		Provider:         fact.Provider,
+		ProviderRefundID: fact.ProviderRefundID,
+		ProviderOrderID:  fact.ProviderOrderID,
+		AmountMinor:      fact.AmountMinor,
+		Currency:         fact.Currency,
+		Success:          fact.Success,
+		RawHash:          fact.RawHash,
+		Timestamp:        fact.Timestamp,
+		SignedPayload:    fact.SignedPayload,
+		CreatedAt:        clock.Now(),
+	})
+	if err != nil {
+		return rec, fmt.Errorf("refund: persist callback fact: %w", err)
+	}
+
+	// Terminal states are idempotent — return current state.
+	if rec.Status.IsTerminal() {
+		return rec, nil
+	}
+
+	// If this fact was already seen (dedup), the refund was already driven by
+	// this callback in a prior call. Return current state.
+	if !inserted && rec.Status == RefundStatusLedgerReversing {
+		// Already processing this callback — retry the ledger reversal.
+		return s.processLedgerReversing(ctx, rec)
+	}
+
+	if fact.Success {
+		// Only proceed from provider_processing. If still in pending_fence, the
+		// callback arrived before the submission was recorded — persist and wait.
+		if rec.Status != RefundStatusProviderProcessing {
+			return rec, nil
+		}
+		return s.handleProviderSuccess(ctx, rec, fact)
+	}
+
+	// Definitive failure (verified fact with non-empty hash).
+	if fact.RawHash != "" && !fact.Success {
+		reason := "provider callback returned definitive failure"
+		rec = s.failRefund(ctx, rec, reason)
+		return rec, fmt.Errorf("%w: %s", ErrProviderRefundFailed, reason)
+	}
+
+	// Unknown result — retain the fence.
+	return rec, nil
 }
 
 // ---------------------------------------------------------------------------
