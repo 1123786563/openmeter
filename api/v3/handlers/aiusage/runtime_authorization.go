@@ -2,6 +2,10 @@ package aiusage
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -77,8 +81,7 @@ func (h *handler) GetCustomerRuntimeAuthorization() GetCustomerRuntimeAuthorizat
 				return GetCustomerRuntimeAuthorizationResponse{}, err
 			}
 
-			view := authorizationPackageFromSigned(pkg)
-			return toAPIRuntimeAuthorization(view, time.Now().UTC()), nil
+			return signedPackageToAPI(pkg, time.Now().UTC()), nil
 		},
 		commonhttp.JSONResponseEncoder[GetCustomerRuntimeAuthorizationResponse],
 		httptransport.AppendOptions(
@@ -100,4 +103,52 @@ func authorizationPackageFromSigned(pkg signing.AuthorizationPackage) authorizat
 		ReservationCeilingCredits: 0,
 		CoveredTenantSeq:          pkg.CoveredTenantSeq,
 	}
+}
+
+// signedPackageToAPI maps the signed authorization package to the API
+// response, preserving the Ed25519 signature envelope so consumers (WeKnora)
+// can cryptographically verify the authorization decision. The canonical
+// bytes are recomputed (idempotent — CanonicalBytes zeroes the signature),
+// SHA-256 hashed, and the hex signature is converted to base64 to match the
+// WeKnora verification contract.
+func signedPackageToAPI(pkg signing.AuthorizationPackage, now time.Time) api.AIUsageRuntimeAuthorization {
+	resp := api.AIUsageRuntimeAuthorization{
+		ContractVersion:  contractVersion,
+		RetrievedAt:      now,
+		Authorized:       pkg.AuthorizationCapacityCredits > 0,
+		AvailableCredits: pkg.SpendableCredits,
+		CoveredTenantSeq: pkg.CoveredTenantSeq,
+		SnapshotVersion:  pkg.SnapshotVersion,
+		KeyID:            pkg.KeyID,
+	}
+
+	if len(pkg.SubjectKeys) > 0 {
+		resp.SubjectKey = pkg.SubjectKeys[0]
+	}
+
+	if !pkg.ExpiresAt.IsZero() {
+		expires := pkg.ExpiresAt
+		resp.ValidUntil = &expires
+	}
+
+	if pkg.AuthorizationCapacityCredits <= 0 {
+		reason := "insufficient_credits"
+		resp.DenialReason = &reason
+	}
+
+	// Recompute canonical bytes (idempotent) and derive the signing envelope.
+	canonical, err := signing.CanonicalBytes(pkg)
+	if err != nil {
+		return resp // canonicalization failed; return unsigned
+	}
+	resp.CanonicalPayload = json.RawMessage(canonical)
+
+	hash := sha256.Sum256(canonical)
+	resp.CanonicalSHA256 = hex.EncodeToString(hash[:])
+
+	if sigBytes, err := hex.DecodeString(pkg.Signature); err == nil {
+		resp.Signature = base64.StdEncoding.EncodeToString(sigBytes)
+	}
+
+	return resp
 }

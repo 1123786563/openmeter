@@ -33,7 +33,7 @@ services:
     profiles:
       - redis
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
 
   # Development
   # docker compose --profile dev up
@@ -53,7 +53,7 @@ services:
       file: docker-compose.base.yaml
       service: postgres
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
 
   svix:
     extends:

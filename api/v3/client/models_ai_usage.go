@@ -2,7 +2,10 @@
 
 package openmeter
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Cursor paginated response.
 type AICreditTransactionPaginatedResponse struct {
@@ -130,6 +133,14 @@ type AIUsageRuntimeAuthorization struct {
 	CoveredTenantSeq int64 `json:"covered_tenant_seq"`
 	// The reason authorization was denied, when `authorized` is `false`.
 	DenialReason *string `json:"denial_reason,omitempty"`
+	// Signature envelope for consumer-side verification (Phase 2).
+	CanonicalPayload json.RawMessage `json:"canonical_payload,omitempty"`
+	CanonicalSHA256  string          `json:"canonical_sha256,omitempty"`
+	KeyID            string          `json:"key_id,omitempty"`
+	Signature        string          `json:"signature,omitempty"`
+	SnapshotVersion  int64           `json:"snapshot_version,omitempty"`
+	SubjectKey       string          `json:"subject_key,omitempty"`
+	ValidUntil       *time.Time      `json:"valid_until,omitempty"`
 }
 
 // The customer-facing sales price snapshot (typically in CNY for display).

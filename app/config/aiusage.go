@@ -77,13 +77,13 @@ func (c AIUsageConfiguration) Validate() error {
 
 // ConfigureAIUsage sets viper defaults for the ai_usage configuration keys.
 func ConfigureAIUsage(v *viper.Viper) {
-	v.SetDefault("ai_usage.enabled", false)
-	v.SetDefault("ai_usage.signing.current_key_id", "")
-	v.SetDefault("ai_usage.signing.current_seed", "")
-	v.SetDefault("ai_usage.authorization_ttl", "5m")
-	v.SetDefault("ai_usage.worker.lease_duration", "30s")
-	v.SetDefault("ai_usage.worker.batch_size", 50)
-	v.SetDefault("ai_usage.settlement.default_charge_id", "")
-	v.SetDefault("ai_usage.settlement.default_feature_key", "ai_usage")
-	v.SetDefault("ai_usage.settlement.default_currency", "USD")
+	v.SetDefault("aiUsage.enabled", false)
+	v.SetDefault("aiUsage.signing.currentKeyId", "")
+	v.SetDefault("aiUsage.signing.currentSeed", "")
+	v.SetDefault("aiUsage.authorizationTtl", "5m")
+	v.SetDefault("aiUsage.worker.leaseDuration", "30s")
+	v.SetDefault("aiUsage.worker.batchSize", 50)
+	v.SetDefault("aiUsage.settlement.defaultChargeId", "")
+	v.SetDefault("aiUsage.settlement.defaultFeatureKey", "ai_usage")
+	v.SetDefault("aiUsage.settlement.defaultCurrency", "USD")
 }

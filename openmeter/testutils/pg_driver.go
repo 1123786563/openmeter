@@ -156,7 +156,7 @@ func InitPostgresDB(t testing.TB, state PostgresDBState) *TestDB {
 
 	port := os.Getenv("POSTGRES_PORT")
 	if port == "" {
-		port = "5432"
+		port = "5436"
 	}
 
 	config := pgtestdb.Config{

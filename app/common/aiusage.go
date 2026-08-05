@@ -23,6 +23,7 @@ import (
 	enttx "github.com/openmeterio/openmeter/openmeter/ent/tx"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/openmeter/ledger/account"
+	"github.com/openmeterio/openmeter/openmeter/ledger/customerbalance"
 	ledgercollector "github.com/openmeterio/openmeter/openmeter/ledger/collector"
 	"github.com/openmeterio/openmeter/openmeter/ledger/transactions"
 )
@@ -271,6 +272,7 @@ func NewRuntimeAuthorizationService(
 	aiUsageConfig config.AIUsageConfiguration,
 	signer signing.Signer,
 	db *entdb.Client,
+	balanceFacade *customerbalance.Facade,
 	logger *slog.Logger,
 	tracer trace.Tracer,
 ) (runtimeauthorization.Service, error) {
@@ -279,7 +281,8 @@ func NewRuntimeAuthorizationService(
 	}
 
 	return runtimeauthorization.New(runtimeauthorization.Config{
-		BalanceReader:   noopBalanceReader{},
+		Namespace:       "default",
+		BalanceReader:   ledgerBalanceReader{facade: balanceFacade},
 		Subscription:    noopSubscriptionReader{},
 		RatePackage:     noopRatePackageReader{},
 		CoveredSeq:      noopCoveredSeqReader{},

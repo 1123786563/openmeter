@@ -2137,6 +2137,15 @@ type AIUsageRuntimeAuthorization struct {
 
 	// RetrievedAt The timestamp of the authorization check.
 	RetrievedAt DateTime `json:"retrieved_at"`
+
+	// Signature envelope for consumer-side verification (Phase 2).
+	CanonicalPayload json.RawMessage `json:"canonical_payload,omitempty"`
+	CanonicalSHA256  string          `json:"canonical_sha256,omitempty"`
+	KeyID            string          `json:"key_id,omitempty"`
+	Signature        string          `json:"signature,omitempty"`
+	SnapshotVersion  int64           `json:"snapshot_version,omitempty"`
+	SubjectKey       string          `json:"subject_key,omitempty"`
+	ValidUntil       *DateTime       `json:"valid_until,omitempty"`
 }
 
 // AIUsageRuntimeAuthorizationQuery Query parameters for the runtime authorization endpoint.

@@ -92,7 +92,9 @@ func CanonicalBytes(pkg AuthorizationPackage) ([]byte, error) {
 
 	// Re-marshal: encoding/json sorts object keys lexicographically at every
 	// depth, producing RFC 8785-compatible deterministic output.
-	canonical, err := json.Marshal(tree)
+	// SetEscapeHTML(false) ensures compatibility with consumers (e.g. WeKnora)
+	// whose canonicalizer does not HTML-escape &, <, >.
+	canonical, err := marshalNoHTMLEscape(tree)
 	if err != nil {
 		return nil, fmt.Errorf("signing: marshal canonical tree: %w", err)
 	}
@@ -101,6 +103,18 @@ func CanonicalBytes(pkg AuthorizationPackage) ([]byte, error) {
 }
 
 // sortStringsCopy returns a sorted copy of s without mutating the original.
+// marshalNoHTMLEscape serializes v as compact JSON with lexicographically
+// sorted object keys and HTML escaping disabled. This matches the RFC 8785
+// canonical output that WeKnora's canonicalizer reproduces byte-for-byte.
+func marshalNoHTMLEscape(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimRight(buf.Bytes(), "\n"), nil
+}
 func sortStringsCopy(s []string) []string {
 	if len(s) == 0 {
 		return []string{}

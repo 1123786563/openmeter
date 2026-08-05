@@ -795,7 +795,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, client, logger, tracer)
+	runtimeauthorizationService, err := common.NewRuntimeAuthorizationService(aiUsageConfiguration, signer, client, facade, logger, tracer)
 	if err != nil {
 		cleanup8()
 		cleanup7()
