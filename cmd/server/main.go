@@ -156,11 +156,14 @@ func main() {
 
 	// Wire Phase 2 commerce services (catalog, orders, wallet, fulfillment,
 	// reconciliation) and worker manager from the Ent client.
-	commerceWiring, err := wireCommerce(app.EntClient, app.NamespaceManager.GetDefaultNamespace(), logger)
+	commerceWiring, err := wireCommerce(app.EntClient, app.NamespaceManager.GetDefaultNamespace(), app.EntitlementRegistry.Grant, logger)
 	if err != nil {
 		logger.Error("failed to wire commerce services", "error", err)
 		os.Exit(1)
 	}
+
+	// Seed default catalog products (Free/Pro/Team plans + wallet top-up SKUs).
+	seedCatalog(context.Background(), app.NamespaceManager.GetDefaultNamespace(), app.EntClient, commerceWiring.Catalog, logger)
 
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{

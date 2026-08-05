@@ -429,15 +429,15 @@ func (h *handler) CreateCheckoutSession() http.HandlerFunc {
 			AmountMinor:    order.AmountMinor,
 			Currency:       order.Currency,
 		})
-		if err != nil {
-			writeCommerceError(ctx, w, err)
-			return
-		}
-		checkout, err := h.svc.Payment.InitiateCheckout(ctx, ns, attempt.ID)
-		if err != nil {
-			writeCommerceError(ctx, w, err)
-			return
-		}
+	if err != nil {
+		writeCommerceError(ctx, w, err)
+		return
+	}
+	checkout, err := h.svc.Payment.InitiateCheckout(ctx, ns, attempt.ID)
+	if err != nil {
+		writeCommerceError(ctx, w, err)
+		return
+	}
 		writeJSON(ctx, w, http.StatusCreated, toAPICheckoutSession(checkout))
 	}
 }
@@ -774,7 +774,7 @@ func toAPIOrder(o *commerce.Order) api.CommerceOrder {
 		credits = &total
 	}
 	return api.CommerceOrder{
-		Id:                     o.PublicID,
+		Id:                     o.NamespacedID.ID,
 		BillingCustomerId:      o.CustomerID,
 		Kind:                   api.CommerceOrderKind(o.Kind),
 		Status:                 api.CommerceOrderStatus(o.Status),

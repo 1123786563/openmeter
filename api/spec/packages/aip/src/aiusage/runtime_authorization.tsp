@@ -136,9 +136,46 @@ model RuntimeAuthorization {
   covered_tenant_seq: int64;
 
   /**
-   * The reason authorization was denied, when `authorized` is `false`.
+  * The reason authorization was denied, when `authorized` is `false`.
+  */
+ denial_reason?: string;
+
+  /**
+   * Canonical JSON payload for consumer-side verification. The raw bytes of
+   * the canonicalized authorization object, used to derive the SHA-256 hash
+   * and verify the signature.
    */
-  denial_reason?: string;
+  canonical_payload?: Record<string, unknown>;
+
+  /**
+   * SHA-256 hash of the canonical payload, hex-encoded.
+   */
+  canonical_sha256?: string;
+
+  /**
+   * The key ID used to sign the authorization.
+   */
+  key_id?: string;
+
+  /**
+   * Base64-encoded signature over the canonical payload.
+   */
+  signature?: string;
+
+  /**
+   * The snapshot version for watermark tracking.
+   */
+  snapshot_version?: int64;
+
+  /**
+   * The subject or tenant key this authorization applies to.
+   */
+  subject_key?: string;
+
+  /**
+   * The timestamp until which this authorization is valid.
+   */
+  valid_until?: Shared.DateTime;
 }
 
 /**

@@ -226,6 +226,7 @@ func (a *EntAdapter) CreateOrder(ctx context.Context, o Order) (*Order, bool, er
 
 	// Create order header.
 	builder := a.db.CommerceOrder.Create().
+		SetID(o.ID).
 		SetNamespace(o.Namespace).
 		SetPublicID(o.PublicID).
 		SetCustomerID(o.CustomerID).

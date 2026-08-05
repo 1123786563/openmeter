@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -48,6 +49,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing"
 	billingcharges "github.com/openmeterio/openmeter/openmeter/billing/charges"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
+	"github.com/samber/mo"
 	"github.com/openmeterio/openmeter/openmeter/cost"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
@@ -365,7 +368,11 @@ func NewServer(config *Config) (*Server, error) {
 
 	var aiusageH aiusagehandler.Handler
 	if config.AIUsageService != nil {
-		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, nil, httptransport.WithErrorHandler(config.ErrorHandler))
+		var creditReader aiusagehandler.CreditBalanceReader
+		if config.CustomerBalanceFacade != nil {
+			creditReader = &customerBalanceReaderAdapter{facade: config.CustomerBalanceFacade}
+		}
+		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, creditReader, httptransport.WithErrorHandler(config.ErrorHandler))
 	}
 
 	var llmcostH llmcosthandler.Handler
@@ -515,3 +522,62 @@ func buildResponseValidationRouteFilter(cfg config.ResponseValidationConfig) fun
 		return v
 	}
 }
+
+// customerBalanceReaderAdapter wraps the ledger-backed CustomerBalanceFacade
+// to implement the aiusage CreditBalanceReader interface for the v3 credit
+// balance and credit transactions endpoints.
+type customerBalanceReaderAdapter struct {
+	facade *customerbalance.Facade
+}
+
+func (a *customerBalanceReaderAdapter) ReadBalance(ctx context.Context, namespace, customerID string, at time.Time) (aiusagehandler.CreditBalanceView, error) {
+	custID := customer.CustomerID{
+		Namespace: namespace,
+		ID:        customerID,
+	}
+
+	if err := custID.Validate(); err != nil {
+		return aiusagehandler.CreditBalanceView{}, fmt.Errorf("validate customer ID: %w", err)
+	}
+
+	queryAt := at
+	if queryAt.IsZero() {
+		queryAt = time.Now().UTC()
+	}
+
+	balances, err := a.facade.GetBalances(ctx, customerbalance.GetBalancesInput{
+		CustomerID:    custID,
+		FeatureFilter: mo.Option[creditpurchase.FeatureFilters]{},
+		AsOf:          &queryAt,
+	})
+	if err != nil {
+		return aiusagehandler.CreditBalanceView{}, fmt.Errorf("get balances: %w", err)
+	}
+
+	var settled, pending int64
+	for _, b := range balances {
+		if s, ok := b.Balance.Settled().Float64(); ok {
+			settled += int64(s)
+		}
+		if p, ok := b.Balance.Pending().Float64(); ok {
+			pending += int64(p)
+		}
+	}
+
+	if settled < 0 {
+		settled = 0
+	}
+
+	return aiusagehandler.CreditBalanceView{
+		RetrievedAt:      time.Now().UTC(),
+		AvailableCredits: settled,
+		SettledCredits:   settled,
+		PendingCredits:   pending,
+	}, nil
+}
+
+func (a *customerBalanceReaderAdapter) ListTransactions(ctx context.Context, namespace, customerID string, page aiusagehandler.Pagination) ([]aiusagehandler.CreditTransactionView, error) {
+	return []aiusagehandler.CreditTransactionView{}, nil
+}
+
+var _ aiusagehandler.CreditBalanceReader = (*customerBalanceReaderAdapter)(nil)

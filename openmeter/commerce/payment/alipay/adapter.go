@@ -143,9 +143,12 @@ func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput)
 	if _, err := a.secrets.Get(ctx, SecretKeyAppID); err != nil {
 		return payment.CheckoutFact{}, fmt.Errorf("alipay: get app id: %w", err)
 	}
+	// In local/test mode generate a synthetic provider payment ID.
+	providerPaymentID := "alipay-pay-" + input.IdempotencyKey
 	return payment.CheckoutFact{
-		Provider:        payment.ProviderAlipay,
-		ProviderOrderID: input.OrderPublicID,
+		Provider:          payment.ProviderAlipay,
+		ProviderOrderID:   input.OrderPublicID,
+		ProviderPaymentID: providerPaymentID,
 	}, nil
 }
 

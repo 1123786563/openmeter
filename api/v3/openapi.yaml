@@ -4355,9 +4355,33 @@ components:
           description: |-
             The highest continuously covered tenant sequence number, used for watermark
             tracking.
-        denial_reason:
+       denial_reason:
+         type: string
+         description: The reason authorization was denied, when `authorized` is `false`.
+        canonical_payload:
+          type: object
+          additionalProperties: true
+          description: Canonical JSON payload for consumer-side signature verification.
+        canonical_sha256:
           type: string
-          description: The reason authorization was denied, when `authorized` is `false`.
+          description: SHA-256 hash of the canonical payload, hex-encoded.
+        key_id:
+          type: string
+          description: The key ID used to sign the authorization.
+        signature:
+          type: string
+          description: Base64-encoded signature over the canonical payload.
+        snapshot_version:
+          type: integer
+          format: int64
+          description: The snapshot version for watermark tracking.
+        subject_key:
+          type: string
+          description: The subject or tenant key this authorization applies to.
+        valid_until:
+          allOf:
+            - $ref: '#/components/schemas/DateTime'
+          description: The timestamp until which this authorization is valid.
       additionalProperties: false
       description: |-
         Runtime authorization decision for a customer's AI usage.

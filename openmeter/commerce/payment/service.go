@@ -346,6 +346,13 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 		return CheckoutResult{}, err
 	}
 
+	// Transition the order from created to awaiting_payment so the paid-tx
+	// runner can later move it to paid when the callback arrives.
+	if _, err := s.orders.UpdateOrderStatus(ctx, namespace, attempt.OrderID, commerce.OrderStatusCreated, commerce.OrderStatusAwaitingPayment); err != nil {
+		// If already awaiting_payment (idempotent checkout), this is fine.
+		s.logger.WarnContext(ctx, "payment: order status transition to awaiting_payment", "error", err, "orderID", attempt.OrderID)
+	}
+
 	return CheckoutResult{Attempt: updated, Fact: fact}, nil
 }
 

@@ -170,6 +170,7 @@ func (s *service) AllocateAndBook(ctx context.Context, _ adapter.TxAdapter, in S
 		return nil, fmt.Errorf("settlement: collector CollectToAccrued: %w", err)
 	}
 
+
 	allocations := mapCollectorAllocations(allocInputs)
 
 	// Coverage check: if the collector returned fewer credits than charged
@@ -278,7 +279,8 @@ func mapCollectorAllocations(inputs creditrealization.CreateAllocationInputs) []
 	allocations := make([]aiusage.Allocation, 0, len(inputs))
 	for i, input := range inputs {
 		allocations = append(allocations, aiusage.Allocation{
-			Amount: input.Amount.IntPart(),
+			GrantID: input.ID,
+			Amount:  input.Amount.IntPart(),
 			Ledger: aiusage.LedgerProvenance{
 				TransactionGroupID: input.LedgerTransaction.TransactionGroupID,
 				RealizationID:      input.ID,

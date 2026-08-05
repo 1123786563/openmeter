@@ -3,8 +3,11 @@ package adapter
 import (
 	"context"
 	"fmt"
+	"crypto/rand"
+	"time"
 
 	"github.com/alpacahq/alpacadecimal"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
@@ -130,11 +133,15 @@ func (t *txAdapter) CreateSettledBatch(ctx context.Context, in aiusage.SettledBa
 
 	// ---- allocations ----
 	for _, alloc := range in.Allocations {
+		grantID := alloc.GrantID
+		if grantID == "" {
+			grantID = ulid.MustNew(ulid.Timestamp(time.Now().UTC()), rand.Reader).String()
+		}
 		if _, err := t.db.AIUsageAllocation.Create().
 			SetNamespace(in.Namespace).
 			SetCustomerID(in.CustomerID).
 			SetSubjectID(in.SubjectID).
-			SetGrantID(alloc.GrantID).
+			SetGrantID(grantID).
 			SetAmount(alpacadecimal.NewFromInt(alloc.Amount)).
 			SetPriority(alloc.Priority).
 			SetFundingSource(string(alloc.FundingSource)).

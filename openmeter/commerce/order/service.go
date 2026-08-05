@@ -93,16 +93,17 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 	}
 
 	now := clock.Now()
+	orderID := ulid.Make().String()
 	order := commerce.Order{
 		NamespacedID: models.NamespacedID{
 			Namespace: in.Namespace,
-			ID:        ulid.Make().String(),
+			ID:        orderID,
 		},
 		ManagedModel: models.ManagedModel{
 			CreatedAt: now,
 			UpdatedAt: now,
 		},
-		PublicID:       ulid.Make().String(),
+		PublicID:       orderID,
 		CustomerID:     in.CustomerID,
 		Kind:           in.Kind,
 		Status:         commerce.OrderStatusCreated,

@@ -183,9 +183,13 @@ func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput)
 
 	// The full implementation calls the WeChat Pay native pay API.
 	// The provider assigns the order/payment IDs which are persisted on the attempt.
+	// In local/test mode the provider doesn't actually call WeChat, so we
+	// generate a synthetic provider payment ID to satisfy uniqueness constraints.
+	providerPaymentID := "wx-pay-" + input.IdempotencyKey
 	return payment.CheckoutFact{
-		Provider:        payment.ProviderWeChat,
-		ProviderOrderID: input.OrderPublicID,
+		Provider:          payment.ProviderWeChat,
+		ProviderOrderID:   input.OrderPublicID,
+		ProviderPaymentID: providerPaymentID,
 	}, nil
 }
 

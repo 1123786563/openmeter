@@ -33,7 +33,7 @@ func fromAPIBatchCreate(namespace string, body api.AIUsageUsageBatchCreate) aius
 			Quantity:        line.Quantity,
 			Provider:        ptrStringVal(line.Provider),
 			Model:           ptrStringVal(line.Model),
-			ProviderManaged: body.ProviderManaged,
+			ProviderManaged: body.ProviderManaged && aiusage.ResourceCode(line.ResourceCode).IsProviderManaged(),
 			Dimensions:      ptrMapVal(line.PricingDimensions),
 		}
 		input.LineItems = append(input.LineItems, item)

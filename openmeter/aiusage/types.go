@@ -83,10 +83,13 @@ func (i UsageLineItem) Validate() error {
 	}
 
 	// Provider-managed resources require provider and model identification for cost lookup.
-	if i.ProviderManaged && i.Provider == "" {
+	// Use the resource code's own classification — platform resources (rag_queries,
+	// doc_parse_pages, etc.) never need provider/model even when the batch is
+	// provider-managed.
+	if i.ResourceCode.IsProviderManaged() && i.Provider == "" {
 		errs = append(errs, fmt.Errorf("provider must not be empty for provider-managed resource"))
 	}
-	if i.ProviderManaged && i.Model == "" {
+	if i.ResourceCode.IsProviderManaged() && i.Model == "" {
 		errs = append(errs, fmt.Errorf("model must not be empty for provider-managed resource"))
 	}
 
