@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/tls"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -12,10 +13,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/pkg/framework/transport/httpclient"
 )
 
 func NewSvixAPIClient(
 	config config.SvixConfig,
+	logger *slog.Logger,
 	meterProvider metric.MeterProvider,
 	tracerProvider trace.TracerProvider,
 ) (*svix.Svix, error) {
@@ -46,11 +49,14 @@ func NewSvixAPIClient(
 	tr.TLSNextProto = make(map[string]func(authority string, c *tls.Conn) http.RoundTripper)
 
 	opts.HTTPClient = &http.Client{
-		Transport: otelhttp.NewTransport(
-			tr,
-			otelhttp.WithMeterProvider(meterProvider),
-			otelhttp.WithTracerProvider(tracerProvider),
-			otelhttp.WithSpanOptions(trace.WithAttributes(semconv.PeerService("svix"))),
+		Transport: httpclient.NewLoggingTransport(
+			otelhttp.NewTransport(
+				tr,
+				otelhttp.WithMeterProvider(meterProvider),
+				otelhttp.WithTracerProvider(tracerProvider),
+				otelhttp.WithSpanOptions(trace.WithAttributes(semconv.PeerService("svix"))),
+			),
+			logger.With("subsystem", "svix"),
 		),
 	}
 

@@ -71,6 +71,18 @@ func NewService(baseURL, appID, appSecret string, logger *service.Logger, config
 				service.SetToken("")
 			}
 
+			// Log outbound RunAI request outcome; level reflects the status code.
+			requestLog := fmt.Sprintf("runai request: %s %s status=%d duration=%s",
+				response.Request.Method, response.Request.URL, response.StatusCode(), response.Time())
+			switch {
+			case response.StatusCode() >= http.StatusInternalServerError:
+				service.logger.Errorf(requestLog)
+			case response.StatusCode() >= http.StatusBadRequest:
+				service.logger.Warnf(requestLog)
+			default:
+				service.logger.Infof(requestLog)
+			}
+
 			if config.TimingMetrics != nil {
 				path := response.Request.RawRequest.URL.Path
 				if matched, err := regexp.MatchString("/api/v1/workloads/[0-9a-f-]+/pods/[0-9a-f-]+/metrics", path); err == nil && matched {

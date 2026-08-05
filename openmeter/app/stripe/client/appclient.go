@@ -12,6 +12,7 @@ import (
 	"github.com/stripe/stripe-go/v80/client"
 
 	app "github.com/openmeterio/openmeter/openmeter/app"
+	"github.com/openmeterio/openmeter/pkg/framework/transport/httpclient"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -127,6 +128,12 @@ func NewStripeAppClient(config StripeAppClientConfig) (StripeAppClient, error) {
 	backend := stripe.GetBackendWithConfig(stripe.APIBackend, &stripe.BackendConfig{
 		LeveledLogger: leveledLogger{
 			logger: config.Logger,
+		},
+		HTTPClient: &http.Client{
+			Transport: httpclient.NewLoggingTransport(
+				http.DefaultTransport,
+				config.Logger.With("subsystem", "stripe"),
+			),
 		},
 	})
 	client := &client.API{}

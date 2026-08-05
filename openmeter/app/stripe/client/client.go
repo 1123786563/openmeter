@@ -14,6 +14,7 @@ import (
 
 	app "github.com/openmeterio/openmeter/openmeter/app"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
+	"github.com/openmeterio/openmeter/pkg/framework/transport/httpclient"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -63,6 +64,12 @@ func NewStripeClient(config StripeClientConfig) (StripeClient, error) {
 	backend := stripe.GetBackendWithConfig(stripe.APIBackend, &stripe.BackendConfig{
 		LeveledLogger: leveledLogger{
 			logger: config.Logger,
+		},
+		HTTPClient: &http.Client{
+			Transport: httpclient.NewLoggingTransport(
+				http.DefaultTransport,
+				config.Logger.With("subsystem", "stripe"),
+			),
 		},
 	})
 	client := &client.API{}

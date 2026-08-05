@@ -12,6 +12,7 @@ import (
 	llmcostadapter "github.com/openmeterio/openmeter/openmeter/llmcost/adapter"
 	llmcostservice "github.com/openmeterio/openmeter/openmeter/llmcost/service"
 	llmcostsync "github.com/openmeterio/openmeter/openmeter/llmcost/sync"
+	"github.com/openmeterio/openmeter/pkg/framework/transport/httpclient"
 )
 
 var LLMCost = wire.NewSet(
@@ -41,8 +42,13 @@ func NewLLMCostSyncJob(logger *slog.Logger, db *entdb.Client) (*llmcostsync.Sync
 	}
 
 	return llmcostsync.NewSyncJob(llmcostsync.SyncJobConfig{
-		HTTPClient: &http.Client{},
-		Repo:       adapter,
-		Logger:     logger.With("subsystem", "llmcost.sync"),
+		HTTPClient: &http.Client{
+			Transport: httpclient.NewLoggingTransport(
+				http.DefaultTransport,
+				logger.With("subsystem", "llmcost.sync"),
+			),
+		},
+		Repo:   adapter,
+		Logger: logger.With("subsystem", "llmcost.sync"),
 	}), nil
 }
