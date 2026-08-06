@@ -130,21 +130,28 @@ services:
       service: kafka
     ports:
       - "127.0.0.1:29092:29092"
+      - "127.0.0.1:9092:9092"
 
   clickhouse:
     extends:
       file: ../docker-compose.base.yaml
       service: clickhouse
+    ports:
+      - "127.0.0.1:9000:9000"
 
   redis:
     extends:
       file: ../docker-compose.base.yaml
       service: redis
+    ports:
+      - "127.0.0.1:6380:6379"
 
   postgres:
     extends:
       file: ../docker-compose.base.yaml
       service: postgres
+    ports:
+      - "127.0.0.1:5433:5432"
 
   svix:
     extends:
