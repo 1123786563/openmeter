@@ -1,0 +1,4123 @@
+# OpenMeter API 合并清单（v3 全量 + v1/v2 待合并）
+
+生成时间：2026-08-07
+
+说明：
+- 目标：保留 v3 全量能力，给出 v1/v2 中需要迁移补齐到 v3 的候选集合。
+- 排除规则：
+  - v1/v2 中 `deprecated: true` 的接口直接视为过期，不纳入待合并。
+  - v1/v2 与 v3 的接口若命中“`method + 归一化路径`”则视为已转移，不再重复。
+  - 归一化路径：移除 `/api/v1`、`/api/v2`、`/api/v3`、`/openmeter` 前缀；将路径参数统一为 `/{*}`。
+- 统计：v3 共 119 个接口；v1 共 139 个，v2 共 14 个；v1/v2 过期 20 个；已转移 57 个；待合并 76 个（v1：63，v2：13）。
+
+## 一、v3 全量接口（按领域）
+
+### 附加项（addons，共 7 个）
+- **`GET /openmeter/addons`**
+  - 版本：v3
+  - operationId：list-addons
+  - 中文说明：查询附加项
+  - 原始摘要：List add-ons
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort add-ons returned in the response. Supported sort attributes are:
+
+- `id`
+- `key`
+- `name`
+- `created_at` (default)
+- `updated_at`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListAddonsParamsFilter；Filter add-ons returned in the response.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/addons`**
+  - 版本：v3
+  - operationId：create-addon
+  - 中文说明：创建附加项
+  - 原始摘要：Create add-on
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateAddonRequest
+  - 响应：
+    - 201：Addon created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：delete-addon
+  - 中文说明：软删除附加项
+  - 原始摘要：Soft delete add-on
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：get-addon
+  - 中文说明：获取附加项
+  - 原始摘要：Get add-on
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Addon response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：update-addon
+  - 中文说明：更新附加项
+  - 原始摘要：Update add-on
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertAddonRequest
+  - 响应：
+    - 200：Addon upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/addons/{addonId}/archive`**
+  - 版本：v3
+  - operationId：archive-addon
+  - 中文说明：归档附加项
+  - 原始摘要：Archive add-on version
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Addon updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/addons/{addonId}/publish`**
+  - 版本：v3
+  - operationId：publish-addon
+  - 中文说明：发布附加项
+  - 原始摘要：Publish add-on version
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Addon updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### AI 使用批次（ai-usage-batches，共 2 个）
+- **`POST /ai-usage-batches`**
+  - 版本：v3
+  - operationId：create-ai-usage-batch
+  - 中文说明：执行Submit an AI usage batch
+  - 原始摘要：Submit an AI usage batch
+  - 标签：AI Usage
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/AIUsageUsageBatchCreate
+  - 响应：
+    - 200：UsageBatch response.
+    - 201：UsageBatch created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /ai-usage-batches/{batchId}`**
+  - 版本：v3
+  - operationId：get-ai-usage-batch
+  - 中文说明：获取AI 使用批次
+  - 原始摘要：Get an AI usage batch
+  - 标签：AI Usage
+  - 参数：
+    - path `batchId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：UsageBatch response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 应用目录（app-catalog，共 3 个）
+- **`GET /openmeter/app-catalog`**
+  - 版本：v3
+  - operationId：list-app-catalog
+  - 中文说明：查询应用目录
+  - 原始摘要：List app catalog
+  - 标签：OpenMeter Apps
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/app-catalog/install`**
+  - 版本：v3
+  - operationId：install-app
+  - 中文说明：安装应用目录
+  - 原始摘要：Install app from the catalog
+  - 标签：OpenMeter Apps
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingInstallAppRequest
+  - 响应：
+    - 201：InstallAppResponse created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/app-catalog/{appType}`**
+  - 版本：v3
+  - operationId：get-app-catalog-item
+  - 中文说明：获取应用目录
+  - 原始摘要：Get app catalog item by type
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appType`（必填：是）：#/components/schemas/BillingAppType；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：AppCatalogItem response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 应用（apps，共 4 个）
+- **`GET /openmeter/apps`**
+  - 版本：v3
+  - operationId：list-apps
+  - 中文说明：查询应用
+  - 原始摘要：List apps
+  - 标签：OpenMeter Apps
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：uninstall-app
+  - 中文说明：卸载应用
+  - 原始摘要：Uninstall app
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：get-app
+  - 中文说明：获取应用
+  - 原始摘要：Get app
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：App response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：update-app
+  - 中文说明：更新应用
+  - 原始摘要：Update app
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingUpdateAppRequest
+  - 响应：
+    - 200：App updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 账单（billing，共 8 个）
+- **`GET /openmeter/billing/invoices`**
+  - 版本：v3
+  - operationId：list-invoices
+  - 中文说明：查询账单
+  - 原始摘要：List billing invoices
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort invoices returned in the response. Supported sort attributes:
+
+- `issued_at`
+- `created_at` (default)
+- `service_period_start`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListInvoicesParamsFilter；Filter invoices returned in the response.
+
+Examples:
+
+- `filter[status][oeq]=draft,issued`
+- `filter[customer_id]=01KPDB8K...`
+- `filter[issued_at][gte]=2024-01-01T00:00:00Z`
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：delete-invoice
+  - 中文说明：删除账单
+  - 原始摘要：Delete a billing invoice
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：get-invoice
+  - 中文说明：获取账单
+  - 原始摘要：Get a billing invoice
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Invoice response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：update-invoice
+  - 中文说明：更新账单
+  - 原始摘要：Update a billing invoice
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateInvoiceRequest
+  - 响应：
+    - 200：Invoice updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/advance`**
+  - 版本：v3
+  - operationId：advance-invoice
+  - 中文说明：执行Advance billing invoice's next status
+  - 原始摘要：Advance billing invoice's next status
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The updated invoice after advancing to the next state.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/approve`**
+  - 版本：v3
+  - operationId：approve-invoice
+  - 中文说明：执行Send the invoice to the customer
+  - 原始摘要：Send the invoice to the customer
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The updated invoice after sending to the customer.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/retry`**
+  - 版本：v3
+  - operationId：retry-invoice
+  - 中文说明：执行Retry advancing the invoice after a failed attempt
+  - 原始摘要：Retry advancing the invoice after a failed attempt
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The updated invoice after retrying the action.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities`**
+  - 版本：v3
+  - operationId：snapshot-quantities-invoice
+  - 中文说明：执行Snapshot quantities for usage based line items
+  - 原始摘要：Snapshot quantities for usage based line items
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The updated invoice with the snapshot quantities for usage based line
+items.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 结账会话（checkout-sessions，共 1 个）
+- **`GET /checkout-sessions/{sessionId}`**
+  - 版本：v3
+  - operationId：get-checkout-session
+  - 中文说明：获取结账会话
+  - 原始摘要：Get checkout session
+  - 标签：Commerce
+  - 参数：
+    - path `sessionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CheckoutSession response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 币种（currencies，共 5 个）
+- **`GET /openmeter/currencies`**
+  - 版本：v3
+  - operationId：list-currencies
+  - 中文说明：查询币种
+  - 原始摘要：List currencies
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort currencies returned in the response. Supported sort attributes are:
+
+- `code` (default)
+- `name`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListCurrenciesParamsFilter；Filter currencies returned in the response.
+
+To filter currencies by type add the following query param: filter[type]=custom
+    - query `expand`（必填：否）：array[#/components/schemas/BillingCurrencyExpand]；Expand the currencies returned in the response.
+
+To include the currently-active cost basis add: expand=cost_basis
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/currencies/custom`**
+  - 版本：v3
+  - operationId：create-custom-currency
+  - 中文说明：创建币种
+  - 原始摘要：Create custom currency
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCurrencyCustomRequest
+  - 响应：
+    - 201：CurrencyCustom created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/currencies/custom/{currencyId}`**
+  - 版本：v3
+  - operationId：get-custom-currency
+  - 中文说明：获取币种
+  - 原始摘要：Get custom currency
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CurrencyCustom response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/currencies/custom/{currencyId}/cost-bases`**
+  - 版本：v3
+  - operationId：list-cost-bases
+  - 中文说明：查询币种
+  - 原始摘要：List cost bases
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `filter`（必填：否）：#/components/schemas/ListCostBasesParamsFilter；Filter cost bases returned in the response.
+
+To filter cost bases by fiat currency code add the following query param:
+filter[fiat_code]=USD
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/currencies/custom/{currencyId}/cost-bases`**
+  - 版本：v3
+  - operationId：create-cost-basis
+  - 中文说明：创建币种
+  - 原始摘要：Create cost basis
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCostBasisRequest
+  - 响应：
+    - 201：CostBasis created response.
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 客户（customers，共 28 个）
+- **`GET /openmeter/customers`**
+  - 版本：v3
+  - operationId：list-customers
+  - 中文说明：查询客户
+  - 原始摘要：List customers
+  - 标签：OpenMeter Customers
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort customers returned in the response. Supported sort attributes are:
+
+- `id`
+- `name` (default)
+- `created_at`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListCustomersParamsFilter；Filter customers returned in the response.
+
+To filter customers by key add the following query param: filter[key]=my-db-id
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/customers`**
+  - 版本：v3
+  - operationId：create-customer
+  - 中文说明：创建客户
+  - 原始摘要：Create customer
+  - 标签：OpenMeter Customers
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCustomerRequest
+  - 响应：
+    - 201：Customer created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：delete-customer
+  - 中文说明：删除客户
+  - 原始摘要：Delete customer
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：get-customer
+  - 中文说明：获取客户
+  - 原始摘要：Get customer
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Customer response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：upsert-customer
+  - 中文说明：更新或创建客户
+  - 原始摘要：Upsert customer
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertCustomerRequest
+  - 响应：
+    - 200：Customer upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/customers/{customerId}/billing`**
+  - 版本：v3
+  - operationId：get-customer-billing
+  - 中文说明：获取客户
+  - 原始摘要：Get customer billing data
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CustomerBillingData response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/customers/{customerId}/billing`**
+  - 版本：v3
+  - operationId：update-customer-billing
+  - 中文说明：更新客户
+  - 原始摘要：Update customer billing data
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertCustomerBillingDataRequest
+  - 响应：
+    - 200：CustomerBillingData upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/customers/{customerId}/billing/app-data`**
+  - 版本：v3
+  - operationId：update-customer-billing-app-data
+  - 中文说明：更新客户
+  - 原始摘要：Update customer billing app data
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertAppCustomerDataRequest
+  - 响应：
+    - 200：AppCustomerData upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/customers/{customerId}/billing/stripe/checkout-sessions`**
+  - 版本：v3
+  - operationId：create-customer-stripe-checkout-session
+  - 中文说明：创建客户
+  - 原始摘要：Create Stripe Checkout Session
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingCustomerStripeCreateCheckoutSessionRequest
+  - 响应：
+    - 201：CreateStripeCheckoutSessionResult created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/customers/{customerId}/billing/stripe/portal-sessions`**
+  - 版本：v3
+  - operationId：create-customer-stripe-portal-session
+  - 中文说明：创建客户
+  - 原始摘要：Create Stripe customer portal session
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingCustomerStripeCreateCustomerPortalSessionRequest
+  - 响应：
+    - 201：CreateStripeCustomerPortalSessionResult created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/customers/{customerId}/charges`**
+  - 版本：v3
+  - operationId：list-customer-charges
+  - 中文说明：查询客户
+  - 原始摘要：List customer charges
+  - 标签：OpenMeter Customers
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort charges returned in the response.
+
+Supported sort attributes are:
+
+- `id`
+- `created_at`
+- `service_period.from`
+- `billing_period.from`
+    - query `filter`（必填：否）：#/components/schemas/ListChargesParamsFilter；Filter charges.
+
+To filter charges by status add the following query param:
+`filter[status][oeq]=created,active`
+    - query `expand`（必填：否）：array[#/components/schemas/BillingChargesExpand]；Expand full objects for referenced entities.
+
+Supported values are:
+
+- `real_time_usage`: Expand the charge's real-time usage.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/charges`**
+  - 版本：v3
+  - operationId：create-customer-charges
+  - 中文说明：创建客户
+  - 原始摘要：Create customer charge
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateChargeRequest
+  - 响应：
+    - 201：Charge created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /customers/{customerId}/credit-balance`**
+  - 版本：v3
+  - operationId：get-ai-usage-credit-balance
+  - 中文说明：获取客户
+  - 原始摘要：Get AI usage credit balance
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `timestamp`（必填：否）：#/components/schemas/DateTime；Return the credit balance as of this timestamp. Defaults to now.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：AICreditBalance response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/credit-transactions`**
+  - 版本：v3
+  - operationId：list-ai-usage-credit-transactions
+  - 中文说明：查询客户
+  - 原始摘要：List AI usage credit transactions
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Cursor paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/adjustments`**
+  - 版本：v3
+  - operationId：create-credit-adjustment
+  - 中文说明：创建客户
+  - 原始摘要：Create a credit adjustment
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCreditAdjustmentRequest
+  - 响应：
+    - 201：CreditAdjustment created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/credits/balance`**
+  - 版本：v3
+  - operationId：get-customer-credit-balance
+  - 中文说明：获取客户
+  - 原始摘要：Get a customer's credit balance
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `timestamp`（必填：否）：#/components/schemas/DateTime；Return the credit balance as of this timestamp.
+
+Defaults to the current time. Historical responses return `live` as zero because
+live charge impacts are only available for current balances.
+    - query `filter`（必填：否）：#/components/schemas/GetCreditBalanceParamsFilter；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CreditBalances response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/credits/grants`**
+  - 版本：v3
+  - operationId：list-credit-grants
+  - 中文说明：查询客户
+  - 原始摘要：List credit grants
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `filter`（必填：否）：#/components/schemas/ListCreditGrantsParamsFilter；Filter credit grants returned in the response.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants`**
+  - 版本：v3
+  - operationId：create-credit-grant
+  - 中文说明：创建客户
+  - 原始摘要：Create a new credit grant
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCreditGrantRequest
+  - 响应：
+    - 201：CreditGrant created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/customers/{customerId}/credits/grants/{creditGrantId}`**
+  - 版本：v3
+  - operationId：get-credit-grant
+  - 中文说明：获取客户
+  - 原始摘要：Get a credit grant
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CreditGrant response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/settlement/external`**
+  - 版本：v3
+  - operationId：update-credit-grant-external-settlement
+  - 中文说明：更新客户
+  - 原始摘要：Update credit grant external settlement status
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateCreditGrantExternalSettlementRequest
+  - 响应：
+    - 200：CreditGrant updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/void`**
+  - 版本：v3
+  - operationId：void-credit-grant
+  - 中文说明：执行Void credit grant
+  - 原始摘要：Void credit grant
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：否
+    - application/json: #/components/schemas/VoidCreditGrantRequest
+  - 响应：
+    - 200：CreditGrant updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/customers/{customerId}/credits/transactions`**
+  - 版本：v3
+  - operationId：list-credit-transactions
+  - 中文说明：查询客户
+  - 原始摘要：List credit transactions
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
+    - query `filter`（必填：否）：#/components/schemas/ListCreditTransactionsParamsFilter；Filter credit transactions returned in the response.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Cursor paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/entitlement-access`**
+  - 版本：v3
+  - operationId：list-customer-entitlement-access
+  - 中文说明：查询客户
+  - 原始摘要：List customer entitlement access
+  - 标签：OpenMeter Entitlements
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：List the customer's active features and their access.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /customers/{customerId}/offline-payments`**
+  - 版本：v3
+  - operationId：create-offline-payment
+  - 中文说明：创建客户
+  - 原始摘要：Create offline payment
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceOfflinePaymentCreate
+  - 响应：
+    - 201：OfflinePayment created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /customers/{customerId}/receivable-periods`**
+  - 版本：v3
+  - operationId：list-receivable-periods
+  - 中文说明：查询客户
+  - 原始摘要：List receivable periods
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Cursor paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice`**
+  - 版本：v3
+  - operationId：update-external-invoice
+  - 中文说明：更新客户
+  - 原始摘要：Update external invoice
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `periodId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceExternalInvoiceUpdate
+  - 响应：
+    - 200：ExternalInvoice updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/runtime-authorization`**
+  - 版本：v3
+  - operationId：get-customer-runtime-authorization
+  - 中文说明：获取客户
+  - 原始摘要：Get runtime authorization
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `filter`（必填：否）：#/components/schemas/AIUsageRuntimeAuthorizationQuery；Filter the authorization check by subject and reservation.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：RuntimeAuthorization response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/wallet`**
+  - 版本：v3
+  - operationId：get-customer-wallet
+  - 中文说明：获取客户
+  - 原始摘要：Get customer wallet
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Wallet response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 默认配置（defaults，共 2 个）
+- **`GET /openmeter/defaults/tax-codes`**
+  - 版本：v3
+  - operationId：get-organization-default-tax-codes
+  - 中文说明：获取默认配置
+  - 原始摘要：Get organization default tax codes
+  - 标签：OpenMeter Defaults
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：OrganizationDefaultTaxCodes response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/defaults/tax-codes`**
+  - 版本：v3
+  - operationId：update-organization-default-tax-codes
+  - 中文说明：更新默认配置
+  - 原始摘要：Update organization default tax codes
+  - 标签：OpenMeter Defaults
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateOrganizationDefaultTaxCodesRequest
+  - 响应：
+    - 200：OrganizationDefaultTaxCodes upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 事件（events，共 2 个）
+- **`GET /openmeter/events`**
+  - 版本：v3
+  - operationId：list-metering-events
+  - 中文说明：查询事件
+  - 原始摘要：List metering events
+  - 标签：Metering Events
+  - 参数：
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
+    - query `filter`（必填：否）：#/components/schemas/ListEventsParamsFilter；Filter events returned in the response.
+
+To filter events by subject add the following query param:
+filter[subject][eq]=customer-1
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort events returned in the response. Supported sort attributes are:
+
+- `time` (default)
+- `ingested_at`
+- `stored_at`
+
+When omitted, events are sorted by `time desc` (most recent first). When a sort
+field is provided without a suffix, it sorts descending. Append the `asc` suffix
+to sort ascending, or the `desc` suffix to sort descending.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Cursor paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/events`**
+  - 版本：v3
+  - operationId：ingest-metering-events
+  - 中文说明：执行Ingest metering events
+  - 原始摘要：Ingest metering events
+  - 标签：Metering Events
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/cloudevents+json: #/components/schemas/MeteringEvent
+    - application/cloudevents-batch+json: array[#/components/schemas/MeteringEvent]
+    - application/json: any
+  - 响应：
+    - 202：The events have been ingested and are being processed asynchronously.
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 功能（features，共 6 个）
+- **`GET /openmeter/features`**
+  - 版本：v3
+  - operationId：list-features
+  - 中文说明：查询功能
+  - 原始摘要：List features
+  - 标签：OpenMeter Features
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort features returned in the response. Supported sort attributes are:
+
+- `key`
+- `name`
+- `created_at` (default)
+- `updated_at`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListFeatureParamsFilter；Filter features returned in the response.
+
+To filter features by meter_id add the following query param:
+filter[meter_id][oeq]=<id>
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/features`**
+  - 版本：v3
+  - operationId：create-feature
+  - 中文说明：创建功能
+  - 原始摘要：Create feature
+  - 标签：OpenMeter Features
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateFeatureRequest
+  - 响应：
+    - 201：Feature created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：delete-feature
+  - 中文说明：删除功能
+  - 原始摘要：Delete feature
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：get-feature
+  - 中文说明：获取功能
+  - 原始摘要：Get feature
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Feature response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PATCH /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：update-feature
+  - 中文说明：更新功能
+  - 原始摘要：Update feature
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateFeatureRequest
+  - 响应：
+    - 200：Feature updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/features/{featureId}/cost/query`**
+  - 版本：v3
+  - operationId：query-feature-cost
+  - 中文说明：执行Query feature cost
+  - 原始摘要：Query feature cost
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：否
+    - application/json: #/components/schemas/MeterQueryRequest
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 治理（governance，共 1 个）
+- **`POST /openmeter/governance/query`**
+  - 版本：v3
+  - operationId：query-governance-access
+  - 中文说明：执行Query governance access
+  - 原始摘要：Query governance access
+  - 标签：OpenMeter Governance
+  - 参数：
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/GovernanceQueryRequest
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：—
+    - 401：—
+    - 403：—
+
+### LLM 成本（llm-cost，共 5 个）
+- **`GET /openmeter/llm-cost/overrides`**
+  - 版本：v3
+  - operationId：list-llm-cost-overrides
+  - 中文说明：查询LLM 成本
+  - 原始摘要：List LLM cost overrides
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - query `filter`（必填：否）：#/components/schemas/ListLLMCostPricesParamsFilter；未提供
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/llm-cost/overrides`**
+  - 版本：v3
+  - operationId：create-llm-cost-override
+  - 中文说明：创建LLM 成本
+  - 原始摘要：Create LLM cost override
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/LLMCostOverrideCreate
+  - 响应：
+    - 201：Price created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/llm-cost/overrides/{priceId}`**
+  - 版本：v3
+  - operationId：delete-llm-cost-override
+  - 中文说明：删除LLM 成本
+  - 原始摘要：Delete LLM cost override
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - path `priceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/llm-cost/prices`**
+  - 版本：v3
+  - operationId：list-llm-cost-prices
+  - 中文说明：查询LLM 成本
+  - 原始摘要：List LLM cost prices
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - query `filter`（必填：否）：#/components/schemas/ListLLMCostPricesParamsFilter；Filter prices.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort prices returned in the response. Supported sort attributes are:
+
+- `id`
+- `provider.id`
+- `model.id` (default)
+- `effective_from`
+- `effective_to`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/llm-cost/prices/{priceId}`**
+  - 版本：v3
+  - operationId：get-llm-cost-price
+  - 中文说明：获取LLM 成本
+  - 原始摘要：Get LLM cost price
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - path `priceId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 计量表（meters，共 6 个）
+- **`GET /openmeter/meters`**
+  - 版本：v3
+  - operationId：list-meters
+  - 中文说明：查询计量表
+  - 原始摘要：List meters
+  - 标签：Meters
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort meters returned in the response. Supported sort attributes are:
+
+- `key`
+- `name`
+- `aggregation`
+- `created_at` (default)
+- `updated_at`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListMetersParamsFilter；Filter meters returned in the response.
+
+To filter meters by key add the following query param: filter[key]=my-meter-key
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/meters`**
+  - 版本：v3
+  - operationId：create-meter
+  - 中文说明：创建计量表
+  - 原始摘要：Create meter
+  - 标签：Meters
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateMeterRequest
+  - 响应：
+    - 201：Meter created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：delete-meter
+  - 中文说明：删除计量表
+  - 原始摘要：Delete meter
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：get-meter
+  - 中文说明：获取计量表
+  - 原始摘要：Get meter
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Meter response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：update-meter
+  - 中文说明：更新计量表
+  - 原始摘要：Update meter
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateMeterRequest
+  - 响应：
+    - 200：Meter updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/meters/{meterId}/query`**
+  - 版本：v3
+  - operationId：query-meter
+  - 中文说明：执行Query meter
+  - 原始摘要：Query meter
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/MeterQueryRequest
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 订单（orders，共 3 个）
+- **`POST /orders`**
+  - 版本：v3
+  - operationId：create-order
+  - 中文说明：创建订单
+  - 原始摘要：Create order
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceOrderCreate
+  - 响应：
+    - 200：Order response.
+    - 201：Order created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /orders/{orderId}`**
+  - 版本：v3
+  - operationId：get-order
+  - 中文说明：获取订单
+  - 原始摘要：Get order
+  - 标签：Commerce
+  - 参数：
+    - path `orderId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Order response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /orders/{orderId}/checkout-sessions`**
+  - 版本：v3
+  - operationId：create-checkout-session
+  - 中文说明：创建订单
+  - 原始摘要：Create checkout session
+  - 标签：Commerce
+  - 参数：
+    - path `orderId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceCheckoutSessionCreate
+  - 响应：
+    - 201：CheckoutSession created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 支付供应商（payment-providers，共 2 个）
+- **`POST /payment-providers/alipay/callback`**
+  - 版本：v3
+  - operationId：alipay-payment-callback
+  - 中文说明：执行Alipay callback
+  - 原始摘要：Alipay callback
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - text/plain: string
+  - 响应：
+    - 200：ProviderCallbackAck response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /payment-providers/wechat/callback`**
+  - 版本：v3
+  - operationId：wechat-payment-callback
+  - 中文说明：执行WeChat Pay callback
+  - 原始摘要：WeChat Pay callback
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - text/plain: string
+  - 响应：
+    - 200：ProviderCallbackAck response.
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 套餐（plans，共 12 个）
+- **`GET /openmeter/plans`**
+  - 版本：v3
+  - operationId：list-plans
+  - 中文说明：查询套餐
+  - 原始摘要：List plans
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort plans returned in the response. Supported sort attributes are:
+
+- `id`
+- `key`
+- `version`
+- `created_at` (default)
+- `updated_at`
+    - query `filter`（必填：否）：#/components/schemas/ListPlansParamsFilter；Filter plans returned in the response.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/plans`**
+  - 版本：v3
+  - operationId：create-plan
+  - 中文说明：创建套餐
+  - 原始摘要：Create plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreatePlanRequest
+  - 响应：
+    - 201：Plan created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：delete-plan
+  - 中文说明：删除套餐
+  - 原始摘要：Delete plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：get-plan
+  - 中文说明：获取套餐
+  - 原始摘要：Get plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Plan response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：update-plan
+  - 中文说明：更新套餐
+  - 原始摘要：Update plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertPlanRequest
+  - 响应：
+    - 200：Plan upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/plans/{planId}/addons`**
+  - 版本：v3
+  - operationId：list-plan-addons
+  - 中文说明：查询套餐
+  - 原始摘要：List add-ons for plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/addons`**
+  - 版本：v3
+  - operationId：create-plan-addon
+  - 中文说明：添加套餐
+  - 原始摘要：Add add-on to plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreatePlanAddonRequest
+  - 响应：
+    - 201：PlanAddon created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`DELETE /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：delete-plan-addon
+  - 中文说明：移除套餐
+  - 原始摘要：Remove add-on from plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：get-plan-addon
+  - 中文说明：获取套餐
+  - 原始摘要：Get add-on association for plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：PlanAddon response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：update-plan-addon
+  - 中文说明：更新套餐
+  - 原始摘要：Update add-on association for plan
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertPlanAddonRequest
+  - 响应：
+    - 200：PlanAddon upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/archive`**
+  - 版本：v3
+  - operationId：archive-plan
+  - 中文说明：归档套餐
+  - 原始摘要：Archive plan version
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Plan updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/publish`**
+  - 版本：v3
+  - operationId：publish-plan
+  - 中文说明：发布套餐
+  - 原始摘要：Publish plan version
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Plan updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 用户资料（profiles，共 5 个）
+- **`GET /openmeter/profiles`**
+  - 版本：v3
+  - operationId：list-billing-profiles
+  - 中文说明：查询用户资料
+  - 原始摘要：List billing profiles
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/profiles`**
+  - 版本：v3
+  - operationId：create-billing-profile
+  - 中文说明：创建用户资料
+  - 原始摘要：Create a new billing profile
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateBillingProfileRequest
+  - 响应：
+    - 201：BillingProfile created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：delete-billing-profile
+  - 中文说明：删除用户资料
+  - 原始摘要：Delete a billing profile
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：get-billing-profile
+  - 中文说明：获取用户资料
+  - 原始摘要：Get a billing profile
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：BillingProfile response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：update-billing-profile
+  - 中文说明：更新用户资料
+  - 原始摘要：Update a billing profile
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertBillingProfileRequest
+  - 响应：
+    - 200：BillingProfile updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 充值产品（recharge-products，共 1 个）
+- **`GET /recharge-products`**
+  - 版本：v3
+  - operationId：list-recharge-products
+  - 中文说明：查询充值产品
+  - 原始摘要：List recharge products
+  - 标签：Commerce
+  - 参数：
+    - query `currency`（必填：否）：#/components/schemas/CurrencyCode；Filter by currency to show only products priced in the customer's currency.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：RechargeProductList response.
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 退款（refunds，共 2 个）
+- **`POST /refunds`**
+  - 版本：v3
+  - operationId：create-refund
+  - 中文说明：创建退款
+  - 原始摘要：Create refund
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceRefundCreate
+  - 响应：
+    - 201：Refund created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /refunds/{refundId}`**
+  - 版本：v3
+  - operationId：get-refund
+  - 中文说明：获取退款
+  - 原始摘要：Get refund
+  - 标签：Commerce
+  - 参数：
+    - path `refundId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Refund response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 订阅（subscriptions，共 9 个）
+- **`GET /openmeter/subscriptions`**
+  - 版本：v3
+  - operationId：list-subscriptions
+  - 中文说明：查询订阅
+  - 原始摘要：List subscriptions
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort subscriptions returned in the response. Supported sort attributes are:
+
+- `id`
+- `active_from` (default)
+- `active_to`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+    - query `filter`（必填：否）：#/components/schemas/ListSubscriptionsParamsFilter；Filter subscriptions.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions`**
+  - 版本：v3
+  - operationId：create-subscription
+  - 中文说明：创建订阅
+  - 原始摘要：Create subscription
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionCreate
+  - 响应：
+    - 201：Subscription created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/subscriptions/{subscriptionId}`**
+  - 版本：v3
+  - operationId：get-subscription
+  - 中文说明：获取订阅
+  - 原始摘要：Get subscription
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Subscription response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/subscriptions/{subscriptionId}/addons`**
+  - 版本：v3
+  - operationId：list-subscription-addons
+  - 中文说明：查询订阅
+  - 原始摘要：List subscription addons
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort subscription addons returned in the response. Supported sort attributes
+are:
+
+- `id`
+- `created_at` (default)
+- `updated_at`
+
+The `asc` suffix is optional as the default sort order is ascending. The `desc`
+suffix is used to specify a descending order.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/addons`**
+  - 版本：v3
+  - operationId：create-subscription-addon
+  - 中文说明：创建订阅
+  - 原始摘要：Create a new subscription add-on
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateSubscriptionAddonRequest
+  - 响应：
+    - 201：SubscriptionAddon created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`**
+  - 版本：v3
+  - operationId：get-subscription-addon
+  - 中文说明：获取订阅
+  - 原始摘要：Get add-on association for subscription
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+    - path `subscriptionAddonId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：SubscriptionAddon response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/cancel`**
+  - 版本：v3
+  - operationId：cancel-subscription
+  - 中文说明：取消订阅
+  - 原始摘要：Cancel subscription
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionCancel
+  - 响应：
+    - 200：Subscription updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/change`**
+  - 版本：v3
+  - operationId：change-subscription
+  - 中文说明：执行Change subscription
+  - 原始摘要：Change subscription
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionChange
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation`**
+  - 版本：v3
+  - operationId：unschedule-cancelation
+  - 中文说明：执行Unschedule subscription cancelation
+  - 原始摘要：Unschedule subscription cancelation
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Subscription updated response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+
+### 税务代码（tax-codes，共 5 个）
+- **`GET /openmeter/tax-codes`**
+  - 版本：v3
+  - operationId：list-tax-codes
+  - 中文说明：查询税务代码
+  - 原始摘要：List tax codes
+  - 标签：OpenMeter Tax
+  - 参数：
+    - query `page`（必填：否）：object；Determines which page of the collection to retrieve.
+    - query `include_deleted`（必填：否）：boolean；Include deleted tax codes in the response.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：Page paginated response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/tax-codes`**
+  - 版本：v3
+  - operationId：create-tax-code
+  - 中文说明：创建税务代码
+  - 原始摘要：Create tax code
+  - 标签：OpenMeter Tax
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateTaxCodeRequest
+  - 响应：
+    - 201：TaxCode created response.
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：delete-tax-code
+  - 中文说明：删除税务代码
+  - 原始摘要：Delete tax code
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：Deleted response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：get-tax-code
+  - 中文说明：获取税务代码
+  - 原始摘要：Get tax code
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：TaxCode response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：upsert-tax-code
+  - 中文说明：更新或创建税务代码
+  - 原始摘要：Upsert tax code
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertTaxCodeRequest
+  - 响应：
+    - 200：TaxCode upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+
+## 二、v1/v2 待合并（排除已过期、已转移）
+
+### v1 待合并（共 63 个）
+
+#### 应用（apps，共 4 个）
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/draft/synchronized`**
+  - 版本：v1
+  - operationId：appCustomInvoicingDraftSynchronized
+  - 中文说明：执行Submit draft synchronization results
+  - 原始摘要：Submit draft synchronization results
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingDraftSynchronizedRequest
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/issuing/synchronized`**
+  - 版本：v1
+  - operationId：appCustomInvoicingIssuingSynchronized
+  - 中文说明：执行Submit issuing synchronization results
+  - 原始摘要：Submit issuing synchronization results
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingFinalizedRequest
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/payment/status`**
+  - 版本：v1
+  - operationId：appCustomInvoicingUpdatePaymentStatus
+  - 中文说明：更新应用
+  - 原始摘要：Update payment status
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingUpdatePaymentStatusRequest
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/apps/{id}/stripe/webhook`**
+  - 版本：v1
+  - operationId：appStripeWebhook
+  - 中文说明：执行Stripe webhook
+  - 原始摘要：Stripe webhook
+  - 标签：App: Stripe
+  - 参数：
+    - path `id`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/StripeWebhookEvent
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### 账单（billing，共 14 个）
+- **`GET /api/v1/billing/customers`**
+  - 版本：v1
+  - operationId：listBillingProfileCustomerOverrides
+  - 中文说明：查询账单
+  - 原始摘要：List customer overrides
+  - 标签：Billing
+  - 参数：
+    - query `billingProfile`（必填：否）：array[string]；Filter by billing profile.
+    - query `customersWithoutPinnedProfile`（必填：否）：boolean；Only return customers without pinned billing profiles. This implicitly sets includeAllCustomers to true.
+    - query `includeAllCustomers`（必填：否）：boolean；Include customers without customer overrides.
+
+If set to false only the customers specifically associated with a billing profile will be returned.
+
+If set to true, in case of the default billing profile, all customers will be returned.
+    - query `customerId`（必填：否）：array[string]；Filter by customer id.
+    - query `customerName`（必填：否）：string；Filter by customer name.
+    - query `customerKey`（必填：否）：string；Filter by customer key
+    - query `customerPrimaryEmail`（必填：否）：string；Filter by customer primary email
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileCustomerOverrideExpand]；Expand the response with additional details.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/BillingProfileCustomerOverrideOrderBy；The order by field.
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：deleteBillingProfileCustomerOverride
+  - 中文说明：删除账单
+  - 原始摘要：Delete a customer override
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：getBillingProfileCustomerOverride
+  - 中文说明：获取账单
+  - 原始摘要：Get a customer override
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；未提供
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileCustomerOverrideExpand]；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：upsertBillingProfileCustomerOverride
+  - 中文说明：创建账单
+  - 原始摘要：Create a new or update a customer override
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileCustomerOverrideCreate
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/customers/{customerId}/invoices/pending-lines`**
+  - 版本：v1
+  - operationId：createPendingInvoiceLine
+  - 中文说明：创建账单
+  - 原始摘要：Create pending line items
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoicePendingLineCreateInput
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/customers/{customerId}/invoices/simulate`**
+  - 版本：v1
+  - operationId：simulateInvoice
+  - 中文说明：执行Simulate an invoice for a customer
+  - 原始摘要：Simulate an invoice for a customer
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoiceSimulationInput
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/invoices/invoice`**
+  - 版本：v1
+  - operationId：invoicePendingLinesAction
+  - 中文说明：执行Invoice a customer based on the pending line items
+  - 原始摘要：Invoice a customer based on the pending line items
+  - 标签：Billing
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoicePendingLinesActionInput
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/invoices/{invoiceId}/taxes/recalculate`**
+  - 版本：v1
+  - operationId：recalculateInvoiceTaxAction
+  - 中文说明：重算账单
+  - 原始摘要：Recalculate an invoice's tax amounts
+  - 标签：Billing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/invoices/{invoiceId}/void`**
+  - 版本：v1
+  - operationId：voidInvoiceAction
+  - 中文说明：执行Void an invoice
+  - 原始摘要：Void an invoice
+  - 标签：Billing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/VoidInvoiceActionInput
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/billing/profiles`**
+  - 版本：v1
+  - operationId：listBillingProfiles
+  - 中文说明：查询账单
+  - 原始摘要：List billing profiles
+  - 标签：Billing
+  - 参数：
+    - query `includeArchived`（必填：否）：boolean；未提供
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileExpand]；未提供
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/BillingProfileOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/billing/profiles`**
+  - 版本：v1
+  - operationId：createBillingProfile
+  - 中文说明：创建账单
+  - 原始摘要：Create a new billing profile
+  - 标签：Billing
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileCreate
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：deleteBillingProfile
+  - 中文说明：删除账单
+  - 原始摘要：Delete a billing profile
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：getBillingProfile
+  - 中文说明：获取账单
+  - 原始摘要：Get a billing profile
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；未提供
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileExpand]；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：updateBillingProfile
+  - 中文说明：更新账单
+  - 原始摘要：Update a billing profile
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileReplaceUpdateWithWorkflow
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### 客户（customers，共 9 个）
+- **`GET /api/v1/customers/{customerIdOrKey}/access`**
+  - 版本：v1
+  - operationId：getCustomerAccess
+  - 中文说明：获取客户
+  - 原始摘要：Get customer access
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/customers/{customerIdOrKey}/apps`**
+  - 版本：v1
+  - operationId：listCustomerAppData
+  - 中文说明：查询客户
+  - 原始摘要：List customer app data
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `type`（必填：否）：#/components/schemas/AppType；Filter customer data by app type.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/customers/{customerIdOrKey}/apps`**
+  - 版本：v1
+  - operationId：upsertCustomerAppData
+  - 中文说明：更新或创建客户
+  - 原始摘要：Upsert customer app data
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - required：是
+    - application/json: array[#/components/schemas/CustomerAppDataCreateOrUpdateItem]
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v1/customers/{customerIdOrKey}/apps/{appId}`**
+  - 版本：v1
+  - operationId：deleteCustomerAppData
+  - 中文说明：删除客户
+  - 原始摘要：Delete customer app data
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `appId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/customers/{customerIdOrKey}/entitlements/{featureKey}/value`**
+  - 版本：v1
+  - operationId：getCustomerEntitlementValue
+  - 中文说明：获取客户
+  - 原始摘要：Get customer entitlement value
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `featureKey`（必填：是）：string；未提供
+    - query `time`（必填：否）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/customers/{customerIdOrKey}/stripe`**
+  - 版本：v1
+  - operationId：getCustomerStripeAppData
+  - 中文说明：获取客户
+  - 原始摘要：Get customer stripe app data
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/customers/{customerIdOrKey}/stripe`**
+  - 版本：v1
+  - operationId：upsertCustomerStripeAppData
+  - 中文说明：更新或创建客户
+  - 原始摘要：Upsert customer stripe app data
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/StripeCustomerAppDataBase
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/customers/{customerIdOrKey}/stripe/portal`**
+  - 版本：v1
+  - operationId：createCustomerStripePortalSession
+  - 中文说明：创建客户
+  - 原始摘要：Create Stripe customer portal session
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateStripeCustomerPortalSessionParams
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/customers/{customerIdOrKey}/subscriptions`**
+  - 版本：v1
+  - operationId：listCustomerSubscriptions
+  - 中文说明：查询客户
+  - 原始摘要：List customer subscriptions
+  - 标签：Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - query `status`（必填：否）：array[#/components/schemas/SubscriptionStatus]；未提供
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/CustomerSubscriptionOrderBy；The order by field.
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### debug（debug，共 1 个）
+- **`GET /api/v1/debug/metrics`**
+  - 版本：v1
+  - operationId：getDebugMetrics
+  - 中文说明：获取debug
+  - 原始摘要：Get event metrics
+  - 标签：Debug
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### grants（grants，共 1 个）
+- **`DELETE /api/v1/grants/{grantId}`**
+  - 版本：v1
+  - operationId：voidGrant
+  - 中文说明：执行Void grant
+  - 原始摘要：Void grant
+  - 标签：Entitlements
+  - 参数：
+    - path `grantId`（必填：是）：string；未提供
+    - query `at`（必填：否）：string；The time at which the grant should be voided.
+Must not be in the future and must be within the current usage period of the entitlement.
+Defaults to the current time if not specified.
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### info（info，共 2 个）
+- **`GET /api/v1/info/currencies`**
+  - 版本：v1
+  - operationId：listCurrencies
+  - 中文说明：查询info
+  - 原始摘要：List supported currencies
+  - 标签：Lookup Information
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/info/progress/{id}`**
+  - 版本：v1
+  - operationId：getProgress
+  - 中文说明：获取info
+  - 原始摘要：Get progress
+  - 标签：Lookup Information
+  - 参数：
+    - path `id`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### marketplace（marketplace，共 6 个）
+- **`GET /api/v1/marketplace/listings`**
+  - 版本：v1
+  - operationId：listMarketplaceListings
+  - 中文说明：查询marketplace
+  - 原始摘要：List available apps
+  - 标签：Apps
+  - 参数：
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/marketplace/listings/{type}`**
+  - 版本：v1
+  - operationId：getMarketplaceListing
+  - 中文说明：获取marketplace
+  - 原始摘要：Get app details by type
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/marketplace/listings/{type}/install`**
+  - 版本：v1
+  - operationId：marketplaceAppInstall
+  - 中文说明：安装marketplace
+  - 原始摘要：Install app
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；The type of the app to install.
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/MarketplaceInstallRequestPayload
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/marketplace/listings/{type}/install/apikey`**
+  - 版本：v1
+  - operationId：marketplaceAppAPIKeyInstall
+  - 中文说明：安装marketplace
+  - 原始摘要：Install app via API key
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；The type of the app to install.
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/marketplace/listings/{type}/install/oauth2`**
+  - 版本：v1
+  - operationId：marketplaceOAuth2InstallGetURL
+  - 中文说明：获取marketplace
+  - 原始摘要：Get OAuth2 install URL
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/marketplace/listings/{type}/install/oauth2/authorize`**
+  - 版本：v1
+  - operationId：marketplaceOAuth2InstallAuthorize
+  - 中文说明：安装marketplace
+  - 原始摘要：Install app via OAuth2
+  - 标签：Apps
+  - 参数：
+    - query `state`（必填：否）：string；Required if the "state" parameter was present in the client authorization request.
+The exact value received from the client:
+
+Unique, randomly generated, opaque, and non-guessable string that is sent
+when starting an authentication request and validated when processing the response.
+    - query `code`（必填：否）：string；Authorization code which the client will later exchange for an access token.
+Required with the success response.
+    - query `error`（必填：否）：#/components/schemas/OAuth2AuthorizationCodeGrantErrorType；Error code.
+Required with the error response.
+    - query `error_description`（必填：否）：string；Optional human-readable text providing additional information,
+used to assist the client developer in understanding the error that occurred.
+    - query `error_uri`（必填：否）：string；Optional uri identifying a human-readable web page with
+information about the error, used to provide the client
+developer with additional information about the error
+    - path `type`（必填：是）：#/components/schemas/AppType；The type of the app to install.
+  - 请求体：
+    - 无
+  - 响应：
+    - 303：Redirection
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### 计量表（meters，共 3 个）
+- **`GET /api/v1/meters/{meterIdOrSlug}/group-by/{groupByKey}/values`**
+  - 版本：v1
+  - operationId：listMeterGroupByValues
+  - 中文说明：查询计量表
+  - 原始摘要：List meter group by values
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；未提供
+    - path `groupByKey`（必填：是）：string；未提供
+    - query `from`（必填：否）：string；Start date-time in RFC 3339 format.
+
+Inclusive. Defaults to 24 hours ago.
+
+For example: ?from=2025-01-01T00%3A00%3A00.000Z
+    - query `to`（必填：否）：string；End date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?to=2025-02-01T00%3A00%3A00.000Z
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/meters/{meterIdOrSlug}/query`**
+  - 版本：v1
+  - operationId：queryMeter
+  - 中文说明：执行Query meter
+  - 原始摘要：Query meter
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；未提供
+    - query `clientId`（必填：否）：string；Client ID
+Useful to track progress of a query.
+    - query `from`（必填：否）：string；Start date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?from=2025-01-01T00%3A00%3A00.000Z
+    - query `to`（必填：否）：string；End date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?to=2025-02-01T00%3A00%3A00.000Z
+    - query `windowSize`（必填：否）：#/components/schemas/WindowSize；If not specified, a single usage aggregate will be returned for the entirety of the specified period for each subject and group.
+
+For example: ?windowSize=DAY
+    - query `windowTimeZone`（必填：否）：string；The value is the name of the time zone as defined in the IANA Time Zone Database (http://www.iana.org/time-zones).
+If not specified, the UTC timezone will be used.
+
+For example: ?windowTimeZone=UTC
+    - query `subject`（必填：否）：array[string]；Filtering by multiple subjects.
+
+For example: ?subject=subject-1&subject=subject-2
+    - query `filterCustomerId`（必填：否）：array[string]；Filtering by multiple customers.
+
+For example: ?filterCustomerId=customer-1&filterCustomerId=customer-2
+    - query `filterGroupBy`（必填：否）：object；Simple filter for group bys with exact match.
+
+For example: ?filterGroupBy[vendor]=openai&filterGroupBy[model]=gpt-4-turbo
+
+⚠️ __Deprecated__: Use `advancedMeterGroupByFilters` instead
+    - query `advancedMeterGroupByFilters`（必填：否）：any；Optional advanced meter group by filters.
+You can use this to filter for values of the meter groupBy fields.
+    - query `groupBy`（必填：否）：array[string]；If not specified a single aggregate will be returned for each subject and time window.
+`subject` is a reserved group by value.
+
+For example: ?groupBy=subject&groupBy=model
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/meters/{meterIdOrSlug}/subjects`**
+  - 版本：v1
+  - operationId：listMeterSubjects
+  - 中文说明：查询计量表
+  - 原始摘要：List meter subjects
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；未提供
+    - query `from`（必填：否）：string；Start date-time in RFC 3339 format.
+
+Inclusive. Defaults to the beginning of time.
+
+For example: ?from=2025-01-01T00%3A00%3A00.000Z
+    - query `to`（必填：否）：string；End date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?to=2025-02-01T00%3A00%3A00.000Z
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### notification（notification，共 14 个）
+- **`GET /api/v1/notification/channels`**
+  - 版本：v1
+  - operationId：listNotificationChannels
+  - 中文说明：查询notification
+  - 原始摘要：List notification channels
+  - 标签：Notifications
+  - 参数：
+    - query `includeDeleted`（必填：否）：boolean；Include deleted notification channels in response.
+
+Usage: `?includeDeleted=true`
+    - query `includeDisabled`（必填：否）：boolean；Include disabled notification channels in response.
+
+Usage: `?includeDisabled=false`
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationChannelOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/notification/channels`**
+  - 版本：v1
+  - operationId：createNotificationChannel
+  - 中文说明：创建notification
+  - 原始摘要：Create a notification channel
+  - 标签：Notifications
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationChannelCreateRequest
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：deleteNotificationChannel
+  - 中文说明：删除notification
+  - 原始摘要：Delete a notification channel
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：getNotificationChannel
+  - 中文说明：获取notification
+  - 原始摘要：Get notification channel
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：updateNotificationChannel
+  - 中文说明：更新notification
+  - 原始摘要：Update a notification channel
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationChannelCreateRequest
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/notification/events`**
+  - 版本：v1
+  - operationId：listNotificationEvents
+  - 中文说明：查询notification
+  - 原始摘要：List notification events
+  - 标签：Notifications
+  - 参数：
+    - query `from`（必填：否）：string；Start date-time in RFC 3339 format.
+Inclusive.
+    - query `to`（必填：否）：string；End date-time in RFC 3339 format.
+Inclusive.
+    - query `feature`（必填：否）：array[string]；Filtering by multiple feature ids or keys.
+
+Usage: `?feature=feature-1&feature=feature-2`
+    - query `subject`（必填：否）：array[string]；Filtering by multiple subject ids or keys.
+
+Usage: `?subject=subject-1&subject=subject-2`
+    - query `rule`（必填：否）：array[string]；Filtering by multiple rule ids.
+
+Usage: `?rule=01J8J2XYZ2N5WBYK09EDZFBSZM&rule=01J8J4R4VZH180KRKQ63NB2VA5`
+    - query `channel`（必填：否）：array[string]；Filtering by multiple channel ids.
+
+Usage: `?channel=01J8J4RXH778XB056JS088PCYT&channel=01J8J4S1R1G9EVN62RG23A9M6J`
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationEventOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/notification/events/{eventId}`**
+  - 版本：v1
+  - operationId：getNotificationEvent
+  - 中文说明：获取notification
+  - 原始摘要：Get notification event
+  - 标签：Notifications
+  - 参数：
+    - path `eventId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/notification/events/{eventId}/resend`**
+  - 版本：v1
+  - operationId：resendNotificationEvent
+  - 中文说明：执行Re-send notification event
+  - 原始摘要：Re-send notification event
+  - 标签：Notifications
+  - 参数：
+    - path `eventId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationEventResendRequest
+  - 响应：
+    - 202：The request has been accepted for processing, but processing has not yet completed.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/notification/rules`**
+  - 版本：v1
+  - operationId：listNotificationRules
+  - 中文说明：查询notification
+  - 原始摘要：List notification rules
+  - 标签：Notifications
+  - 参数：
+    - query `includeDeleted`（必填：否）：boolean；Include deleted notification rules in response.
+
+Usage: `?includeDeleted=true`
+    - query `includeDisabled`（必填：否）：boolean；Include disabled notification rules in response.
+
+Usage: `?includeDisabled=false`
+    - query `feature`（必填：否）：array[string]；Filtering by multiple feature ids/keys.
+
+Usage: `?feature=feature-1&feature=feature-2`
+    - query `channel`（必填：否）：array[string]；Filtering by multiple notifiaction channel ids.
+
+Usage: `?channel=01ARZ3NDEKTSV4RRFFQ69G5FAV&channel=01J8J2Y5X4NNGQS32CF81W95E3`
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationRuleOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/notification/rules`**
+  - 版本：v1
+  - operationId：createNotificationRule
+  - 中文说明：创建notification
+  - 原始摘要：Create a notification rule
+  - 标签：Notifications
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationRuleCreateRequest
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：deleteNotificationRule
+  - 中文说明：删除notification
+  - 原始摘要：Delete a notification rule
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：getNotificationRule
+  - 中文说明：获取notification
+  - 原始摘要：Get notification rule
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：updateNotificationRule
+  - 中文说明：更新notification
+  - 原始摘要：Update a notification rule
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationRuleCreateRequest
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/notification/rules/{ruleId}/test`**
+  - 版本：v1
+  - operationId：testNotificationRule
+  - 中文说明：执行Test notification rule
+  - 原始摘要：Test notification rule
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### portal（portal，共 4 个）
+- **`GET /api/v1/portal/meters/{meterSlug}/query`**
+  - 版本：v1
+  - operationId：queryPortalMeter
+  - 中文说明：执行Query meter Query meter
+  - 原始摘要：Query meter Query meter
+  - 标签：Portal
+  - 参数：
+    - path `meterSlug`（必填：是）：string；未提供
+    - query `clientId`（必填：否）：string；Client ID
+Useful to track progress of a query.
+    - query `from`（必填：否）：string；Start date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?from=2025-01-01T00%3A00%3A00.000Z
+    - query `to`（必填：否）：string；End date-time in RFC 3339 format.
+
+Inclusive.
+
+For example: ?to=2025-02-01T00%3A00%3A00.000Z
+    - query `windowSize`（必填：否）：#/components/schemas/WindowSize；If not specified, a single usage aggregate will be returned for the entirety of the specified period for each subject and group.
+
+For example: ?windowSize=DAY
+    - query `windowTimeZone`（必填：否）：string；The value is the name of the time zone as defined in the IANA Time Zone Database (http://www.iana.org/time-zones).
+If not specified, the UTC timezone will be used.
+
+For example: ?windowTimeZone=UTC
+    - query `filterCustomerId`（必填：否）：array[string]；Filtering by multiple customers.
+
+For example: ?filterCustomerId=customer-1&filterCustomerId=customer-2
+    - query `filterGroupBy`（必填：否）：object；Simple filter for group bys with exact match.
+
+For example: ?filterGroupBy[vendor]=openai&filterGroupBy[model]=gpt-4-turbo
+
+⚠️ __Deprecated__: Use `advancedMeterGroupByFilters` instead
+    - query `advancedMeterGroupByFilters`（必填：否）：any；Optional advanced meter group by filters.
+You can use this to filter for values of the meter groupBy fields.
+    - query `groupBy`（必填：否）：array[string]；If not specified a single aggregate will be returned for each subject and time window.
+`subject` is a reserved group by value.
+
+For example: ?groupBy=subject&groupBy=model
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v1/portal/tokens`**
+  - 版本：v1
+  - operationId：listPortalTokens
+  - 中文说明：查询portal
+  - 原始摘要：List consumer portal tokens
+  - 标签：Portal
+  - 参数：
+    - query `limit`（必填：否）：integer；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/portal/tokens`**
+  - 版本：v1
+  - operationId：createPortalToken
+  - 中文说明：创建portal
+  - 原始摘要：Create consumer portal token
+  - 标签：Portal
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/PortalToken
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/portal/tokens/invalidate`**
+  - 版本：v1
+  - operationId：invalidatePortalTokens
+  - 中文说明：执行Invalidate portal tokens
+  - 原始摘要：Invalidate portal tokens
+  - 标签：Portal
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### stripe（stripe，共 1 个）
+- **`POST /api/v1/stripe/checkout/sessions`**
+  - 版本：v1
+  - operationId：createStripeCheckoutSession
+  - 中文说明：创建stripe
+  - 原始摘要：Create checkout session
+  - 标签：App: Stripe
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateStripeCheckoutSessionRequest
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### 订阅（subscriptions，共 4 个）
+- **`DELETE /api/v1/subscriptions/{subscriptionId}`**
+  - 版本：v1
+  - operationId：deleteSubscription
+  - 中文说明：删除订阅
+  - 原始摘要：Delete subscription
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing). Variants with ErrorExtensions specific to subscriptions.
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+Variants with ErrorExtensions specific to subscriptions.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PATCH /api/v1/subscriptions/{subscriptionId}`**
+  - 版本：v1
+  - operationId：editSubscription
+  - 中文说明：执行Edit subscription
+  - 原始摘要：Edit subscription
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/SubscriptionEdit
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing). Variants with ErrorExtensions specific to subscriptions.
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+Variants with ErrorExtensions specific to subscriptions.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PATCH /api/v1/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`**
+  - 版本：v1
+  - operationId：updateSubscriptionAddon
+  - 中文说明：更新订阅
+  - 原始摘要：Update subscription addon
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；未提供
+    - path `subscriptionAddonId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/SubscriptionAddonUpdate
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v1/subscriptions/{subscriptionId}/migrate`**
+  - 版本：v1
+  - operationId：migrateSubscription
+  - 中文说明：执行Migrate subscription
+  - 原始摘要：Migrate subscription
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing). Variants with ErrorExtensions specific to subscriptions.
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+Variants with ErrorExtensions specific to subscriptions.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+### v2 待合并（共 13 个）
+
+#### 客户（customers，共 10 个）
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements`**
+  - 版本：v2
+  - operationId：listCustomerEntitlementsV2
+  - 中文说明：查询客户
+  - 原始摘要：List customer entitlements
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - query `includeDeleted`（必填：否）：boolean；未提供
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/EntitlementOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements`**
+  - 版本：v2
+  - operationId：createCustomerEntitlementV2
+  - 中文说明：创建客户
+  - 原始摘要：Create a customer entitlement
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementV2CreateInputs
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`DELETE /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}`**
+  - 版本：v2
+  - operationId：deleteCustomerEntitlementV2
+  - 中文说明：删除客户
+  - 原始摘要：Delete customer entitlement
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementV2
+  - 中文说明：获取客户
+  - 原始摘要：Get customer entitlement
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`**
+  - 版本：v2
+  - operationId：listCustomerEntitlementGrantsV2
+  - 中文说明：查询客户
+  - 原始摘要：List customer entitlement grants
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+    - query `includeDeleted`（必填：否）：boolean；未提供
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `offset`（必填：否）：integer；Number of items to skip.
+
+Default is 0.
+    - query `limit`（必填：否）：integer；Number of items to return.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/GrantOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`**
+  - 版本：v2
+  - operationId：createCustomerEntitlementGrantV2
+  - 中文说明：创建客户
+  - 原始摘要：Create customer entitlement grant
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementGrantCreateInputV2
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/history`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementHistoryV2
+  - 中文说明：获取客户
+  - 原始摘要：Get customer entitlement history
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+    - query `from`（必填：否）：string；Start of time range to query entitlement: date-time in RFC 3339 format. Defaults to the last reset. Gets truncated to the granularity of the underlying meter.
+    - query `to`（必填：否）：string；End of time range to query entitlement: date-time in RFC 3339 format. Defaults to now.
+If not now then gets truncated to the granularity of the underlying meter.
+    - query `windowSize`（必填：是）：#/components/schemas/WindowSize；Windowsize
+    - query `windowTimeZone`（必填：否）：string；The timezone used when calculating the windows.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`PUT /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/override`**
+  - 版本：v2
+  - operationId：overrideCustomerEntitlementV2
+  - 中文说明：执行Override customer entitlement
+  - 原始摘要：Override customer entitlement
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementV2CreateInputs
+  - 响应：
+    - 201：The request has succeeded and a new resource has been created as a result.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 409：The request could not be completed due to a conflict with the current state of the target resource.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/reset`**
+  - 版本：v2
+  - operationId：resetCustomerEntitlementUsageV2
+  - 中文说明：执行Reset customer entitlement
+  - 原始摘要：Reset customer entitlement
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/ResetEntitlementUsageInput
+  - 响应：
+    - 204：There is no content to send for this request, but the headers may be useful. 
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/value`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementValueV2
+  - 中文说明：获取客户
+  - 原始摘要：Get customer entitlement value
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；未提供
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；未提供
+    - query `time`（必填：否）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### entitlements（entitlements，共 2 个）
+- **`GET /api/v2/entitlements`**
+  - 版本：v2
+  - operationId：listEntitlementsV2
+  - 中文说明：查询entitlements
+  - 原始摘要：List all entitlements
+  - 标签：Entitlements
+  - 参数：
+    - query `feature`（必填：否）：array[string]；Filtering by multiple features.
+
+Usage: `?feature=feature-1&feature=feature-2`
+    - query `customerKeys`（必填：否）：array[string]；Filtering by multiple customers.
+
+Usage: `?customerKeys=customer-1&customerKeys=customer-3`
+    - query `customerIds`（必填：否）：array[string]；Filtering by multiple customers.
+
+Usage: `?customerIds=01K4WAQ0J99ZZ0MD75HXR112H8&customerIds=01K4WAQ0J99ZZ0MD75HXR112H9`
+    - query `entitlementType`（必填：否）：array[#/components/schemas/EntitlementType]；Filtering by multiple entitlement types.
+
+Usage: `?entitlementType=metered&entitlementType=boolean`
+    - query `excludeInactive`（必填：否）：boolean；Exclude inactive entitlements in the response (those scheduled for later or earlier)
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `offset`（必填：否）：integer；Number of items to skip.
+
+Default is 0.
+    - query `limit`（必填：否）：integer；Number of items to return.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/EntitlementOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+- **`GET /api/v2/entitlements/{entitlementId}`**
+  - 版本：v2
+  - operationId：getEntitlementByIdV2
+  - 中文说明：获取entitlements
+  - 原始摘要：Get entitlement by ID
+  - 标签：Entitlements
+  - 参数：
+    - path `entitlementId`（必填：是）：string；未提供
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 404：The origin server did not find a current representation for the target resource or is not willing to disclose that one exists.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+#### grants（grants，共 1 个）
+- **`GET /api/v2/grants`**
+  - 版本：v2
+  - operationId：listGrantsV2
+  - 中文说明：查询grants
+  - 原始摘要：List grants
+  - 标签：Entitlements
+  - 参数：
+    - query `feature`（必填：否）：array[string]；Filtering by multiple features.
+
+Usage: `?feature=feature-1&feature=feature-2`
+    - query `customer`（必填：否）：array[#/components/schemas/ULIDOrExternalKey]；Filtering by multiple customers (either by ID or key).
+
+Usage: `?customer=customer-1&customer=customer-2`
+    - query `includeDeleted`（必填：否）：boolean；Include deleted
+    - query `page`（必填：否）：integer；Page index.
+
+Default is 1.
+    - query `pageSize`（必填：否）：integer；The maximum number of items per page.
+
+Default is 100.
+    - query `offset`（必填：否）：integer；Number of items to skip.
+
+Default is 0.
+    - query `limit`（必填：否）：integer；Number of items to return.
+
+Default is 100.
+    - query `order`（必填：否）：any；The order direction.
+    - query `orderBy`（必填：否）：#/components/schemas/GrantOrderBy；The order by field.
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：The request has succeeded.
+    - 400：The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).
+    - 401：The request has not been applied because it lacks valid authentication credentials for the target resource.
+    - 403：The server understood the request but refuses to authorize it.
+    - 412：One or more conditions given in the request header fields evaluated to false when tested on the server.
+    - 500：The server encountered an unexpected condition that prevented it from fulfilling the request.
+    - 503：The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.
+    - default：An unexpected error response.
+
+## 三、排除清单
+
+### 已过期（deprecated，已剔除）共 20 个
+- v1 `PUT /api/v1/apps/{id}/stripe/api-key`（updateStripeAPIKey）
+- v1 `GET /api/v1/entitlements`（listEntitlements）
+- v1 `GET /api/v1/entitlements/{entitlementId}`（getEntitlementById）
+- v1 `GET /api/v1/grants`（listGrants）
+- v1 `POST /api/v1/plans/{planIdOrKey}/next`（nextPlan）
+- v1 `GET /api/v1/subjects`（listSubjects）
+- v1 `POST /api/v1/subjects`（upsertSubject）
+- v1 `DELETE /api/v1/subjects/{subjectIdOrKey}`（deleteSubject）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}`（getSubject）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements`（listSubjectEntitlements）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements`（createEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`（listEntitlementGrants）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`（createGrant）
+- v1 `PUT /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/override`（overrideEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/value`（getEntitlementValue）
+- v1 `DELETE /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}`（deleteEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}`（getEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}/history`（getEntitlementHistory）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}/reset`（resetEntitlementUsage）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/restore`（restoreSubscription）
+
+### 已转移到 v3（已剔除）共 57 个
+- v1 `GET /api/v1/addons` -> v3 `GET /openmeter/addons`（listAddons -> list-addons）
+- v1 `POST /api/v1/addons` -> v3 `POST /openmeter/addons`（createAddon -> create-addon）
+- v1 `DELETE /api/v1/addons/{addonId}` -> v3 `DELETE /openmeter/addons/{addonId}`（deleteAddon -> delete-addon）
+- v1 `GET /api/v1/addons/{addonId}` -> v3 `GET /openmeter/addons/{addonId}`（getAddon -> get-addon）
+- v1 `PUT /api/v1/addons/{addonId}` -> v3 `PUT /openmeter/addons/{addonId}`（updateAddon -> update-addon）
+- v1 `POST /api/v1/addons/{addonId}/archive` -> v3 `POST /openmeter/addons/{addonId}/archive`（archiveAddon -> archive-addon）
+- v1 `POST /api/v1/addons/{addonId}/publish` -> v3 `POST /openmeter/addons/{addonId}/publish`（publishAddon -> publish-addon）
+- v1 `GET /api/v1/apps` -> v3 `GET /openmeter/apps`（listApps -> list-apps）
+- v1 `DELETE /api/v1/apps/{id}` -> v3 `DELETE /openmeter/apps/{appId}`（uninstallApp -> uninstall-app）
+- v1 `GET /api/v1/apps/{id}` -> v3 `GET /openmeter/apps/{appId}`（getApp -> get-app）
+- v1 `PUT /api/v1/apps/{id}` -> v3 `PUT /openmeter/apps/{appId}`（updateApp -> update-app）
+- v1 `GET /api/v1/billing/invoices` -> v3 `GET /openmeter/billing/invoices`（listInvoices -> list-invoices）
+- v1 `DELETE /api/v1/billing/invoices/{invoiceId}` -> v3 `DELETE /openmeter/billing/invoices/{invoiceId}`（deleteInvoice -> delete-invoice）
+- v1 `GET /api/v1/billing/invoices/{invoiceId}` -> v3 `GET /openmeter/billing/invoices/{invoiceId}`（getInvoice -> get-invoice）
+- v1 `PUT /api/v1/billing/invoices/{invoiceId}` -> v3 `PUT /openmeter/billing/invoices/{invoiceId}`（updateInvoice -> update-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/advance` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/advance`（advanceInvoiceAction -> advance-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/approve` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/approve`（approveInvoiceAction -> approve-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/retry` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/retry`（retryInvoiceAction -> retry-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/snapshot-quantities` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities`（snapshotQuantitiesInvoiceAction -> snapshot-quantities-invoice）
+- v1 `GET /api/v1/customers` -> v3 `GET /openmeter/customers`（listCustomers -> list-customers）
+- v1 `POST /api/v1/customers` -> v3 `POST /openmeter/customers`（createCustomer -> create-customer）
+- v1 `DELETE /api/v1/customers/{customerIdOrKey}` -> v3 `DELETE /openmeter/customers/{customerId}`（deleteCustomer -> delete-customer）
+- v1 `GET /api/v1/customers/{customerIdOrKey}` -> v3 `GET /openmeter/customers/{customerId}`（getCustomer -> get-customer）
+- v1 `PUT /api/v1/customers/{customerIdOrKey}` -> v3 `PUT /openmeter/customers/{customerId}`（updateCustomer -> upsert-customer）
+- v1 `GET /api/v1/events` -> v3 `GET /openmeter/events`（listEvents -> list-metering-events）
+- v2 `GET /api/v2/events` -> v3 `GET /openmeter/events`（listEventsV2 -> list-metering-events）
+- v1 `POST /api/v1/events` -> v3 `POST /openmeter/events`（ingestEvents -> ingest-metering-events）
+- v1 `GET /api/v1/features` -> v3 `GET /openmeter/features`（listFeatures -> list-features）
+- v1 `POST /api/v1/features` -> v3 `POST /openmeter/features`（createFeature -> create-feature）
+- v1 `DELETE /api/v1/features/{featureId}` -> v3 `DELETE /openmeter/features/{featureId}`（deleteFeature -> delete-feature）
+- v1 `GET /api/v1/features/{featureId}` -> v3 `GET /openmeter/features/{featureId}`（getFeature -> get-feature）
+- v1 `GET /api/v1/meters` -> v3 `GET /openmeter/meters`（listMeters -> list-meters）
+- v1 `POST /api/v1/meters` -> v3 `POST /openmeter/meters`（createMeter -> create-meter）
+- v1 `DELETE /api/v1/meters/{meterIdOrSlug}` -> v3 `DELETE /openmeter/meters/{meterId}`（deleteMeter -> delete-meter）
+- v1 `GET /api/v1/meters/{meterIdOrSlug}` -> v3 `GET /openmeter/meters/{meterId}`（getMeter -> get-meter）
+- v1 `PUT /api/v1/meters/{meterIdOrSlug}` -> v3 `PUT /openmeter/meters/{meterId}`（updateMeter -> update-meter）
+- v1 `POST /api/v1/meters/{meterIdOrSlug}/query` -> v3 `POST /openmeter/meters/{meterId}/query`（queryMeterPost -> query-meter）
+- v1 `GET /api/v1/plans` -> v3 `GET /openmeter/plans`（listPlans -> list-plans）
+- v1 `POST /api/v1/plans` -> v3 `POST /openmeter/plans`（createPlan -> create-plan）
+- v1 `DELETE /api/v1/plans/{planId}` -> v3 `DELETE /openmeter/plans/{planId}`（deletePlan -> delete-plan）
+- v1 `GET /api/v1/plans/{planId}` -> v3 `GET /openmeter/plans/{planId}`（getPlan -> get-plan）
+- v1 `PUT /api/v1/plans/{planId}` -> v3 `PUT /openmeter/plans/{planId}`（updatePlan -> update-plan）
+- v1 `GET /api/v1/plans/{planId}/addons` -> v3 `GET /openmeter/plans/{planId}/addons`（listPlanAddons -> list-plan-addons）
+- v1 `POST /api/v1/plans/{planId}/addons` -> v3 `POST /openmeter/plans/{planId}/addons`（createPlanAddon -> create-plan-addon）
+- v1 `DELETE /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `DELETE /openmeter/plans/{planId}/addons/{planAddonId}`（deletePlanAddon -> delete-plan-addon）
+- v1 `GET /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `GET /openmeter/plans/{planId}/addons/{planAddonId}`（getPlanAddon -> get-plan-addon）
+- v1 `PUT /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `PUT /openmeter/plans/{planId}/addons/{planAddonId}`（updatePlanAddon -> update-plan-addon）
+- v1 `POST /api/v1/plans/{planId}/archive` -> v3 `POST /openmeter/plans/{planId}/archive`（archivePlan -> archive-plan）
+- v1 `POST /api/v1/plans/{planId}/publish` -> v3 `POST /openmeter/plans/{planId}/publish`（publishPlan -> publish-plan）
+- v1 `POST /api/v1/subscriptions` -> v3 `POST /openmeter/subscriptions`（createSubscription -> create-subscription）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}` -> v3 `GET /openmeter/subscriptions/{subscriptionId}`（getSubscription -> get-subscription）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}/addons` -> v3 `GET /openmeter/subscriptions/{subscriptionId}/addons`（listSubscriptionAddons -> list-subscription-addons）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/addons` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/addons`（createSubscriptionAddon -> create-subscription-addon）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}` -> v3 `GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`（getSubscriptionAddon -> get-subscription-addon）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/cancel` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/cancel`（cancelSubscription -> cancel-subscription）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/change` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/change`（changeSubscription -> change-subscription）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/unschedule-cancelation` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation`（unscheduleCancelation -> unschedule-cancelation）

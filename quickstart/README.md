@@ -21,6 +21,12 @@ Launch OpenMeter and its dependencies via:
 docker compose up -d
 ```
 
+If you changed `config.yaml`, restart only OpenMeter services with:
+
+```sh
+make env-local-restart-config
+```
+
 ## 2. Ingest usage event(s)
 
 Ingest usage events in [CloudEvents](https://cloudevents.io/) format:

@@ -28,6 +28,19 @@ env-local-up:
 		-f docker-compose.debug-ports.yaml \
 		up -d --force-recreate
 
+.PHONY: env-local-restart-config
+env-local-restart-config: ## Recreate quickstart OpenMeter services to apply config.yaml changes
+	$(call print-target)
+	docker compose \
+		-f docker-compose.yaml \
+		up -d --no-deps --force-recreate \
+		openmeter \
+		openmeter-jobs \
+		sink-worker \
+		balance-worker \
+		notification-service \
+		billing-worker
+
 .PHONY: help
 .DEFAULT_GOAL := help
 help:

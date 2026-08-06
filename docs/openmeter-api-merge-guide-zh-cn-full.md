@@ -1,0 +1,3928 @@
+# OpenMeter API 全中文化版（v3 全量 + v1/v2 需合并）
+
+生成时间：2026-08-07
+
+说明：
+- 目标：保留 v3 全量接口，列出 v1/v2 中未过期且未转移到 v3 的补齐清单。
+- 排除规则：
+  - v1/v2 中 `deprecated: true` 标记的接口被视为已过期，剔除。
+  - `method + 归一化路径` 命中 v3 的接口视为已转移，剔除。
+  - 归一化路径：去除 `/api/v1`、`/api/v2`、`/api/v3`、`/openmeter`，并把路径参数统一为 `/{*}`。
+- 统计：v3 共 119 个接口；v1 共 139，v2 共 14；过期 20；已转移 57；待合并 76（v1：63，v2：13）。
+
+## 一、v3 全量接口（按领域）
+
+### AI 使用批次（ai-usage-batches，共 2 个）
+- **`POST /ai-usage-batches`**
+  - 版本：v3
+  - operationId：create-ai-usage-batch
+  - 中文说明：提交AI使用批次
+  - 标签：AI Usage
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/AIUsageUsageBatchCreate
+  - 响应：
+    - 200：使用批次响应。
+    - 201：创建使用批次响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /ai-usage-batches/{batchId}`**
+  - 版本：v3
+  - operationId：get-ai-usage-batch
+  - 中文说明：获取AI使用批次
+  - 标签：AI Usage
+  - 参数：
+    - path `batchId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：使用批次响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### LLM 成本（llm-cost，共 5 个）
+- **`GET /openmeter/llm-cost/overrides`**
+  - 版本：v3
+  - operationId：list-llm-cost-overrides
+  - 中文说明：列出LLM成本覆盖
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - query `filter`（必填：否）：#/components/schemas/ListLLMCostPricesParamsFilter；—
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/llm-cost/overrides`**
+  - 版本：v3
+  - operationId：create-llm-cost-override
+  - 中文说明：创建LLM成本覆盖
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/LLMCostOverrideCreate
+  - 响应：
+    - 201：价格已创建回复。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/llm-cost/overrides/{priceId}`**
+  - 版本：v3
+  - operationId：delete-llm-cost-override
+  - 中文说明：删除LLM成本覆盖
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - path `priceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/llm-cost/prices`**
+  - 版本：v3
+  - operationId：list-llm-cost-prices
+  - 中文说明：列出LLM成本价
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - query `filter`（必填：否）：#/components/schemas/ListLLMCostPricesParamsFilter；筛选价格。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的价格进行排序。 支持的排序属性包括：
+
+- `id`
+- `provider.id`
+- `model.id` （默认）
+- `effective_from`
+- `effective_to`
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/llm-cost/prices/{priceId}`**
+  - 版本：v3
+  - operationId：get-llm-cost-price
+  - 中文说明：获取LLM成本价
+  - 标签：OpenMeter LLM Cost
+  - 参数：
+    - path `priceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 事件（events，共 2 个）
+- **`GET /openmeter/events`**
+  - 版本：v3
+  - operationId：list-metering-events
+  - 中文说明：列出计量事件
+  - 标签：Metering Events
+  - 参数：
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
+    - query `filter`（必填：否）：#/components/schemas/ListEventsParamsFilter；筛选响应中返回的事件。
+
+要按主题过滤事件，请添加以下查询参数：
+过滤示例：`[subject] [eq] = customer-1`
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的事件进行排序。 支持的排序属性包括：
+
+- “时间” （默认）
+- `ingested_at`
+- `stored_at`
+
+省略时，事件按“时间降序”排序（最新的在前）。当排序
+字段不带后缀，按降序排序。 追加“asc”后缀
+按升序排序，或按`DESC`后缀按降序排序。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：光标分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/events`**
+  - 版本：v3
+  - operationId：ingest-metering-events
+  - 中文说明：摄取计量事件
+  - 标签：Metering Events
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/cloudevents+json: #/components/schemas/MeteringEvent
+    - application/cloudevents-batch+json: array[#/components/schemas/MeteringEvent]
+    - application/json: any
+  - 响应：
+    - 202：事件已被摄取，并且正在异步处理。
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 充值产品（recharge-products，共 1 个）
+- **`GET /recharge-products`**
+  - 版本：v3
+  - operationId：list-recharge-products
+  - 中文说明：列出充值产品
+  - 标签：Commerce
+  - 参数：
+    - query `currency`（必填：否）：#/components/schemas/CurrencyCode；按币种筛选，仅显示以客户币种定价的产品。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：RechargeProductList响应。
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 功能（features，共 6 个）
+- **`GET /openmeter/features`**
+  - 版本：v3
+  - operationId：list-features
+  - 中文说明：列表功能
+  - 标签：OpenMeter Features
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的特征进行排序。 支持的排序属性包括：
+
+- `key`
+- `name`
+- “created_at” （默认）
+- `updated_at`
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+    - query `filter`（必填：否）：#/components/schemas/ListFeatureParamsFilter；筛选响应中返回的特性。
+
+要按 `meter_id` 筛选特性，请添加以下查询参数：
+filter[meter_id][oeq]=<id>
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/features`**
+  - 版本：v3
+  - operationId：create-feature
+  - 中文说明：创建专题
+  - 标签：OpenMeter Features
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateFeatureRequest
+  - 响应：
+    - 201：功能创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：delete-feature
+  - 中文说明：删除特点
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：get-feature
+  - 中文说明：获取功能
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：功能响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PATCH /openmeter/features/{featureId}`**
+  - 版本：v3
+  - operationId：update-feature
+  - 中文说明：更新特色
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateFeatureRequest
+  - 响应：
+    - 200：功能更新的回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/features/{featureId}/cost/query`**
+  - 版本：v3
+  - operationId：query-feature-cost
+  - 中文说明：查询功能成本
+  - 标签：OpenMeter Features
+  - 参数：
+    - path `featureId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：否
+    - application/json: #/components/schemas/MeterQueryRequest
+  - 响应：
+    - 200：请求已成功。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 套餐（plans，共 12 个）
+- **`GET /openmeter/plans`**
+  - 版本：v3
+  - operationId：list-plans
+  - 中文说明：列出计划
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的计划进行排序。 支持的排序属性包括：
+
+- `id`
+- `key`
+- `版本`
+- “created_at” （默认）
+- `updated_at`
+    - query `filter`（必填：否）：#/components/schemas/ListPlansParamsFilter；响应中返回的筛选计划。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/plans`**
+  - 版本：v3
+  - operationId：create-plan
+  - 中文说明：创建计划
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreatePlanRequest
+  - 响应：
+    - 201：计划创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：delete-plan
+  - 中文说明：删除计划
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：get-plan
+  - 中文说明：获取计划
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：计划响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/plans/{planId}`**
+  - 版本：v3
+  - operationId：update-plan
+  - 中文说明：更新计划
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertPlanRequest
+  - 响应：
+    - 200：规划upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/plans/{planId}/addons`**
+  - 版本：v3
+  - operationId：list-plan-addons
+  - 中文说明：列出套餐的附加组件
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/addons`**
+  - 版本：v3
+  - operationId：create-plan-addon
+  - 中文说明：将附加组件添加到套餐
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreatePlanAddonRequest
+  - 响应：
+    - 201：PlanAddon已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`DELETE /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：delete-plan-addon
+  - 中文说明：从套餐中删除附加组件
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：get-plan-addon
+  - 中文说明：获取套餐的附加组件关联
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：PlanAddon响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/plans/{planId}/addons/{planAddonId}`**
+  - 版本：v3
+  - operationId：update-plan-addon
+  - 中文说明：更新套餐的附加组件关联
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+    - path `planAddonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertPlanAddonRequest
+  - 响应：
+    - 200：PlanAddon upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/archive`**
+  - 版本：v3
+  - operationId：archive-plan
+  - 中文说明：存档计划版本
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：计划更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/plans/{planId}/publish`**
+  - 版本：v3
+  - operationId：publish-plan
+  - 中文说明：发布计划版本
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `planId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：计划更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 客户（customers，共 28 个）
+- **`GET /openmeter/customers`**
+  - 版本：v3
+  - operationId：list-customers
+  - 中文说明：查询客户
+  - 标签：OpenMeter Customers
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的客户进行排序。支持的排序属性包括：
+
+- `id`
+- `name` (default)
+- `created_at`
+
+`asc` 后缀可省略；默认排序为升序。`desc`
+后缀用于指定降序排序。
+    - query `filter`（必填：否）：#/components/schemas/ListCustomersParamsFilter；筛选响应中返回的顾客。
+
+要按密钥筛选客户，请添加以下查询参数： filter [key] = my-db-id
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/customers`**
+  - 版本：v3
+  - operationId：create-customer
+  - 中文说明：创建客户
+  - 标签：OpenMeter Customers
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCustomerRequest
+  - 响应：
+    - 201：顾客创建了回复。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：delete-customer
+  - 中文说明：删除客户
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：get-customer
+  - 中文说明：客户产品代码
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：客户回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/customers/{customerId}`**
+  - 版本：v3
+  - operationId：upsert-customer
+  - 中文说明：Upsert客户
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertCustomerRequest
+  - 响应：
+    - 200：客户不满的回应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/customers/{customerId}/billing`**
+  - 版本：v3
+  - operationId：get-customer-billing
+  - 中文说明：获取客户计费数据
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CustomerBillingData响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/customers/{customerId}/billing`**
+  - 版本：v3
+  - operationId：update-customer-billing
+  - 中文说明：更新客户账单数据
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertCustomerBillingDataRequest
+  - 响应：
+    - 200：CustomerBillingData upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/customers/{customerId}/billing/app-data`**
+  - 版本：v3
+  - operationId：update-customer-billing-app-data
+  - 中文说明：更新客户计费应用数据
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertAppCustomerDataRequest
+  - 响应：
+    - 200：AppCustomerData upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/customers/{customerId}/billing/stripe/checkout-sessions`**
+  - 版本：v3
+  - operationId：create-customer-stripe-checkout-session
+  - 中文说明：创建Stripe结账会话
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingCustomerStripeCreateCheckoutSessionRequest
+  - 响应：
+    - 201：CreateStripeCheckoutSessionResult created response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/customers/{customerId}/billing/stripe/portal-sessions`**
+  - 版本：v3
+  - operationId：create-customer-stripe-portal-session
+  - 中文说明：创建Stripe客户门户会话
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingCustomerStripeCreateCustomerPortalSessionRequest
+  - 响应：
+    - 201：CreateStripeCustomerPortalSessionResult创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`GET /openmeter/customers/{customerId}/charges`**
+  - 版本：v3
+  - operationId：list-customer-charges
+  - 中文说明：列出客户费用
+  - 标签：OpenMeter Customers
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的费用进行排序。
+
+支持的排序属性包括：
+
+- `id`
+- `created_at`
+- `service_period.from`
+- `billing_period.from`
+    - query `filter`（必填：否）：#/components/schemas/ListChargesParamsFilter；筛选费用。
+
+要按状态筛选费用，请添加以下查询参数：
+`filter [status] [oeq] = created, active`
+    - query `expand`（必填：否）：array[#/components/schemas/BillingChargesExpand]；展开被引用实体的完整对象。
+
+支持的值为：
+
+- `real_time_usage` ：扩展收费的实时使用情况。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/charges`**
+  - 版本：v3
+  - operationId：create-customer-charges
+  - 中文说明：创建顾客费用
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateChargeRequest
+  - 响应：
+    - 201：收费创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /customers/{customerId}/credit-balance`**
+  - 版本：v3
+  - operationId：get-ai-usage-credit-balance
+  - 中文说明：获取AI使用积分余额
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `timestamp`（必填：否）：#/components/schemas/DateTime；返回截至此时间戳的贷方余额。默认为现在。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：AICreditBalance响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/credit-transactions`**
+  - 版本：v3
+  - operationId：list-ai-usage-credit-transactions
+  - 中文说明：列出AI使用信用交易
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：光标分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/adjustments`**
+  - 版本：v3
+  - operationId：create-credit-adjustment
+  - 中文说明：创建旅行基金调整
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCreditAdjustmentRequest
+  - 响应：
+    - 201：CreditAdjustment已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/credits/balance`**
+  - 版本：v3
+  - operationId：get-customer-credit-balance
+  - 中文说明：客户帐贷差,客户保证金,客帐贷余
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `timestamp`（必填：否）：#/components/schemas/DateTime；返回截至此时间戳的贷方余额。
+
+默认为当前时间。 历史回复返回“实时”为零，因为
+实时充电影响仅适用于当前余额。
+    - query `filter`（必填：否）：#/components/schemas/GetCreditBalanceParamsFilter；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CreditBalances响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/credits/grants`**
+  - 版本：v3
+  - operationId：list-credit-grants
+  - 中文说明：列出信用授予
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `filter`（必填：否）：#/components/schemas/ListCreditGrantsParamsFilter；筛选响应中返回的信用额度授予。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants`**
+  - 版本：v3
+  - operationId：create-credit-grant
+  - 中文说明：创建新的信用授予
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCreditGrantRequest
+  - 响应：
+    - 201：CreditGrant创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/customers/{customerId}/credits/grants/{creditGrantId}`**
+  - 版本：v3
+  - operationId：get-credit-grant
+  - 中文说明：获得旅行基金资助
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CreditGrant响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/settlement/external`**
+  - 版本：v3
+  - operationId：update-credit-grant-external-settlement
+  - 中文说明：更新授信外部结算状态
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateCreditGrantExternalSettlementRequest
+  - 响应：
+    - 200：CreditGrant更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/void`**
+  - 版本：v3
+  - operationId：void-credit-grant
+  - 中文说明：无效信用补助
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - path `creditGrantId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：否
+    - application/json: #/components/schemas/VoidCreditGrantRequest
+  - 响应：
+    - 200：CreditGrant更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/customers/{customerId}/credits/transactions`**
+  - 版本：v3
+  - operationId：list-credit-transactions
+  - 中文说明：信贷业务
+  - 标签：OpenMeter Customers
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
+    - query `filter`（必填：否）：#/components/schemas/ListCreditTransactionsParamsFilter；筛选响应中返回的旅行基金交易记录。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：光标分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/customers/{customerId}/entitlement-access`**
+  - 版本：v3
+  - operationId：list-customer-entitlement-access
+  - 中文说明：列出客户权利访问权限
+  - 标签：OpenMeter Entitlements
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：列出客户的有效功能及其访问权限。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /customers/{customerId}/offline-payments`**
+  - 版本：v3
+  - operationId：create-offline-payment
+  - 中文说明：创建线下付款
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceOfflinePaymentCreate
+  - 响应：
+    - 201：OfflinePayment已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /customers/{customerId}/receivable-periods`**
+  - 版本：v3
+  - operationId：list-receivable-periods
+  - 中文说明：列出应收期
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：光标分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice`**
+  - 版本：v3
+  - operationId：update-external-invoice
+  - 中文说明：更新外部发票
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - path `periodId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceExternalInvoiceUpdate
+  - 响应：
+    - 200：ExternalInvoice已更新响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/runtime-authorization`**
+  - 版本：v3
+  - operationId：get-customer-runtime-authorization
+  - 中文说明：获取运行时授权
+  - 标签：AI Usage
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+    - query `filter`（必填：否）：#/components/schemas/AIUsageRuntimeAuthorizationQuery；按主题和预订筛选授权检查。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：RuntimeAuthorization响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /customers/{customerId}/wallet`**
+  - 版本：v3
+  - operationId：get-customer-wallet
+  - 中文说明：客户钱包
+  - 标签：Commerce
+  - 参数：
+    - path `customerId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：钱包响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 币种（currencies，共 5 个）
+- **`GET /openmeter/currencies`**
+  - 版本：v3
+  - operationId：list-currencies
+  - 中文说明：货币列表
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的货币进行排序。支持的排序属性包括：
+
+- `code` (default)
+- `name`
+
+`asc` 后缀可省略；默认排序为升序。`desc`
+后缀用于指定降序排序。
+    - query `filter`（必填：否）：#/components/schemas/ListCurrenciesParamsFilter；筛选响应中返回的货币。
+
+要按类型过滤货币，请添加以下查询参数： filter [type] = custom
+    - query `expand`（必填：否）：array[#/components/schemas/BillingCurrencyExpand]；展开响应中返回的币种。
+
+要包括当前活动成本基数，请添加： expand = cost_basis
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/currencies/custom`**
+  - 版本：v3
+  - operationId：create-custom-currency
+  - 中文说明：创建自定义货币
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCurrencyCustomRequest
+  - 响应：
+    - 201：CurrencyCustom创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/currencies/custom/{currencyId}`**
+  - 版本：v3
+  - operationId：get-custom-currency
+  - 中文说明：自定义币种
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CurrencyCustom响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/currencies/custom/{currencyId}/cost-bases`**
+  - 版本：v3
+  - operationId：list-cost-bases
+  - 中文说明：列出成本基数
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；—
+    - query `filter`（必填：否）：#/components/schemas/ListCostBasesParamsFilter；筛选响应中返回的成本基数。
+
+要按法定货币代码过滤成本基数，请添加以下查询参数：
+filter [fiat_code] =美元
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/currencies/custom/{currencyId}/cost-bases`**
+  - 版本：v3
+  - operationId：create-cost-basis
+  - 中文说明：创建成本基础
+  - 标签：OpenMeter Currencies
+  - 参数：
+    - path `currencyId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateCostBasisRequest
+  - 响应：
+    - 201：CostBasis已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 应用（apps，共 4 个）
+- **`GET /openmeter/apps`**
+  - 版本：v3
+  - operationId：list-apps
+  - 中文说明：列出应用
+  - 标签：OpenMeter Apps
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：uninstall-app
+  - 中文说明：卸载应用
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：get-app
+  - 中文说明：获取应用
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：应用响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/apps/{appId}`**
+  - 版本：v3
+  - operationId：update-app
+  - 中文说明：Update app
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingUpdateAppRequest
+  - 响应：
+    - 200：应用更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 应用目录（app-catalog，共 3 个）
+- **`GET /openmeter/app-catalog`**
+  - 版本：v3
+  - operationId：list-app-catalog
+  - 中文说明：列出应用目录
+  - 标签：OpenMeter Apps
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/app-catalog/install`**
+  - 版本：v3
+  - operationId：install-app
+  - 中文说明：从目录安装应用
+  - 标签：OpenMeter Apps
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingInstallAppRequest
+  - 响应：
+    - 201：InstallAppResponse创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`GET /openmeter/app-catalog/{appType}`**
+  - 版本：v3
+  - operationId：get-app-catalog-item
+  - 中文说明：按类型获取应用目录项
+  - 标签：OpenMeter Apps
+  - 参数：
+    - path `appType`（必填：是）：#/components/schemas/BillingAppType；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：AppCatalogItem响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 支付供应商（payment-providers，共 2 个）
+- **`POST /payment-providers/alipay/callback`**
+  - 版本：v3
+  - operationId：alipay-payment-callback
+  - 中文说明：支付宝回电
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - text/plain: string
+  - 响应：
+    - 200：ProviderCallbackAck响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /payment-providers/wechat/callback`**
+  - 版本：v3
+  - operationId：wechat-payment-callback
+  - 中文说明：微信支付回拨
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - text/plain: string
+  - 响应：
+    - 200：ProviderCallbackAck响应。
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 治理（governance，共 1 个）
+- **`POST /openmeter/governance/query`**
+  - 版本：v3
+  - operationId：query-governance-access
+  - 中文说明：查询治理访问
+  - 标签：OpenMeter Governance
+  - 参数：
+    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/GovernanceQueryRequest
+  - 响应：
+    - 200：请求已成功。
+    - 400：—
+    - 401：—
+    - 403：—
+
+### 用户资料（profiles，共 5 个）
+- **`GET /openmeter/profiles`**
+  - 版本：v3
+  - operationId：list-billing-profiles
+  - 中文说明：列出账单账户
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/profiles`**
+  - 版本：v3
+  - operationId：create-billing-profile
+  - 中文说明：创建一份新的资料
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateBillingProfileRequest
+  - 响应：
+    - 201：BillingProfile已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：delete-billing-profile
+  - 中文说明：删除账单账户
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：get-billing-profile
+  - 中文说明：获取账单账户
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：BillingProfile响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/profiles/{id}`**
+  - 版本：v3
+  - operationId：update-billing-profile
+  - 中文说明：更新账单账户
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `id`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertBillingProfileRequest
+  - 响应：
+    - 200：BillingProfile更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 税务代码（tax-codes，共 5 个）
+- **`GET /openmeter/tax-codes`**
+  - 版本：v3
+  - operationId：list-tax-codes
+  - 中文说明：税码
+  - 标签：OpenMeter Tax
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `include_deleted`（必填：否）：boolean；在回复中包含已删除的税码。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/tax-codes`**
+  - 版本：v3
+  - operationId：create-tax-code
+  - 中文说明：创建税码
+  - 标签：OpenMeter Tax
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateTaxCodeRequest
+  - 响应：
+    - 201：TaxCode创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：delete-tax-code
+  - 中文说明：删除税费
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：get-tax-code
+  - 中文说明：获取税码
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：TaxCode响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/tax-codes/{taxCodeId}`**
+  - 版本：v3
+  - operationId：upsert-tax-code
+  - 中文说明：Upsert税码
+  - 标签：OpenMeter Tax
+  - 参数：
+    - path `taxCodeId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertTaxCodeRequest
+  - 响应：
+    - 200：TaxCode upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+
+### 结账会话（checkout-sessions，共 1 个）
+- **`GET /checkout-sessions/{sessionId}`**
+  - 版本：v3
+  - operationId：get-checkout-session
+  - 中文说明：获取结账会话
+  - 标签：Commerce
+  - 参数：
+    - path `sessionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：CheckoutSession响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 计量表（meters，共 6 个）
+- **`GET /openmeter/meters`**
+  - 版本：v3
+  - operationId：list-meters
+  - 中文说明：列出仪表
+  - 标签：Meters
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的仪表进行排序。 支持的排序属性包括：
+
+- `key`
+- `name`
+- `聚合`
+- “created_at” （默认）
+- `updated_at`
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+    - query `filter`（必填：否）：#/components/schemas/ListMetersParamsFilter；响应中返回的筛选器仪表。
+
+要按键过滤仪表，请添加以下查询参数： filter [key] = my-meter-key
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/meters`**
+  - 版本：v3
+  - operationId：create-meter
+  - 中文说明：创建仪表
+  - 标签：Meters
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateMeterRequest
+  - 响应：
+    - 201：仪表已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：delete-meter
+  - 中文说明：删除仪表
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：get-meter
+  - 中文说明：获取仪表
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：仪表响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/meters/{meterId}`**
+  - 版本：v3
+  - operationId：update-meter
+  - 中文说明：Update meter
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateMeterRequest
+  - 响应：
+    - 200：仪表更新响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/meters/{meterId}/query`**
+  - 版本：v3
+  - operationId：query-meter
+  - 中文说明：查询仪表
+  - 标签：Meters
+  - 参数：
+    - path `meterId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/MeterQueryRequest
+  - 响应：
+    - 200：请求已成功。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 订单（orders，共 3 个）
+- **`POST /orders`**
+  - 版本：v3
+  - operationId：create-order
+  - 中文说明：Create order
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceOrderCreate
+  - 响应：
+    - 200：-指令响应时间
+    - 201：订单已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /orders/{orderId}`**
+  - 版本：v3
+  - operationId：get-order
+  - 中文说明：获取订单
+  - 标签：Commerce
+  - 参数：
+    - path `orderId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：-指令响应时间
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /orders/{orderId}/checkout-sessions`**
+  - 版本：v3
+  - operationId：create-checkout-session
+  - 中文说明：创建结账会话
+  - 标签：Commerce
+  - 参数：
+    - path `orderId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceCheckoutSessionCreate
+  - 响应：
+    - 201：CheckoutSession创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 订阅（subscriptions，共 9 个）
+- **`GET /openmeter/subscriptions`**
+  - 版本：v3
+  - operationId：list-subscriptions
+  - 中文说明：订阅列表：
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；Sort subscriptions returned in the response. Supported sort attributes are:
+
+- `id`
+- `active_from` (default)
+- `active_to`
+
+`asc` 后缀可省略；默认排序为升序。`desc`
+后缀用于指定降序排序。
+    - query `filter`（必填：否）：#/components/schemas/ListSubscriptionsParamsFilter；过滤订阅
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions`**
+  - 版本：v3
+  - operationId：create-subscription
+  - 中文说明：创建订阅
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionCreate
+  - 响应：
+    - 201：订阅已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/subscriptions/{subscriptionId}`**
+  - 版本：v3
+  - operationId：get-subscription
+  - 中文说明：获取订阅
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：订阅响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/subscriptions/{subscriptionId}/addons`**
+  - 版本：v3
+  - operationId：list-subscription-addons
+  - 中文说明：列出订阅插件
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的订阅加载项进行排序。支持的排序属性
+是：
+
+- `id`
+- “created_at” （默认）
+- `updated_at`
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/addons`**
+  - 版本：v3
+  - operationId：create-subscription-addon
+  - 中文说明：创建新的订阅加载项
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateSubscriptionAddonRequest
+  - 响应：
+    - 201：SubscriptionAddon已创建响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`**
+  - 版本：v3
+  - operationId：get-subscription-addon
+  - 中文说明：获取订阅的附加组件关联
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+    - path `subscriptionAddonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：SubscriptionAddon响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/cancel`**
+  - 版本：v3
+  - operationId：cancel-subscription
+  - 中文说明：取消订阅
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionCancel
+  - 响应：
+    - 200：订阅已更新响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/change`**
+  - 版本：v3
+  - operationId：change-subscription
+  - 中文说明：更改订阅
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingSubscriptionChange
+  - 响应：
+    - 200：请求已成功。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+- **`POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation`**
+  - 版本：v3
+  - operationId：unschedule-cancelation
+  - 中文说明：取消订阅注销取消计划
+  - 标签：OpenMeter Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：订阅已更新响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 409：—
+
+### 账单（billing，共 8 个）
+- **`GET /openmeter/billing/invoices`**
+  - 版本：v3
+  - operationId：list-invoices
+  - 中文说明：账单和发票
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的发票进行排序。支持的排序属性：
+
+- `issued_at`
+- “created_at” （默认）
+- “SERVICE_PERIOD_START
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+    - query `filter`（必填：否）：#/components/schemas/ListInvoicesParamsFilter；筛选响应中返回的发票。
+
+例如：
+
+- `filter [status] [oeq] = draft, issued`
+- `filter [customer_id] = 01KPDB8K...`
+- `filter [issued_at] [gte] = 2024-01-01T 00:00:00 Z`
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：delete-invoice
+  - 中文说明：删除账单发票
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：get-invoice
+  - 中文说明：获取账单发票
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：发票回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/billing/invoices/{invoiceId}`**
+  - 版本：v3
+  - operationId：update-invoice
+  - 中文说明：更新账单收据
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateInvoiceRequest
+  - 响应：
+    - 200：已更新发票回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/advance`**
+  - 版本：v3
+  - operationId：advance-invoice
+  - 中文说明：预付账单发票的下一个状态
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：升级到下一个状态后更新的发票。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/approve`**
+  - 版本：v3
+  - operationId：approve-invoice
+  - 中文说明：将发票发送给客户
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：发送给客户后更新的发票。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/retry`**
+  - 版本：v3
+  - operationId：retry-invoice
+  - 中文说明：尝试失败后重试推进发票
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：重试操作后更新的发票。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities`**
+  - 版本：v3
+  - operationId：snapshot-quantities-invoice
+  - 中文说明：基于使用情况的行项目的快照数量
+  - 标签：OpenMeter Billing Settings
+  - 参数：
+    - path `invoiceId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：返回已更新的按 usage-based lineItems 计量快照数量的发票。
+items.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 退款（refunds，共 2 个）
+- **`POST /refunds`**
+  - 版本：v3
+  - operationId：create-refund
+  - 中文说明：创建退款
+  - 标签：Commerce
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CommerceRefundCreate
+  - 响应：
+    - 201：退款已创建回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 409：—
+- **`GET /refunds/{refundId}`**
+  - 版本：v3
+  - operationId：get-refund
+  - 中文说明：获得退款
+  - 标签：Commerce
+  - 参数：
+    - path `refundId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：退款回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 附加项（addons，共 7 个）
+- **`GET /openmeter/addons`**
+  - 版本：v3
+  - operationId：list-addons
+  - 中文说明：列出附加项
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - query `page`（必填：否）：object；确定要检索集合的哪个页面。
+    - query `sort`（必填：否）：#/components/schemas/SortQuery；对响应中返回的加载项进行排序。 支持的排序属性包括：
+
+- `id`
+- `key`
+- `name`
+- “created_at” （默认）
+- `updated_at`
+
+“asc”后缀是可选的，因为默认排序顺序是升序。“DESC”
+后缀用于指定降序。
+    - query `filter`（必填：否）：#/components/schemas/ListAddonsParamsFilter；在响应中返回的筛选器加载项。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：页面分页响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`POST /openmeter/addons`**
+  - 版本：v3
+  - operationId：create-addon
+  - 中文说明：创建附加组件
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateAddonRequest
+  - 响应：
+    - 201：插件创建的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+- **`DELETE /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：delete-addon
+  - 中文说明：删除此add-on
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：已删除回复。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`GET /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：get-addon
+  - 中文说明：获取插件
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：加载项响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`PUT /openmeter/addons/{addonId}`**
+  - 版本：v3
+  - operationId：update-addon
+  - 中文说明：更新附加组件
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpsertAddonRequest
+  - 响应：
+    - 200：Addon upsert response.
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+    - 410：—
+- **`POST /openmeter/addons/{addonId}/archive`**
+  - 版本：v3
+  - operationId：archive-addon
+  - 中文说明：存档附加组件版本
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：加载项更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`POST /openmeter/addons/{addonId}/publish`**
+  - 版本：v3
+  - operationId：publish-addon
+  - 中文说明：发布附加组件版本
+  - 标签：OpenMeter Product Catalog
+  - 参数：
+    - path `addonId`（必填：是）：#/components/schemas/ULID；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：加载项更新的响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+### 默认配置（defaults，共 2 个）
+- **`GET /openmeter/defaults/tax-codes`**
+  - 版本：v3
+  - operationId：get-organization-default-tax-codes
+  - 中文说明：获取组织默认税码
+  - 标签：OpenMeter Defaults
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：OrganizationDefaultTaxCodes响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+- **`PUT /openmeter/defaults/tax-codes`**
+  - 版本：v3
+  - operationId：update-organization-default-tax-codes
+  - 中文说明：更新组织默认税率代码
+  - 标签：OpenMeter Defaults
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/UpdateOrganizationDefaultTaxCodesRequest
+  - 响应：
+    - 200：OrganizationDefaultTaxCodes upsert响应。
+    - 400：—
+    - 401：—
+    - 403：—
+    - 404：—
+
+## 二、v1/v2 待合并（排除已过期、已转移）
+
+### v1 待合并（共 63 个）
+
+#### debug（debug，共 1 个）
+- **`GET /api/v1/debug/metrics`**
+  - 版本：v1
+  - operationId：getDebugMetrics
+  - 中文说明：获取事件指标
+  - 标签：Debug
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### grants（grants，共 1 个）
+- **`DELETE /api/v1/grants/{grantId}`**
+  - 版本：v1
+  - operationId：voidGrant
+  - 中文说明：无效补助金
+  - 标签：Entitlements
+  - 参数：
+    - path `grantId`（必填：是）：string；—
+    - query `at`（必填：否）：string；补助金应作废的时间。
+不得晚于当前时间且必须位于权益的当前计量周期内。
+如果未指定，则默认为当前时间。
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 409：由于与目标资源的当前状态冲突，无法完成请求。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### info（info，共 2 个）
+- **`GET /api/v1/info/currencies`**
+  - 版本：v1
+  - operationId：listCurrencies
+  - 中文说明：支持的货币列表。
+  - 标签：Lookup Information
+  - 参数：
+    - 无
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/info/progress/{id}`**
+  - 版本：v1
+  - operationId：getProgress
+  - 中文说明：获取进度
+  - 标签：Lookup Information
+  - 参数：
+    - path `id`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### marketplace（marketplace，共 6 个）
+- **`GET /api/v1/marketplace/listings`**
+  - 版本：v1
+  - operationId：listMarketplaceListings
+  - 中文说明：可用的应用
+  - 标签：Apps
+  - 参数：
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/marketplace/listings/{type}`**
+  - 版本：v1
+  - operationId：getMarketplaceListing
+  - 中文说明：按类型获取应用详细信息
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/marketplace/listings/{type}/install`**
+  - 版本：v1
+  - operationId：marketplaceAppInstall
+  - 中文说明：安装app
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；要安装的应用程序的类型。
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/MarketplaceInstallRequestPayload
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/marketplace/listings/{type}/install/apikey`**
+  - 版本：v1
+  - operationId：marketplaceAppAPIKeyInstall
+  - 中文说明：通过API密钥安装应用
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；要安装的应用程序的类型。
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/marketplace/listings/{type}/install/oauth2`**
+  - 版本：v1
+  - operationId：marketplaceOAuth2InstallGetURL
+  - 中文说明：获取OAuth2安装URL
+  - 标签：Apps
+  - 参数：
+    - path `type`（必填：是）：#/components/schemas/AppType；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/marketplace/listings/{type}/install/oauth2/authorize`**
+  - 版本：v1
+  - operationId：marketplaceOAuth2InstallAuthorize
+  - 中文说明：通过OAuth2安装应用
+  - 标签：Apps
+  - 参数：
+    - query `state`（必填：否）：string；如果客户端授权请求中存在“state”参数，则为必需。
+从客户端收到的确切值：
+
+发送的唯一、随机生成、不透明且不可猜测的字符串
+启动身份验证请求时，并在处理响应时进行验证。
+    - query `code`（必填：否）：string；客户端稍后将交换访问令牌的授权代码。
+成功响应必填。
+    - query `error`（必填：否）：#/components/schemas/OAuth2AuthorizationCodeGrantErrorType；错误代码。
+与错误响应一起需要。
+    - query `error_description`（必填：否）：string；可选的人类可读文本，提供其他信息，
+用于帮助客户端开发人员了解发生的错误。
+    - query `error_uri`（必填：否）：string；标识人类可读网页的可选URI
+有关错误的信息，用于向客户提供
+developer提供有关错误的其他信息
+    - path `type`（必填：是）：#/components/schemas/AppType；要安装的应用程序的类型。
+  - 请求体：
+    - 无
+  - 响应：
+    - 303：重定向
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### notification（notification，共 14 个）
+- **`GET /api/v1/notification/channels`**
+  - 版本：v1
+  - operationId：listNotificationChannels
+  - 中文说明：列出通知渠道
+  - 标签：Notifications
+  - 参数：
+    - query `includeDeleted`（必填：否）：boolean；在回复中包括已删除的通知渠道。
+
+用法： `? includeDeleted = true`
+    - query `includeDisabled`（必填：否）：boolean；在响应中包括禁用的通知通道。
+
+用法： `? includeDisabled = false`
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationChannelOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/notification/channels`**
+  - 版本：v1
+  - operationId：createNotificationChannel
+  - 中文说明：创建通知通道
+  - 标签：Notifications
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationChannelCreateRequest
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：deleteNotificationChannel
+  - 中文说明：删除通知通道
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：getNotificationChannel
+  - 中文说明：通知通道
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/notification/channels/{channelId}`**
+  - 版本：v1
+  - operationId：updateNotificationChannel
+  - 中文说明：更新通知通道
+  - 标签：Notifications
+  - 参数：
+    - path `channelId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationChannelCreateRequest
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/notification/events`**
+  - 版本：v1
+  - operationId：listNotificationEvents
+  - 中文说明：通知事项
+  - 标签：Notifications
+  - 参数：
+    - query `from`（必填：否）：string；开始日期时间为RFC 3339格式。
+包容。
+    - query `to`（必填：否）：string；RFC 3339格式的结束日期时间。
+包容。
+    - query `feature`（必填：否）：array[string]；按多个功能ID或键过滤。
+
+用法： `? feature = feature-1 & feature = feature-2`
+    - query `subject`（必填：否）：array[string]；按多个主题ID或键过滤。
+
+用法： `? subject = subject-1 & subject = subject-2`
+    - query `rule`（必填：否）：array[string]；按多个规则ID筛选。
+
+用法： `? rule = 01J8J2XYZ2N5WBYK09EDZFBSZM&rule = 01J8J4R4VZH180KRKQ63NB2VA5`
+    - query `channel`（必填：否）：array[string]；按多个频道ID过滤。
+
+用法： `? channel = 01J8J4RXH778XB056JS088PCYT&channel = 01J8J4S1R1G9EVN62RG23A9M6J`
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationEventOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/notification/events/{eventId}`**
+  - 版本：v1
+  - operationId：getNotificationEvent
+  - 中文说明：获取通知事件
+  - 标签：Notifications
+  - 参数：
+    - path `eventId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/notification/events/{eventId}/resend`**
+  - 版本：v1
+  - operationId：resendNotificationEvent
+  - 中文说明：重新发送通知事件
+  - 标签：Notifications
+  - 参数：
+    - path `eventId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationEventResendRequest
+  - 响应：
+    - 202：请求已被接受处理，但处理尚未完成。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/notification/rules`**
+  - 版本：v1
+  - operationId：listNotificationRules
+  - 中文说明：列出通知规则
+  - 标签：Notifications
+  - 参数：
+    - query `includeDeleted`（必填：否）：boolean；在回复中包括已删除的通知规则。
+
+用法： `? includeDeleted = true`
+    - query `includeDisabled`（必填：否）：boolean；在响应中包括禁用的通知规则。
+
+用法： `? includeDisabled = false`
+    - query `feature`（必填：否）：array[string]；按多个功能ID/键过滤。
+
+用法： `? feature = feature-1 & feature = feature-2`
+    - query `channel`（必填：否）：array[string]；按多个通知频道ID筛选。
+
+用法： `? channel = 01ARZ3NDEKTSV4RRFFQ69G5FAV&channel = 01J8J2Y5X4NNGQS32CF81W95E3`
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/NotificationRuleOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/notification/rules`**
+  - 版本：v1
+  - operationId：createNotificationRule
+  - 中文说明：创建通知规则
+  - 标签：Notifications
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationRuleCreateRequest
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：deleteNotificationRule
+  - 中文说明：删除通知规则
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：getNotificationRule
+  - 中文说明：获取通知规则
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/notification/rules/{ruleId}`**
+  - 版本：v1
+  - operationId：updateNotificationRule
+  - 中文说明：更新通知规则
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/NotificationRuleCreateRequest
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/notification/rules/{ruleId}/test`**
+  - 版本：v1
+  - operationId：testNotificationRule
+  - 中文说明：测试通知
+  - 标签：Notifications
+  - 参数：
+    - path `ruleId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### portal（portal，共 4 个）
+- **`GET /api/v1/portal/meters/{meterSlug}/query`**
+  - 版本：v1
+  - operationId：queryPortalMeter
+  - 中文说明：查询仪表查询仪表
+  - 标签：Portal
+  - 参数：
+    - path `meterSlug`（必填：是）：string；—
+    - query `clientId`（必填：否）：string；客户ID
+用于跟踪查询的进度。
+    - query `from`（必填：否）：string；开始日期时间为RFC 3339格式。
+
+包容。
+
+例如：? from = 2025-01-01T00% 3A00% 3A00.000Z
+    - query `to`（必填：否）：string；RFC 3339格式的结束日期时间。
+
+包容。
+
+例如：? to = 2025-02-01T00% 3A00% 3A00.000Z
+    - query `windowSize`（必填：否）：#/components/schemas/WindowSize；如果未指定，将为每个受试者和组返回整个指定期间的单个使用汇总。
+
+例如：? windowSize = DAY
+    - query `windowTimeZone`（必填：否）：string；值为 IANA 时区数据库（http://www.iana.org/time-zones）中定义的时区名称。
+若未指定，将使用 UTC 时区。
+
+例如：? windowTimeZone = UTC
+    - query `filterCustomerId`（必填：否）：array[string]；按多个客户筛选。
+
+例如：? filterCustomerId = customer-1 & filterCustomerId = customer-2
+    - query `filterGroupBy`（必填：否）：object；具有精确匹配的group bys的简单过滤器。
+
+例如：? filterGroupBy [vendor] = openai&filterGroupBy [model] = gpt-4-turbo
+
+⚠️ __已弃用__ ：改用`advancedMeterGroupByFilters`
+    - query `advancedMeterGroupByFilters`（必填：否）：any；可选的高级仪表按过滤器分组。
+您可以使用它来筛选meter groupBy字段的值。
+    - query `groupBy`（必填：否）：array[string]；如果未指定，将为每个受试者和时间窗口返回单个聚合。
+“subject”是一个保留的按值分组。
+
+例如：? groupBy = subject&groupBy = model
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/portal/tokens`**
+  - 版本：v1
+  - operationId：listPortalTokens
+  - 中文说明：列出消费者门户令牌
+  - 标签：Portal
+  - 参数：
+    - query `limit`（必填：否）：integer；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/portal/tokens`**
+  - 版本：v1
+  - operationId：createPortalToken
+  - 中文说明：创建消费者门户令牌
+  - 标签：Portal
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/PortalToken
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/portal/tokens/invalidate`**
+  - 版本：v1
+  - operationId：invalidatePortalTokens
+  - 中文说明：使门户令牌无效
+  - 标签：Portal
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### stripe（stripe，共 1 个）
+- **`POST /api/v1/stripe/checkout/sessions`**
+  - 版本：v1
+  - operationId：createStripeCheckoutSession
+  - 中文说明：创建结账会话
+  - 标签：App: Stripe
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateStripeCheckoutSessionRequest
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 客户（customers，共 9 个）
+- **`GET /api/v1/customers/{customerIdOrKey}/access`**
+  - 版本：v1
+  - operationId：getCustomerAccess
+  - 中文说明：客户访问
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/customers/{customerIdOrKey}/apps`**
+  - 版本：v1
+  - operationId：listCustomerAppData
+  - 中文说明：列出客户应用数据
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `type`（必填：否）：#/components/schemas/AppType；按应用类型筛选客户数据。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/customers/{customerIdOrKey}/apps`**
+  - 版本：v1
+  - operationId：upsertCustomerAppData
+  - 中文说明：Upsert客户应用数据
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - required：是
+    - application/json: array[#/components/schemas/CustomerAppDataCreateOrUpdateItem]
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v1/customers/{customerIdOrKey}/apps/{appId}`**
+  - 版本：v1
+  - operationId：deleteCustomerAppData
+  - 中文说明：删除客户应用数据
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `appId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/customers/{customerIdOrKey}/entitlements/{featureKey}/value`**
+  - 版本：v1
+  - operationId：getCustomerEntitlementValue
+  - 中文说明：获取客户权利值
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `featureKey`（必填：是）：string；—
+    - query `time`（必填：否）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/customers/{customerIdOrKey}/stripe`**
+  - 版本：v1
+  - operationId：getCustomerStripeAppData
+  - 中文说明：获取客户Stripe应用数据
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/customers/{customerIdOrKey}/stripe`**
+  - 版本：v1
+  - operationId：upsertCustomerStripeAppData
+  - 中文说明：Upsert客户条纹应用数据
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/StripeCustomerAppDataBase
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/customers/{customerIdOrKey}/stripe/portal`**
+  - 版本：v1
+  - operationId：createCustomerStripePortalSession
+  - 中文说明：创建Stripe客户门户会话
+  - 标签：Customers, Apps
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CreateStripeCustomerPortalSessionParams
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/customers/{customerIdOrKey}/subscriptions`**
+  - 版本：v1
+  - operationId：listCustomerSubscriptions
+  - 中文说明：客户订阅
+  - 标签：Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - query `status`（必填：否）：array[#/components/schemas/SubscriptionStatus]；—
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/CustomerSubscriptionOrderBy；按字段排序
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 应用（apps，共 4 个）
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/draft/synchronized`**
+  - 版本：v1
+  - operationId：appCustomInvoicingDraftSynchronized
+  - 中文说明：提交草稿同步结果
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingDraftSynchronizedRequest
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/issuing/synchronized`**
+  - 版本：v1
+  - operationId：appCustomInvoicingIssuingSynchronized
+  - 中文说明：提交签发同步结果
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingFinalizedRequest
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/apps/custom-invoicing/{invoiceId}/payment/status`**
+  - 版本：v1
+  - operationId：appCustomInvoicingUpdatePaymentStatus
+  - 中文说明：更新付款状态
+  - 标签：App: Custom Invoicing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/CustomInvoicingUpdatePaymentStatusRequest
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/apps/{id}/stripe/webhook`**
+  - 版本：v1
+  - operationId：appStripeWebhook
+  - 中文说明：Stripe webhook URL
+  - 标签：App: Stripe
+  - 参数：
+    - path `id`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/StripeWebhookEvent
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 计量表（meters，共 3 个）
+- **`GET /api/v1/meters/{meterIdOrSlug}/group-by/{groupByKey}/values`**
+  - 版本：v1
+  - operationId：listMeterGroupByValues
+  - 中文说明：按值列出仪表组
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；—
+    - path `groupByKey`（必填：是）：string；—
+    - query `from`（必填：否）：string；开始日期时间为RFC 3339格式。
+
+包含。默认为24小时前。
+
+例如：? from = 2025-01-01T00% 3A00% 3A00.000Z
+    - query `to`（必填：否）：string；RFC 3339格式的结束日期时间。
+
+包容。
+
+例如：? to = 2025-02-01T00% 3A00% 3A00.000Z
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/meters/{meterIdOrSlug}/query`**
+  - 版本：v1
+  - operationId：queryMeter
+  - 中文说明：查询仪表
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；—
+    - query `clientId`（必填：否）：string；客户ID
+用于跟踪查询的进度。
+    - query `from`（必填：否）：string；开始日期时间为RFC 3339格式。
+
+包容。
+
+例如：? from = 2025-01-01T00% 3A00% 3A00.000Z
+    - query `to`（必填：否）：string；RFC 3339格式的结束日期时间。
+
+包容。
+
+例如：? to = 2025-02-01T00% 3A00% 3A00.000Z
+    - query `windowSize`（必填：否）：#/components/schemas/WindowSize；如果未指定，将为每个受试者和组返回整个指定期间的单个使用汇总。
+
+例如：? windowSize = DAY
+    - query `windowTimeZone`（必填：否）：string；值为 IANA 时区数据库（http://www.iana.org/time-zones）中定义的时区名称。
+若未指定，将使用 UTC 时区。
+
+例如：? windowTimeZone = UTC
+    - query `subject`（必填：否）：array[string]；按多个受试者筛选。
+
+例如：? subject = subject-1 & subject = subject-2
+    - query `filterCustomerId`（必填：否）：array[string]；按多个客户筛选。
+
+例如：? filterCustomerId = customer-1 & filterCustomerId = customer-2
+    - query `filterGroupBy`（必填：否）：object；具有精确匹配的group bys的简单过滤器。
+
+例如：? filterGroupBy [vendor] = openai&filterGroupBy [model] = gpt-4-turbo
+
+⚠️ __已弃用__ ：改用`advancedMeterGroupByFilters`
+    - query `advancedMeterGroupByFilters`（必填：否）：any；可选的高级仪表按过滤器分组。
+您可以使用它来筛选meter groupBy字段的值。
+    - query `groupBy`（必填：否）：array[string]；如果未指定，将为每个受试者和时间窗口返回单个聚合。
+“subject”是一个保留的按值分组。
+
+例如：? groupBy = subject&groupBy = model
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/meters/{meterIdOrSlug}/subjects`**
+  - 版本：v1
+  - operationId：listMeterSubjects
+  - 中文说明：列出仪表科目
+  - 标签：Meters
+  - 参数：
+    - path `meterIdOrSlug`（必填：是）：string；—
+    - query `from`（必填：否）：string；开始日期时间为RFC 3339格式。
+
+包含。默认为时间开头。
+
+例如：? from = 2025-01-01T00% 3A00% 3A00.000Z
+    - query `to`（必填：否）：string；RFC 3339格式的结束日期时间。
+
+包容。
+
+例如：? to = 2025-02-01T00% 3A00% 3A00.000Z
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 订阅（subscriptions，共 4 个）
+- **`DELETE /api/v1/subscriptions/{subscriptionId}`**
+  - 版本：v1
+  - operationId：deleteSubscription
+  - 中文说明：删除订阅
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。具有特定于订阅的ErrorExtensions的变体。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 409：由于目标资源当前状态冲突，请求无法完成。
+包含订阅专属 ErrorExtensions 的变体。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PATCH /api/v1/subscriptions/{subscriptionId}`**
+  - 版本：v1
+  - operationId：editSubscription
+  - 中文说明：编辑订阅
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/SubscriptionEdit
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。具有特定于订阅的ErrorExtensions的变体。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 409：由于目标资源当前状态冲突，请求无法完成。
+包含订阅专属 ErrorExtensions 的变体。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PATCH /api/v1/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`**
+  - 版本：v1
+  - operationId：updateSubscriptionAddon
+  - 中文说明：更新订阅插件
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；—
+    - path `subscriptionAddonId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/SubscriptionAddonUpdate
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/subscriptions/{subscriptionId}/migrate`**
+  - 版本：v1
+  - operationId：migrateSubscription
+  - 中文说明：迁移订阅
+  - 标签：Subscriptions
+  - 参数：
+    - path `subscriptionId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: object
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。具有特定于订阅的ErrorExtensions的变体。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 409：由于目标资源当前状态冲突，请求无法完成。
+包含订阅专属 ErrorExtensions 的变体。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 账单（billing，共 14 个）
+- **`GET /api/v1/billing/customers`**
+  - 版本：v1
+  - operationId：listBillingProfileCustomerOverrides
+  - 中文说明：列出客户覆盖
+  - 标签：Billing
+  - 参数：
+    - query `billingProfile`（必填：否）：array[string]；按账单账户筛选。
+    - query `customersWithoutPinnedProfile`（必填：否）：boolean；仅限没有固定账单账户的回头客。这会隐式将includeAllCustomers设置为true。
+    - query `includeAllCustomers`（必填：否）：boolean；包括没有客户覆盖的客户。
+
+如果设置为false ，则仅返回与账单账户特别关联的客户。
+
+如果设置为true ，则在默认账单账户的情况下，所有客户都将被退回。
+    - query `customerId`（必填：否）：array[string]；按客户过滤
+    - query `customerName`（必填：否）：string；按名称检索
+    - query `customerKey`（必填：否）：string；按客户过滤
+    - query `customerPrimaryEmail`（必填：否）：string；按客户主邮箱筛选
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileCustomerOverrideExpand]；用更多详细信息扩展回复。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/BillingProfileCustomerOverrideOrderBy；按字段排序
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：deleteBillingProfileCustomerOverride
+  - 中文说明：删除客户覆盖
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：getBillingProfileCustomerOverride
+  - 中文说明：获取客户覆盖
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；—
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileCustomerOverrideExpand]；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/billing/customers/{customerId}`**
+  - 版本：v1
+  - operationId：upsertBillingProfileCustomerOverride
+  - 中文说明：创建新的或更新客户覆盖
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileCustomerOverrideCreate
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/customers/{customerId}/invoices/pending-lines`**
+  - 版本：v1
+  - operationId：createPendingInvoiceLine
+  - 中文说明：创建待定行项目
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoicePendingLineCreateInput
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/customers/{customerId}/invoices/simulate`**
+  - 版本：v1
+  - operationId：simulateInvoice
+  - 中文说明：为客户模拟发票
+  - 标签：Billing
+  - 参数：
+    - path `customerId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoiceSimulationInput
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/invoices/invoice`**
+  - 版本：v1
+  - operationId：invoicePendingLinesAction
+  - 中文说明：根据待定行项目向客户开具发票
+  - 标签：Billing
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/InvoicePendingLinesActionInput
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/invoices/{invoiceId}/taxes/recalculate`**
+  - 版本：v1
+  - operationId：recalculateInvoiceTaxAction
+  - 中文说明：重新计算发票的税额
+  - 标签：Billing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/invoices/{invoiceId}/void`**
+  - 版本：v1
+  - operationId：voidInvoiceAction
+  - 中文说明：作废发票
+  - 标签：Billing
+  - 参数：
+    - path `invoiceId`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/VoidInvoiceActionInput
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/billing/profiles`**
+  - 版本：v1
+  - operationId：listBillingProfiles
+  - 中文说明：列出账单账户
+  - 标签：Billing
+  - 参数：
+    - query `includeArchived`（必填：否）：boolean；—
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileExpand]；—
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/BillingProfileOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v1/billing/profiles`**
+  - 版本：v1
+  - operationId：createBillingProfile
+  - 中文说明：创建一份新的资料
+  - 标签：Billing
+  - 参数：
+    - 无
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileCreate
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：deleteBillingProfile
+  - 中文说明：删除账单账户
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：getBillingProfile
+  - 中文说明：获取账单账户
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；—
+    - query `expand`（必填：否）：array[#/components/schemas/BillingProfileExpand]；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v1/billing/profiles/{id}`**
+  - 版本：v1
+  - operationId：updateBillingProfile
+  - 中文说明：更新账单账户
+  - 标签：Billing
+  - 参数：
+    - path `id`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/BillingProfileReplaceUpdateWithWorkflow
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+### v2 待合并（共 13 个）
+
+#### entitlements（entitlements，共 2 个）
+- **`GET /api/v2/entitlements`**
+  - 版本：v2
+  - operationId：listEntitlementsV2
+  - 中文说明：列出所有授权
+  - 标签：Entitlements
+  - 参数：
+    - query `feature`（必填：否）：array[string]；按多个功能筛选。
+
+用法： `? feature = feature-1 & feature = feature-2`
+    - query `customerKeys`（必填：否）：array[string]；按多个客户筛选。
+
+用法： `? customerKeys = customer-1 & customerKeys = customer-3`
+    - query `customerIds`（必填：否）：array[string]；按多个客户筛选。
+
+用法： `? customerIds = 01K4WAQ0J99ZZ0MD75HXR112H8 & customerIds = 01K4WAQ0J99ZZ0MD75HXR112H9`
+    - query `entitlementType`（必填：否）：array[#/components/schemas/EntitlementType]；按多种授权类型筛选。
+
+用法： `? entitlementType = metered&entitlementType = boolean`
+    - query `excludeInactive`（必填：否）：boolean；在回复中排除非活动授权（安排在稍后或更早的授权）
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `offset`（必填：否）：integer；要跳过的项目数。
+
+默认值为0。
+    - query `limit`（必填：否）：integer；要返回的项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/EntitlementOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v2/entitlements/{entitlementId}`**
+  - 版本：v2
+  - operationId：getEntitlementByIdV2
+  - 中文说明：通过ID获取权利
+  - 标签：Entitlements
+  - 参数：
+    - path `entitlementId`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### grants（grants，共 1 个）
+- **`GET /api/v2/grants`**
+  - 版本：v2
+  - operationId：listGrantsV2
+  - 中文说明：列出补助金
+  - 标签：Entitlements
+  - 参数：
+    - query `feature`（必填：否）：array[string]；按多个功能筛选。
+
+用法： `? feature = feature-1 & feature = feature-2`
+    - query `customer`（必填：否）：array[#/components/schemas/ULIDOrExternalKey]；按多个客户筛选（按ID或密钥）。
+
+用法： `? customer = customer-1 & customer = customer-2`
+    - query `includeDeleted`（必填：否）：boolean；包括已删除的
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `offset`（必填：否）：integer；要跳过的项目数。
+
+默认值为0。
+    - query `limit`（必填：否）：integer；要返回的项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/GrantOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+#### 客户（customers，共 10 个）
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements`**
+  - 版本：v2
+  - operationId：listCustomerEntitlementsV2
+  - 中文说明：List customer entitlements
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - query `includeDeleted`（必填：否）：boolean；—
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/EntitlementOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements`**
+  - 版本：v2
+  - operationId：createCustomerEntitlementV2
+  - 中文说明：创建客户授权
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementV2CreateInputs
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 409：由于与目标资源的当前状态冲突，无法完成请求。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`DELETE /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}`**
+  - 版本：v2
+  - operationId：deleteCustomerEntitlementV2
+  - 中文说明：删除客户授权
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementV2
+  - 中文说明：获取客户授权
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`**
+  - 版本：v2
+  - operationId：listCustomerEntitlementGrantsV2
+  - 中文说明：列出客户权利授予
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+    - query `includeDeleted`（必填：否）：boolean；—
+    - query `page`（必填：否）：integer；页面索引。
+
+默认值为1。
+    - query `pageSize`（必填：否）：integer；每页的最大项目数。
+
+默认值为100。
+    - query `offset`（必填：否）：integer；要跳过的项目数。
+
+默认值为0。
+    - query `limit`（必填：否）：integer；要返回的项目数。
+
+默认值为100。
+    - query `order`（必填：否）：any；订单方向
+    - query `orderBy`（必填：否）：#/components/schemas/GrantOrderBy；按字段排序
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`**
+  - 版本：v2
+  - operationId：createCustomerEntitlementGrantV2
+  - 中文说明：创建客户权利授予
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementGrantCreateInputV2
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 409：由于与目标资源的当前状态冲突，无法完成请求。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/history`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementHistoryV2
+  - 中文说明：获取客户授权历史记录
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+    - query `from`（必填：否）：string；查询权利的时间范围的开始： RFC 3339格式的日期时间。默认为上次重置。获取截断为基础仪表的粒度。
+    - query `to`（必填：否）：string；查询权利的时间范围结束： RFC 3339格式的日期时间。默认为现在。
+如果不是现在，则被截断为底层仪表的粒度。
+    - query `windowSize`（必填：是）：#/components/schemas/WindowSize；Windowsize
+    - query `windowTimeZone`（必填：否）：string；计算窗口时使用的时区。
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`PUT /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/override`**
+  - 版本：v2
+  - operationId：overrideCustomerEntitlementV2
+  - 中文说明：覆盖客户授权
+  - 标签：Entitlements
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/EntitlementV2CreateInputs
+  - 响应：
+    - 201：请求已成功，因此已创建新资源。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 409：由于与目标资源的当前状态冲突，无法完成请求。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`POST /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/reset`**
+  - 版本：v2
+  - operationId：resetCustomerEntitlementUsageV2
+  - 中文说明：重置客户授权
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+  - 请求体：
+    - required：是
+    - application/json: #/components/schemas/ResetEntitlementUsageInput
+  - 响应：
+    - 204：当前请求无内容返回，但响应头信息可能有用。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+- **`GET /api/v2/customers/{customerIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/value`**
+  - 版本：v2
+  - operationId：getCustomerEntitlementValueV2
+  - 中文说明：获取客户权利值
+  - 标签：Entitlements, Customers
+  - 参数：
+    - path `customerIdOrKey`（必填：是）：#/components/schemas/ULIDOrExternalKey；—
+    - path `entitlementIdOrFeatureKey`（必填：是）：string；—
+    - query `time`（必填：否）：string；—
+  - 请求体：
+    - 无
+  - 响应：
+    - 200：请求已成功。
+    - 400：由于被认为是客户端错误的内容（例如，格式错误的请求语法、无效的请求消息框架或欺骗性请求路由） ，服务器无法或不会处理该请求。
+    - 401：请求尚未应用，因为它缺少目标资源的有效身份验证凭据。
+    - 403：服务器已理解请求，但拒绝授权。
+    - 404：原始服务器未找到目标资源的当前表示形式，或者不愿意披露存在表示形式。
+    - 412：在服务器上测试时，请求标头字段中给出的一个或多个条件评估为false。
+    - 500：服务器遇到意外情况，无法完成该请求。
+    - 503：由于临时过载或定期维护，服务器当前无法处理该请求，这可能会在一些延迟后得到缓解。
+    - default：意外错误响应。
+
+## 三、排除清单
+
+### 已过期（deprecated）共 20 个
+- v1 `PUT /api/v1/apps/{id}/stripe/api-key`（updateStripeAPIKey）
+- v1 `GET /api/v1/entitlements`（listEntitlements）
+- v1 `GET /api/v1/entitlements/{entitlementId}`（getEntitlementById）
+- v1 `GET /api/v1/grants`（listGrants）
+- v1 `POST /api/v1/plans/{planIdOrKey}/next`（nextPlan）
+- v1 `GET /api/v1/subjects`（listSubjects）
+- v1 `POST /api/v1/subjects`（upsertSubject）
+- v1 `DELETE /api/v1/subjects/{subjectIdOrKey}`（deleteSubject）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}`（getSubject）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements`（listSubjectEntitlements）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements`（createEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`（listEntitlementGrants）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/grants`（createGrant）
+- v1 `PUT /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/override`（overrideEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementIdOrFeatureKey}/value`（getEntitlementValue）
+- v1 `DELETE /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}`（deleteEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}`（getEntitlement）
+- v1 `GET /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}/history`（getEntitlementHistory）
+- v1 `POST /api/v1/subjects/{subjectIdOrKey}/entitlements/{entitlementId}/reset`（resetEntitlementUsage）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/restore`（restoreSubscription）
+
+### 已转移到 v3（已剔除）共 57 个
+- v1 `GET /api/v1/addons` -> v3 `GET /openmeter/addons`（listAddons -> list-addons）
+- v1 `POST /api/v1/addons` -> v3 `POST /openmeter/addons`（createAddon -> create-addon）
+- v1 `DELETE /api/v1/addons/{addonId}` -> v3 `DELETE /openmeter/addons/{addonId}`（deleteAddon -> delete-addon）
+- v1 `GET /api/v1/addons/{addonId}` -> v3 `GET /openmeter/addons/{addonId}`（getAddon -> get-addon）
+- v1 `PUT /api/v1/addons/{addonId}` -> v3 `PUT /openmeter/addons/{addonId}`（updateAddon -> update-addon）
+- v1 `POST /api/v1/addons/{addonId}/archive` -> v3 `POST /openmeter/addons/{addonId}/archive`（archiveAddon -> archive-addon）
+- v1 `POST /api/v1/addons/{addonId}/publish` -> v3 `POST /openmeter/addons/{addonId}/publish`（publishAddon -> publish-addon）
+- v1 `GET /api/v1/apps` -> v3 `GET /openmeter/apps`（listApps -> list-apps）
+- v1 `DELETE /api/v1/apps/{id}` -> v3 `DELETE /openmeter/apps/{appId}`（uninstallApp -> uninstall-app）
+- v1 `GET /api/v1/apps/{id}` -> v3 `GET /openmeter/apps/{appId}`（getApp -> get-app）
+- v1 `PUT /api/v1/apps/{id}` -> v3 `PUT /openmeter/apps/{appId}`（updateApp -> update-app）
+- v1 `GET /api/v1/billing/invoices` -> v3 `GET /openmeter/billing/invoices`（listInvoices -> list-invoices）
+- v1 `DELETE /api/v1/billing/invoices/{invoiceId}` -> v3 `DELETE /openmeter/billing/invoices/{invoiceId}`（deleteInvoice -> delete-invoice）
+- v1 `GET /api/v1/billing/invoices/{invoiceId}` -> v3 `GET /openmeter/billing/invoices/{invoiceId}`（getInvoice -> get-invoice）
+- v1 `PUT /api/v1/billing/invoices/{invoiceId}` -> v3 `PUT /openmeter/billing/invoices/{invoiceId}`（updateInvoice -> update-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/advance` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/advance`（advanceInvoiceAction -> advance-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/approve` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/approve`（approveInvoiceAction -> approve-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/retry` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/retry`（retryInvoiceAction -> retry-invoice）
+- v1 `POST /api/v1/billing/invoices/{invoiceId}/snapshot-quantities` -> v3 `POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities`（snapshotQuantitiesInvoiceAction -> snapshot-quantities-invoice）
+- v1 `GET /api/v1/customers` -> v3 `GET /openmeter/customers`（listCustomers -> list-customers）
+- v1 `POST /api/v1/customers` -> v3 `POST /openmeter/customers`（createCustomer -> create-customer）
+- v1 `DELETE /api/v1/customers/{customerIdOrKey}` -> v3 `DELETE /openmeter/customers/{customerId}`（deleteCustomer -> delete-customer）
+- v1 `GET /api/v1/customers/{customerIdOrKey}` -> v3 `GET /openmeter/customers/{customerId}`（getCustomer -> get-customer）
+- v1 `PUT /api/v1/customers/{customerIdOrKey}` -> v3 `PUT /openmeter/customers/{customerId}`（updateCustomer -> upsert-customer）
+- v1 `GET /api/v1/events` -> v3 `GET /openmeter/events`（listEvents -> list-metering-events）
+- v2 `GET /api/v2/events` -> v3 `GET /openmeter/events`（listEventsV2 -> list-metering-events）
+- v1 `POST /api/v1/events` -> v3 `POST /openmeter/events`（ingestEvents -> ingest-metering-events）
+- v1 `GET /api/v1/features` -> v3 `GET /openmeter/features`（listFeatures -> list-features）
+- v1 `POST /api/v1/features` -> v3 `POST /openmeter/features`（createFeature -> create-feature）
+- v1 `DELETE /api/v1/features/{featureId}` -> v3 `DELETE /openmeter/features/{featureId}`（deleteFeature -> delete-feature）
+- v1 `GET /api/v1/features/{featureId}` -> v3 `GET /openmeter/features/{featureId}`（getFeature -> get-feature）
+- v1 `GET /api/v1/meters` -> v3 `GET /openmeter/meters`（listMeters -> list-meters）
+- v1 `POST /api/v1/meters` -> v3 `POST /openmeter/meters`（createMeter -> create-meter）
+- v1 `DELETE /api/v1/meters/{meterIdOrSlug}` -> v3 `DELETE /openmeter/meters/{meterId}`（deleteMeter -> delete-meter）
+- v1 `GET /api/v1/meters/{meterIdOrSlug}` -> v3 `GET /openmeter/meters/{meterId}`（getMeter -> get-meter）
+- v1 `PUT /api/v1/meters/{meterIdOrSlug}` -> v3 `PUT /openmeter/meters/{meterId}`（updateMeter -> update-meter）
+- v1 `POST /api/v1/meters/{meterIdOrSlug}/query` -> v3 `POST /openmeter/meters/{meterId}/query`（queryMeterPost -> query-meter）
+- v1 `GET /api/v1/plans` -> v3 `GET /openmeter/plans`（listPlans -> list-plans）
+- v1 `POST /api/v1/plans` -> v3 `POST /openmeter/plans`（createPlan -> create-plan）
+- v1 `DELETE /api/v1/plans/{planId}` -> v3 `DELETE /openmeter/plans/{planId}`（deletePlan -> delete-plan）
+- v1 `GET /api/v1/plans/{planId}` -> v3 `GET /openmeter/plans/{planId}`（getPlan -> get-plan）
+- v1 `PUT /api/v1/plans/{planId}` -> v3 `PUT /openmeter/plans/{planId}`（updatePlan -> update-plan）
+- v1 `GET /api/v1/plans/{planId}/addons` -> v3 `GET /openmeter/plans/{planId}/addons`（listPlanAddons -> list-plan-addons）
+- v1 `POST /api/v1/plans/{planId}/addons` -> v3 `POST /openmeter/plans/{planId}/addons`（createPlanAddon -> create-plan-addon）
+- v1 `DELETE /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `DELETE /openmeter/plans/{planId}/addons/{planAddonId}`（deletePlanAddon -> delete-plan-addon）
+- v1 `GET /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `GET /openmeter/plans/{planId}/addons/{planAddonId}`（getPlanAddon -> get-plan-addon）
+- v1 `PUT /api/v1/plans/{planId}/addons/{planAddonId}` -> v3 `PUT /openmeter/plans/{planId}/addons/{planAddonId}`（updatePlanAddon -> update-plan-addon）
+- v1 `POST /api/v1/plans/{planId}/archive` -> v3 `POST /openmeter/plans/{planId}/archive`（archivePlan -> archive-plan）
+- v1 `POST /api/v1/plans/{planId}/publish` -> v3 `POST /openmeter/plans/{planId}/publish`（publishPlan -> publish-plan）
+- v1 `POST /api/v1/subscriptions` -> v3 `POST /openmeter/subscriptions`（createSubscription -> create-subscription）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}` -> v3 `GET /openmeter/subscriptions/{subscriptionId}`（getSubscription -> get-subscription）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}/addons` -> v3 `GET /openmeter/subscriptions/{subscriptionId}/addons`（listSubscriptionAddons -> list-subscription-addons）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/addons` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/addons`（createSubscriptionAddon -> create-subscription-addon）
+- v1 `GET /api/v1/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}` -> v3 `GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}`（getSubscriptionAddon -> get-subscription-addon）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/cancel` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/cancel`（cancelSubscription -> cancel-subscription）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/change` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/change`（changeSubscription -> change-subscription）
+- v1 `POST /api/v1/subscriptions/{subscriptionId}/unschedule-cancelation` -> v3 `POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation`（unscheduleCancelation -> unschedule-cancelation）

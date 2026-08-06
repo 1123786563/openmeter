@@ -1,0 +1,29 @@
+# Build from local source inside the official image (which already has Go + librdkafka)
+FROM ghcr.io/openmeterio/openmeter:latest AS base
+
+FROM golang:1.26.5-bookworm AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends librdkafka-dev clang gcc && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY go.mod go.sum ./
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=off
+RUN go mod download
+COPY . .
+ENV CGO_ENABLED=1
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter ./cmd/server
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter-sink-worker ./cmd/sink-worker
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter-balance-worker ./cmd/balance-worker
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter-notification-service ./cmd/notification-service
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter-billing-worker ./cmd/billing-worker
+RUN go build -ldflags "-X main.version=local-dev" -o /usr/local/bin/openmeter-jobs ./cmd/jobs
+
+FROM base
+RUN apk add --no-cache gcompat
+COPY --from=builder /usr/local/bin/openmeter /usr/local/bin/openmeter
+COPY --from=builder /usr/local/bin/openmeter-sink-worker /usr/local/bin/openmeter-sink-worker
+COPY --from=builder /usr/local/bin/openmeter-balance-worker /usr/local/bin/openmeter-balance-worker
+COPY --from=builder /usr/local/bin/openmeter-notification-service /usr/local/bin/openmeter-notification-service
+COPY --from=builder /usr/local/bin/openmeter-billing-worker /usr/local/bin/openmeter-billing-worker
+COPY --from=builder /usr/local/bin/openmeter-jobs /usr/local/bin/openmeter-jobs
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["openmeter"]

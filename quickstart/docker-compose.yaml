@@ -7,10 +7,13 @@ x-openmeter-worker-healthcheck: &openmeter-worker-healthcheck
 
 services:
   openmeter:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
+    build:
+      context: ..
+      dockerfile: Dockerfile.local
     command: openmeter --address 0.0.0.0:8888 --config /etc/openmeter/config.yaml
     restart: always
-    pull_policy: always
+    pull_policy: never
     depends_on:
       kafka:
         condition: service_healthy
@@ -19,7 +22,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "127.0.0.1:48888:8888"
+      - "127.0.0.1:8888:8888"
     volumes:
       - ./config.yaml:/etc/openmeter/config.yaml
     healthcheck:
@@ -29,10 +32,10 @@ services:
       retries: 30
 
   sink-worker:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
     command: openmeter-sink-worker --config /etc/openmeter/config.yaml
     restart: always
-    pull_policy: always
+    pull_policy: never
     depends_on:
       kafka:
         condition: service_healthy
@@ -49,10 +52,10 @@ services:
     healthcheck: *openmeter-worker-healthcheck
 
   balance-worker:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
     command: openmeter-balance-worker --config /etc/openmeter/config.yaml
     restart: always
-    pull_policy: always
+    pull_policy: never
     depends_on:
       kafka:
         condition: service_healthy
@@ -69,10 +72,10 @@ services:
     healthcheck: *openmeter-worker-healthcheck
 
   notification-service:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
     command: openmeter-notification-service --config /etc/openmeter/config.yaml
     restart: always
-    pull_policy: always
+    pull_policy: never
     depends_on:
       kafka:
         condition: service_healthy
@@ -87,10 +90,10 @@ services:
     healthcheck: *openmeter-worker-healthcheck
 
   billing-worker:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
     command: openmeter-billing-worker --config /etc/openmeter/config.yaml
     restart: always
-    pull_policy: always
+    pull_policy: never
     depends_on:
       kafka:
         condition: service_healthy
@@ -105,7 +108,7 @@ services:
     healthcheck: *openmeter-worker-healthcheck
 
   openmeter-jobs:
-    image: ghcr.io/openmeterio/openmeter:latest
+    image: openmeter:local
     command: openmeter-jobs --config /etc/openmeter/config.yaml quickstart cron
     restart: always
     pull_policy: never
@@ -125,6 +128,8 @@ services:
     extends:
       file: ../docker-compose.base.yaml
       service: kafka
+    ports:
+      - "127.0.0.1:29092:29092"
 
   clickhouse:
     extends:

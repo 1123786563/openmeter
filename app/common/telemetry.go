@@ -225,7 +225,15 @@ func NewDefaultTextMapPropagator() propagation.TextMapPropagator {
 }
 
 func NewHealthChecker(logger *slog.Logger) health.Health {
-	return health.New(health.WithCheckListeners(gosundheit.NewLogger(logger.With(slog.String("component", "healthcheck")))))
+	// Health checks run frequently and emit DEBUG logs on every cycle, which is
+	// noisy. Wrap the per-component logger in a LevelHandler so only warnings
+	// (check failures) surface; other components keep their configured level.
+	hcLogger := slog.New(NewLevelHandler(
+		logger.With(slog.String("component", "healthcheck")).Handler(),
+		slog.LevelWarn,
+	))
+
+	return health.New(health.WithCheckListeners(gosundheit.NewLogger(hcLogger)))
 }
 
 type TelemetryHandler http.Handler

@@ -4355,9 +4355,9 @@ components:
           description: |-
             The highest continuously covered tenant sequence number, used for watermark
             tracking.
-       denial_reason:
-         type: string
-         description: The reason authorization was denied, when `authorized` is `false`.
+        denial_reason:
+          type: string
+          description: The reason authorization was denied, when `authorized` is `false`.
         canonical_payload:
           type: object
           additionalProperties: true

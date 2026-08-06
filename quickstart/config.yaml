@@ -73,3 +73,71 @@ svix:
   apiKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MjI5NzYyNzMsImV4cCI6MjAzODMzNjI3MywibmJmIjoxNzIyOTc2MjczLCJpc3MiOiJzdml4LXNlcnZlciIsInN1YiI6Im9yZ18yM3JiOFlkR3FNVDBxSXpwZ0d3ZFhmSGlyTXUifQ.B0OVUl3w9m7nKkSjIpPrxbfXL9IuVimy8LXcdIc3q7k
   serverURL: http://svix:8071
   debug: false
+  
+aiUsage:
+  enabled: true
+  signing:
+    currentKeyId: "wkc-p1-key-001"
+    currentSeed: "c8548eb734e07ee13a62f75cd42d800ae5c72b00b7191cd3e3d2e30edf579fa8"
+  authorizationTtl: "5m"
+  worker:
+    leaseDuration: "30s"
+    batchSize: 50
+  settlement:
+    defaultChargeId: "ai-usage-charge"
+    defaultFeatureKey: "ai_usage"
+    defaultCurrency: "CNY"
+  rateEntries:
+    # LLM tokens (1 credit per token for Phase 1 testing)
+    - resourceCode: "llm_input_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "llm_output_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "llm_cache_read_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "llm_cache_write_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "llm_reasoning_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    # Embedding and rerank
+    - resourceCode: "embedding_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "rerank_calls"
+      creditsPerUnit: 10
+      unitSize: 1
+    # Multimodal
+    - resourceCode: "vlm_input_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "vlm_output_tokens"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "vlm_images"
+      creditsPerUnit: 100
+      unitSize: 1
+    # Speech
+    - resourceCode: "asr_milliseconds"
+      creditsPerUnit: 1
+      unitSize: 1000
+    # Platform resources
+    - resourceCode: "rag_queries"
+      creditsPerUnit: 1
+      unitSize: 1
+    - resourceCode: "doc_parse_pages"
+      creditsPerUnit: 10
+      unitSize: 1
+    - resourceCode: "mcp_tool_calls"
+      creditsPerUnit: 5
+      unitSize: 1
+    - resourceCode: "web_searches"
+      creditsPerUnit: 10
+      unitSize: 1
+    - resourceCode: "agent_runs"
+      creditsPerUnit: 50
+      unitSize: 1

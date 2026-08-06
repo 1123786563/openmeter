@@ -80,7 +80,8 @@ RUN xx-verify /usr/local/bin/openmeter-jobs
 # a canonical JSON form.
 FROM mikefarah/yq:4 AS openapi-json
 COPY --link api/v3/openapi.yaml /openapi.yaml
-RUN yq -o=json /openapi.yaml > /openapi.json
+WORKDIR /tmp
+RUN yq -o=json /openapi.yaml > openapi.json
 
 FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
@@ -98,7 +99,7 @@ COPY --link --from=builder /src/go.* /usr/local/src/openmeter/
 COPY --link --from=builder /src/entrypoint.sh /entrypoint.sh
 
 COPY --link api/v3/openapi.yaml /contract/openapi.yaml
-COPY --link --from=openapi-json /openapi.json /contract/openapi.json
+COPY --link --from=openapi-json /tmp/openapi.json /contract/openapi.json
 
 ENTRYPOINT ["/entrypoint.sh"]
 
