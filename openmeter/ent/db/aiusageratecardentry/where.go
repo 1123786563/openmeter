@@ -115,6 +115,16 @@ func CreditRate(v int64) predicate.AIUsageRatecardEntry {
 	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldCreditRate, v))
 }
 
+// CreditsPerUnit applies equality check predicate on the "credits_per_unit" field. It's identical to CreditsPerUnitEQ.
+func CreditsPerUnit(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldCreditsPerUnit, v))
+}
+
+// UnitSize applies equality check predicate on the "unit_size" field. It's identical to UnitSizeEQ.
+func UnitSize(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldUnitSize, v))
+}
+
 // EffectiveFrom applies equality check predicate on the "effective_from" field. It's identical to EffectiveFromEQ.
 func EffectiveFrom(v time.Time) predicate.AIUsageRatecardEntry {
 	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldEffectiveFrom, v))
@@ -660,6 +670,16 @@ func PricePerUnitCnyLTE(v alpacadecimal.Decimal) predicate.AIUsageRatecardEntry 
 	return predicate.AIUsageRatecardEntry(sql.FieldLTE(FieldPricePerUnitCny, v))
 }
 
+// PricePerUnitCnyIsNil applies the IsNil predicate on the "price_per_unit_cny" field.
+func PricePerUnitCnyIsNil() predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldIsNull(FieldPricePerUnitCny))
+}
+
+// PricePerUnitCnyNotNil applies the NotNil predicate on the "price_per_unit_cny" field.
+func PricePerUnitCnyNotNil() predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNotNull(FieldPricePerUnitCny))
+}
+
 // CreditRateEQ applies the EQ predicate on the "credit_rate" field.
 func CreditRateEQ(v int64) predicate.AIUsageRatecardEntry {
 	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldCreditRate, v))
@@ -698,6 +718,96 @@ func CreditRateLT(v int64) predicate.AIUsageRatecardEntry {
 // CreditRateLTE applies the LTE predicate on the "credit_rate" field.
 func CreditRateLTE(v int64) predicate.AIUsageRatecardEntry {
 	return predicate.AIUsageRatecardEntry(sql.FieldLTE(FieldCreditRate, v))
+}
+
+// CreditRateIsNil applies the IsNil predicate on the "credit_rate" field.
+func CreditRateIsNil() predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldIsNull(FieldCreditRate))
+}
+
+// CreditRateNotNil applies the NotNil predicate on the "credit_rate" field.
+func CreditRateNotNil() predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNotNull(FieldCreditRate))
+}
+
+// CreditsPerUnitEQ applies the EQ predicate on the "credits_per_unit" field.
+func CreditsPerUnitEQ(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldCreditsPerUnit, v))
+}
+
+// CreditsPerUnitNEQ applies the NEQ predicate on the "credits_per_unit" field.
+func CreditsPerUnitNEQ(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNEQ(FieldCreditsPerUnit, v))
+}
+
+// CreditsPerUnitIn applies the In predicate on the "credits_per_unit" field.
+func CreditsPerUnitIn(vs ...int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldIn(FieldCreditsPerUnit, vs...))
+}
+
+// CreditsPerUnitNotIn applies the NotIn predicate on the "credits_per_unit" field.
+func CreditsPerUnitNotIn(vs ...int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNotIn(FieldCreditsPerUnit, vs...))
+}
+
+// CreditsPerUnitGT applies the GT predicate on the "credits_per_unit" field.
+func CreditsPerUnitGT(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldGT(FieldCreditsPerUnit, v))
+}
+
+// CreditsPerUnitGTE applies the GTE predicate on the "credits_per_unit" field.
+func CreditsPerUnitGTE(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldGTE(FieldCreditsPerUnit, v))
+}
+
+// CreditsPerUnitLT applies the LT predicate on the "credits_per_unit" field.
+func CreditsPerUnitLT(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldLT(FieldCreditsPerUnit, v))
+}
+
+// CreditsPerUnitLTE applies the LTE predicate on the "credits_per_unit" field.
+func CreditsPerUnitLTE(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldLTE(FieldCreditsPerUnit, v))
+}
+
+// UnitSizeEQ applies the EQ predicate on the "unit_size" field.
+func UnitSizeEQ(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldEQ(FieldUnitSize, v))
+}
+
+// UnitSizeNEQ applies the NEQ predicate on the "unit_size" field.
+func UnitSizeNEQ(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNEQ(FieldUnitSize, v))
+}
+
+// UnitSizeIn applies the In predicate on the "unit_size" field.
+func UnitSizeIn(vs ...int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldIn(FieldUnitSize, vs...))
+}
+
+// UnitSizeNotIn applies the NotIn predicate on the "unit_size" field.
+func UnitSizeNotIn(vs ...int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldNotIn(FieldUnitSize, vs...))
+}
+
+// UnitSizeGT applies the GT predicate on the "unit_size" field.
+func UnitSizeGT(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldGT(FieldUnitSize, v))
+}
+
+// UnitSizeGTE applies the GTE predicate on the "unit_size" field.
+func UnitSizeGTE(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldGTE(FieldUnitSize, v))
+}
+
+// UnitSizeLT applies the LT predicate on the "unit_size" field.
+func UnitSizeLT(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldLT(FieldUnitSize, v))
+}
+
+// UnitSizeLTE applies the LTE predicate on the "unit_size" field.
+func UnitSizeLTE(v int64) predicate.AIUsageRatecardEntry {
+	return predicate.AIUsageRatecardEntry(sql.FieldLTE(FieldUnitSize, v))
 }
 
 // EffectiveFromEQ applies the EQ predicate on the "effective_from" field.

@@ -632,3 +632,45 @@ func (s *Server) GetCustomerRuntimeAuthorization(w http.ResponseWriter, r *http.
 		Filter:     params.Filter,
 	}).ServeHTTP(w, r)
 }
+
+// --- Rate Card Management ---
+
+func (s *Server) CreateRateCardEntry(w http.ResponseWriter, r *http.Request) {
+	if s.rateCardHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
+		return
+	}
+	s.rateCardHandler.CreateRateCardEntry().ServeHTTP(w, r)
+}
+
+func (s *Server) GetRateCardEntry(w http.ResponseWriter, r *http.Request) {
+	if s.rateCardHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
+		return
+	}
+	s.rateCardHandler.GetRateCardEntry().ServeHTTP(w, r)
+}
+
+func (s *Server) ListRateCardEntries(w http.ResponseWriter, r *http.Request) {
+	if s.rateCardHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
+		return
+	}
+	s.rateCardHandler.ListRateCardEntries().ServeHTTP(w, r)
+}
+
+func (s *Server) UpdateRateCardEntry(w http.ResponseWriter, r *http.Request) {
+	if s.rateCardHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
+		return
+	}
+	s.rateCardHandler.UpdateRateCardEntry().ServeHTTP(w, r)
+}
+
+func (s *Server) DeleteRateCardEntry(w http.ResponseWriter, r *http.Request) {
+	if s.rateCardHandler == nil {
+		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
+		return
+	}
+	s.rateCardHandler.DeleteRateCardEntry().ServeHTTP(w, r)
+}

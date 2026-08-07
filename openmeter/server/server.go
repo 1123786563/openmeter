@@ -179,6 +179,7 @@ func NewServer(config *Config) (*Server, error) {
 		AIUsageEnabled:              config.RouterConfig.AIUsageEnabled,
 		AIUsageService:              config.RouterConfig.AIUsageService,
 		RuntimeAuthorizationService: config.RouterConfig.RuntimeAuthorizationService,
+		RateCardService:             config.RouterConfig.RateCardService,
 		CommerceHandler:             config.CommerceHandler,
 	})
 	if err != nil {

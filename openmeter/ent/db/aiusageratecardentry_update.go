@@ -156,6 +156,12 @@ func (_u *AIUsageRatecardEntryUpdate) SetNillablePricePerUnitCny(v *alpacadecima
 	return _u
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (_u *AIUsageRatecardEntryUpdate) ClearPricePerUnitCny() *AIUsageRatecardEntryUpdate {
+	_u.mutation.ClearPricePerUnitCny()
+	return _u
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (_u *AIUsageRatecardEntryUpdate) SetCreditRate(v int64) *AIUsageRatecardEntryUpdate {
 	_u.mutation.ResetCreditRate()
@@ -174,6 +180,54 @@ func (_u *AIUsageRatecardEntryUpdate) SetNillableCreditRate(v *int64) *AIUsageRa
 // AddCreditRate adds value to the "credit_rate" field.
 func (_u *AIUsageRatecardEntryUpdate) AddCreditRate(v int64) *AIUsageRatecardEntryUpdate {
 	_u.mutation.AddCreditRate(v)
+	return _u
+}
+
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (_u *AIUsageRatecardEntryUpdate) ClearCreditRate() *AIUsageRatecardEntryUpdate {
+	_u.mutation.ClearCreditRate()
+	return _u
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (_u *AIUsageRatecardEntryUpdate) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryUpdate {
+	_u.mutation.ResetCreditsPerUnit()
+	_u.mutation.SetCreditsPerUnit(v)
+	return _u
+}
+
+// SetNillableCreditsPerUnit sets the "credits_per_unit" field if the given value is not nil.
+func (_u *AIUsageRatecardEntryUpdate) SetNillableCreditsPerUnit(v *int64) *AIUsageRatecardEntryUpdate {
+	if v != nil {
+		_u.SetCreditsPerUnit(*v)
+	}
+	return _u
+}
+
+// AddCreditsPerUnit adds value to the "credits_per_unit" field.
+func (_u *AIUsageRatecardEntryUpdate) AddCreditsPerUnit(v int64) *AIUsageRatecardEntryUpdate {
+	_u.mutation.AddCreditsPerUnit(v)
+	return _u
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (_u *AIUsageRatecardEntryUpdate) SetUnitSize(v int64) *AIUsageRatecardEntryUpdate {
+	_u.mutation.ResetUnitSize()
+	_u.mutation.SetUnitSize(v)
+	return _u
+}
+
+// SetNillableUnitSize sets the "unit_size" field if the given value is not nil.
+func (_u *AIUsageRatecardEntryUpdate) SetNillableUnitSize(v *int64) *AIUsageRatecardEntryUpdate {
+	if v != nil {
+		_u.SetUnitSize(*v)
+	}
+	return _u
+}
+
+// AddUnitSize adds value to the "unit_size" field.
+func (_u *AIUsageRatecardEntryUpdate) AddUnitSize(v int64) *AIUsageRatecardEntryUpdate {
+	_u.mutation.AddUnitSize(v)
 	return _u
 }
 
@@ -313,11 +367,29 @@ func (_u *AIUsageRatecardEntryUpdate) sqlSave(ctx context.Context) (_node int, e
 	if value, ok := _u.mutation.PricePerUnitCny(); ok {
 		_spec.SetField(aiusageratecardentry.FieldPricePerUnitCny, field.TypeOther, value)
 	}
+	if _u.mutation.PricePerUnitCnyCleared() {
+		_spec.ClearField(aiusageratecardentry.FieldPricePerUnitCny, field.TypeOther)
+	}
 	if value, ok := _u.mutation.CreditRate(); ok {
 		_spec.SetField(aiusageratecardentry.FieldCreditRate, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.AddedCreditRate(); ok {
 		_spec.AddField(aiusageratecardentry.FieldCreditRate, field.TypeInt64, value)
+	}
+	if _u.mutation.CreditRateCleared() {
+		_spec.ClearField(aiusageratecardentry.FieldCreditRate, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.CreditsPerUnit(); ok {
+		_spec.SetField(aiusageratecardentry.FieldCreditsPerUnit, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsPerUnit(); ok {
+		_spec.AddField(aiusageratecardentry.FieldCreditsPerUnit, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.UnitSize(); ok {
+		_spec.SetField(aiusageratecardentry.FieldUnitSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedUnitSize(); ok {
+		_spec.AddField(aiusageratecardentry.FieldUnitSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.EffectiveFrom(); ok {
 		_spec.SetField(aiusageratecardentry.FieldEffectiveFrom, field.TypeTime, value)
@@ -474,6 +546,12 @@ func (_u *AIUsageRatecardEntryUpdateOne) SetNillablePricePerUnitCny(v *alpacadec
 	return _u
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (_u *AIUsageRatecardEntryUpdateOne) ClearPricePerUnitCny() *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.ClearPricePerUnitCny()
+	return _u
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (_u *AIUsageRatecardEntryUpdateOne) SetCreditRate(v int64) *AIUsageRatecardEntryUpdateOne {
 	_u.mutation.ResetCreditRate()
@@ -492,6 +570,54 @@ func (_u *AIUsageRatecardEntryUpdateOne) SetNillableCreditRate(v *int64) *AIUsag
 // AddCreditRate adds value to the "credit_rate" field.
 func (_u *AIUsageRatecardEntryUpdateOne) AddCreditRate(v int64) *AIUsageRatecardEntryUpdateOne {
 	_u.mutation.AddCreditRate(v)
+	return _u
+}
+
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (_u *AIUsageRatecardEntryUpdateOne) ClearCreditRate() *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.ClearCreditRate()
+	return _u
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (_u *AIUsageRatecardEntryUpdateOne) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.ResetCreditsPerUnit()
+	_u.mutation.SetCreditsPerUnit(v)
+	return _u
+}
+
+// SetNillableCreditsPerUnit sets the "credits_per_unit" field if the given value is not nil.
+func (_u *AIUsageRatecardEntryUpdateOne) SetNillableCreditsPerUnit(v *int64) *AIUsageRatecardEntryUpdateOne {
+	if v != nil {
+		_u.SetCreditsPerUnit(*v)
+	}
+	return _u
+}
+
+// AddCreditsPerUnit adds value to the "credits_per_unit" field.
+func (_u *AIUsageRatecardEntryUpdateOne) AddCreditsPerUnit(v int64) *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.AddCreditsPerUnit(v)
+	return _u
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (_u *AIUsageRatecardEntryUpdateOne) SetUnitSize(v int64) *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.ResetUnitSize()
+	_u.mutation.SetUnitSize(v)
+	return _u
+}
+
+// SetNillableUnitSize sets the "unit_size" field if the given value is not nil.
+func (_u *AIUsageRatecardEntryUpdateOne) SetNillableUnitSize(v *int64) *AIUsageRatecardEntryUpdateOne {
+	if v != nil {
+		_u.SetUnitSize(*v)
+	}
+	return _u
+}
+
+// AddUnitSize adds value to the "unit_size" field.
+func (_u *AIUsageRatecardEntryUpdateOne) AddUnitSize(v int64) *AIUsageRatecardEntryUpdateOne {
+	_u.mutation.AddUnitSize(v)
 	return _u
 }
 
@@ -661,11 +787,29 @@ func (_u *AIUsageRatecardEntryUpdateOne) sqlSave(ctx context.Context) (_node *AI
 	if value, ok := _u.mutation.PricePerUnitCny(); ok {
 		_spec.SetField(aiusageratecardentry.FieldPricePerUnitCny, field.TypeOther, value)
 	}
+	if _u.mutation.PricePerUnitCnyCleared() {
+		_spec.ClearField(aiusageratecardentry.FieldPricePerUnitCny, field.TypeOther)
+	}
 	if value, ok := _u.mutation.CreditRate(); ok {
 		_spec.SetField(aiusageratecardentry.FieldCreditRate, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.AddedCreditRate(); ok {
 		_spec.AddField(aiusageratecardentry.FieldCreditRate, field.TypeInt64, value)
+	}
+	if _u.mutation.CreditRateCleared() {
+		_spec.ClearField(aiusageratecardentry.FieldCreditRate, field.TypeInt64)
+	}
+	if value, ok := _u.mutation.CreditsPerUnit(); ok {
+		_spec.SetField(aiusageratecardentry.FieldCreditsPerUnit, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedCreditsPerUnit(); ok {
+		_spec.AddField(aiusageratecardentry.FieldCreditsPerUnit, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.UnitSize(); ok {
+		_spec.SetField(aiusageratecardentry.FieldUnitSize, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.AddedUnitSize(); ok {
+		_spec.AddField(aiusageratecardentry.FieldUnitSize, field.TypeInt64, value)
 	}
 	if value, ok := _u.mutation.EffectiveFrom(); ok {
 		_spec.SetField(aiusageratecardentry.FieldEffectiveFrom, field.TypeTime, value)

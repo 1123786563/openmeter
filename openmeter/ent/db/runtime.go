@@ -336,6 +336,14 @@ func init() {
 	aiusageratecardentryDescCreditRate := aiusageratecardentryFields[5].Descriptor()
 	// aiusageratecardentry.DefaultCreditRate holds the default value on creation for the credit_rate field.
 	aiusageratecardentry.DefaultCreditRate = aiusageratecardentryDescCreditRate.Default.(int64)
+	// aiusageratecardentryDescCreditsPerUnit is the schema descriptor for credits_per_unit field.
+	aiusageratecardentryDescCreditsPerUnit := aiusageratecardentryFields[6].Descriptor()
+	// aiusageratecardentry.DefaultCreditsPerUnit holds the default value on creation for the credits_per_unit field.
+	aiusageratecardentry.DefaultCreditsPerUnit = aiusageratecardentryDescCreditsPerUnit.Default.(int64)
+	// aiusageratecardentryDescUnitSize is the schema descriptor for unit_size field.
+	aiusageratecardentryDescUnitSize := aiusageratecardentryFields[7].Descriptor()
+	// aiusageratecardentry.DefaultUnitSize holds the default value on creation for the unit_size field.
+	aiusageratecardentry.DefaultUnitSize = aiusageratecardentryDescUnitSize.Default.(int64)
 	// aiusageratecardentryDescID is the schema descriptor for id field.
 	aiusageratecardentryDescID := aiusageratecardentryMixinFields0[0].Descriptor()
 	// aiusageratecardentry.DefaultID holds the default value on creation for the id field.

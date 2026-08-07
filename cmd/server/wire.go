@@ -15,6 +15,7 @@ import (
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
@@ -85,6 +86,7 @@ type Application struct {
 	AIUsageRepository                aiusage.Repository
 	RuntimeAuthorizationService      runtimeauthorization.Service
 	AIUsageWorker                    *worker.Worker
+	RateCardService                  ratecard.Service
 	Logger                           *slog.Logger
 	MetricMeter                      metric.Meter
 	MeterConfigInitializer           common.MeterConfigInitializer

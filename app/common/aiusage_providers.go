@@ -11,6 +11,7 @@ import (
 
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/pricing"
 	aiusageservice "github.com/openmeterio/openmeter/openmeter/aiusage/service"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
@@ -85,6 +86,31 @@ func newConfigRateEntryProvider(cfg config.AIUsageConfiguration) (pricing.RateEn
 		})
 	}
 	return &configRateEntryProvider{entries: entries}, nil
+}
+
+// SeedRateCardEntries populates the database with rate entries from config
+// when the table is empty. This is called once at startup.
+func SeedRateCardEntries(ctx context.Context, svc ratecard.Service, cfg config.AIUsageConfiguration) error {
+	if svc == nil {
+		return nil
+	}
+	now := time.Now().Add(-24 * time.Hour)
+	entries := make([]ratecard.RateCardEntryInput, 0, len(cfg.RateEntries))
+	for _, re := range cfg.RateEntries {
+		unitSize := re.UnitSize
+		if unitSize <= 0 {
+			unitSize = 1
+		}
+		entries = append(entries, ratecard.RateCardEntryInput{
+			ResourceCode:   aiusage.ResourceCode(re.ResourceCode),
+			Provider:       re.Provider,
+			Model:          re.Model,
+			CreditsPerUnit: re.CreditsPerUnit,
+			UnitSize:       unitSize,
+			EffectiveFrom:  now,
+		})
+	}
+	return svc.BootstrapSeed(ctx, "default", entries)
 }
 
 // =========================================================================

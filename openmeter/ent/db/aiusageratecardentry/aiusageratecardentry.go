@@ -35,6 +35,10 @@ const (
 	FieldPricePerUnitCny = "price_per_unit_cny"
 	// FieldCreditRate holds the string denoting the credit_rate field in the database.
 	FieldCreditRate = "credit_rate"
+	// FieldCreditsPerUnit holds the string denoting the credits_per_unit field in the database.
+	FieldCreditsPerUnit = "credits_per_unit"
+	// FieldUnitSize holds the string denoting the unit_size field in the database.
+	FieldUnitSize = "unit_size"
 	// FieldEffectiveFrom holds the string denoting the effective_from field in the database.
 	FieldEffectiveFrom = "effective_from"
 	// FieldEffectiveTo holds the string denoting the effective_to field in the database.
@@ -57,6 +61,8 @@ var Columns = []string{
 	FieldModel,
 	FieldPricePerUnitCny,
 	FieldCreditRate,
+	FieldCreditsPerUnit,
+	FieldUnitSize,
 	FieldEffectiveFrom,
 	FieldEffectiveTo,
 }
@@ -84,6 +90,10 @@ var (
 	ResourceCodeValidator func(string) error
 	// DefaultCreditRate holds the default value on creation for the "credit_rate" field.
 	DefaultCreditRate int64
+	// DefaultCreditsPerUnit holds the default value on creation for the "credits_per_unit" field.
+	DefaultCreditsPerUnit int64
+	// DefaultUnitSize holds the default value on creation for the "unit_size" field.
+	DefaultUnitSize int64
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -144,6 +154,16 @@ func ByPricePerUnitCny(opts ...sql.OrderTermOption) OrderOption {
 // ByCreditRate orders the results by the credit_rate field.
 func ByCreditRate(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreditRate, opts...).ToFunc()
+}
+
+// ByCreditsPerUnit orders the results by the credits_per_unit field.
+func ByCreditsPerUnit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsPerUnit, opts...).ToFunc()
+}
+
+// ByUnitSize orders the results by the unit_size field.
+func ByUnitSize(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUnitSize, opts...).ToFunc()
 }
 
 // ByEffectiveFrom orders the results by the effective_from field.

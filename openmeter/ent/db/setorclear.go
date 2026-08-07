@@ -188,6 +188,34 @@ func (u *AIUsageRatecardEntryUpdateOne) SetOrClearModel(value *string) *AIUsageR
 	return u.SetModel(*value)
 }
 
+func (u *AIUsageRatecardEntryUpdate) SetOrClearPricePerUnitCny(value *alpacadecimal.Decimal) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearPricePerUnitCny()
+	}
+	return u.SetPricePerUnitCny(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearPricePerUnitCny(value *alpacadecimal.Decimal) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearPricePerUnitCny()
+	}
+	return u.SetPricePerUnitCny(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdate) SetOrClearCreditRate(value *int64) *AIUsageRatecardEntryUpdate {
+	if value == nil {
+		return u.ClearCreditRate()
+	}
+	return u.SetCreditRate(*value)
+}
+
+func (u *AIUsageRatecardEntryUpdateOne) SetOrClearCreditRate(value *int64) *AIUsageRatecardEntryUpdateOne {
+	if value == nil {
+		return u.ClearCreditRate()
+	}
+	return u.SetCreditRate(*value)
+}
+
 func (u *AIUsageRatecardEntryUpdate) SetOrClearEffectiveTo(value *time.Time) *AIUsageRatecardEntryUpdate {
 	if value == nil {
 		return u.ClearEffectiveTo()

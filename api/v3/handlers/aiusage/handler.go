@@ -5,6 +5,7 @@ import (
 
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
 )
 
@@ -21,6 +22,13 @@ type Handler interface {
 	// Credit balance / transactions
 	GetAiUsageCreditBalance() GetAiUsageCreditBalanceHandler
 	ListAiUsageCreditTransactions() ListAiUsageCreditTransactionsHandler
+
+	// Rate card management
+	CreateRateCardEntry() CreateRateCardEntryHandler
+	GetRateCardEntry() GetRateCardEntryHandler
+	ListRateCardEntries() ListRateCardEntriesHandler
+	UpdateRateCardEntry() UpdateRateCardEntryHandler
+	DeleteRateCardEntry() DeleteRateCardEntryHandler
 }
 
 type handler struct {
@@ -28,6 +36,7 @@ type handler struct {
 	service                     aiusage.Service
 	runtimeAuthorizationService runtimeauthorization.Service
 	creditBalanceReader         CreditBalanceReader
+	rateCardService             ratecard.Service
 	options                     []httptransport.HandlerOption
 }
 
@@ -39,6 +48,7 @@ func New(
 	service aiusage.Service,
 	runtimeAuthorizationService runtimeauthorization.Service,
 	creditBalanceReader CreditBalanceReader,
+	rateCardService ratecard.Service,
 	options ...httptransport.HandlerOption,
 ) Handler {
 	return &handler{
@@ -46,6 +56,7 @@ func New(
 		service:                     service,
 		runtimeAuthorizationService: runtimeAuthorizationService,
 		creditBalanceReader:         creditBalanceReader,
+		rateCardService:             rateCardService,
 		options:                     options,
 	}
 }

@@ -214,6 +214,7 @@ func main() {
 			AIUsageService:              app.AIUsageService,
 			RuntimeAuthorizationService: app.RuntimeAuthorizationService,
 			AIUsageEnabled:              conf.AIUsage.Enabled,
+			RateCardService:             app.RateCardService,
 		},
 		RouterHooks:         lo.FromPtr(app.RouterHooks),
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
@@ -345,6 +346,13 @@ func main() {
 	{
 		workerRun, workerStop := common.AIUsageWorkerGroup(ctx, app.AIUsageWorker)
 		group.Add(workerRun, workerStop)
+	}
+
+	// Seed rate card entries from config on first boot
+	if app.RateCardService != nil {
+		if err := common.SeedRateCardEntries(ctx, app.RateCardService, conf.AIUsage); err != nil {
+			logger.Warn("failed to seed rate card entries", "error", err)
+		}
 	}
 
 	// Commerce worker lifecycle

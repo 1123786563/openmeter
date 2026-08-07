@@ -241,8 +241,10 @@ var (
 		{Name: "resource_code", Type: field.TypeString},
 		{Name: "provider", Type: field.TypeString, Nullable: true},
 		{Name: "model", Type: field.TypeString, Nullable: true},
-		{Name: "price_per_unit_cny", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
-		{Name: "credit_rate", Type: field.TypeInt64, Default: 1000},
+		{Name: "price_per_unit_cny", Type: field.TypeOther, Nullable: true, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "credit_rate", Type: field.TypeInt64, Nullable: true, Default: 1000},
+		{Name: "credits_per_unit", Type: field.TypeInt64, Default: 1},
+		{Name: "unit_size", Type: field.TypeInt64, Default: 1},
 		{Name: "effective_from", Type: field.TypeTime},
 		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
 	}
@@ -275,7 +277,7 @@ var (
 			{
 				Name:    "aiusageratecardentry_namespace_customer_id_resource_code_provider_model_effective_from",
 				Unique:  true,
-				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[1], AiUsageRatecardEntriesColumns[6], AiUsageRatecardEntriesColumns[7], AiUsageRatecardEntriesColumns[8], AiUsageRatecardEntriesColumns[9], AiUsageRatecardEntriesColumns[12]},
+				Columns: []*schema.Column{AiUsageRatecardEntriesColumns[1], AiUsageRatecardEntriesColumns[6], AiUsageRatecardEntriesColumns[7], AiUsageRatecardEntriesColumns[8], AiUsageRatecardEntriesColumns[9], AiUsageRatecardEntriesColumns[14]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},

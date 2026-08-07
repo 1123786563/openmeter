@@ -34,8 +34,10 @@ func (AIUsageRatecardEntry) Fields() []ent.Field {
 		field.Other("price_per_unit_cny", alpacadecimal.Decimal{}).
 			SchemaType(map[string]string{
 				dialect.Postgres: "numeric",
-			}),
-		field.Int64("credit_rate").Default(1000),
+			}).Optional(),
+		field.Int64("credit_rate").Default(1000).Optional(),
+		field.Int64("credits_per_unit").Default(1),
+		field.Int64("unit_size").Default(1),
 		field.Time("effective_from"),
 		field.Time("effective_to").Optional().Nillable(),
 	}

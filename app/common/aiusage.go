@@ -13,6 +13,7 @@ import (
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
 	aiusageadapter "github.com/openmeterio/openmeter/openmeter/aiusage/adapter"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/pricing"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	aiusageservice "github.com/openmeterio/openmeter/openmeter/aiusage/service"
@@ -43,6 +44,7 @@ var AIUsage = wire.NewSet(
 	NewAIUsageSigner,
 	NewRuntimeAuthorizationService,
 	NewAIUsageWorker,
+	NewAIUsageRateCardService,
 )
 
 // NewAIUsageConfig extracts the AIUsageConfiguration from the top-level Configuration.
@@ -85,15 +87,20 @@ func NewAIUsageAdapter(
 // entries.
 func NewAIUsagePricingResolver(
 	aiUsageConfig config.AIUsageConfiguration,
+	db *entdb.Client,
 ) (aiusageservice.PricingResolver, error) {
 	if !aiUsageConfig.Enabled {
 		return nil, nil
 	}
-	provider, err := newConfigRateEntryProvider(aiUsageConfig)
-	if err != nil {
-		return nil, fmt.Errorf("ai_usage: rate entry provider: %w", err)
+	// Fallback to config provider when DB is not yet available (early boot).
+	if db == nil {
+		provider, err := newConfigRateEntryProvider(aiUsageConfig)
+		if err != nil {
+			return nil, fmt.Errorf("ai_usage: rate entry provider: %w", err)
+		}
+		return pricing.NewService(provider), nil
 	}
-	return pricing.NewService(provider), nil
+	return pricing.NewService(aiusageadapter.NewDBRateEntryProvider(db)), nil
 }
 
 // NewAIUsageProfileResolver creates the customer profile resolver backed by
@@ -373,3 +380,19 @@ var (
 	_ aiusageservice.AllocationFetcher       = (*dbAllocationFetcher)(nil)
 	_ worker.OutboxRepository                = (*entOutboxRepository)(nil)
 )
+
+// NewAIUsageRateCardService creates the ent-backed rate card service for CRUD
+// operations and bootstrap seeding.
+func NewAIUsageRateCardService(
+	aiUsageConfig config.AIUsageConfiguration,
+	db *entdb.Client,
+	logger *slog.Logger,
+) (ratecard.Service, error) {
+	if !aiUsageConfig.Enabled {
+		return nil, nil
+	}
+	if db == nil {
+		return nil, fmt.Errorf("ai_usage: ent client is required when ai_usage is enabled")
+	}
+	return aiusageadapter.NewRateCardRepository(db, logger), nil
+}

@@ -133,6 +133,14 @@ func (_c *AIUsageRatecardEntryCreate) SetPricePerUnitCny(v alpacadecimal.Decimal
 	return _c
 }
 
+// SetNillablePricePerUnitCny sets the "price_per_unit_cny" field if the given value is not nil.
+func (_c *AIUsageRatecardEntryCreate) SetNillablePricePerUnitCny(v *alpacadecimal.Decimal) *AIUsageRatecardEntryCreate {
+	if v != nil {
+		_c.SetPricePerUnitCny(*v)
+	}
+	return _c
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (_c *AIUsageRatecardEntryCreate) SetCreditRate(v int64) *AIUsageRatecardEntryCreate {
 	_c.mutation.SetCreditRate(v)
@@ -143,6 +151,34 @@ func (_c *AIUsageRatecardEntryCreate) SetCreditRate(v int64) *AIUsageRatecardEnt
 func (_c *AIUsageRatecardEntryCreate) SetNillableCreditRate(v *int64) *AIUsageRatecardEntryCreate {
 	if v != nil {
 		_c.SetCreditRate(*v)
+	}
+	return _c
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (_c *AIUsageRatecardEntryCreate) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryCreate {
+	_c.mutation.SetCreditsPerUnit(v)
+	return _c
+}
+
+// SetNillableCreditsPerUnit sets the "credits_per_unit" field if the given value is not nil.
+func (_c *AIUsageRatecardEntryCreate) SetNillableCreditsPerUnit(v *int64) *AIUsageRatecardEntryCreate {
+	if v != nil {
+		_c.SetCreditsPerUnit(*v)
+	}
+	return _c
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (_c *AIUsageRatecardEntryCreate) SetUnitSize(v int64) *AIUsageRatecardEntryCreate {
+	_c.mutation.SetUnitSize(v)
+	return _c
+}
+
+// SetNillableUnitSize sets the "unit_size" field if the given value is not nil.
+func (_c *AIUsageRatecardEntryCreate) SetNillableUnitSize(v *int64) *AIUsageRatecardEntryCreate {
+	if v != nil {
+		_c.SetUnitSize(*v)
 	}
 	return _c
 }
@@ -228,6 +264,14 @@ func (_c *AIUsageRatecardEntryCreate) defaults() {
 		v := aiusageratecardentry.DefaultCreditRate
 		_c.mutation.SetCreditRate(v)
 	}
+	if _, ok := _c.mutation.CreditsPerUnit(); !ok {
+		v := aiusageratecardentry.DefaultCreditsPerUnit
+		_c.mutation.SetCreditsPerUnit(v)
+	}
+	if _, ok := _c.mutation.UnitSize(); !ok {
+		v := aiusageratecardentry.DefaultUnitSize
+		_c.mutation.SetUnitSize(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := aiusageratecardentry.DefaultID()
 		_c.mutation.SetID(v)
@@ -258,11 +302,11 @@ func (_c *AIUsageRatecardEntryCreate) check() error {
 			return &ValidationError{Name: "resource_code", err: fmt.Errorf(`db: validator failed for field "AIUsageRatecardEntry.resource_code": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.PricePerUnitCny(); !ok {
-		return &ValidationError{Name: "price_per_unit_cny", err: errors.New(`db: missing required field "AIUsageRatecardEntry.price_per_unit_cny"`)}
+	if _, ok := _c.mutation.CreditsPerUnit(); !ok {
+		return &ValidationError{Name: "credits_per_unit", err: errors.New(`db: missing required field "AIUsageRatecardEntry.credits_per_unit"`)}
 	}
-	if _, ok := _c.mutation.CreditRate(); !ok {
-		return &ValidationError{Name: "credit_rate", err: errors.New(`db: missing required field "AIUsageRatecardEntry.credit_rate"`)}
+	if _, ok := _c.mutation.UnitSize(); !ok {
+		return &ValidationError{Name: "unit_size", err: errors.New(`db: missing required field "AIUsageRatecardEntry.unit_size"`)}
 	}
 	if _, ok := _c.mutation.EffectiveFrom(); !ok {
 		return &ValidationError{Name: "effective_from", err: errors.New(`db: missing required field "AIUsageRatecardEntry.effective_from"`)}
@@ -346,6 +390,14 @@ func (_c *AIUsageRatecardEntryCreate) createSpec() (*AIUsageRatecardEntry, *sqlg
 	if value, ok := _c.mutation.CreditRate(); ok {
 		_spec.SetField(aiusageratecardentry.FieldCreditRate, field.TypeInt64, value)
 		_node.CreditRate = value
+	}
+	if value, ok := _c.mutation.CreditsPerUnit(); ok {
+		_spec.SetField(aiusageratecardentry.FieldCreditsPerUnit, field.TypeInt64, value)
+		_node.CreditsPerUnit = value
+	}
+	if value, ok := _c.mutation.UnitSize(); ok {
+		_spec.SetField(aiusageratecardentry.FieldUnitSize, field.TypeInt64, value)
+		_node.UnitSize = value
 	}
 	if value, ok := _c.mutation.EffectiveFrom(); ok {
 		_spec.SetField(aiusageratecardentry.FieldEffectiveFrom, field.TypeTime, value)
@@ -533,6 +585,12 @@ func (u *AIUsageRatecardEntryUpsert) UpdatePricePerUnitCny() *AIUsageRatecardEnt
 	return u
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (u *AIUsageRatecardEntryUpsert) ClearPricePerUnitCny() *AIUsageRatecardEntryUpsert {
+	u.SetNull(aiusageratecardentry.FieldPricePerUnitCny)
+	return u
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (u *AIUsageRatecardEntryUpsert) SetCreditRate(v int64) *AIUsageRatecardEntryUpsert {
 	u.Set(aiusageratecardentry.FieldCreditRate, v)
@@ -548,6 +606,48 @@ func (u *AIUsageRatecardEntryUpsert) UpdateCreditRate() *AIUsageRatecardEntryUps
 // AddCreditRate adds v to the "credit_rate" field.
 func (u *AIUsageRatecardEntryUpsert) AddCreditRate(v int64) *AIUsageRatecardEntryUpsert {
 	u.Add(aiusageratecardentry.FieldCreditRate, v)
+	return u
+}
+
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (u *AIUsageRatecardEntryUpsert) ClearCreditRate() *AIUsageRatecardEntryUpsert {
+	u.SetNull(aiusageratecardentry.FieldCreditRate)
+	return u
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsert) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsert {
+	u.Set(aiusageratecardentry.FieldCreditsPerUnit, v)
+	return u
+}
+
+// UpdateCreditsPerUnit sets the "credits_per_unit" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsert) UpdateCreditsPerUnit() *AIUsageRatecardEntryUpsert {
+	u.SetExcluded(aiusageratecardentry.FieldCreditsPerUnit)
+	return u
+}
+
+// AddCreditsPerUnit adds v to the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsert) AddCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsert {
+	u.Add(aiusageratecardentry.FieldCreditsPerUnit, v)
+	return u
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsert) SetUnitSize(v int64) *AIUsageRatecardEntryUpsert {
+	u.Set(aiusageratecardentry.FieldUnitSize, v)
+	return u
+}
+
+// UpdateUnitSize sets the "unit_size" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsert) UpdateUnitSize() *AIUsageRatecardEntryUpsert {
+	u.SetExcluded(aiusageratecardentry.FieldUnitSize)
+	return u
+}
+
+// AddUnitSize adds v to the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsert) AddUnitSize(v int64) *AIUsageRatecardEntryUpsert {
+	u.Add(aiusageratecardentry.FieldUnitSize, v)
 	return u
 }
 
@@ -782,6 +882,13 @@ func (u *AIUsageRatecardEntryUpsertOne) UpdatePricePerUnitCny() *AIUsageRatecard
 	})
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (u *AIUsageRatecardEntryUpsertOne) ClearPricePerUnitCny() *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.ClearPricePerUnitCny()
+	})
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (u *AIUsageRatecardEntryUpsertOne) SetCreditRate(v int64) *AIUsageRatecardEntryUpsertOne {
 	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
@@ -800,6 +907,55 @@ func (u *AIUsageRatecardEntryUpsertOne) AddCreditRate(v int64) *AIUsageRatecardE
 func (u *AIUsageRatecardEntryUpsertOne) UpdateCreditRate() *AIUsageRatecardEntryUpsertOne {
 	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
 		s.UpdateCreditRate()
+	})
+}
+
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (u *AIUsageRatecardEntryUpsertOne) ClearCreditRate() *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.ClearCreditRate()
+	})
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsertOne) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.SetCreditsPerUnit(v)
+	})
+}
+
+// AddCreditsPerUnit adds v to the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsertOne) AddCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.AddCreditsPerUnit(v)
+	})
+}
+
+// UpdateCreditsPerUnit sets the "credits_per_unit" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsertOne) UpdateCreditsPerUnit() *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.UpdateCreditsPerUnit()
+	})
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsertOne) SetUnitSize(v int64) *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.SetUnitSize(v)
+	})
+}
+
+// AddUnitSize adds v to the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsertOne) AddUnitSize(v int64) *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.AddUnitSize(v)
+	})
+}
+
+// UpdateUnitSize sets the "unit_size" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsertOne) UpdateUnitSize() *AIUsageRatecardEntryUpsertOne {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.UpdateUnitSize()
 	})
 }
 
@@ -1206,6 +1362,13 @@ func (u *AIUsageRatecardEntryUpsertBulk) UpdatePricePerUnitCny() *AIUsageRatecar
 	})
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (u *AIUsageRatecardEntryUpsertBulk) ClearPricePerUnitCny() *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.ClearPricePerUnitCny()
+	})
+}
+
 // SetCreditRate sets the "credit_rate" field.
 func (u *AIUsageRatecardEntryUpsertBulk) SetCreditRate(v int64) *AIUsageRatecardEntryUpsertBulk {
 	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
@@ -1224,6 +1387,55 @@ func (u *AIUsageRatecardEntryUpsertBulk) AddCreditRate(v int64) *AIUsageRatecard
 func (u *AIUsageRatecardEntryUpsertBulk) UpdateCreditRate() *AIUsageRatecardEntryUpsertBulk {
 	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
 		s.UpdateCreditRate()
+	})
+}
+
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (u *AIUsageRatecardEntryUpsertBulk) ClearCreditRate() *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.ClearCreditRate()
+	})
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsertBulk) SetCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.SetCreditsPerUnit(v)
+	})
+}
+
+// AddCreditsPerUnit adds v to the "credits_per_unit" field.
+func (u *AIUsageRatecardEntryUpsertBulk) AddCreditsPerUnit(v int64) *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.AddCreditsPerUnit(v)
+	})
+}
+
+// UpdateCreditsPerUnit sets the "credits_per_unit" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsertBulk) UpdateCreditsPerUnit() *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.UpdateCreditsPerUnit()
+	})
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsertBulk) SetUnitSize(v int64) *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.SetUnitSize(v)
+	})
+}
+
+// AddUnitSize adds v to the "unit_size" field.
+func (u *AIUsageRatecardEntryUpsertBulk) AddUnitSize(v int64) *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.AddUnitSize(v)
+	})
+}
+
+// UpdateUnitSize sets the "unit_size" field to the value that was provided on create.
+func (u *AIUsageRatecardEntryUpsertBulk) UpdateUnitSize() *AIUsageRatecardEntryUpsertBulk {
+	return u.Update(func(s *AIUsageRatecardEntryUpsert) {
+		s.UpdateUnitSize()
 	})
 }
 

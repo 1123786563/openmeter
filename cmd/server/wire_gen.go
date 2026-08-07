@@ -12,6 +12,7 @@ import (
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
@@ -687,7 +688,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	pricingResolver, err := common.NewAIUsagePricingResolver(aiUsageConfiguration)
+	pricingResolver, err := common.NewAIUsagePricingResolver(aiUsageConfiguration, client)
 	if err != nil {
 		cleanup8()
 		cleanup7()
@@ -808,6 +809,18 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		return Application{}, nil, err
 	}
 	worker, err := common.NewAIUsageWorker(aiUsageConfiguration, client, logger, tracer)
+	if err != nil {
+		cleanup8()
+		cleanup7()
+		cleanup6()
+		cleanup5()
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return Application{}, nil, err
+	}
+	ratecardService, err := common.NewAIUsageRateCardService(aiUsageConfiguration, client, logger)
 	if err != nil {
 		cleanup8()
 		cleanup7()
@@ -1022,6 +1035,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		AIUsageRepository:                aiusageRepository,
 		RuntimeAuthorizationService:      runtimeauthorizationService,
 		AIUsageWorker:                    worker,
+		RateCardService:                  ratecardService,
 		Logger:                           logger,
 		MetricMeter:                      meter,
 		MeterConfigInitializer:           v7,
@@ -1099,6 +1113,7 @@ type Application struct {
 	AIUsageRepository                aiusage.Repository
 	RuntimeAuthorizationService      runtimeauthorization.Service
 	AIUsageWorker                    *worker.Worker
+	RateCardService                  ratecard.Service
 	Logger                           *slog.Logger
 	MetricMeter                      metric.Meter
 	MeterConfigInitializer           common.MeterConfigInitializer

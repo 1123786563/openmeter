@@ -4742,27 +4742,31 @@ func (m *AIUsageOutboxMutation) ResetEdge(name string) error {
 // AIUsageRatecardEntryMutation represents an operation that mutates the AIUsageRatecardEntry nodes in the graph.
 type AIUsageRatecardEntryMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *string
-	namespace          *string
-	annotations        *models.Annotations
-	created_at         *time.Time
-	updated_at         *time.Time
-	deleted_at         *time.Time
-	customer_id        *string
-	resource_code      *string
-	provider           *string
-	model              *string
-	price_per_unit_cny *alpacadecimal.Decimal
-	credit_rate        *int64
-	addcredit_rate     *int64
-	effective_from     *time.Time
-	effective_to       *time.Time
-	clearedFields      map[string]struct{}
-	done               bool
-	oldValue           func(context.Context) (*AIUsageRatecardEntry, error)
-	predicates         []predicate.AIUsageRatecardEntry
+	op                  Op
+	typ                 string
+	id                  *string
+	namespace           *string
+	annotations         *models.Annotations
+	created_at          *time.Time
+	updated_at          *time.Time
+	deleted_at          *time.Time
+	customer_id         *string
+	resource_code       *string
+	provider            *string
+	model               *string
+	price_per_unit_cny  *alpacadecimal.Decimal
+	credit_rate         *int64
+	addcredit_rate      *int64
+	credits_per_unit    *int64
+	addcredits_per_unit *int64
+	unit_size           *int64
+	addunit_size        *int64
+	effective_from      *time.Time
+	effective_to        *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*AIUsageRatecardEntry, error)
+	predicates          []predicate.AIUsageRatecardEntry
 }
 
 var _ ent.Mutation = (*AIUsageRatecardEntryMutation)(nil)
@@ -5289,9 +5293,22 @@ func (m *AIUsageRatecardEntryMutation) OldPricePerUnitCny(ctx context.Context) (
 	return oldValue.PricePerUnitCny, nil
 }
 
+// ClearPricePerUnitCny clears the value of the "price_per_unit_cny" field.
+func (m *AIUsageRatecardEntryMutation) ClearPricePerUnitCny() {
+	m.price_per_unit_cny = nil
+	m.clearedFields[aiusageratecardentry.FieldPricePerUnitCny] = struct{}{}
+}
+
+// PricePerUnitCnyCleared returns if the "price_per_unit_cny" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) PricePerUnitCnyCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldPricePerUnitCny]
+	return ok
+}
+
 // ResetPricePerUnitCny resets all changes to the "price_per_unit_cny" field.
 func (m *AIUsageRatecardEntryMutation) ResetPricePerUnitCny() {
 	m.price_per_unit_cny = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldPricePerUnitCny)
 }
 
 // SetCreditRate sets the "credit_rate" field.
@@ -5344,10 +5361,136 @@ func (m *AIUsageRatecardEntryMutation) AddedCreditRate() (r int64, exists bool) 
 	return *v, true
 }
 
+// ClearCreditRate clears the value of the "credit_rate" field.
+func (m *AIUsageRatecardEntryMutation) ClearCreditRate() {
+	m.credit_rate = nil
+	m.addcredit_rate = nil
+	m.clearedFields[aiusageratecardentry.FieldCreditRate] = struct{}{}
+}
+
+// CreditRateCleared returns if the "credit_rate" field was cleared in this mutation.
+func (m *AIUsageRatecardEntryMutation) CreditRateCleared() bool {
+	_, ok := m.clearedFields[aiusageratecardentry.FieldCreditRate]
+	return ok
+}
+
 // ResetCreditRate resets all changes to the "credit_rate" field.
 func (m *AIUsageRatecardEntryMutation) ResetCreditRate() {
 	m.credit_rate = nil
 	m.addcredit_rate = nil
+	delete(m.clearedFields, aiusageratecardentry.FieldCreditRate)
+}
+
+// SetCreditsPerUnit sets the "credits_per_unit" field.
+func (m *AIUsageRatecardEntryMutation) SetCreditsPerUnit(i int64) {
+	m.credits_per_unit = &i
+	m.addcredits_per_unit = nil
+}
+
+// CreditsPerUnit returns the value of the "credits_per_unit" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) CreditsPerUnit() (r int64, exists bool) {
+	v := m.credits_per_unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreditsPerUnit returns the old "credits_per_unit" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldCreditsPerUnit(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreditsPerUnit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreditsPerUnit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreditsPerUnit: %w", err)
+	}
+	return oldValue.CreditsPerUnit, nil
+}
+
+// AddCreditsPerUnit adds i to the "credits_per_unit" field.
+func (m *AIUsageRatecardEntryMutation) AddCreditsPerUnit(i int64) {
+	if m.addcredits_per_unit != nil {
+		*m.addcredits_per_unit += i
+	} else {
+		m.addcredits_per_unit = &i
+	}
+}
+
+// AddedCreditsPerUnit returns the value that was added to the "credits_per_unit" field in this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedCreditsPerUnit() (r int64, exists bool) {
+	v := m.addcredits_per_unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreditsPerUnit resets all changes to the "credits_per_unit" field.
+func (m *AIUsageRatecardEntryMutation) ResetCreditsPerUnit() {
+	m.credits_per_unit = nil
+	m.addcredits_per_unit = nil
+}
+
+// SetUnitSize sets the "unit_size" field.
+func (m *AIUsageRatecardEntryMutation) SetUnitSize(i int64) {
+	m.unit_size = &i
+	m.addunit_size = nil
+}
+
+// UnitSize returns the value of the "unit_size" field in the mutation.
+func (m *AIUsageRatecardEntryMutation) UnitSize() (r int64, exists bool) {
+	v := m.unit_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnitSize returns the old "unit_size" field's value of the AIUsageRatecardEntry entity.
+// If the AIUsageRatecardEntry object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AIUsageRatecardEntryMutation) OldUnitSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnitSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnitSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnitSize: %w", err)
+	}
+	return oldValue.UnitSize, nil
+}
+
+// AddUnitSize adds i to the "unit_size" field.
+func (m *AIUsageRatecardEntryMutation) AddUnitSize(i int64) {
+	if m.addunit_size != nil {
+		*m.addunit_size += i
+	} else {
+		m.addunit_size = &i
+	}
+}
+
+// AddedUnitSize returns the value that was added to the "unit_size" field in this mutation.
+func (m *AIUsageRatecardEntryMutation) AddedUnitSize() (r int64, exists bool) {
+	v := m.addunit_size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUnitSize resets all changes to the "unit_size" field.
+func (m *AIUsageRatecardEntryMutation) ResetUnitSize() {
+	m.unit_size = nil
+	m.addunit_size = nil
 }
 
 // SetEffectiveFrom sets the "effective_from" field.
@@ -5469,7 +5612,7 @@ func (m *AIUsageRatecardEntryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AIUsageRatecardEntryMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 15)
 	if m.namespace != nil {
 		fields = append(fields, aiusageratecardentry.FieldNamespace)
 	}
@@ -5502,6 +5645,12 @@ func (m *AIUsageRatecardEntryMutation) Fields() []string {
 	}
 	if m.credit_rate != nil {
 		fields = append(fields, aiusageratecardentry.FieldCreditRate)
+	}
+	if m.credits_per_unit != nil {
+		fields = append(fields, aiusageratecardentry.FieldCreditsPerUnit)
+	}
+	if m.unit_size != nil {
+		fields = append(fields, aiusageratecardentry.FieldUnitSize)
 	}
 	if m.effective_from != nil {
 		fields = append(fields, aiusageratecardentry.FieldEffectiveFrom)
@@ -5539,6 +5688,10 @@ func (m *AIUsageRatecardEntryMutation) Field(name string) (ent.Value, bool) {
 		return m.PricePerUnitCny()
 	case aiusageratecardentry.FieldCreditRate:
 		return m.CreditRate()
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		return m.CreditsPerUnit()
+	case aiusageratecardentry.FieldUnitSize:
+		return m.UnitSize()
 	case aiusageratecardentry.FieldEffectiveFrom:
 		return m.EffectiveFrom()
 	case aiusageratecardentry.FieldEffectiveTo:
@@ -5574,6 +5727,10 @@ func (m *AIUsageRatecardEntryMutation) OldField(ctx context.Context, name string
 		return m.OldPricePerUnitCny(ctx)
 	case aiusageratecardentry.FieldCreditRate:
 		return m.OldCreditRate(ctx)
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		return m.OldCreditsPerUnit(ctx)
+	case aiusageratecardentry.FieldUnitSize:
+		return m.OldUnitSize(ctx)
 	case aiusageratecardentry.FieldEffectiveFrom:
 		return m.OldEffectiveFrom(ctx)
 	case aiusageratecardentry.FieldEffectiveTo:
@@ -5664,6 +5821,20 @@ func (m *AIUsageRatecardEntryMutation) SetField(name string, value ent.Value) er
 		}
 		m.SetCreditRate(v)
 		return nil
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreditsPerUnit(v)
+		return nil
+	case aiusageratecardentry.FieldUnitSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnitSize(v)
+		return nil
 	case aiusageratecardentry.FieldEffectiveFrom:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -5689,6 +5860,12 @@ func (m *AIUsageRatecardEntryMutation) AddedFields() []string {
 	if m.addcredit_rate != nil {
 		fields = append(fields, aiusageratecardentry.FieldCreditRate)
 	}
+	if m.addcredits_per_unit != nil {
+		fields = append(fields, aiusageratecardentry.FieldCreditsPerUnit)
+	}
+	if m.addunit_size != nil {
+		fields = append(fields, aiusageratecardentry.FieldUnitSize)
+	}
 	return fields
 }
 
@@ -5699,6 +5876,10 @@ func (m *AIUsageRatecardEntryMutation) AddedField(name string) (ent.Value, bool)
 	switch name {
 	case aiusageratecardentry.FieldCreditRate:
 		return m.AddedCreditRate()
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		return m.AddedCreditsPerUnit()
+	case aiusageratecardentry.FieldUnitSize:
+		return m.AddedUnitSize()
 	}
 	return nil, false
 }
@@ -5714,6 +5895,20 @@ func (m *AIUsageRatecardEntryMutation) AddField(name string, value ent.Value) er
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCreditRate(v)
+		return nil
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreditsPerUnit(v)
+		return nil
+	case aiusageratecardentry.FieldUnitSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUnitSize(v)
 		return nil
 	}
 	return fmt.Errorf("unknown AIUsageRatecardEntry numeric field %s", name)
@@ -5737,6 +5932,12 @@ func (m *AIUsageRatecardEntryMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(aiusageratecardentry.FieldModel) {
 		fields = append(fields, aiusageratecardentry.FieldModel)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldPricePerUnitCny) {
+		fields = append(fields, aiusageratecardentry.FieldPricePerUnitCny)
+	}
+	if m.FieldCleared(aiusageratecardentry.FieldCreditRate) {
+		fields = append(fields, aiusageratecardentry.FieldCreditRate)
 	}
 	if m.FieldCleared(aiusageratecardentry.FieldEffectiveTo) {
 		fields = append(fields, aiusageratecardentry.FieldEffectiveTo)
@@ -5769,6 +5970,12 @@ func (m *AIUsageRatecardEntryMutation) ClearField(name string) error {
 		return nil
 	case aiusageratecardentry.FieldModel:
 		m.ClearModel()
+		return nil
+	case aiusageratecardentry.FieldPricePerUnitCny:
+		m.ClearPricePerUnitCny()
+		return nil
+	case aiusageratecardentry.FieldCreditRate:
+		m.ClearCreditRate()
 		return nil
 	case aiusageratecardentry.FieldEffectiveTo:
 		m.ClearEffectiveTo()
@@ -5813,6 +6020,12 @@ func (m *AIUsageRatecardEntryMutation) ResetField(name string) error {
 		return nil
 	case aiusageratecardentry.FieldCreditRate:
 		m.ResetCreditRate()
+		return nil
+	case aiusageratecardentry.FieldCreditsPerUnit:
+		m.ResetCreditsPerUnit()
+		return nil
+	case aiusageratecardentry.FieldUnitSize:
+		m.ResetUnitSize()
 		return nil
 	case aiusageratecardentry.FieldEffectiveFrom:
 		m.ResetEffectiveFrom()

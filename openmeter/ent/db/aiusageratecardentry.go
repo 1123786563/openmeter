@@ -42,6 +42,10 @@ type AIUsageRatecardEntry struct {
 	PricePerUnitCny alpacadecimal.Decimal `json:"price_per_unit_cny,omitempty"`
 	// CreditRate holds the value of the "credit_rate" field.
 	CreditRate int64 `json:"credit_rate,omitempty"`
+	// CreditsPerUnit holds the value of the "credits_per_unit" field.
+	CreditsPerUnit int64 `json:"credits_per_unit,omitempty"`
+	// UnitSize holds the value of the "unit_size" field.
+	UnitSize int64 `json:"unit_size,omitempty"`
 	// EffectiveFrom holds the value of the "effective_from" field.
 	EffectiveFrom time.Time `json:"effective_from,omitempty"`
 	// EffectiveTo holds the value of the "effective_to" field.
@@ -58,7 +62,7 @@ func (*AIUsageRatecardEntry) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case aiusageratecardentry.FieldPricePerUnitCny:
 			values[i] = new(alpacadecimal.Decimal)
-		case aiusageratecardentry.FieldCreditRate:
+		case aiusageratecardentry.FieldCreditRate, aiusageratecardentry.FieldCreditsPerUnit, aiusageratecardentry.FieldUnitSize:
 			values[i] = new(sql.NullInt64)
 		case aiusageratecardentry.FieldID, aiusageratecardentry.FieldNamespace, aiusageratecardentry.FieldCustomerID, aiusageratecardentry.FieldResourceCode, aiusageratecardentry.FieldProvider, aiusageratecardentry.FieldModel:
 			values[i] = new(sql.NullString)
@@ -157,6 +161,18 @@ func (_m *AIUsageRatecardEntry) assignValues(columns []string, values []any) err
 			} else if value.Valid {
 				_m.CreditRate = value.Int64
 			}
+		case aiusageratecardentry.FieldCreditsPerUnit:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credits_per_unit", values[i])
+			} else if value.Valid {
+				_m.CreditsPerUnit = value.Int64
+			}
+		case aiusageratecardentry.FieldUnitSize:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field unit_size", values[i])
+			} else if value.Valid {
+				_m.UnitSize = value.Int64
+			}
 		case aiusageratecardentry.FieldEffectiveFrom:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field effective_from", values[i])
@@ -246,6 +262,12 @@ func (_m *AIUsageRatecardEntry) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credit_rate=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CreditRate))
+	builder.WriteString(", ")
+	builder.WriteString("credits_per_unit=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CreditsPerUnit))
+	builder.WriteString(", ")
+	builder.WriteString("unit_size=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UnitSize))
 	builder.WriteString(", ")
 	builder.WriteString("effective_from=")
 	builder.WriteString(_m.EffectiveFrom.Format(time.ANSIC))

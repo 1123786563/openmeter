@@ -17,6 +17,7 @@ import (
 	currencyhandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appcustominvoicing "github.com/openmeterio/openmeter/openmeter/app/custominvoicing"
@@ -149,6 +150,7 @@ type Config struct {
 	AIUsageService              aiusage.Service
 	RuntimeAuthorizationService runtimeauthorization.Service
 	AIUsageEnabled              bool
+	RateCardService             ratecard.Service
 }
 
 func (c Config) Validate() error {

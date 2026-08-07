@@ -43,6 +43,7 @@ import (
 	"github.com/openmeterio/openmeter/api/v3/render"
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/aiusage"
+	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
 	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appstripe "github.com/openmeterio/openmeter/openmeter/app/stripe"
@@ -125,6 +126,7 @@ type Config struct {
 	AIUsageEnabled              bool
 	AIUsageService              aiusage.Service
 	RuntimeAuthorizationService runtimeauthorization.Service
+	RateCardService             ratecard.Service
 
 	// Commerce
 	CommerceHandler commercehandler.Handler
@@ -293,6 +295,8 @@ type Server struct {
 	featureCostHandler          featurecosthandler.Handler
 	aiusageHandler              aiusagehandler.Handler
 
+	rateCardHandler             aiusagehandler.Handler
+
 	commerceHandler commercehandler.Handler
 }
 
@@ -372,7 +376,11 @@ func NewServer(config *Config) (*Server, error) {
 		if config.CustomerBalanceFacade != nil {
 			creditReader = &customerBalanceReaderAdapter{facade: config.CustomerBalanceFacade}
 		}
-		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, creditReader, httptransport.WithErrorHandler(config.ErrorHandler))
+		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, creditReader, nil, httptransport.WithErrorHandler(config.ErrorHandler))
+	}
+	var rateCardH aiusagehandler.Handler
+	if config.RateCardService != nil {
+		rateCardH = aiusagehandler.New(resolveNamespace, nil, nil, nil, config.RateCardService, httptransport.WithErrorHandler(config.ErrorHandler))
 	}
 
 	var llmcostH llmcosthandler.Handler
@@ -410,6 +418,7 @@ func NewServer(config *Config) (*Server, error) {
 		featureCostHandler:          featureCostH,
 		governanceHandler:           governanceHandler,
 		aiusageHandler:              aiusageH,
+		rateCardHandler:             rateCardH,
 		commerceHandler:             config.CommerceHandler,
 	}, nil
 }
@@ -500,6 +509,17 @@ func (s *Server) RegisterRoutes(r chi.Router) error {
 			Middlewares:      middlewares,
 			ErrorHandlerFunc: apierrors.NewV3ErrorHandlerFunc(s.ErrorHandler),
 		})
+
+		// Rate card management — custom routes not in the OpenAPI spec.
+		if s.rateCardHandler != nil {
+			r.Route("/ai-usage/rate-entries", func(r chi.Router) {
+				r.Post("/", s.CreateRateCardEntry)
+				r.Get("/", s.ListRateCardEntries)
+				r.Get("/{id}", s.GetRateCardEntry)
+				r.Patch("/{id}", s.UpdateRateCardEntry)
+				r.Delete("/{id}", s.DeleteRateCardEntry)
+			})
+		}
 	})
 
 	return nil
