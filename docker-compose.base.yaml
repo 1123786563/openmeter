@@ -1,3 +1,4 @@
+
 services:
   kafka:
     image: confluentinc/cp-kafka:8.0.3@sha256:db5eac24a1d15a1689fa89642ef97a7e3bc4f55ad5159a07b213c4dc7d0114e3
@@ -145,8 +146,4 @@ services:
 
 configs:
   svix_sql:
-    content: |
-      CREATE USER svix WITH PASSWORD 'svix';
-      CREATE DATABASE svix;
-      GRANT ALL PRIVILEGES ON DATABASE svix TO svix;
-      ALTER DATABASE svix OWNER TO svix;
+    file: ./svix.sql
