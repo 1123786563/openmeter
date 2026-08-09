@@ -101,6 +101,32 @@ func TestCreateReservationIsIdempotentByKeyAndHash(t *testing.T) {
 	require.ErrorIs(t, err, creditreservation.ErrIdempotencyConflict)
 }
 
+func TestCreateReservationRejectsIntersectingIdempotencyAndCallIdentities(t *testing.T) {
+	adp, _ := newAdapter(t)
+	firstInput := reservationInput("wk:reserve:first", "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd")
+	firstInput.Reservation.ID = "reservation-first"
+	secondInput := reservationInput("wk:reserve:second", "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+	secondInput.Reservation.ID = "reservation-second"
+
+	for _, input := range []creditreservationadapter.CreateReservationInput{firstInput, secondInput} {
+		err := adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+			_, created, err := tx.CreateReservation(t.Context(), input)
+			require.True(t, created)
+			return err
+		})
+		require.NoError(t, err)
+	}
+
+	intersection := firstInput
+	intersection.Reservation.ID = "reservation-intersection"
+	intersection.ClientCallID = secondInput.ClientCallID
+	err := adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		_, _, err := tx.CreateReservation(t.Context(), intersection)
+		return err
+	})
+	require.ErrorIs(t, err, creditreservation.ErrIdempotencyConflict)
+}
+
 func TestReservationAndUsageOutboxRollbackTogether(t *testing.T) {
 	adp, client := newAdapter(t)
 	input := reservationInput("wk:reserve:rollback", "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")

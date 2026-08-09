@@ -259,18 +259,51 @@ func getReservation(ctx context.Context, db *entdb.Client, id models.NamespacedI
 }
 
 func findReservationCommand(ctx context.Context, db *entdb.Client, namespace, idempotencyKey, clientCallID string) (*entdb.CreditReservation, error) {
+	byIdempotencyKey, err := findReservationByIdempotencyKey(ctx, db, namespace, idempotencyKey)
+	if err != nil {
+		return nil, err
+	}
+	byClientCall, err := findReservationByClientCall(ctx, db, namespace, clientCallID)
+	if err != nil {
+		return nil, err
+	}
+	return selectReservationIdentity(byIdempotencyKey, byClientCall)
+}
+
+func selectReservationIdentity(byIdempotencyKey, byClientCall *entdb.CreditReservation) (*entdb.CreditReservation, error) {
+	if byIdempotencyKey != nil && byClientCall != nil && byIdempotencyKey.ID != byClientCall.ID {
+		return nil, creditreservation.ErrIdempotencyConflict
+	}
+	if byIdempotencyKey != nil {
+		return byIdempotencyKey, nil
+	}
+	return byClientCall, nil
+}
+
+func findReservationByIdempotencyKey(ctx context.Context, db *entdb.Client, namespace, idempotencyKey string) (*entdb.CreditReservation, error) {
 	row, err := db.CreditReservation.Query().Where(
 		dbcreditreservation.NamespaceEQ(namespace),
-		dbcreditreservation.Or(
-			dbcreditreservation.IdempotencyKeyEQ(idempotencyKey),
-			dbcreditreservation.ClientCallIDEQ(clientCallID),
-		),
+		dbcreditreservation.IdempotencyKeyEQ(idempotencyKey),
 	).Only(ctx)
 	if entdb.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("find reservation command: %w", err)
+		return nil, fmt.Errorf("find reservation by idempotency key: %w", err)
+	}
+	return row, nil
+}
+
+func findReservationByClientCall(ctx context.Context, db *entdb.Client, namespace, clientCallID string) (*entdb.CreditReservation, error) {
+	row, err := db.CreditReservation.Query().Where(
+		dbcreditreservation.NamespaceEQ(namespace),
+		dbcreditreservation.ClientCallIDEQ(clientCallID),
+	).Only(ctx)
+	if entdb.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find reservation by client call: %w", err)
 	}
 	return row, nil
 }
