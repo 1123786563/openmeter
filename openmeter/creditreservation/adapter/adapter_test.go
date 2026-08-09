@@ -16,6 +16,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
+	"github.com/openmeterio/openmeter/pkg/models"
 )
 
 func newAdapter(t *testing.T) (creditreservationadapter.Adapter, *entdb.Client) {
@@ -99,6 +100,41 @@ func TestCreateReservationIsIdempotentByKeyAndHash(t *testing.T) {
 		return err
 	})
 	require.ErrorIs(t, err, creditreservation.ErrIdempotencyConflict)
+}
+
+func TestLifecycleCommandIdentityIsDurablePerKind(t *testing.T) {
+	adp, _ := newAdapter(t)
+	input := reservationInput("wk:reserve:lifecycle", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	err := adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		_, _, err := tx.CreateReservation(t.Context(), input)
+		return err
+	})
+	require.NoError(t, err)
+	id := input.Reservation.ID
+	execute := creditreservation.CommandIdentity{IdempotencyKey: "wk:execute:1", PayloadHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+	err = adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		replay, err := tx.EnsureLifecycleCommand(t.Context(), models.NamespacedID{Namespace: "test", ID: id}, "execute", execute)
+		require.False(t, replay)
+		return err
+	})
+	require.NoError(t, err)
+	err = adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		replay, err := tx.EnsureLifecycleCommand(t.Context(), models.NamespacedID{Namespace: "test", ID: id}, "execute", execute)
+		require.True(t, replay)
+		return err
+	})
+	require.NoError(t, err)
+	err = adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		_, err := tx.EnsureLifecycleCommand(t.Context(), models.NamespacedID{Namespace: "test", ID: id}, "execute", creditreservation.CommandIdentity{IdempotencyKey: execute.IdempotencyKey, PayloadHash: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"})
+		return err
+	})
+	require.ErrorIs(t, err, creditreservation.ErrIdempotencyConflict)
+	err = adp.WithCustomerLock(t.Context(), customerID(), func(tx creditreservationadapter.TxAdapter) error {
+		replay, err := tx.EnsureLifecycleCommand(t.Context(), models.NamespacedID{Namespace: "test", ID: id}, "unknown", execute)
+		require.False(t, replay)
+		return err
+	})
+	require.NoError(t, err)
 }
 
 func TestCreateReservationRejectsIntersectingIdempotencyAndCallIdentities(t *testing.T) {
