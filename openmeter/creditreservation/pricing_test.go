@@ -50,6 +50,19 @@ func TestCatalogPriceResolverRejectsFiatAndAmbiguousMatches(t *testing.T) {
 	require.ErrorIs(t, err, creditreservation.ErrAmbiguousRate)
 }
 
+// This prevents an empty authorization request from becoming a successful
+// zero-credit result with an unresolved currency identity.
+func TestCatalogPriceResolverRejectsEmptyLines(t *testing.T) {
+	input := validResolveInput()
+	input.Lines = nil
+
+	result, err := newResolverFixture(t,
+		unitRateCard("llm-input", "ai_usage", "CREDIT", "openai", "gpt-5", "1"),
+	).Resolve(t.Context(), input)
+	require.ErrorIs(t, err, creditreservation.ErrResourceLinesRequired)
+	require.Equal(t, creditreservation.ResolvedPrice{}, result)
+}
+
 // This catches a wildcard card taking precedence over the exact provider/model card.
 func TestCatalogPriceResolverPrefersExactProviderAndModelOverWildcard(t *testing.T) {
 	resolver := newResolverFixture(t,
@@ -140,6 +153,22 @@ func TestCatalogPriceResolverRequiresPersistedSubscriptionItemRateCard(t *testin
 
 	_, err := resolver.Resolve(t.Context(), validResolveInput())
 	require.ErrorIs(t, err, creditreservation.ErrRateNotFound)
+}
+
+func TestCommandIdentityBindsIdempotencyKeyToPayloadHash(t *testing.T) {
+	require.ErrorIs(t, creditreservation.CommandIdentity{}.Validate(), creditreservation.ErrInvalidCommandIdentity)
+
+	identity := creditreservation.CommandIdentity{
+		IdempotencyKey: "settle:reservation-1",
+		PayloadHash:    "b570c6e6e3b9a00ce77510fa8dbd1b3a0bf1403bcd25ac3309796f9e5e8f9e14",
+	}
+	require.NoError(t, identity.Validate())
+	require.NoError(t, creditreservation.Reservation{CommandIdentity: identity}.Validate())
+	require.NoError(t, creditreservation.Charge{CommandIdentity: identity}.Validate())
+
+	identity.PayloadHash = "not-a-sha256-hash"
+	require.ErrorIs(t, identity.Validate(), creditreservation.ErrInvalidCommandIdentity)
+	require.ErrorIs(t, creditreservation.Reservation{CommandIdentity: identity}.Validate(), creditreservation.ErrInvalidCommandIdentity)
 }
 
 func validResolveInput() creditreservation.ResolvePriceInput {

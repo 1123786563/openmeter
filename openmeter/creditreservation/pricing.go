@@ -37,6 +37,10 @@ func NewCatalogPriceResolver(subscriptions subscription.QueryService, currencies
 }
 
 func (r *catalogPriceResolver) Resolve(ctx context.Context, input ResolvePriceInput) (ResolvedPrice, error) {
+	if len(input.Lines) == 0 {
+		return ResolvedPrice{}, ErrResourceLinesRequired
+	}
+
 	if r.subscriptions == nil || r.currencies == nil {
 		return ResolvedPrice{}, fmt.Errorf("price resolver dependencies are required")
 	}

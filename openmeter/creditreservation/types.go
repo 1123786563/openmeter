@@ -4,6 +4,8 @@ package creditreservation
 
 import (
 	"context"
+	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/currencies"
@@ -37,28 +39,56 @@ type RatedLine struct {
 	Credits     int64  `json:"credits"`
 }
 
+// CommandIdentity binds an idempotency key to the exact command payload. A
+// caller must reuse both values on retries; a changed payload requires a new
+// key, preventing a retry from becoming a second ledger instruction.
+type CommandIdentity struct {
+	IdempotencyKey string `json:"idempotencyKey"`
+	PayloadHash    string `json:"payloadHash"`
+}
+
+func (c CommandIdentity) Validate() error {
+	if strings.TrimSpace(c.IdempotencyKey) == "" || len(c.PayloadHash) != 64 {
+		return ErrInvalidCommandIdentity
+	}
+	if _, err := hex.DecodeString(c.PayloadHash); err != nil {
+		return ErrInvalidCommandIdentity
+	}
+	return nil
+}
+
 // Reservation is the temporary authorization hold for a CREDIT-denominated
 // resource call. Ledger posting is intentionally outside this package.
 type Reservation struct {
-	ID           string                       `json:"id"`
-	Namespace    string                       `json:"namespace"`
-	CustomerID   string                       `json:"customerId"`
-	Currency     currencies.CurrencyReference `json:"currency"`
-	State        ReservationState             `json:"state"`
-	RateVersion  string                       `json:"rateVersion"`
-	Lines        []RatedLine                  `json:"lines"`
-	TotalCredits int64                        `json:"totalCredits"`
-	ExpiresAt    *time.Time                   `json:"expiresAt,omitempty"`
+	ID              string                       `json:"id"`
+	Namespace       string                       `json:"namespace"`
+	CustomerID      string                       `json:"customerId"`
+	Currency        currencies.CurrencyReference `json:"currency"`
+	State           ReservationState             `json:"state"`
+	RateVersion     string                       `json:"rateVersion"`
+	Lines           []RatedLine                  `json:"lines"`
+	TotalCredits    int64                        `json:"totalCredits"`
+	ExpiresAt       *time.Time                   `json:"expiresAt,omitempty"`
+	CommandIdentity CommandIdentity              `json:"commandIdentity"`
+}
+
+func (r Reservation) Validate() error {
+	return r.CommandIdentity.Validate()
 }
 
 // Charge records a settlement instruction derived from a reservation. It does
 // not represent a booked ledger entry.
 type Charge struct {
-	ReservationID string                       `json:"reservationId"`
-	Currency      currencies.CurrencyReference `json:"currency"`
-	RateVersion   string                       `json:"rateVersion"`
-	Lines         []RatedLine                  `json:"lines"`
-	TotalCredits  int64                        `json:"totalCredits"`
+	ReservationID   string                       `json:"reservationId"`
+	Currency        currencies.CurrencyReference `json:"currency"`
+	RateVersion     string                       `json:"rateVersion"`
+	Lines           []RatedLine                  `json:"lines"`
+	TotalCredits    int64                        `json:"totalCredits"`
+	CommandIdentity CommandIdentity              `json:"commandIdentity"`
+}
+
+func (c Charge) Validate() error {
+	return c.CommandIdentity.Validate()
 }
 
 type PriceResolver interface {

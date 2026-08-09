@@ -23,8 +23,6 @@ func TestReservationStateTransitions(t *testing.T) {
 			creditreservation.ReservationStateUnknown,
 		},
 		creditreservation.ReservationStateUnknown: {
-			creditreservation.ReservationStateSettled,
-			creditreservation.ReservationStateReleased,
 			creditreservation.ReservationStateManualReview,
 		},
 	}
@@ -38,5 +36,43 @@ func TestReservationStateTransitions(t *testing.T) {
 	require.ErrorIs(t,
 		creditreservation.ValidateTransition(creditreservation.ReservationStateSettled, creditreservation.ReservationStateReleased),
 		creditreservation.ErrStateConflict,
+	)
+	require.ErrorIs(t,
+		creditreservation.ValidateTransition(creditreservation.ReservationStateUnknown, creditreservation.ReservationStateSettled),
+		creditreservation.ErrTransitionEvidenceRequired,
+	)
+}
+
+func TestUnknownTransitionRequiresMatchingEvidence(t *testing.T) {
+	require.ErrorIs(t,
+		creditreservation.ValidateTransitionWithEvidence(
+			creditreservation.ReservationStateUnknown,
+			creditreservation.ReservationStateSettled,
+			creditreservation.TransitionEvidence{},
+		),
+		creditreservation.ErrTransitionEvidenceRequired,
+	)
+	require.ErrorIs(t,
+		creditreservation.ValidateTransitionWithEvidence(
+			creditreservation.ReservationStateUnknown,
+			creditreservation.ReservationStateReleased,
+			creditreservation.TransitionEvidence{Kind: creditreservation.TransitionEvidenceRelease, Reference: " "},
+		),
+		creditreservation.ErrTransitionEvidenceRequired,
+	)
+
+	require.NoError(t,
+		creditreservation.ValidateTransitionWithEvidence(
+			creditreservation.ReservationStateUnknown,
+			creditreservation.ReservationStateSettled,
+			creditreservation.TransitionEvidence{Kind: creditreservation.TransitionEvidenceSettlement, Reference: "ledger-entry-1"},
+		),
+	)
+	require.NoError(t,
+		creditreservation.ValidateTransitionWithEvidence(
+			creditreservation.ReservationStateUnknown,
+			creditreservation.ReservationStateReleased,
+			creditreservation.TransitionEvidence{Kind: creditreservation.TransitionEvidenceRelease, Reference: "release-confirmation-1"},
+		),
 	)
 }
