@@ -22,7 +22,6 @@ import (
 	"time"
 
 	api "github.com/openmeterio/openmeter/api/v3"
-	"github.com/openmeterio/openmeter/api/v3/apierrors"
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
@@ -966,7 +965,7 @@ func writeJSON(ctx context.Context, w http.ResponseWriter, status int, v any) {
 }
 
 func writeStatus(ctx context.Context, w http.ResponseWriter, status int, err error) {
-	writeJSON(ctx, w, status, apierrors.NewInternalError(ctx, err))
+	models.NewStatusProblem(ctx, err, status).Respond(w)
 }
 
 // notImplementedHandler returns a handler that responds with 501 Not Implemented.

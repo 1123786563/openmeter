@@ -174,7 +174,9 @@ interface WechatCallbackOperations {
   callback(@body body: string):
     | WechatCallbackSuccess
     | Common.BadRequest
+    | Common.Conflict
     | Common.PayloadTooLarge
+    | Common.Internal
     | Common.ErrorResponses;
 }
 
@@ -193,7 +195,9 @@ interface AlipayCallbackOperations {
   callback(@body body: string):
     | AlipayCallbackSuccess
     | Common.BadRequest
+    | Common.Conflict
     | Common.PayloadTooLarge
+    | Common.Internal
     | Common.ErrorResponses;
 }
 

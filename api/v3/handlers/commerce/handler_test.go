@@ -394,8 +394,31 @@ func TestPaymentCallback_NoNamespace(t *testing.T) {
 		return "", errors.New("no namespace")
 	}, Services{Payment: &mockPayment{}})
 	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 when namespace unresolvable, got %d", rr.Code)
+	requireProblemResponse(t, rr, http.StatusBadRequest)
+}
+
+func requireProblemResponse(t *testing.T, rr *httptest.ResponseRecorder, wantStatus int) {
+	t.Helper()
+
+	if rr.Code != wantStatus {
+		t.Fatalf("expected %d, got %d: %s", wantStatus, rr.Code, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Type"); got != models.ProblemContentType {
+		t.Fatalf("expected %q content type, got %q", models.ProblemContentType, got)
+	}
+
+	var problem struct {
+		Status int    `json:"status"`
+		Title  string `json:"title"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&problem); err != nil {
+		t.Fatalf("decode problem response: %v", err)
+	}
+	if problem.Status != wantStatus {
+		t.Errorf("expected problem status %d, got %d", wantStatus, problem.Status)
+	}
+	if want := http.StatusText(wantStatus); problem.Title != want {
+		t.Errorf("expected problem title %q, got %q", want, problem.Title)
 	}
 }
 
@@ -437,9 +460,7 @@ func TestPaymentCallbackBodyLimit(t *testing.T) {
 	})
 	oversized := string(make([]byte, 1<<20+1))
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", oversized, nil)
-	if rr.Code != http.StatusRequestEntityTooLarge {
-		t.Fatalf("expected 413 for oversized body, got %d: %s", rr.Code, rr.Body.String())
-	}
+	requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
 }
 
 func TestPaymentCallbackSignatureRejectionIsBadRequest(t *testing.T) {
@@ -447,9 +468,7 @@ func TestPaymentCallbackSignatureRejectionIsBadRequest(t *testing.T) {
 		Payment: &mockPayment{err: payment.ErrInvalidSignature},
 	})
 	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 on invalid signature, got %d: %s", rr.Code, rr.Body.String())
-	}
+	requireProblemResponse(t, rr, http.StatusBadRequest)
 	if got := rr.Body.String(); got == "success" || containsStr(got, "<xml>") {
 		t.Fatalf("invalid signature must not receive provider success ACK, got %q", got)
 	}
@@ -460,12 +479,7 @@ func TestPaymentCallbackFactMismatchIsBadRequest(t *testing.T) {
 		Payment: &mockPayment{err: payment.ErrPaymentFactMismatch},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 on payment fact mismatch, got %d: %s", rr.Code, rr.Body.String())
-	}
-	if rr.Body.Len() == 0 {
-		t.Fatal("expected validation error body")
-	}
+	requireProblemResponse(t, rr, http.StatusBadRequest)
 }
 
 func TestPaymentCallbackContradictoryFactIsConflict(t *testing.T) {
@@ -473,9 +487,7 @@ func TestPaymentCallbackContradictoryFactIsConflict(t *testing.T) {
 		Payment: &mockPayment{err: payment.ErrContradictoryPaymentFact},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	if rr.Code != http.StatusConflict {
-		t.Fatalf("expected 409 on contradictory payment fact, got %d: %s", rr.Code, rr.Body.String())
-	}
+	requireProblemResponse(t, rr, http.StatusConflict)
 }
 
 func TestPaymentCallbackDuplicateEventIsProviderSuccess(t *testing.T) {
@@ -756,14 +768,12 @@ func TestWechatCallback_NilPayment_501(t *testing.T) {
 // Payment callback transient error test (Important #3)
 // ---------------------------------------------------------------------------
 
-func TestPaymentCallback_TransientError_500(t *testing.T) {
+func TestPaymentCallback_TxRunnerError_500(t *testing.T) {
 	h := testHandler(Services{
-		Payment: &mockPayment{err: errors.New("database connection lost")},
+		Payment: &mockPayment{err: errors.New("paid TxRunner: database connection lost")},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500 on transient error, got %d: %s", rr.Code, rr.Body.String())
-	}
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
 }
 
 func TestPaymentCallback_SignatureRejection_400(t *testing.T) {
