@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -63,8 +64,27 @@ func requireValidRequestRSA2(t *testing.T, publicKey *rsa.PublicKey, values url.
 	t.Helper()
 	signature, err := base64.StdEncoding.DecodeString(values.Get("sign"))
 	require.NoError(t, err)
-	digest := sha256.Sum256([]byte(buildSignContent(values)))
+	digest := sha256.Sum256([]byte(requestSignContent(values)))
 	require.NoError(t, rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, digest[:], signature))
+}
+
+func testNotificationSignContent(values url.Values) string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		if key != "sign" && key != "sign_type" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		for _, value := range values[key] {
+			if value != "" {
+				parts = append(parts, key+"="+value)
+			}
+		}
+	}
+	return strings.Join(parts, "&")
 }
 
 func writeSignedAlipayResponse(t *testing.T, key *rsa.PrivateKey, w http.ResponseWriter, responseKey string, response map[string]any) {
@@ -118,7 +138,26 @@ func buildAlipayCallback(t *testing.T, key *rsa.PrivateKey, overrides map[string
 	for key, value := range overrides {
 		values.Set(key, value)
 	}
-	values.Set("sign", signTestRSA2(t, key, buildSignContent(values)))
+	values.Set("sign", signTestRSA2(t, key, testNotificationSignContent(values)))
+	return []byte(values.Encode())
+}
+
+func buildAlipayRefundCallback(t *testing.T, key *rsa.PrivateKey, overrides map[string]string) []byte {
+	t.Helper()
+	values := url.Values{
+		"app_id":         {"ali-app"},
+		"seller_id":      {"ali-seller"},
+		"out_trade_no":   {"01ORDER"},
+		"out_request_no": {"refund-1"},
+		"refund_fee":     {"100.00"},
+		"refund_status":  {"REFUND_SUCCESS"},
+		"gmt_refund":     {"2027-01-15 08:00:00"},
+		"sign_type":      {"RSA2"},
+	}
+	for name, value := range overrides {
+		values.Set(name, value)
+	}
+	values.Set("sign", signTestRSA2(t, key, testNotificationSignContent(values)))
 	return []byte(values.Encode())
 }
 
@@ -241,6 +280,46 @@ func TestVerifyCallbackValidatesIdentityOrderAndStatus(t *testing.T) {
 	require.False(t, fact.Success)
 }
 
+func TestVerifyRefundCallbackValidatesSignedContextAndStatus(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter := newTestAdapter(t, "https://openapi.alipay.com/gateway.do", keys)
+
+	for _, testCase := range []struct {
+		name      string
+		overrides map[string]string
+	}{
+		{name: "non RSA2 signature", overrides: map[string]string{"sign_type": "RSA"}},
+		{name: "wrong application", overrides: map[string]string{"app_id": "other-app"}},
+		{name: "wrong seller", overrides: map[string]string{"seller_id": "other-seller"}},
+		{name: "missing order", overrides: map[string]string{"out_trade_no": ""}},
+		{name: "missing request", overrides: map[string]string{"out_request_no": ""}},
+		{name: "zero refund", overrides: map[string]string{"refund_fee": "0.00"}},
+		{name: "non CNY currency", overrides: map[string]string{"refund_currency": "USD"}},
+		{name: "unknown status", overrides: map[string]string{"refund_status": "UNKNOWN"}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := adapter.VerifyRefundCallback(t.Context(), nil, buildAlipayRefundCallback(t, keys.alipayPrivate, testCase.overrides))
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
+
+	success, err := adapter.VerifyRefundCallback(t.Context(), nil, buildAlipayRefundCallback(t, keys.alipayPrivate, nil))
+	require.NoError(t, err)
+	require.True(t, success.Success)
+	require.NotEmpty(t, success.RawHash)
+	require.Equal(t, "CNY", success.Currency)
+
+	processing, err := adapter.VerifyRefundCallback(t.Context(), nil, buildAlipayRefundCallback(t, keys.alipayPrivate, map[string]string{"refund_status": "REFUND_PROCESSING"}))
+	require.NoError(t, err)
+	require.False(t, processing.Success)
+	require.Empty(t, processing.RawHash)
+
+	failed, err := adapter.VerifyRefundCallback(t.Context(), nil, buildAlipayRefundCallback(t, keys.alipayPrivate, map[string]string{"refund_status": "REFUND_FAIL"}))
+	require.NoError(t, err)
+	require.False(t, failed.Success)
+	require.NotEmpty(t, failed.RawHash)
+}
+
 func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
 	for _, testCase := range []struct {
 		status  string
@@ -272,9 +351,38 @@ func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
 			require.Equal(t, "CNY", fact.Currency)
 			require.Equal(t, "ali-app", fact.ApplicationID)
 			require.Equal(t, "ali-seller", fact.MerchantID)
+			require.Empty(t, fact.ProviderEventID)
 			require.NotEmpty(t, fact.RawHash)
 		})
 	}
+}
+
+func TestQueryPaymentAllowsSameTradeNumberToAdvanceFromWaitingToSuccess(t *testing.T) {
+	keys := newTestKeys(t)
+	requestNumber := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestNumber++
+		status := "WAIT_BUYER_PAY"
+		if requestNumber == 2 {
+			status = "TRADE_SUCCESS"
+		}
+		writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_query_response", map[string]any{
+			"code": "10000", "msg": "Success", "out_trade_no": "01ORDER",
+			"trade_no": "same-trade-no", "trade_status": status, "total_amount": "100.00",
+		})
+	}))
+	defer server.Close()
+	adapter := newTestAdapter(t, server.URL, keys)
+
+	waiting, err := adapter.QueryPayment(t.Context(), "01ORDER")
+	require.NoError(t, err)
+	success, err := adapter.QueryPayment(t.Context(), "01ORDER")
+	require.NoError(t, err)
+	require.False(t, waiting.Success)
+	require.True(t, success.Success)
+	require.Empty(t, waiting.ProviderEventID)
+	require.Empty(t, success.ProviderEventID)
+	require.NotEqual(t, waiting.RawHash, success.RawHash)
 }
 
 func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
@@ -301,6 +409,7 @@ func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
 		case 2:
 			require.Equal(t, "alipay.trade.fastpay.refund.query", r.Form.Get("method"))
 			require.Equal(t, "refund-idem-1", biz["out_request_no"])
+			require.Equal(t, "01ORDER", biz["out_trade_no"])
 			writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{
 				"code": "10000", "msg": "Success", "trade_no": "2027011522001400000001",
 				"out_trade_no": "01ORDER", "out_request_no": "refund-idem-1",
@@ -321,7 +430,9 @@ func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
 	require.Equal(t, "refund-idem-1", submission.ProviderRefundID)
 	require.Equal(t, "success", submission.Status)
 
-	fact, err := adapter.QueryRefund(t.Context(), "refund-idem-1")
+	fact, err := adapter.QueryRefund(t.Context(), payment.RefundQueryInput{
+		ProviderRefundID: "refund-idem-1", ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY",
+	})
 	require.NoError(t, err)
 	require.Equal(t, "refund-idem-1", fact.ProviderRefundID)
 	require.Equal(t, "01ORDER", fact.ProviderOrderID)
@@ -344,6 +455,51 @@ func TestRefundRejectsMismatchedSignedAmount(t *testing.T) {
 		ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY", IdempotencyKey: "refund-idem-1",
 	})
 	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestQueryRefundRejectsMismatchedSignedContext(t *testing.T) {
+	keys := newTestKeys(t)
+	for _, testCase := range []struct {
+		name    string
+		orderID string
+		amount  string
+	}{
+		{name: "provider order", orderID: "OTHER", amount: "10.01"},
+		{name: "refund amount", orderID: "01ORDER", amount: "10.00"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{
+					"code": "10000", "msg": "Success", "trade_no": "trade-1",
+					"out_trade_no": testCase.orderID, "out_request_no": "refund-idem-1",
+					"refund_amount": testCase.amount, "refund_status": "REFUND_SUCCESS",
+				})
+			}))
+			defer server.Close()
+			_, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+				ProviderRefundID: "refund-idem-1", ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY",
+			})
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
+}
+
+func TestQueryRefundProcessingHasNoDefinitiveFailureHash(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{
+			"code": "10000", "msg": "Success", "trade_no": "trade-1",
+			"out_trade_no": "01ORDER", "out_request_no": "refund-idem-1",
+			"refund_amount": "10.01", "refund_status": "REFUND_PROCESSING",
+		})
+	}))
+	defer server.Close()
+	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+		ProviderRefundID: "refund-idem-1", ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY",
+	})
+	require.NoError(t, err)
+	require.False(t, fact.Success)
+	require.Empty(t, fact.RawHash)
 }
 
 func TestGatewayRejectsTamperedAndOversizedResponses(t *testing.T) {
@@ -425,10 +581,10 @@ func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {
 	}
 }
 
-func TestBuildSignContentUsesSortedDecodedValues(t *testing.T) {
+func TestRequestSignContentUsesSortedDecodedValues(t *testing.T) {
 	values, err := url.ParseQuery("subject=%E7%9F%A5%E8%AF%86%E5%BA%93+%26+RAG&app_id=ali-app&sign=ignored&sign_type=RSA2")
 	require.NoError(t, err)
-	require.Equal(t, "app_id=ali-app&sign_type=RSA2&subject=知识库 & RAG", buildSignContent(values))
+	require.Equal(t, "app_id=ali-app&sign_type=RSA2&subject=知识库 & RAG", requestSignContent(values))
 }
 
 func TestParseAmountMinor(t *testing.T) {

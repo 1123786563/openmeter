@@ -245,7 +245,7 @@ func (m *mockProvider) Refund(_ context.Context, _ RefundInput) (RefundSubmissio
 	return RefundSubmission{Provider: m.name, Status: "processing"}, nil
 }
 
-func (m *mockProvider) QueryRefund(_ context.Context, _ string) (RefundFact, error) {
+func (m *mockProvider) QueryRefund(_ context.Context, _ RefundQueryInput) (RefundFact, error) {
 	return RefundFact{Provider: m.name}, nil
 }
 func (m *mockProvider) Name() Provider { return m.name }

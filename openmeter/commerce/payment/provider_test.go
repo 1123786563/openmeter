@@ -73,7 +73,7 @@ func (noopAdapter) QueryPayment(context.Context, string) (PaymentFact, error) {
 func (noopAdapter) Refund(context.Context, RefundInput) (RefundSubmission, error) {
 	return RefundSubmission{}, nil
 }
-func (noopAdapter) QueryRefund(context.Context, string) (RefundFact, error) {
+func (noopAdapter) QueryRefund(context.Context, RefundQueryInput) (RefundFact, error) {
 	return RefundFact{}, nil
 }
 func (noopAdapter) Name() Provider { return ProviderOffline }

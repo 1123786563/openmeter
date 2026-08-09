@@ -46,7 +46,7 @@ func (a *Adapter) call(ctx context.Context, method, responseKey string, requestV
 	if err != nil {
 		return nil, fmt.Errorf("alipay: parse application private key: %w", err)
 	}
-	signature, err := signRSA2(privateKey, []byte(buildSignContent(values)))
+	signature, err := signRSA2(privateKey, []byte(requestSignContent(values)))
 	if err != nil {
 		return nil, fmt.Errorf("alipay: sign %s request: %w", method, err)
 	}
@@ -134,13 +134,24 @@ func signRSA2(key *rsa.PrivateKey, content []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(signature), nil
 }
 
-// buildSignContent sorts parameter names and joins their decoded, non-empty
-// values. url.Values contains decoded values both after ParseQuery and before
-// Encode, so signing always happens before the final URL encoding step.
-func buildSignContent(values url.Values) string {
+// requestSignContent excludes only sign. sign_type is a signed request field.
+func requestSignContent(values url.Values) string {
+	return canonicalSignContent(values, false)
+}
+
+// notificationSignContent follows Alipay's async notification protocol, which
+// excludes both sign and sign_type from the verified content.
+func notificationSignContent(values url.Values) string {
+	return canonicalSignContent(values, true)
+}
+
+// canonicalSignContent sorts parameter names and joins their decoded,
+// non-empty values. url.Values contains decoded values both after ParseQuery
+// and before Encode, so request signing happens before the final URL encoding.
+func canonicalSignContent(values url.Values, excludeSignType bool) string {
 	keys := make([]string, 0, len(values))
 	for key := range values {
-		if key != "sign" {
+		if key != "sign" && (!excludeSignType || key != "sign_type") {
 			keys = append(keys, key)
 		}
 	}

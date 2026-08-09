@@ -386,7 +386,9 @@ func TestRefundAndQueryRefund(t *testing.T) {
 	require.Equal(t, "refund-idem", submission.ProviderRefundID)
 	require.Equal(t, "processing", submission.Status)
 
-	fact, err := adapter.QueryRefund(t.Context(), "refund-idem")
+	fact, err := adapter.QueryRefund(t.Context(), payment.RefundQueryInput{
+		ProviderRefundID: "refund-idem", ProviderOrderID: "01ORDER", AmountMinor: 3000, Currency: "CNY",
+	})
 	require.NoError(t, err)
 	require.True(t, fact.Success)
 	require.Equal(t, "refund-idem", fact.ProviderRefundID)
@@ -450,7 +452,9 @@ func TestQueryRefundMapsTerminalFailuresWithRawHash(t *testing.T) {
 				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, body)
 			}))
 			defer server.Close()
-			fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+			fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+				ProviderRefundID: "refund-idem", ProviderOrderID: "01ORDER", AmountMinor: 3000, Currency: "CNY",
+			})
 			require.NoError(t, err)
 			require.False(t, fact.Success)
 			require.NotEmpty(t, fact.RawHash)
@@ -476,7 +480,9 @@ func TestQueryRefundRejectsInvalidMoneyAndProviderFields(t *testing.T) {
 				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, tt.body)
 			}))
 			defer server.Close()
-			_, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+			_, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+				ProviderRefundID: "refund-idem", ProviderOrderID: "01ORDER", AmountMinor: 3000, Currency: "CNY",
+			})
 			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
 		})
 	}
@@ -519,7 +525,9 @@ func TestQueryRefundProcessingHasNoDefinitiveFailureHash(t *testing.T) {
 		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
 	}))
 	defer server.Close()
-	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+		ProviderRefundID: "refund-idem", ProviderOrderID: "01ORDER", AmountMinor: 3000, Currency: "CNY",
+	})
 	require.NoError(t, err)
 	require.False(t, fact.Success)
 	require.Empty(t, fact.RawHash)

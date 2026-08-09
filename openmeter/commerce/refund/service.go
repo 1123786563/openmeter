@@ -267,7 +267,7 @@ type ReverseCreditsResult struct {
 // ProviderRefunder submits and queries refunds at the payment provider.
 type ProviderRefunder interface {
 	Refund(ctx context.Context, input payment.RefundInput) (payment.RefundSubmission, error)
-	QueryRefund(ctx context.Context, providerRefundID string) (payment.RefundFact, error)
+	QueryRefund(ctx context.Context, input payment.RefundQueryInput) (payment.RefundFact, error)
 	Name() payment.Provider
 }
 
@@ -327,8 +327,8 @@ type Config struct {
 	// (I5). If nil, lookupProvider falls back to the refund's ProviderName or,
 	// failing that, a deterministic first-key selection (no map iteration).
 	ProviderResolver ProviderResolver
-	Snapshots SnapshotPublisher
-	Logger    *slog.Logger
+	Snapshots        SnapshotPublisher
+	Logger           *slog.Logger
 }
 
 type service struct {
@@ -593,7 +593,16 @@ func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequ
 		return s.submitToProvider(ctx, rec)
 	}
 
-	fact, err := provider.QueryRefund(ctx, rec.ProviderRefundID)
+	order, err := s.orders.GetOrder(ctx, rec.Namespace, rec.CommerceOrderID)
+	if err != nil {
+		return rec, fmt.Errorf("refund: get order for provider query: %w", err)
+	}
+	fact, err := provider.QueryRefund(ctx, payment.RefundQueryInput{
+		ProviderRefundID: rec.ProviderRefundID,
+		ProviderOrderID:  order.PublicID,
+		AmountMinor:      rec.RefundFen,
+		Currency:         rec.Currency,
+	})
 	if err != nil {
 		s.logger.WarnContext(ctx, "refund: provider query failed", "id", rec.ID, "error", err)
 		return rec, nil

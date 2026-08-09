@@ -409,7 +409,7 @@ type mockProvider struct {
 	mu           sync.Mutex
 	name         payment.Provider
 	refundResult func(input payment.RefundInput) (payment.RefundSubmission, error)
-	queryResult  func(providerRefundID string) (payment.RefundFact, error)
+	queryResult  func(input payment.RefundQueryInput) (payment.RefundFact, error)
 	queryCallN   atomic.Int64
 	refundCallN  atomic.Int64
 }
@@ -424,12 +424,12 @@ func newMockProvider(name payment.Provider) *mockProvider {
 				Status:           "success",
 			}, nil
 		},
-		queryResult: func(providerRefundID string) (payment.RefundFact, error) {
+		queryResult: func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 			return payment.RefundFact{
 				Provider:         name,
-				ProviderRefundID: providerRefundID,
+				ProviderRefundID: input.ProviderRefundID,
 				Success:          true,
-				RawHash:          "hash-" + providerRefundID,
+				RawHash:          "hash-" + input.ProviderRefundID,
 				AmountMinor:      0,
 				Timestamp:        time.Now(),
 			}, nil
@@ -442,9 +442,9 @@ func (p *mockProvider) Refund(ctx context.Context, input payment.RefundInput) (p
 	return p.refundResult(input)
 }
 
-func (p *mockProvider) QueryRefund(_ context.Context, providerRefundID string) (payment.RefundFact, error) {
+func (p *mockProvider) QueryRefund(_ context.Context, input payment.RefundQueryInput) (payment.RefundFact, error) {
 	p.queryCallN.Add(1)
-	return p.queryResult(providerRefundID)
+	return p.queryResult(input)
 }
 
 func (p *mockProvider) Name() payment.Provider { return p.name }
@@ -1183,13 +1183,15 @@ func TestProcessOneProviderProcessingThenSuccess(t *testing.T) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
 	queryCalled := atomic.Bool{}
-	h.provider.queryResult = func(providerRefundID string) (payment.RefundFact, error) {
+	var queryInput payment.RefundQueryInput
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		queryCalled.Store(true)
+		queryInput = input
 		return payment.RefundFact{
 			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: providerRefundID,
+			ProviderRefundID: input.ProviderRefundID,
 			Success:          true,
-			RawHash:          "hash-" + providerRefundID,
+			RawHash:          "hash-" + input.ProviderRefundID,
 			AmountMinor:      10000,
 			Currency:         "CNY",
 			Timestamp:        time.Now(),
@@ -1224,12 +1226,15 @@ func TestProcessOneProviderProcessingThenSuccess(t *testing.T) {
 	if !queryCalled.Load() {
 		t.Error("QueryRefund should have been called")
 	}
+	if queryInput.ProviderRefundID != "idem-proc" || queryInput.ProviderOrderID != "pub-order-proc" || queryInput.AmountMinor != 10000 || queryInput.Currency != "CNY" {
+		t.Errorf("QueryRefund input = %+v, want persisted refund and order context", queryInput)
+	}
 	if h.reverser.totalReversed() != 100000 {
 		t.Errorf("total reversed = %d, want 100000", h.reverser.totalReversed())
 	}
 }
 
-func TestProcessOneProviderUnknownResultRetainsFence(t *testing.T) {
+func TestProcessOneProviderProcessingResultRetainsFence(t *testing.T) {
 	h := newTestHarness(t)
 	h.wallet.setGrants("cust", []commerce.AllocationGrant{
 		rechargeGrant("grant-1", 100000, 0, 100000),
@@ -1240,12 +1245,14 @@ func TestProcessOneProviderUnknownResultRetainsFence(t *testing.T) {
 	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
-	// QueryRefund returns unknown (no success, no raw hash).
-	h.provider.queryResult = func(providerRefundID string) (payment.RefundFact, error) {
+	// QueryRefund returns a verified provider-processing result (no success and
+	// no definitive RawHash), so the service must retain the fence.
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		return payment.RefundFact{
 			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: providerRefundID,
+			ProviderRefundID: input.ProviderRefundID,
 			Success:          false,
+			SignedPayload:    map[string]any{"refund_status": "REFUND_PROCESSING"},
 		}, nil
 	}
 
@@ -1292,12 +1299,12 @@ func TestProcessOneProviderDefinitiveFailureReleasesFence(t *testing.T) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
 	// QueryRefund returns definitive failure (non-success with raw hash).
-	h.provider.queryResult = func(providerRefundID string) (payment.RefundFact, error) {
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		return payment.RefundFact{
 			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: providerRefundID,
+			ProviderRefundID: input.ProviderRefundID,
 			Success:          false,
-			RawHash:          "def-hash-" + providerRefundID,
+			RawHash:          "def-hash-" + input.ProviderRefundID,
 			Timestamp:        time.Now(),
 		}, nil
 	}
@@ -1461,10 +1468,10 @@ func TestProviderMoneyUnderRefundFails(t *testing.T) {
 	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
-	h.provider.queryResult = func(providerRefundID string) (payment.RefundFact, error) {
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		return payment.RefundFact{
 			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: providerRefundID,
+			ProviderRefundID: input.ProviderRefundID,
 			Success:          true,
 			AmountMinor:      5000, // only 5,000 fen — but 10,000 was reserved
 			RawHash:          "hash-money-under",
@@ -1508,10 +1515,10 @@ func TestProviderMoneyMatchesSucceeds(t *testing.T) {
 	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
-	h.provider.queryResult = func(providerRefundID string) (payment.RefundFact, error) {
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		return payment.RefundFact{
 			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: providerRefundID,
+			ProviderRefundID: input.ProviderRefundID,
 			Success:          true,
 			AmountMinor:      10000, // exact match
 			RawHash:          "hash-money-match",

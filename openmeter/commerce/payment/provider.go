@@ -104,6 +104,16 @@ type RefundSubmission struct {
 	Status           string
 }
 
+// RefundQueryInput binds a provider status query to the persisted refund and
+// original provider order. AmountMinor and Currency let adapters reject a
+// signed response that describes a different refund.
+type RefundQueryInput struct {
+	ProviderRefundID string
+	ProviderOrderID  string
+	AmountMinor      int64
+	Currency         string
+}
+
 // RefundFact is a verified refund result from the provider.
 type RefundFact struct {
 	Provider         Provider
@@ -143,7 +153,7 @@ type ProviderAdapter interface {
 	Refund(ctx context.Context, input RefundInput) (RefundSubmission, error)
 
 	// QueryRefund queries the provider for a refund's status.
-	QueryRefund(ctx context.Context, providerRefundID string) (RefundFact, error)
+	QueryRefund(ctx context.Context, input RefundQueryInput) (RefundFact, error)
 
 	// Name returns the provider identifier.
 	Name() Provider

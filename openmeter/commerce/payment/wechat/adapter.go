@@ -291,12 +291,15 @@ func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (paymen
 	}, nil
 }
 
-// QueryRefund queries a refund by out_refund_no. PROCESSING remains a
+// QueryRefund queries a refund by out_refund_no and binds the response to the
+// persisted provider order, amount, and currency. PROCESSING remains a
 // non-terminal fact; CLOSED and ABNORMAL are definitive failures.
-func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (payment.RefundFact, error) {
-	providerRefundID = strings.TrimSpace(providerRefundID)
-	if providerRefundID == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: provider refund ID is required", payment.ErrPermanentProviderProtocol)
+func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInput) (payment.RefundFact, error) {
+	providerRefundID := strings.TrimSpace(input.ProviderRefundID)
+	providerOrderID := strings.TrimSpace(input.ProviderOrderID)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if providerRefundID == "" || providerOrderID == "" || input.AmountMinor <= 0 || currency != "CNY" {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund query input", payment.ErrPermanentProviderProtocol)
 	}
 	path := "/v3/refund/domestic/refunds/" + url.PathEscape(providerRefundID)
 	var response refund
@@ -304,8 +307,11 @@ func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (pay
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
-	if err := validateRefund(response, providerRefundID, ""); err != nil {
+	if err := validateRefund(response, providerRefundID, providerOrderID); err != nil {
 		return payment.RefundFact{}, err
+	}
+	if response.Amount.Refund != input.AmountMinor || response.Amount.Currency != currency {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund query response does not match request", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(rawBody)
 	if err != nil {

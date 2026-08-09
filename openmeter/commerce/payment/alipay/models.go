@@ -40,6 +40,7 @@ type refundResponse struct {
 }
 
 type refundQueryRequest struct {
+	OutTradeNo   string `json:"out_trade_no"`
 	OutRequestNo string `json:"out_request_no"`
 }
 

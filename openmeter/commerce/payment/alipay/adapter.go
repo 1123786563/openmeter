@@ -145,7 +145,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, _ http.Header, body []byte
 	if signature == "" {
 		return payment.PaymentFact{}, fmt.Errorf("%w: callback is missing sign", payment.ErrInvalidSignature)
 	}
-	if err := a.verifySignature(ctx, []byte(buildSignContent(values)), signature); err != nil {
+	if err := a.verifySignature(ctx, []byte(notificationSignContent(values)), signature); err != nil {
 		return payment.PaymentFact{}, err
 	}
 	if values.Get("sign_type") != "RSA2" {
@@ -227,7 +227,6 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 		Provider:          payment.ProviderAlipay,
 		ProviderOrderID:   response.OutTradeNo,
 		ProviderPaymentID: response.TradeNo,
-		ProviderEventID:   response.TradeNo,
 		MerchantID:        a.sellerID,
 		ApplicationID:     a.appID,
 		AmountMinor:       amount,
@@ -265,25 +264,30 @@ func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (paymen
 	return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: requestID, Status: "success"}, nil
 }
 
-// QueryRefund queries an idempotent refund by out_request_no.
-func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (payment.RefundFact, error) {
-	providerRefundID = strings.TrimSpace(providerRefundID)
-	if providerRefundID == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: provider refund ID is required", payment.ErrPermanentProviderProtocol)
+// QueryRefund queries an idempotent refund by out_request_no and binds the
+// response to the persisted provider order, amount, and currency.
+func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInput) (payment.RefundFact, error) {
+	providerRefundID := strings.TrimSpace(input.ProviderRefundID)
+	providerOrderID := strings.TrimSpace(input.ProviderOrderID)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if providerRefundID == "" || providerOrderID == "" || input.AmountMinor <= 0 || currency != "CNY" {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid Alipay refund query input", payment.ErrPermanentProviderProtocol)
 	}
 	var response refundQueryResponse
-	rawResponse, err := a.call(ctx, "alipay.trade.fastpay.refund.query", "alipay_trade_fastpay_refund_query_response", refundQueryRequest{OutRequestNo: providerRefundID}, &response)
+	rawResponse, err := a.call(ctx, "alipay.trade.fastpay.refund.query", "alipay_trade_fastpay_refund_query_response", refundQueryRequest{
+		OutTradeNo: providerOrderID, OutRequestNo: providerRefundID,
+	}, &response)
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
 	if err := validateProviderSuccess(response.providerResponse); err != nil {
 		return payment.RefundFact{}, err
 	}
-	if response.OutRequestNo != providerRefundID || strings.TrimSpace(response.OutTradeNo) == "" {
+	if response.OutRequestNo != providerRefundID || response.OutTradeNo != providerOrderID {
 		return payment.RefundFact{}, fmt.Errorf("%w: refund query response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
 	amount, err := parseAmountMinor(response.RefundAmount)
-	if err != nil {
+	if err != nil || amount != input.AmountMinor {
 		return payment.RefundFact{}, fmt.Errorf("%w: refund query amount is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	if response.RefundStatus != "" && response.RefundStatus != "REFUND_SUCCESS" && response.RefundStatus != "REFUND_PROCESSING" && response.RefundStatus != "REFUND_FAIL" {
@@ -293,14 +297,18 @@ func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (pay
 	if err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: invalid signed refund query response", payment.ErrPermanentProviderProtocol)
 	}
+	rawHash := ""
+	if response.RefundStatus == "REFUND_SUCCESS" || response.RefundStatus == "REFUND_FAIL" {
+		rawHash = hashBody(rawResponse)
+	}
 	return payment.RefundFact{
 		Provider:         payment.ProviderAlipay,
 		ProviderRefundID: response.OutRequestNo,
 		ProviderOrderID:  response.OutTradeNo,
 		AmountMinor:      amount,
-		Currency:         "CNY",
+		Currency:         currency,
 		Success:          response.RefundStatus == "REFUND_SUCCESS",
-		RawHash:          hashBody(rawResponse),
+		RawHash:          rawHash,
 		Timestamp:        a.now(),
 		SignedPayload:    payload,
 	}, nil
@@ -313,21 +321,46 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, _ http.Header, body 
 	if err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund callback form", payment.ErrPermanentProviderProtocol)
 	}
-	if err := a.verifySignature(ctx, []byte(buildSignContent(values)), values.Get("sign")); err != nil {
+	if err := a.verifySignature(ctx, []byte(notificationSignContent(values)), values.Get("sign")); err != nil {
 		return payment.RefundFact{}, err
 	}
+	if values.Get("sign_type") != "RSA2" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback sign_type must be RSA2", payment.ErrPermanentProviderProtocol)
+	}
+	if values.Get("app_id") != a.appID {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback application ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if values.Get("seller_id") != a.sellerID {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback seller ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	providerOrderID := strings.TrimSpace(values.Get("out_trade_no"))
+	providerRefundID := strings.TrimSpace(values.Get("out_request_no"))
+	if providerOrderID == "" || providerRefundID == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback order and request IDs are required", payment.ErrPermanentProviderProtocol)
+	}
+	if currency := values.Get("refund_currency"); currency != "" && strings.ToUpper(strings.TrimSpace(currency)) != "CNY" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback currency must be CNY", payment.ErrPermanentProviderProtocol)
+	}
 	amount, err := parseAmountMinor(values.Get("refund_fee"))
-	if err != nil {
+	if err != nil || amount <= 0 {
 		return payment.RefundFact{}, fmt.Errorf("%w: refund callback amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	status := values.Get("refund_status")
+	if status != "REFUND_SUCCESS" && status != "REFUND_PROCESSING" && status != "REFUND_FAIL" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback status is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	timestamp, err := time.ParseInLocation("2006-01-02 15:04:05", values.Get("gmt_refund"), a.now().Location())
 	if err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: refund callback time is invalid", payment.ErrPermanentProviderProtocol)
 	}
+	rawHash := ""
+	if status != "REFUND_PROCESSING" {
+		rawHash = hashBody(body)
+	}
 	return payment.RefundFact{
-		Provider: payment.ProviderAlipay, ProviderRefundID: values.Get("out_request_no"),
-		ProviderOrderID: values.Get("out_trade_no"), AmountMinor: amount, Currency: "CNY", Success: true,
-		RawHash: hashBody(body), Timestamp: timestamp, SignedPayload: valuesToMap(values),
+		Provider: payment.ProviderAlipay, ProviderRefundID: providerRefundID,
+		ProviderOrderID: providerOrderID, AmountMinor: amount, Currency: "CNY", Success: status == "REFUND_SUCCESS",
+		RawHash: rawHash, Timestamp: timestamp, SignedPayload: valuesToMap(values),
 	}, nil
 }
 
