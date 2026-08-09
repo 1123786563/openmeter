@@ -37,19 +37,23 @@ func (m *mockWallet) GetWallet(_ context.Context, _, _ string) (*commerce.Wallet
 }
 
 type mockCatalog struct {
-	products     []commerce.Product
-	product      *commerce.Product
-	productBySKU *commerce.Product
-	err          error
+	products               []commerce.Product
+	product                *commerce.Product
+	productBySKU           *commerce.Product
+	lastRequestedProductID string
+	lastRequestedSKU       string
+	err                    error
 }
 
 func (m *mockCatalog) CreateProduct(_ context.Context, _ commerce.CreateProductInput) (*commerce.Product, error) {
 	return m.product, m.err
 }
-func (m *mockCatalog) GetProduct(_ context.Context, _, _ string) (*commerce.Product, error) {
+func (m *mockCatalog) GetProduct(_ context.Context, _, id string) (*commerce.Product, error) {
+	m.lastRequestedProductID = id
 	return m.product, m.err
 }
-func (m *mockCatalog) GetProductBySKU(_ context.Context, _, _ string) (*commerce.Product, error) {
+func (m *mockCatalog) GetProductBySKU(_ context.Context, _, sku string) (*commerce.Product, error) {
+	m.lastRequestedSKU = sku
 	if m.productBySKU != nil {
 		return m.productBySKU, m.err
 	}
@@ -321,7 +325,8 @@ func TestCreateOrder_IdempotentReplay(t *testing.T) {
 func TestCreateOrderResolvesPlanReferenceToCatalogSKU(t *testing.T) {
 	orderService := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1"}, created: true}
 	plan := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindPlanPurchase, AmountMinor: 9900, Currency: "CNY", Active: true}
-	h := testHandler(Services{Catalog: &mockCatalog{productBySKU: plan}, Orders: orderService})
+	catalog := &mockCatalog{productBySKU: plan}
+	h := testHandler(Services{Catalog: catalog, Orders: orderService})
 	body := api.CommerceOrderCreate{
 		BillingCustomerId: "customer-1",
 		IdempotencyKey:    "plan-idem-1",
@@ -333,8 +338,63 @@ func TestCreateOrderResolvesPlanReferenceToCatalogSKU(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
+	if catalog.lastRequestedSKU != "PLAN-PRO-MONTHLY" {
+		t.Fatalf("catalog SKU = %q, want PLAN-PRO-MONTHLY", catalog.lastRequestedSKU)
+	}
 	if got := orderService.lastInput.ProductIDs; len(got) != 1 || got[0] != "product-plan-pro-monthly" {
 		t.Fatalf("resolved product IDs = %v, want [product-plan-pro-monthly]", got)
+	}
+}
+
+func TestCreateOrderAcceptsMatchingPlanIDAndSKU(t *testing.T) {
+	const planID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+	plan := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: planID}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindPlanPurchase, AmountMinor: 9900, Currency: "CNY", Active: true}
+	catalog := &mockCatalog{product: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1", AmountMinor: 9900}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "plan-idem-matching-id",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommercePlanRef{PlanId: api.ULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if catalog.lastRequestedProductID != planID {
+		t.Fatalf("catalog product ID = %q, want %q", catalog.lastRequestedProductID, planID)
+	}
+	if got := orders.lastInput.ProductIDs; len(got) != 1 || got[0] != planID {
+		t.Fatalf("resolved product IDs = %v, want [%s]", got, planID)
+	}
+}
+
+func TestCreateOrderRejectsMismatchingPlanIDAndSKU(t *testing.T) {
+	const planID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+	plan := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: planID}, SKU: "PLAN-TEAM-MONTHLY", Kind: commerce.ProductKindPlanPurchase, AmountMinor: 19900, Currency: "CNY", Active: true}
+	catalog := &mockCatalog{product: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1", AmountMinor: 9900}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "plan-idem-mismatching-id",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommercePlanRef{PlanId: api.ULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for mismatching plan_id/SKU, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if catalog.lastRequestedProductID != planID {
+		t.Fatalf("catalog product ID = %q, want %q", catalog.lastRequestedProductID, planID)
+	}
+	if len(orders.lastInput.ProductIDs) != 0 {
+		t.Fatalf("order service received product IDs after plan mismatch: %v", orders.lastInput.ProductIDs)
 	}
 }
 

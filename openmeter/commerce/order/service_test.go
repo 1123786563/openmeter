@@ -273,6 +273,9 @@ func TestOrderLineSnapshotFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if order.AmountMinor != 9900 {
+		t.Fatalf("order amount_minor = %d, want 9900", order.AmountMinor)
+	}
 
 	line := order.Lines[0]
 
