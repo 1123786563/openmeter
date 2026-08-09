@@ -4037,8 +4037,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '413':
           $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/Internal'
       tags:
         - Commerce
       requestBody:
@@ -4066,8 +4070,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '413':
           $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/Internal'
       tags:
         - Commerce
       requestBody:
@@ -15634,6 +15642,12 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/PayloadTooLargeError'
+    Internal:
+      description: Internal
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/BaseError'
   examples:
     UnauthorizedExample:
       value:
