@@ -329,13 +329,14 @@ func TestVerifyRefundCallbackValidatesSignedContextAndStatus(t *testing.T) {
 
 func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
 	for _, testCase := range []struct {
-		status  string
-		success bool
+		status   string
+		success  bool
+		terminal bool
 	}{
-		{status: "TRADE_SUCCESS", success: true},
-		{status: "TRADE_FINISHED", success: true},
+		{status: "TRADE_SUCCESS", success: true, terminal: true},
+		{status: "TRADE_FINISHED", success: true, terminal: true},
 		{status: "WAIT_BUYER_PAY", success: false},
-		{status: "TRADE_CLOSED", success: false},
+		{status: "TRADE_CLOSED", success: false, terminal: true},
 	} {
 		t.Run(testCase.status, func(t *testing.T) {
 			keys := newTestKeys(t)
@@ -354,6 +355,7 @@ func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
 			fact, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "01ORDER")
 			require.NoError(t, err)
 			require.Equal(t, testCase.success, fact.Success)
+			require.Equal(t, testCase.terminal, fact.Terminal)
 			require.Equal(t, int64(10000), fact.AmountMinor)
 			require.Equal(t, "CNY", fact.Currency)
 			require.Equal(t, "ali-app", fact.ApplicationID)
@@ -674,9 +676,10 @@ func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {
 	}
 	adapter, err := New(valid)
 	require.NoError(t, err)
-	merchantID, applicationID := adapter.Identity()
-	require.Equal(t, "ali-seller", merchantID)
-	require.Equal(t, "ali-app", applicationID)
+	identity, err := adapter.Identity(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, "ali-seller", identity.MerchantID)
+	require.Equal(t, "ali-app", identity.ApplicationID)
 	require.Equal(t, payment.ProviderAlipay, adapter.Name())
 
 	testCases := []struct {

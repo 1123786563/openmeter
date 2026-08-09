@@ -217,10 +217,16 @@ func (m *mockOrderStatusUpdater) UpdateOrderStatus(_ context.Context, namespace,
 
 // mockProvider is a test ProviderAdapter that returns a configured PaymentFact.
 type mockProvider struct {
-	name     Provider
-	verifyFn func(ctx context.Context, headers http.Header, body []byte) (PaymentFact, error)
-	queryFn  func(ctx context.Context, providerOrderID string) (PaymentFact, error)
-	qrFn     func(ctx context.Context, in CheckoutInput) (CheckoutFact, error)
+	name        Provider
+	identity    ProviderIdentity
+	identityErr error
+	verifyFn    func(ctx context.Context, headers http.Header, body []byte) (PaymentFact, error)
+	queryFn     func(ctx context.Context, providerOrderID string) (PaymentFact, error)
+	qrFn        func(ctx context.Context, in CheckoutInput) (CheckoutFact, error)
+}
+
+func (m *mockProvider) Identity(_ context.Context) (ProviderIdentity, error) {
+	return m.identity, m.identityErr
 }
 
 func (m *mockProvider) CreateQRCode(ctx context.Context, in CheckoutInput) (CheckoutFact, error) {
@@ -317,7 +323,13 @@ func newTestHarness(t *testing.T) *testHarness {
 	attempts := newMockAttemptRepo()
 	facts := newMockFactRepo()
 	orders := newMockOrderUpdater()
-	prov := &mockProvider{name: ProviderWeChat}
+	prov := &mockProvider{
+		name: ProviderWeChat,
+		identity: ProviderIdentity{
+			MerchantID:    "merchant-1",
+			ApplicationID: "application-1",
+		},
+	}
 	paidTx := &mockPaidTxRunner{attempts: attempts, facts: facts, orders: orders}
 
 	svc, err := New(Config{
@@ -644,6 +656,58 @@ func TestConfirmPaymentCallbackLost(t *testing.T) {
 	}
 }
 
+func TestConfirmPaymentRetainsPendingForProviderProcessingOrTimeout(t *testing.T) {
+	t.Run("provider processing", func(t *testing.T) {
+		h := newTestHarness(t)
+		_, attempt := h.setupPaidOrder("ns", "cust", "order-processing", "PROV-PROCESSING", 100)
+		h.provider.queryFn = func(context.Context, string) (PaymentFact, error) {
+			return PaymentFact{
+				Provider: ProviderWeChat, ProviderOrderID: "PROV-PROCESSING",
+				AmountMinor: 100, Currency: "CNY", Success: false, Terminal: false,
+				RawHash: "processing-query-hash",
+			}, nil
+		}
+
+		_, err := h.svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+		require.NoError(t, err)
+		require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
+	})
+
+	t.Run("provider timeout", func(t *testing.T) {
+		h := newTestHarness(t)
+		_, attempt := h.setupPaidOrder("ns", "cust", "order-timeout", "PROV-TIMEOUT", 100)
+		wantErr := &ProviderError{
+			Provider: ProviderWeChat, Operation: "query payment", Kind: ProviderErrorRetryable,
+			Cause: context.DeadlineExceeded,
+		}
+		h.provider.queryFn = func(context.Context, string) (PaymentFact, error) {
+			return PaymentFact{}, wantErr
+		}
+
+		_, err := h.svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+		require.ErrorIs(t, err, wantErr)
+		require.ErrorIs(t, err, ErrRetryableProvider)
+		require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
+	})
+}
+
+func TestConfirmPaymentMovesDefinitiveProviderFailureToFailed(t *testing.T) {
+	h := newTestHarness(t)
+	_, attempt := h.setupPaidOrder("ns", "cust", "order-failed", "PROV-FAILED", 100)
+	h.provider.queryFn = func(context.Context, string) (PaymentFact, error) {
+		return PaymentFact{
+			Provider: ProviderWeChat, ProviderOrderID: "PROV-FAILED",
+			AmountMinor: 100, Currency: "CNY", Success: false, Terminal: true,
+			RawHash: "failed-query-hash",
+		}, nil
+	}
+
+	result, err := h.svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+	require.NoError(t, err)
+	require.Equal(t, AttemptStatusFailed, result.Attempt.Status)
+	require.Equal(t, AttemptStatusFailed, h.attempts.attempts[attempt.ID].Status)
+}
+
 // TestCreateAttemptIdempotent verifies that creating an attempt with the same
 // idempotency key returns the existing attempt.
 func TestCreateAttemptIdempotent(t *testing.T) {
@@ -682,6 +746,66 @@ func TestCreateAttemptIdempotent(t *testing.T) {
 	}
 	if first.ID != second.ID {
 		t.Fatalf("idempotent replay returned different ID: %s vs %s", first.ID, second.ID)
+	}
+}
+
+func TestCreateAttemptSnapshotsProviderIdentity(t *testing.T) {
+	h := newTestHarness(t)
+	h.provider.identity = ProviderIdentity{MerchantID: "mch-1", ApplicationID: "app-1"}
+
+	attempt, fresh, err := h.svc.CreateAttempt(t.Context(), CreateAttemptInput{
+		Namespace:             "default",
+		OrderID:               "order-identity",
+		CustomerID:            "customer-1",
+		Provider:              ProviderWeChat,
+		IdempotencyKey:        "idem-identity",
+		AmountMinor:           100,
+		Currency:              "CNY",
+		ExpectedMerchantID:    "caller-must-not-control-this",
+		ExpectedApplicationID: "caller-must-not-control-this",
+	})
+	require.NoError(t, err)
+	require.True(t, fresh)
+	require.Equal(t, "mch-1", attempt.ExpectedMerchantID)
+	require.Equal(t, "app-1", attempt.ExpectedApplicationID)
+}
+
+func TestCreateAttemptFailsClosedWithoutProviderIdentity(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider ProviderAdapter
+	}{
+		{name: "provider disabled"},
+		{name: "merchant missing", provider: &mockProvider{name: ProviderWeChat, identity: ProviderIdentity{ApplicationID: "app-1"}}},
+		{name: "application missing", provider: &mockProvider{name: ProviderWeChat, identity: ProviderIdentity{MerchantID: "mch-1"}}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			providers := map[Provider]ProviderAdapter{}
+			if tt.provider != nil {
+				providers[ProviderWeChat] = tt.provider
+			}
+			svc, err := New(Config{
+				Attempts:  h.attempts,
+				Facts:     h.facts,
+				Orders:    h.orders,
+				TxRunner:  h.paidTx,
+				Providers: providers,
+			})
+			require.NoError(t, err)
+
+			_, _, err = svc.CreateAttempt(t.Context(), CreateAttemptInput{
+				Namespace: "default", OrderID: "order-1", CustomerID: "customer-1",
+				Provider: ProviderWeChat, IdempotencyKey: "idem-1", AmountMinor: 100, Currency: "CNY",
+			})
+			require.Error(t, err)
+			require.ErrorIs(t, err, ErrPermanentProviderProtocol)
+			var providerErr *ProviderError
+			require.ErrorAs(t, err, &providerErr)
+			require.Equal(t, ProviderErrorPermanent, providerErr.Kind)
+		})
 	}
 }
 
@@ -922,6 +1046,35 @@ func TestHandleCallbackApplicationMismatch(t *testing.T) {
 	_, err := h.svc.HandleCallback(context.Background(), "ns", ProviderWeChat, nil, []byte("body-21"))
 	if err == nil {
 		t.Fatal("application mismatch should fail")
+	}
+}
+
+func TestMatchFactToAttemptRequiresSnapshottedIdentity(t *testing.T) {
+	attempt := &PaymentAttempt{
+		AmountMinor:           100,
+		Currency:              "CNY",
+		ExpectedMerchantID:    "merchant-1",
+		ExpectedApplicationID: "application-1",
+	}
+
+	tests := []struct {
+		name string
+		fact PaymentFact
+	}{
+		{
+			name: "missing merchant",
+			fact: PaymentFact{AmountMinor: 100, Currency: "CNY", ApplicationID: "application-1"},
+		},
+		{
+			name: "missing application",
+			fact: PaymentFact{AmountMinor: 100, Currency: "CNY", MerchantID: "merchant-1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorIs(t, matchFactToAttempt(attempt, tt.fact), ErrPaymentFactMismatch)
+		})
 	}
 }
 

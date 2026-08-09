@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -282,6 +283,11 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 		return existing, false, nil
 	}
 
+	identity, err := s.providerIdentity(ctx, in.Provider)
+	if err != nil {
+		return nil, false, err
+	}
+
 	now := clock.Now()
 	attempt := PaymentAttempt{
 		ID:                    ulid.Make().String(),
@@ -293,13 +299,47 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 		IdempotencyKey:        in.IdempotencyKey,
 		AmountMinor:           in.AmountMinor,
 		Currency:              in.Currency,
-		ExpectedMerchantID:    in.ExpectedMerchantID,
-		ExpectedApplicationID: in.ExpectedApplicationID,
+		ExpectedMerchantID:    identity.MerchantID,
+		ExpectedApplicationID: identity.ApplicationID,
 		CreatedAt:             now,
 		UpdatedAt:             now,
 	}
 
 	return s.attempts.CreateAttempt(ctx, attempt)
+}
+
+func (s *service) providerIdentity(ctx context.Context, providerName Provider) (ProviderIdentity, error) {
+	provider, ok := s.providers[providerName]
+	if !ok || provider == nil {
+		return ProviderIdentity{}, &ProviderError{
+			Provider:  providerName,
+			Operation: "identity",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
+		}
+	}
+
+	identity, err := provider.Identity(ctx)
+	if err != nil {
+		return ProviderIdentity{}, &ProviderError{
+			Provider:  providerName,
+			Operation: "identity",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: %v", ErrPermanentProviderProtocol, err),
+		}
+	}
+	identity.MerchantID = strings.TrimSpace(identity.MerchantID)
+	identity.ApplicationID = strings.TrimSpace(identity.ApplicationID)
+	if identity.MerchantID == "" || identity.ApplicationID == "" {
+		return ProviderIdentity{}, &ProviderError{
+			Provider:  providerName,
+			Operation: "identity",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: merchant and application identity are required", ErrPermanentProviderProtocol),
+		}
+	}
+
+	return identity, nil
 }
 
 // GetAttempt retrieves a payment attempt.
@@ -400,7 +440,18 @@ func (s *service) ConfirmPayment(ctx context.Context, namespace, attemptID strin
 		return CallbackResult{}, fmt.Errorf("payment: provider query payment: %w", err)
 	}
 
-	return s.applyPaymentFact(ctx, attempt.Namespace, pf)
+	result, err := s.applyPaymentFact(ctx, attempt.Namespace, pf)
+	if err != nil {
+		return CallbackResult{}, err
+	}
+	if !pf.Success && pf.Terminal {
+		updated, err := s.attempts.UpdateAttemptStatus(ctx, attempt.Namespace, attempt.ID, AttemptStatusPending, AttemptStatusFailed)
+		if err != nil {
+			return CallbackResult{}, fmt.Errorf("payment: mark definitively failed attempt: %w", err)
+		}
+		result.Attempt = updated
+	}
+	return result, nil
 }
 
 // applyPaymentFact is the core atom: deduplicate the fact, match it against the
@@ -527,12 +578,12 @@ func matchFactToAttempt(attempt *PaymentAttempt, pf PaymentFact) error {
 	}
 	// Validate merchant identity (I2): if the attempt has an expected merchant
 	// ID, the fact must match it.
-	if attempt.ExpectedMerchantID != "" && pf.MerchantID != "" && attempt.ExpectedMerchantID != pf.MerchantID {
+	if attempt.ExpectedMerchantID != "" && attempt.ExpectedMerchantID != pf.MerchantID {
 		return fmt.Errorf("%w: merchant mismatch (fact=%s, attempt=%s)", ErrPaymentFactMismatch, pf.MerchantID, attempt.ExpectedMerchantID)
 	}
 	// Validate application identity (I2): if the attempt has an expected app ID,
 	// the fact must match it.
-	if attempt.ExpectedApplicationID != "" && pf.ApplicationID != "" && attempt.ExpectedApplicationID != pf.ApplicationID {
+	if attempt.ExpectedApplicationID != "" && attempt.ExpectedApplicationID != pf.ApplicationID {
 		return fmt.Errorf("%w: application mismatch (fact=%s, attempt=%s)", ErrPaymentFactMismatch, pf.ApplicationID, attempt.ExpectedApplicationID)
 	}
 	return nil

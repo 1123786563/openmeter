@@ -1,0 +1,204 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
+	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
+	"github.com/openmeterio/openmeter/openmeter/credit"
+	"github.com/openmeterio/openmeter/openmeter/credit/grant"
+	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
+	"github.com/openmeterio/openmeter/openmeter/testutils"
+	"github.com/openmeterio/openmeter/pkg/models"
+)
+
+type testGrantConnector struct{}
+
+func (testGrantConnector) CreateGrant(context.Context, models.NamespacedID, credit.CreateGrantInput) (*grant.Grant, error) {
+	return &grant.Grant{}, nil
+}
+
+func (testGrantConnector) VoidGrant(context.Context, models.NamespacedID, *time.Time) error {
+	return nil
+}
+
+type testFenceClient struct{}
+
+func (testFenceClient) EstablishFence(context.Context, string, string) (refund.FenceResult, error) {
+	return refund.FenceResult{Sequence: "fence-1", Established: true}, nil
+}
+
+func (testFenceClient) ReleaseFence(context.Context, string, string, string) error { return nil }
+
+func (testFenceClient) ConfirmSnapshotApplied(context.Context, string, string, string) (bool, error) {
+	return true, nil
+}
+
+type testCreditReverser struct{}
+
+func (testCreditReverser) ReverseCredits(_ context.Context, in refund.ReverseCreditsInput) (refund.ReverseCreditsResult, error) {
+	return refund.ReverseCreditsResult{LedgerEntryID: "reversal-1", Credits: in.Credits}, nil
+}
+
+type testSnapshotPublisher struct{}
+
+func (testSnapshotPublisher) PublishSnapshot(context.Context, refund.PublishSnapshotInput) (string, error) {
+	return "snapshot-1", nil
+}
+
+type testNoopFence struct{ testFenceClient }
+
+func (testNoopFence) IsNoop() bool { return true }
+
+type testRefundProcessorService struct{ err error }
+
+func (s testRefundProcessorService) ProcessOne(context.Context, string, string) (*refund.RefundRequest, error) {
+	return nil, s.err
+}
+
+func completeRuntimeDependencies() *commerceRuntimeDependencies {
+	return &commerceRuntimeDependencies{
+		RefundFence:             testFenceClient{},
+		RefundCreditReverser:    testCreditReverser{},
+		RefundSnapshotPublisher: testSnapshotPublisher{},
+	}
+}
+
+func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{},
+		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, wiring.Handler)
+	require.NotNil(t, wiring.Catalog)
+	require.Nil(t, wiring.WorkerManager)
+	require.Empty(t, wiring.paymentProviders)
+	require.Empty(t, wiring.refundProviders)
+}
+
+func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.T) {
+	cfg := validCommerceConfiguration(t)
+
+	for _, tt := range []struct {
+		name string
+		deps *commerceRuntimeDependencies
+		want string
+	}{
+		{name: "missing bundle", want: "refund fence"},
+		{
+			name: "missing credit reverser",
+			deps: &commerceRuntimeDependencies{RefundFence: testFenceClient{}, RefundSnapshotPublisher: testSnapshotPublisher{}},
+			want: "credit reverser",
+		},
+		{
+			name: "missing snapshot publisher",
+			deps: &commerceRuntimeDependencies{RefundFence: testFenceClient{}, RefundCreditReverser: testCreditReverser{}},
+			want: "snapshot publisher",
+		},
+		{
+			name: "noop dependency",
+			deps: &commerceRuntimeDependencies{RefundFence: testNoopFence{}, RefundCreditReverser: testCreditReverser{}, RefundSnapshotPublisher: testSnapshotPublisher{}},
+			want: "refund fence",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			wiring, err := wireCommerce(
+				entdb.NewClient(), "default", testGrantConnector{}, cfg, tt.deps, testutils.NewLogger(t),
+			)
+			require.Nil(t, wiring)
+			require.ErrorContains(t, err, "commerce automatic refund disabled")
+			require.ErrorContains(t, err, tt.want)
+		})
+	}
+}
+
+func TestWireCommerceEnabledWithoutChannelsStillRequiresRealRefundDependencies(t *testing.T) {
+	cfg := config.CommerceConfiguration{
+		Enabled: true,
+		Payment: config.CommercePaymentConfiguration{
+			HTTPTimeout: time.Second, MaxResponseBytes: 1024, PendingStaleAfter: 30 * time.Second,
+		},
+	}
+
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{}, cfg, nil, testutils.NewLogger(t),
+	)
+	require.Nil(t, wiring)
+	require.ErrorContains(t, err, "commerce automatic refund disabled")
+}
+
+func TestWireCommerceEnabledRegistersProviderRecoveryWorkersWithCompleteDependencies(t *testing.T) {
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{},
+		validCommerceConfiguration(t), completeRuntimeDependencies(), testutils.NewLogger(t),
+	)
+	require.NoError(t, err)
+	require.Equal(t, []string{"fulfillment", "refund-query", "payment-query-recovery", "reconciliation"}, wiring.WorkerManager.RunnerNames())
+	require.Contains(t, wiring.paymentProviders, payment.ProviderWeChat)
+	require.Contains(t, wiring.refundProviders, payment.ProviderWeChat)
+	require.Same(t, wiring.paymentProviders[payment.ProviderWeChat], wiring.refundProviders[payment.ProviderWeChat])
+	require.Contains(t, wiring.paymentProviders, payment.ProviderAlipay)
+	require.Contains(t, wiring.refundProviders, payment.ProviderAlipay)
+	require.Same(t, wiring.paymentProviders[payment.ProviderAlipay], wiring.refundProviders[payment.ProviderAlipay])
+}
+
+func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
+	cfg := validCommerceConfiguration(t)
+	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
+
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{}, cfg,
+		completeRuntimeDependencies(), testutils.NewLogger(t),
+	)
+	require.Nil(t, wiring)
+	require.Error(t, err)
+	var pathErr *os.PathError
+	require.True(t, errors.As(err, &pathErr))
+}
+
+func TestRefundWorkerAdapterPassesThroughProcessError(t *testing.T) {
+	wantErr := errors.New("provider timeout")
+	adapter := refundWorkerAdapter{svc: testRefundProcessorService{err: wantErr}}
+	require.ErrorIs(t, adapter.ProcessOne(t.Context(), "default", "refund-1"), wantErr)
+}
+
+func validCommerceConfiguration(t *testing.T) config.CommerceConfiguration {
+	t.Helper()
+	dir := t.TempDir()
+	writeSecret := func(name, value string) string {
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.WriteFile(path, []byte(value), 0o600))
+		return path
+	}
+
+	return config.CommerceConfiguration{
+		Enabled: true,
+		Payment: config.CommercePaymentConfiguration{
+			HTTPTimeout: 2 * time.Second, MaxResponseBytes: 1 << 20, PendingStaleAfter: 30 * time.Second,
+			WeChat: config.WeChatPaymentConfiguration{
+				Enabled: true, BaseURL: "https://api.mch.weixin.qq.com", AppID: "wx-app", MerchantID: "wx-mch",
+				MerchantSerial: "merchant-serial", MerchantPrivateKeyFile: writeSecret("merchant.pem", "merchant-private-key"),
+				APIv3KeyFile:           writeSecret("api-v3-key", "0123456789abcdef0123456789abcdef"),
+				PlatformPublicKeyFiles: map[string]string{"platform-serial": writeSecret("platform.pem", "platform-public-key")},
+				NotifyURL:              "https://merchant.example/wechat/notify", RefundNotifyURL: "https://merchant.example/wechat/refund-notify",
+				CallbackMaxAge: 5 * time.Minute,
+			},
+			Alipay: config.AlipayPaymentConfiguration{
+				Enabled: true, GatewayURL: "https://openapi.alipay.com/gateway.do",
+				AppID: "ali-app", SellerID: "ali-seller",
+				AppPrivateKeyFile:   writeSecret("alipay-app-private.pem", "alipay-app-private-key"),
+				AlipayPublicKeyFile: writeSecret("alipay-public.pem", "alipay-public-key"),
+				NotifyURL:           "https://merchant.example/alipay/notify",
+			},
+		},
+	}
+}

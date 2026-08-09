@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/oklog/ulid/v2"
 
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
@@ -273,6 +274,57 @@ func (a *EntAdapter) GetPaymentAttemptByProviderOrder(ctx context.Context, names
 		return nil, fmt.Errorf("ent: get attempt by provider order: %w", err)
 	}
 	return mapEntPaymentAttempt(epa), nil
+}
+
+// ListStalePendingPaymentAttempts returns the callback-lost recovery batch in
+// deterministic oldest-first order. The persistence boundary enforces the
+// pending status and the production maximum batch size.
+func (a *EntAdapter) ListStalePendingPaymentAttempts(ctx context.Context, namespace string, cutoff time.Time, limit int) ([]PaymentAttemptWire, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	attempts, err := a.db.PaymentAttempt.Query().
+		Where(
+			paymentattempt.NamespaceEQ(namespace),
+			paymentattempt.StatusEQ(paymentattempt.StatusPending),
+			paymentattempt.UpdatedAtLTE(cutoff),
+		).
+		Order(paymentattempt.ByUpdatedAt(), paymentattempt.ByID()).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ent: list stale pending payment attempts: %w", err)
+	}
+
+	result := make([]PaymentAttemptWire, len(attempts))
+	for i, attempt := range attempts {
+		result[i] = *mapEntPaymentAttempt(attempt)
+	}
+	return result, nil
+}
+
+// ResolvePaymentProviderForOrder returns the successful provider when present,
+// otherwise the most recently updated attempt's provider.
+func (a *EntAdapter) ResolvePaymentProviderForOrder(ctx context.Context, namespace, orderID string) (PaymentProviderWire, error) {
+	attempts, err := a.db.PaymentAttempt.Query().
+		Where(
+			paymentattempt.NamespaceEQ(namespace),
+			paymentattempt.CommerceOrderIDEQ(orderID),
+		).
+		Order(paymentattempt.ByUpdatedAt(entsql.OrderDesc()), paymentattempt.ByID(entsql.OrderDesc())).
+		All(ctx)
+	if err != nil {
+		return "", fmt.Errorf("ent: resolve payment provider for order: %w", err)
+	}
+	if len(attempts) == 0 {
+		return "", ErrPaymentAttemptNotFound
+	}
+	for _, attempt := range attempts {
+		if attempt.Status == paymentattempt.StatusSucceeded {
+			return string(attempt.Provider), nil
+		}
+	}
+	return string(attempts[0].Provider), nil
 }
 
 func (a *EntAdapter) UpdatePaymentAttemptStatus(ctx context.Context, namespace, id string, expectedFrom, to AttemptStatusWire) (*PaymentAttemptWire, error) {
@@ -635,6 +687,28 @@ func (a *EntAdapter) GetRefundRequestByIdempotencyKey(ctx context.Context, names
 		return nil, fmt.Errorf("ent: get refund by idempotency key: %w", err)
 	}
 	return mapEntRefundRequest(er), nil
+}
+
+func (a *EntAdapter) ListProviderProcessingRefundRequests(ctx context.Context, namespace string, limit int) ([]RefundRequestWire, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	requests, err := a.db.RefundRequest.Query().
+		Where(
+			refundrequest.NamespaceEQ(namespace),
+			refundrequest.StatusEQ(refundrequest.StatusProviderProcessing),
+		).
+		Order(refundrequest.ByUpdatedAt(), refundrequest.ByID()).
+		Limit(limit).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ent: list provider-processing refunds: %w", err)
+	}
+	result := make([]RefundRequestWire, len(requests))
+	for i, request := range requests {
+		result[i] = *mapEntRefundRequest(request)
+	}
+	return result, nil
 }
 
 func (a *EntAdapter) UpdateRefundStatus(ctx context.Context, namespace, id string, to RefundStatusWire) (*RefundRequestWire, error) {

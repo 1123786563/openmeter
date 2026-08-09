@@ -169,6 +169,60 @@ func TestInsertPaymentFactProviderEventDedupDifferentRawHashNonSuccess(t *testin
 	require.Equal(t, 1, countPaymentFacts(t, client, first.ProviderEventID))
 }
 
+func TestListStalePendingPaymentAttemptsFiltersAndOrders(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+	_, older := createPaidTransitionFixture(t, client, "recovery-older")
+	_, sameTimeA := createPaidTransitionFixture(t, client, "recovery-same-a")
+	_, sameTimeB := createPaidTransitionFixture(t, client, "recovery-same-b")
+	_, fresh := createPaidTransitionFixture(t, client, "recovery-fresh")
+	_, succeeded := createPaidTransitionFixture(t, client, "recovery-succeeded")
+	otherOrder, err := client.CommerceOrder.Create().
+		SetNamespace("other").
+		SetCustomerID("customer-recovery-other-namespace").
+		SetKind(commerceorder.KindWalletTopUp).
+		SetStatus(commerceorder.StatusAwaitingPayment).
+		SetTotalCents(100).
+		SetCurrency("CNY").
+		SetIdempotencyKey("order-idempotency-recovery-other-namespace").
+		Save(t.Context())
+	require.NoError(t, err)
+	otherNamespace, err := client.PaymentAttempt.Create().
+		SetNamespace("other").
+		SetCommerceOrderID(otherOrder.ID).
+		SetCustomerID("customer-recovery-other-namespace").
+		SetProvider(paymentattempt.ProviderWechat).
+		SetStatus(paymentattempt.StatusPending).
+		SetIdempotencyKey("attempt-idempotency-recovery-other-namespace").
+		SetAmountCents(100).
+		SetCurrency("CNY").
+		Save(t.Context())
+	require.NoError(t, err)
+
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(older.ID).SetUpdatedAt(now.Add(-2*time.Minute)).Exec(t.Context()))
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(sameTimeA.ID).SetUpdatedAt(now.Add(-time.Minute)).Exec(t.Context()))
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(sameTimeB.ID).SetUpdatedAt(now.Add(-time.Minute)).Exec(t.Context()))
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(fresh.ID).SetUpdatedAt(now).Exec(t.Context()))
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(succeeded.ID).SetStatus(paymentattempt.StatusSucceeded).SetUpdatedAt(now.Add(-3*time.Minute)).Exec(t.Context()))
+	require.NoError(t, client.PaymentAttempt.UpdateOneID(otherNamespace.ID).SetUpdatedAt(now.Add(-3*time.Minute)).Exec(t.Context()))
+
+	got, err := adapter.ListStalePendingPaymentAttempts(t.Context(), "default", now.Add(-30*time.Second), 3)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	require.Equal(t, older.ID, got[0].ID)
+	wantSameTimeIDs := []string{sameTimeA.ID, sameTimeB.ID}
+	if wantSameTimeIDs[0] > wantSameTimeIDs[1] {
+		wantSameTimeIDs[0], wantSameTimeIDs[1] = wantSameTimeIDs[1], wantSameTimeIDs[0]
+	}
+	require.Equal(t, wantSameTimeIDs[0], got[1].ID)
+	require.Equal(t, wantSameTimeIDs[1], got[2].ID)
+}
+
 func createPaidTransitionFixture(t *testing.T, client *db.Client, suffix string) (*db.CommerceOrder, *db.PaymentAttempt) {
 	t.Helper()
 	order, err := client.CommerceOrder.Create().

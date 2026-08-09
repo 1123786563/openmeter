@@ -125,8 +125,8 @@ func (a *Adapter) Name() payment.Provider { return payment.ProviderWeChat }
 
 // Identity returns the non-secret merchant and application identities used to
 // bind later provider facts to the payment attempt.
-func (a *Adapter) Identity() (merchantID, applicationID string) {
-	return a.merchantID, a.appID
+func (a *Adapter) Identity(context.Context) (payment.ProviderIdentity, error) {
+	return payment.ProviderIdentity{MerchantID: a.merchantID, ApplicationID: a.appID}, nil
 }
 
 // CreateQRCode creates a Native payment and returns WeChat's code_url.
@@ -188,12 +188,12 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 		Provider:          payment.ProviderWeChat,
 		ProviderOrderID:   response.OutTradeNo,
 		ProviderPaymentID: response.TransactionID,
-		ProviderEventID:   response.TransactionID,
 		MerchantID:        response.MchID,
 		ApplicationID:     response.AppID,
 		AmountMinor:       response.Amount.Total,
 		Currency:          response.Amount.Currency,
 		Success:           response.TradeState == "SUCCESS",
+		Terminal:          terminalTradeState(response.TradeState),
 		RawHash:           hashBody(rawBody),
 		Timestamp:         parseProviderTime(response.SuccessTime, a.now()),
 		SignedPayload:     payload,
@@ -247,6 +247,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 		AmountMinor:       resource.Amount.Total,
 		Currency:          resource.Amount.Currency,
 		Success:           resource.TradeState == "SUCCESS",
+		Terminal:          terminalTradeState(resource.TradeState),
 		RawHash:           hashBody(body),
 		Timestamp:         callbackTime,
 		SignedPayload:     payload,
@@ -392,10 +393,29 @@ func (a *Adapter) validateTransaction(value transaction) error {
 	if value.OutTradeNo == "" || value.Amount.Total <= 0 {
 		return fmt.Errorf("%w: transaction order or amount is invalid", payment.ErrPermanentProviderProtocol)
 	}
+	if !validTradeState(value.TradeState) {
+		return fmt.Errorf("%w: transaction trade state is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if value.TradeState == "SUCCESS" && value.TransactionID == "" {
+		return fmt.Errorf("%w: successful transaction ID is required", payment.ErrPermanentProviderProtocol)
+	}
 	if value.Amount.Currency != "CNY" {
 		return fmt.Errorf("%w: transaction currency must be CNY", payment.ErrPermanentProviderProtocol)
 	}
 	return nil
+}
+
+func validTradeState(state string) bool {
+	switch state {
+	case "SUCCESS", "NOTPAY", "USERPAYING", "CLOSED", "PAYERROR":
+		return true
+	default:
+		return false
+	}
+}
+
+func terminalTradeState(state string) bool {
+	return state == "SUCCESS" || state == "CLOSED" || state == "PAYERROR"
 }
 
 func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string) error {

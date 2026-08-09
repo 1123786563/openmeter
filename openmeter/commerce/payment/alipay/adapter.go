@@ -104,8 +104,8 @@ func (a *Adapter) Name() payment.Provider { return payment.ProviderAlipay }
 
 // Identity returns the non-secret identities used to bind signed facts to the
 // payment attempt.
-func (a *Adapter) Identity() (merchantID, applicationID string) {
-	return a.sellerID, a.appID
+func (a *Adapter) Identity(context.Context) (payment.ProviderIdentity, error) {
+	return payment.ProviderIdentity{MerchantID: a.sellerID, ApplicationID: a.appID}, nil
 }
 
 // CreateQRCode calls alipay.trade.precreate and returns its signed qr_code.
@@ -191,6 +191,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, _ http.Header, body []byte
 		AmountMinor:       amount,
 		Currency:          "CNY",
 		Success:           successfulTradeStatus(status),
+		Terminal:          terminalTradeStatus(status),
 		RawHash:           rawHash,
 		Timestamp:         timestamp,
 		SignedPayload:     valuesToMap(values),
@@ -232,6 +233,7 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 		AmountMinor:       amount,
 		Currency:          "CNY",
 		Success:           successfulTradeStatus(response.TradeState),
+		Terminal:          terminalTradeStatus(response.TradeState),
 		RawHash:           hashBody(rawResponse),
 		Timestamp:         a.now(),
 		SignedPayload:     payload,
@@ -402,6 +404,10 @@ func validTradeStatus(status string) bool {
 
 func successfulTradeStatus(status string) bool {
 	return status == "TRADE_SUCCESS" || status == "TRADE_FINISHED"
+}
+
+func terminalTradeStatus(status string) bool {
+	return successfulTradeStatus(status) || status == "TRADE_CLOSED"
 }
 
 func formatAmountMinor(amount int64) string {

@@ -31,6 +31,13 @@ const (
 	ProviderOffline Provider = "offline"
 )
 
+// ProviderIdentity is the immutable, non-secret merchant/application identity
+// used to bind verified provider facts to the attempt that initiated payment.
+type ProviderIdentity struct {
+	MerchantID    string
+	ApplicationID string
+}
+
 // CheckoutInput carries the order context needed to create a provider payment
 // session (QR code). The provider assigns its own order/payment IDs; the domain
 // stores them on the PaymentAttempt.
@@ -71,8 +78,11 @@ type PaymentFact struct {
 	AmountMinor       int64
 	Currency          string
 	Success           bool
-	RawHash           string
-	Timestamp         time.Time
+	// Terminal distinguishes an explicit provider failure from a still-pending
+	// query result. Successful facts are always terminal.
+	Terminal  bool
+	RawHash   string
+	Timestamp time.Time
 	// SignedPayload stores verified fields extracted from the callback. This is
 	// the durable audit record — it never contains the raw body.
 	SignedPayload map[string]any
@@ -204,6 +214,11 @@ type RefundFact struct {
 //   - Never log or persist raw API keys.
 //   - Source all secrets from a SecretProvider.
 type ProviderAdapter interface {
+	// Identity returns the configured merchant/application identity. Callers
+	// snapshot it before creating an attempt so request payloads cannot choose
+	// the identity later used to validate signed provider facts.
+	Identity(ctx context.Context) (ProviderIdentity, error)
+
 	// CreateQRCode initiates a payment session at the provider and returns a
 	// checkout fact (QR code + provider IDs).
 	CreateQRCode(ctx context.Context, input CheckoutInput) (CheckoutFact, error)

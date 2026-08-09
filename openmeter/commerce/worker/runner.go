@@ -297,7 +297,7 @@ type paymentConfirmer interface {
 }
 
 // reconRunner runs the reconciliation check suite and returns the count of
-// findings. The runner logs findings but never fails — reconciliation reports.
+// findings. Service errors are returned to the runner for retry/logging.
 type reconRunner interface {
 	Run(ctx context.Context, namespace string) (int, error)
 }
@@ -400,8 +400,7 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 			Job: func(ctx context.Context) (int, error) {
 				findings, err := deps.Reconciliation.Run(ctx, deps.Namespace)
 				if err != nil {
-					logger.WarnContext(ctx, "reconciliation run failed", "error", err)
-					return 0, nil
+					return 0, err
 				}
 				if findings > 0 {
 					logger.WarnContext(ctx, "reconciliation found issues", "findings", findings)
@@ -421,22 +420,23 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 }
 
 // processRefundBatch lists all refunds in provider_processing status and
-// processes each one. This is a best-effort batch — individual refund failures
-// are logged and skipped so one bad refund doesn't block the rest.
+// processes each one. It continues after individual failures, then returns the
+// joined errors so the runner reports the incomplete batch and retries later.
 func processRefundBatch(ctx context.Context, svc refundProcessor, namespace string) (int, error) {
 	ids, err := svc.ListProviderProcessing(ctx, namespace)
 	if err != nil {
 		return 0, fmt.Errorf("list provider-processing refunds: %w", err)
 	}
 	processed := 0
+	var processErrors []error
 	for _, id := range ids {
 		if err := svc.ProcessOne(ctx, namespace, id); err != nil {
-			slog.WarnContext(ctx, "refund-query: process failed", "refund_id", id, "error", err)
+			processErrors = append(processErrors, fmt.Errorf("refund %s: %w", id, err))
 			continue
 		}
 		processed++
 	}
-	return processed, nil
+	return processed, errors.Join(processErrors...)
 }
 
 // confirmPendingPayments lists payment attempts stuck in pending status past
@@ -448,14 +448,15 @@ func confirmPendingPayments(ctx context.Context, confirmer paymentConfirmer, nam
 		return 0, fmt.Errorf("list stale pending attempts: %w", err)
 	}
 	processed := 0
+	var confirmErrors []error
 	for _, id := range ids {
 		if err := confirmer.ConfirmPayment(ctx, namespace, id); err != nil {
-			slog.WarnContext(ctx, "payment-query-recovery: confirm failed", "attempt_id", id, "error", err)
+			confirmErrors = append(confirmErrors, fmt.Errorf("payment attempt %s: %w", id, err))
 			continue
 		}
 		processed++
 	}
-	return processed, nil
+	return processed, errors.Join(confirmErrors...)
 }
 
 // evaluateAllAccounts lists all receivable accounts in the namespace and

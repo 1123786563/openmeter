@@ -61,6 +61,9 @@ func TestProviderAdapterInterfaceCompile(t *testing.T) {
 
 type noopAdapter struct{}
 
+func (noopAdapter) Identity(context.Context) (ProviderIdentity, error) {
+	return ProviderIdentity{MerchantID: "merchant", ApplicationID: "application"}, nil
+}
 func (noopAdapter) CreateQRCode(context.Context, CheckoutInput) (CheckoutFact, error) {
 	return CheckoutFact{}, nil
 }

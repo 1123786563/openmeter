@@ -262,9 +262,9 @@ func (m *mockFulfillmentProcessor) ProcessPending(ctx context.Context, ns string
 }
 
 type mockRefundProcessor struct {
-	listIDs  []string
-	listErr  error
-	procErrs map[string]error
+	listIDs   []string
+	listErr   error
+	procErrs  map[string]error
 	processed []string
 }
 
@@ -283,9 +283,9 @@ func (m *mockRefundProcessor) ProcessOne(_ context.Context, _, refundID string) 
 }
 
 type mockPaymentConfirmer struct {
-	listIDs  []string
-	listErr  error
-	procErrs map[string]error
+	listIDs   []string
+	listErr   error
+	procErrs  map[string]error
 	confirmed []string
 }
 
@@ -339,7 +339,7 @@ func (m *mockEnterpriseCloser) EvaluateCollection(_ context.Context, _, accountI
 
 func TestRegisterCommerceWorkers_RefundQueryProcesses(t *testing.T) {
 	refundMock := &mockRefundProcessor{
-		listIDs: []string{"ref-1", "ref-2", "ref-3"},
+		listIDs:  []string{"ref-1", "ref-2", "ref-3"},
 		procErrs: map[string]error{"ref-2": errors.New("provider timeout")},
 	}
 	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{
@@ -356,8 +356,8 @@ func TestRegisterCommerceWorkers_RefundQueryProcesses(t *testing.T) {
 	// Run the job once via ProcessOnce on the registered runner
 	runner := mgr.runners[0]
 	n, err := runner.ProcessOnce(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if err == nil || !errors.Is(err, refundMock.procErrs["ref-2"]) {
+		t.Fatalf("expected provider timeout error, got %v", err)
 	}
 	// ref-1 and ref-3 succeed, ref-2 fails — 2 processed
 	if n != 2 {
@@ -365,6 +365,29 @@ func TestRegisterCommerceWorkers_RefundQueryProcesses(t *testing.T) {
 	}
 	if len(refundMock.processed) != 2 {
 		t.Errorf("expected 2 processed in mock, got %d", len(refundMock.processed))
+	}
+}
+
+func TestRegisterCommerceWorkers_PaymentQueryReturnsItemErrorsAfterBatch(t *testing.T) {
+	wantErr := errors.New("provider timeout")
+	payMock := &mockPaymentConfirmer{
+		listIDs:  []string{"att-1", "att-2", "att-3"},
+		procErrs: map[string]error{"att-2": wantErr},
+	}
+	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{Namespace: "test-ns", Payment: payMock})
+	if err != nil {
+		t.Fatalf("create manager: %v", err)
+	}
+
+	n, err := mgr.runners[0].ProcessOnce(context.Background())
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected provider timeout error, got %v", err)
+	}
+	if n != 2 {
+		t.Fatalf("expected 2 confirmed, got %d", n)
+	}
+	if len(payMock.confirmed) != 2 {
+		t.Fatalf("expected remaining attempts to continue, got %v", payMock.confirmed)
 	}
 }
 
@@ -438,5 +461,24 @@ func TestRegisterCommerceWorkers_ReconciliationReportsFindings(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("expected 1 (recon ran), got %d", n)
+	}
+}
+
+func TestRegisterCommerceWorkers_ReconciliationReturnsServiceError(t *testing.T) {
+	wantErr := errors.New("reconciliation unavailable")
+	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{
+		Namespace:      "test-ns",
+		Reconciliation: &mockReconRunner{err: wantErr},
+	})
+	if err != nil {
+		t.Fatalf("create manager: %v", err)
+	}
+
+	n, err := mgr.runners[0].ProcessOnce(context.Background())
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected reconciliation error, got %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("expected no completed reconciliation run, got %d", n)
 	}
 }

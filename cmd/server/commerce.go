@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
+	"net/http"
+	"reflect"
 	"time"
 
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
+	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/catalog"
 	"github.com/openmeterio/openmeter/openmeter/commerce/fulfillment"
@@ -33,17 +35,37 @@ type CommerceWiring struct {
 	Handler       commercehandler.Handler
 	WorkerManager *worker.Manager
 	Catalog       catalog.Service
+
+	paymentProviders map[payment.Provider]payment.ProviderAdapter
+	refundProviders  map[payment.Provider]refund.ProviderRefunder
+}
+
+// commerceRuntimeDependencies is the narrow seam for external automatic
+// refund collaborators. Production currently passes nil; tests and future
+// runtime integrations can supply complete real implementations atomically.
+type commerceRuntimeDependencies struct {
+	RefundFence             refund.FenceClient
+	RefundCreditReverser    refund.CreditReverser
+	RefundSnapshotPublisher refund.SnapshotPublisher
 }
 
 // wireCommerce builds the commerce services that have Ent-backed implementations
-// (catalog, orders, wallet, fulfillment, reconciliation) and constructs both the
-// HTTP handler and the background worker manager. Services without Ent-backed
-// repos (payment, refund, enterprise) are left nil; the handler returns 501 for
-// those routes and the corresponding workers are not registered.
+// (catalog, orders, wallet, fulfillment, reconciliation) and conditionally
+// constructs production payment/refund services and workers.
 //
 // The defaultNamespace is used to resolve the namespace for both the handler
 // (via StaticNamespaceDecoder) and the worker jobs.
-func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnector credit.GrantConnector, logger *slog.Logger) (*CommerceWiring, error) {
+func wireCommerce(
+	entClient *entdb.Client,
+	defaultNamespace string,
+	grantConnector credit.GrantConnector,
+	cfg config.CommerceConfiguration,
+	runtimeDeps *commerceRuntimeDependencies,
+	logger *slog.Logger,
+) (*CommerceWiring, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("commerce configuration: %w", err)
+	}
 	entAdapter, err := commerce.NewEntAdapter(commerce.EntAdapterConfig{
 		Client: entClient,
 		Logger: logger,
@@ -92,59 +114,52 @@ func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnect
 		Logger: logger,
 	})
 
-	// Payment service: uses EntAdapter-backed repositories + PaidTxRunner.
-	testSecrets := map[string]string{
-		"wechat_app_id":  "test-wechat-app-id",
-		"wechat_mch_id":  "test-wechat-mch-id",
-		"wechat_api_key": "test-wechat-api-key",
-		"alipay_app_id":  "test-alipay-app-id",
-	}
-	// Load test RSA public key for WeChat callback signature verification.
-	// In production, this comes from the platform secret manager.
-	if pubKeyPEM, err := os.ReadFile("tmp/test_public_key.pem"); err == nil {
-		testSecrets["wechat_platform_public_key"] = string(pubKeyPEM)
-	} else {
-		logger.Warn("commerce: could not load test public key, WeChat callback verification will fail", "error", err)
-	}
-	secretProvider := &payment.StaticSecretProvider{Secrets: testSecrets}
-	wechatAdapter, _ := wechat.New(wechat.Config{Secrets: secretProvider})
-	alipayAdapter, _ := alipay.New(alipay.Config{Secrets: secretProvider})
-	paymentProviders := map[payment.Provider]payment.ProviderAdapter{
-		payment.ProviderWeChat:  wechatAdapter,
-		payment.ProviderAlipay:  alipayAdapter,
-		payment.ProviderOffline: nil, // offline has no provider adapter
-	}
-	paymentSvc, err := payment.New(payment.Config{
-		Attempts:  paymentAttemptRepoAdapter{entAdapter},
-		Facts:     paymentFactRepoAdapter{entAdapter},
-		Orders:    fulfillmentOrderAdapter{entAdapter},
-		TxRunner:  &entPaidTxRunner{adapter: entAdapter},
-		Providers: paymentProviders,
-		Logger:    logger,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("payment service: %w", err)
-	}
+	paymentProviders := map[payment.Provider]payment.ProviderAdapter{}
+	refundProviders := map[payment.Provider]refund.ProviderRefunder{}
+	var paymentSvc payment.Service
+	var refundSvc refund.Service
+	var paymentRecovery *payment.Recovery
+	var refundWorker *refundWorkerAdapter
+	if cfg.Enabled {
+		if err := validateAutomaticRefundDependencies(runtimeDeps); err != nil {
+			return nil, err
+		}
+		paymentProviders, refundProviders, err = wirePaymentProviders(cfg, logger)
+		if err != nil {
+			return nil, err
+		}
 
-	// Refund service: uses EntAdapter-backed repository + noop stubs for
-	// external dependencies (fence, reverser, snapshots). These stubs are
-	// safe for offline/manual refund flows; replace with real implementations
-	// for automated provider refunds.
-	refundProviders := map[payment.Provider]refund.ProviderRefunder{
-		payment.ProviderOffline: noopProviderRefunder{name: payment.ProviderOffline},
-	}
-	refundSvc, err := refund.New(refund.Config{
-		Repo:      refundRepoAdapter{entAdapter},
-		Orders:    refundOrderReader{entAdapter},
-		Wallet:    refundWalletAdapter{entAdapter},
-		Fence:     noopFenceClient{},
-		Reverser:  noopCreditReverser{},
-		Providers: refundProviders,
-		Snapshots: noopSnapshotPublisher{},
-		Logger:    logger,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("refund service: %w", err)
+		if len(paymentProviders) > 0 {
+			attemptRepo := paymentAttemptRepoAdapter{entAdapter}
+			paymentSvc, err = payment.New(payment.Config{
+				Attempts:  attemptRepo,
+				Facts:     paymentFactRepoAdapter{entAdapter},
+				Orders:    fulfillmentOrderAdapter{entAdapter},
+				TxRunner:  &entPaidTxRunner{adapter: entAdapter},
+				Providers: paymentProviders,
+				Logger:    logger,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("payment service: %w", err)
+			}
+			paymentRecovery = payment.NewRecovery(attemptRepo, paymentSvc, cfg.Payment.PendingStaleAfter)
+
+			refundSvc, err = refund.New(refund.Config{
+				Repo:             refundRepoAdapter{entAdapter},
+				Orders:           refundOrderReader{entAdapter},
+				Wallet:           refundWalletAdapter{entAdapter},
+				Fence:            runtimeDeps.RefundFence,
+				Reverser:         runtimeDeps.RefundCreditReverser,
+				Providers:        refundProviders,
+				ProviderResolver: paymentProviderResolverAdapter{entAdapter},
+				Snapshots:        runtimeDeps.RefundSnapshotPublisher,
+				Logger:           logger,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("refund service: %w", err)
+			}
+			refundWorker = &refundWorkerAdapter{svc: refundSvc, repo: entAdapter}
+		}
 	}
 
 	// Namespace resolver backed by the static default namespace.
@@ -166,15 +181,25 @@ func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnect
 	}
 
 	handler := commercehandler.New(resolveNamespace, svc)
+	wiring := &CommerceWiring{
+		Handler: handler, Catalog: catalogSvc,
+		paymentProviders: paymentProviders, refundProviders: refundProviders,
+	}
+	if !cfg.Enabled {
+		return wiring, nil
+	}
 
 	// Build the worker manager with runners backed by real domain services.
-	// Fulfillment and reconciliation runners are wired now. Payment/refund/
-	// enterprise runners are omitted until their services are wired.
+	// Payment and refund runners are registered only when at least one payment
+	// channel was configured and the complete refund dependency bundle passed
+	// validation above.
 	reconWrapper := &reconWorkerAdapter{checker: reconChecker}
-	leaseWrapper := &leaseRecoveryAdapter{}
+	leaseWrapper := &leaseRecoveryAdapter{repo: entAdapter, namespace: defaultNamespace}
 	workerMgr, err := worker.RegisterCommerceWorkers(worker.CommerceWorkerDeps{
 		Namespace:      defaultNamespace,
 		Fulfillment:    &fulfillmentWorkerAdapter{svc: fulfillmentSvc},
+		Payment:        paymentRecovery,
+		Refund:         refundWorker,
 		Reconciliation: reconWrapper,
 		LeaseRecovery:  leaseWrapper,
 		Logger:         logger,
@@ -183,11 +208,104 @@ func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnect
 		return nil, err
 	}
 
-	return &CommerceWiring{
-		Handler:       handler,
-		WorkerManager: workerMgr,
-		Catalog:       catalogSvc,
-	}, nil
+	wiring.WorkerManager = workerMgr
+	return wiring, nil
+}
+
+func wirePaymentProviders(cfg config.CommerceConfiguration, logger *slog.Logger) (map[payment.Provider]payment.ProviderAdapter, map[payment.Provider]refund.ProviderRefunder, error) {
+	paymentProviders := map[payment.Provider]payment.ProviderAdapter{}
+	refundProviders := map[payment.Provider]refund.ProviderRefunder{}
+	secretPaths := map[string]string{}
+	if cfg.Payment.WeChat.Enabled {
+		secretPaths[wechat.SecretKeyMerchantPrivateKey] = cfg.Payment.WeChat.MerchantPrivateKeyFile
+		secretPaths[wechat.SecretKeyAPIv3] = cfg.Payment.WeChat.APIv3KeyFile
+		for serial, path := range cfg.Payment.WeChat.PlatformPublicKeyFiles {
+			secretPaths[wechat.PlatformPublicKeySecret(serial)] = path
+		}
+	}
+	if cfg.Payment.Alipay.Enabled {
+		secretPaths[alipay.SecretKeyAppPrivateKey] = cfg.Payment.Alipay.AppPrivateKeyFile
+		secretPaths[alipay.SecretKeyAlipayPublicKey] = cfg.Payment.Alipay.AlipayPublicKeyFile
+	}
+	if len(secretPaths) == 0 {
+		return paymentProviders, refundProviders, nil
+	}
+
+	secretProvider, err := payment.NewFileSecretProvider(secretPaths)
+	if err != nil {
+		return nil, nil, fmt.Errorf("commerce payment secrets: %w", err)
+	}
+	if cfg.Payment.WeChat.Enabled {
+		adapter, err := wechat.New(wechat.Config{
+			Secrets: secretProvider, Client: &http.Client{Timeout: cfg.Payment.HTTPTimeout},
+			BaseURL: cfg.Payment.WeChat.BaseURL, AppID: cfg.Payment.WeChat.AppID,
+			MerchantID: cfg.Payment.WeChat.MerchantID, MerchantSerial: cfg.Payment.WeChat.MerchantSerial,
+			NotifyURL: cfg.Payment.WeChat.NotifyURL, RefundNotifyURL: cfg.Payment.WeChat.RefundNotifyURL,
+			Now: time.Now, CallbackMaxAge: cfg.Payment.WeChat.CallbackMaxAge,
+			MaxResponseBytes: cfg.Payment.MaxResponseBytes, Logger: logger,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("commerce WeChat adapter: %w", err)
+		}
+		paymentProviders[payment.ProviderWeChat] = adapter
+		refundProviders[payment.ProviderWeChat] = adapter
+	}
+	if cfg.Payment.Alipay.Enabled {
+		adapter, err := alipay.New(alipay.Config{
+			Secrets: secretProvider, Client: &http.Client{Timeout: cfg.Payment.HTTPTimeout},
+			GatewayURL: cfg.Payment.Alipay.GatewayURL, AppID: cfg.Payment.Alipay.AppID,
+			SellerID: cfg.Payment.Alipay.SellerID, NotifyURL: cfg.Payment.Alipay.NotifyURL,
+			Now: time.Now, MaxResponseBytes: cfg.Payment.MaxResponseBytes, Logger: logger,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("commerce Alipay adapter: %w", err)
+		}
+		paymentProviders[payment.ProviderAlipay] = adapter
+		refundProviders[payment.ProviderAlipay] = adapter
+	}
+
+	return paymentProviders, refundProviders, nil
+}
+
+func validateAutomaticRefundDependencies(deps *commerceRuntimeDependencies) error {
+	var fence refund.FenceClient
+	var reverser refund.CreditReverser
+	var publisher refund.SnapshotPublisher
+	if deps != nil {
+		fence = deps.RefundFence
+		reverser = deps.RefundCreditReverser
+		publisher = deps.RefundSnapshotPublisher
+	}
+	for _, dependency := range []struct {
+		name  string
+		value any
+	}{
+		{name: "refund fence", value: fence},
+		{name: "credit reverser", value: reverser},
+		{name: "snapshot publisher", value: publisher},
+	} {
+		if unavailableCommerceDependency(dependency.value) {
+			return fmt.Errorf("commerce automatic refund disabled: real %s is required", dependency.name)
+		}
+	}
+	return nil
+}
+
+func unavailableCommerceDependency(value any) bool {
+	if value == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		if reflected.IsNil() {
+			return true
+		}
+	}
+	if marker, ok := value.(interface{ IsNoop() bool }); ok {
+		return marker.IsNoop()
+	}
+	return false
 }
 
 // ---------------------------------------------------------------------------
@@ -209,8 +327,36 @@ func (a *fulfillmentWorkerAdapter) ProcessPending(ctx context.Context, namespace
 	return a.svc.ProcessPending(ctx, namespace, limit)
 }
 
+// refundWorkerAdapter exposes the refund service through the worker's narrow
+// batch boundary. ProcessOne deliberately returns the service error unchanged.
+type refundWorkerAdapter struct {
+	svc  refundProcessService
+	repo *commerce.EntAdapter
+}
+
+type refundProcessService interface {
+	ProcessOne(ctx context.Context, namespace, refundID string) (*refund.RefundRequest, error)
+}
+
+func (a *refundWorkerAdapter) ListProviderProcessing(ctx context.Context, namespace string) ([]string, error) {
+	refunds, err := a.repo.ListProviderProcessingRefundRequests(ctx, namespace, 100)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, len(refunds))
+	for i, item := range refunds {
+		ids[i] = item.ID
+	}
+	return ids, nil
+}
+
+func (a *refundWorkerAdapter) ProcessOne(ctx context.Context, namespace, refundID string) error {
+	_, err := a.svc.ProcessOne(ctx, namespace, refundID)
+	return err
+}
+
 // reconWorkerAdapter bridges reconciliation.Checker to the worker's reconRunner
-// interface. Run returns the number of findings (errors are never fatal).
+// interface. Run returns the number of findings produced by the checker.
 type reconWorkerAdapter struct {
 	checker *reconciliation.Checker
 }
@@ -222,12 +368,13 @@ func (a *reconWorkerAdapter) Run(ctx context.Context, namespace string) (int, er
 
 // leaseRecoveryAdapter bridges the fulfillment Repository's lease recovery
 // to the worker's LeaseRecoverer interface.
-type leaseRecoveryAdapter struct{}
+type leaseRecoveryAdapter struct {
+	repo      *commerce.EntAdapter
+	namespace string
+}
 
-func (leaseRecoveryAdapter) RecoverExpiredLeases(_ context.Context) (int, error) {
-	// The EntAdapter does not yet implement lease recovery queries.
-	// Returning 0 is safe — no stale leases to reclaim.
-	return 0, nil
+func (a leaseRecoveryAdapter) RecoverExpiredLeases(ctx context.Context) (int, error) {
+	return a.repo.RecoverExpiredFulfillmentLeases(ctx, a.namespace, fulfillment.ProcessingLeaseTimeout)
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +514,18 @@ func (a paymentAttemptRepoAdapter) GetAttemptByProviderOrder(ctx context.Context
 	return mapWireToPaymentAttempt(w), nil
 }
 
+func (a paymentAttemptRepoAdapter) ListStalePendingAttempts(ctx context.Context, namespace string, cutoff time.Time, limit int) ([]payment.PaymentAttempt, error) {
+	wires, err := a.EntAdapter.ListStalePendingPaymentAttempts(ctx, namespace, cutoff, limit)
+	if err != nil {
+		return nil, err
+	}
+	attempts := make([]payment.PaymentAttempt, len(wires))
+	for i := range wires {
+		attempts[i] = *mapWireToPaymentAttempt(&wires[i])
+	}
+	return attempts, nil
+}
+
 func (a paymentAttemptRepoAdapter) UpdateAttemptStatus(ctx context.Context, namespace, id string, expectedFrom, to payment.AttemptStatus) (*payment.PaymentAttempt, error) {
 	w, err := a.EntAdapter.UpdatePaymentAttemptStatus(ctx, namespace, id, string(expectedFrom), string(to))
 	if err != nil {
@@ -402,6 +561,18 @@ func mapWireToPaymentAttempt(w *commerce.PaymentAttemptWire) *payment.PaymentAtt
 		CreatedAt:             w.CreatedAt,
 		UpdatedAt:             w.UpdatedAt,
 	}
+}
+
+type paymentProviderResolverAdapter struct {
+	*commerce.EntAdapter
+}
+
+func (a paymentProviderResolverAdapter) ResolveProviderForOrder(ctx context.Context, namespace, orderID string) (payment.Provider, error) {
+	provider, err := a.EntAdapter.ResolvePaymentProviderForOrder(ctx, namespace, orderID)
+	if err != nil {
+		return "", err
+	}
+	return payment.Provider(provider), nil
 }
 
 // ---------------------------------------------------------------------------
@@ -733,71 +904,6 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 		GrantID: created.ID,
 		Credits: int64(created.Amount),
 	}, nil
-}
-
-// ---------------------------------------------------------------------------
-// Refund noop stubs (external dependencies)
-// ---------------------------------------------------------------------------
-
-// noopFenceClient is a stub FenceClient. It always succeeds without actually
-// establishing a fence. Replace with a real WeKnora fence API client.
-type noopFenceClient struct{}
-
-func (noopFenceClient) EstablishFence(_ context.Context, _, _ string) (refund.FenceResult, error) {
-	return refund.FenceResult{Sequence: "noop", Established: true}, nil
-}
-func (noopFenceClient) ReleaseFence(_ context.Context, _, _, _ string) error { return nil }
-func (noopFenceClient) ConfirmSnapshotApplied(_ context.Context, _, _, _ string) (bool, error) {
-	return true, nil
-}
-
-// noopCreditReverser is a stub CreditReverser. Replace with a real credit
-// ledger reversal implementation.
-type noopCreditReverser struct{}
-
-func (noopCreditReverser) ReverseCredits(_ context.Context, in refund.ReverseCreditsInput) (refund.ReverseCreditsResult, error) {
-	return refund.ReverseCreditsResult{
-		LedgerEntryID: "noop-reversal",
-		Credits:       in.Credits,
-	}, nil
-}
-
-// noopSnapshotPublisher is a stub SnapshotPublisher.
-type noopSnapshotPublisher struct{}
-
-func (noopSnapshotPublisher) PublishSnapshot(_ context.Context, _ refund.PublishSnapshotInput) (string, error) {
-	return "noop-snapshot-v1", nil
-}
-
-// noopProviderRefunder is a stub for provider refund operations.
-type noopProviderRefunder struct {
-	name payment.Provider
-}
-
-func (n noopProviderRefunder) Refund(_ context.Context, input payment.RefundInput) (payment.RefundSubmission, error) {
-	return payment.RefundSubmission{
-		Provider:         n.name,
-		ProviderRefundID: "offline-refund-" + input.IdempotencyKey,
-		Status:           "succeeded",
-	}, nil
-}
-func (n noopProviderRefunder) QueryRefund(_ context.Context, _ string) (payment.RefundFact, error) {
-	return payment.RefundFact{
-		Provider: n.name,
-		Success:  true,
-	}, nil
-}
-func (n noopProviderRefunder) Name() payment.Provider { return n.name }
-
-// noopProviderResolver resolves the provider from a refund's stored provider name.
-type noopProviderResolver struct {
-	adapter *commerce.EntAdapter
-}
-
-func (r noopProviderResolver) ResolveProviderForOrder(ctx context.Context, namespace, orderID string) (payment.Provider, error) {
-	// Try to find the order's payment attempt to determine the provider.
-	// For now, return offline as the default.
-	return payment.ProviderOffline, nil
 }
 
 // ---------------------------------------------------------------------------

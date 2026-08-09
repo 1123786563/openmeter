@@ -1,6 +1,7 @@
 package wechat
 
 import (
+	"context"
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
@@ -26,6 +27,12 @@ import (
 
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
 
 const (
 	testAPIv3Key = "0123456789abcdef0123456789abcdef"
@@ -309,14 +316,15 @@ func TestVerifyEncryptedCallbackRejectsPaymentIdentityAndMoneyMismatch(t *testin
 func TestQueryPaymentUsesOutTradeNumberAndMapsOnlySuccess(t *testing.T) {
 	keys := newTestKeys(t)
 	states := []struct {
-		state   string
-		success bool
+		state    string
+		success  bool
+		terminal bool
 	}{
-		{state: "SUCCESS", success: true},
+		{state: "SUCCESS", success: true, terminal: true},
 		{state: "NOTPAY"},
 		{state: "USERPAYING"},
-		{state: "CLOSED"},
-		{state: "PAYERROR"},
+		{state: "CLOSED", terminal: true},
+		{state: "PAYERROR", terminal: true},
 	}
 	for _, tt := range states {
 		t.Run(tt.state, func(t *testing.T) {
@@ -332,6 +340,8 @@ func TestQueryPaymentUsesOutTradeNumberAndMapsOnlySuccess(t *testing.T) {
 			fact, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "ORDER/1")
 			require.NoError(t, err)
 			require.Equal(t, tt.success, fact.Success)
+			require.Equal(t, tt.terminal, fact.Terminal)
+			require.Empty(t, fact.ProviderEventID)
 			require.Equal(t, "ORDER/1", fact.ProviderOrderID)
 			require.Equal(t, int64(10000), fact.AmountMinor)
 		})
@@ -346,6 +356,33 @@ func TestQueryPaymentRejectsMismatchedProviderOrder(t *testing.T) {
 	defer server.Close()
 	_, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "01ORDER")
 	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestQueryPaymentRejectsMissingRequiredTransactionFields(t *testing.T) {
+	keys := newTestKeys(t)
+	for _, tt := range []struct {
+		name string
+		body string
+	}{
+		{
+			name: "successful transaction ID",
+			body: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","trade_state":"SUCCESS","amount":{"total":10000,"currency":"CNY"}}`,
+		},
+		{
+			name: "known trade state",
+			body: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4200000001","trade_state":"UNKNOWN","amount":{"total":10000,"currency":"CNY"}}`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, tt.body)
+			}))
+			defer server.Close()
+
+			_, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "01ORDER")
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
 }
 
 func TestRefundAndQueryRefund(t *testing.T) {
@@ -564,9 +601,10 @@ func TestAPIResponseBodyLimit(t *testing.T) {
 
 func TestIdentity(t *testing.T) {
 	keys := newTestKeys(t)
-	merchantID, applicationID := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).Identity()
-	require.Equal(t, "wx-mch", merchantID)
-	require.Equal(t, "wx-app", applicationID)
+	identity, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).Identity(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, "wx-mch", identity.MerchantID)
+	require.Equal(t, "wx-app", identity.ApplicationID)
 }
 
 func TestPlatformPublicKeySecretTrimsSerial(t *testing.T) {
@@ -609,6 +647,63 @@ func TestNewRequiresProductionDependencies(t *testing.T) {
 			require.Error(t, err)
 		})
 	}
+}
+
+func TestProviderErrorsExposeRetryClassification(t *testing.T) {
+	keys := newTestKeys(t)
+	for _, tt := range []struct {
+		name       string
+		statusCode int
+		code       string
+		kind       payment.ProviderErrorKind
+		marker     error
+	}{
+		{name: "HTTP 503", statusCode: http.StatusServiceUnavailable, code: "SYSTEM_ERROR", kind: payment.ProviderErrorRetryable, marker: payment.ErrRetryableProvider},
+		{name: "HTTP 429", statusCode: http.StatusTooManyRequests, code: "FREQUENCY_LIMITED", kind: payment.ProviderErrorRetryable, marker: payment.ErrRetryableProvider},
+		{name: "HTTP 400", statusCode: http.StatusBadRequest, code: "PARAM_ERROR", kind: payment.ProviderErrorPermanent, marker: payment.ErrPermanentProviderProtocol},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.statusCode)
+				_, err := io.WriteString(w, fmt.Sprintf(`{"code":%q,"message":"sensitive-response-body-marker"}`, tt.code))
+				require.NoError(t, err)
+			}))
+			defer server.Close()
+
+			_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+				OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+			})
+			require.ErrorIs(t, err, tt.marker)
+			require.NotContains(t, err.Error(), "sensitive-response-body-marker")
+			var providerErr *payment.ProviderError
+			require.ErrorAs(t, err, &providerErr)
+			require.Equal(t, payment.ProviderWeChat, providerErr.Provider)
+			require.Equal(t, "POST /v3/pay/transactions/native", providerErr.Operation)
+			require.Equal(t, tt.kind, providerErr.Kind)
+			require.Equal(t, tt.statusCode, providerErr.HTTPStatus)
+			require.Equal(t, tt.code, providerErr.Code)
+		})
+	}
+}
+
+func TestProviderTransportTimeoutIsRetryableAndPreservesCause(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys)
+	adapter.httpClient = &http.Client{
+		Timeout: time.Second,
+		Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("transport timeout: %w", context.DeadlineExceeded)
+		}),
+	}
+
+	_, err := adapter.CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrRetryableProvider)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	var providerErr *payment.ProviderError
+	require.ErrorAs(t, err, &providerErr)
+	require.Equal(t, payment.ProviderErrorRetryable, providerErr.Kind)
 }
 
 func TestRequestCanonicalURLPreservesEncodedPathAndQuery(t *testing.T) {
