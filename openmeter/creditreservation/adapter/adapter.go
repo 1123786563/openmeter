@@ -48,6 +48,8 @@ type TxAdapter interface {
 	GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error)
 	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference, featureKey string) (int64, error)
 	HasActiveRefundFence(ctx context.Context) (bool, error)
+	EstablishRefundFence(ctx context.Context, refundID string) (creditreservation.FenceResult, error)
+	ReleaseRefundFence(ctx context.Context, refundID, sequence string) error
 	CreateReservation(ctx context.Context, input CreateReservationInput) (creditreservation.Reservation, bool, error)
 	UpdateReservation(ctx context.Context, input UpdateReservationInput) (creditreservation.Reservation, error)
 	CreateCharge(ctx context.Context, input CreateChargeInput) (creditreservation.Charge, bool, error)

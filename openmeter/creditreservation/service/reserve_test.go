@@ -69,6 +69,35 @@ func TestReserveFencePreventsRowCreation(t *testing.T) {
 	require.Zero(t, store.reservationCount())
 }
 
+func TestEstablishedFenceBlocksConcurrentReserveWithStableSequence(t *testing.T) {
+	svc, store := newReserveService(t, 10, nil, 10)
+	ready := make(chan creditreservation.FenceResult, 1)
+	go func() {
+		_ = store.WithCustomerLock(context.Background(), customer.CustomerID{Namespace: "ns", ID: "customer"}, func(tx reservationadapter.TxAdapter) error {
+			fence, err := tx.EstablishRefundFence(context.Background(), "refund-1")
+			ready <- fence
+			return err
+		})
+	}()
+	first := <-ready
+	second, err := establishMemoryFence(store)
+	require.NoError(t, err)
+	require.Equal(t, first.Sequence, second.Sequence)
+	_, err = svc.Reserve(t.Context(), reserveInput("call-after-established-fence"))
+	require.ErrorIs(t, err, creditreservation.ErrCustomerFenced)
+	require.Zero(t, store.reservationCount())
+}
+
+func establishMemoryFence(store *memoryAdapter) (creditreservation.FenceResult, error) {
+	var result creditreservation.FenceResult
+	err := store.WithCustomerLock(context.Background(), customer.CustomerID{Namespace: "ns", ID: "customer"}, func(tx reservationadapter.TxAdapter) error {
+		var err error
+		result, err = tx.EstablishRefundFence(context.Background(), "refund-1")
+		return err
+	})
+	return result, err
+}
+
 func TestLifecycleExecuteUnknownReleaseAndSweep(t *testing.T) {
 	svc, store := newReserveService(t, 30, nil, 10)
 	reserved, err := svc.Reserve(t.Context(), reserveInput("call-life"))
@@ -131,10 +160,11 @@ func (l fixedLimit) Remaining(context.Context, creditlimit.RemainingInput) (*dec
 }
 
 type memoryAdapter struct {
-	mu     sync.Mutex
-	rows   map[string]creditreservation.Reservation
-	fenced bool
-	outbox int
+	mu       sync.Mutex
+	rows     map[string]creditreservation.Reservation
+	fenced   bool
+	sequence string
+	outbox   int
 }
 
 func (m *memoryAdapter) WithCustomerLock(ctx context.Context, _ customer.CustomerID, fn func(reservationadapter.TxAdapter) error) error {
@@ -195,6 +225,20 @@ func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyRefe
 	return held, nil
 }
 func (t memoryTx) HasActiveRefundFence(context.Context) (bool, error) { return t.m.fenced, nil }
+func (t memoryTx) EstablishRefundFence(context.Context, string) (creditreservation.FenceResult, error) {
+	if t.m.sequence == "" {
+		t.m.sequence = "fence-1"
+	}
+	t.m.fenced = true
+	return creditreservation.FenceResult{Sequence: t.m.sequence, Established: true}, nil
+}
+func (t memoryTx) ReleaseRefundFence(_ context.Context, _ string, sequence string) error {
+	if sequence != t.m.sequence {
+		return creditreservation.ErrFenceSequenceConflict
+	}
+	t.m.fenced = false
+	return nil
+}
 func (t memoryTx) CreateReservation(_ context.Context, input reservationadapter.CreateReservationInput) (creditreservation.Reservation, bool, error) {
 	if row, ok := t.m.rows[input.Reservation.ID]; ok {
 		return row, false, nil

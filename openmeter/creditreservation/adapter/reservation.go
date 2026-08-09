@@ -7,6 +7,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
@@ -33,6 +35,48 @@ type CreateReservationInput struct {
 	ExecutionDeadline *time.Time
 	HoldLedgerGroupID string
 	UsageEventID      string
+}
+
+func (t *txAdapter) EstablishRefundFence(ctx context.Context, refundID string) (creditreservation.FenceResult, error) {
+	row, err := t.db.RefundRequest.Query().Where(
+		refundrequest.IDEQ(refundID), refundrequest.NamespaceEQ(t.customerID.Namespace), refundrequest.CustomerIDEQ(t.customerID.ID),
+		refundrequest.StatusIn(refundrequest.StatusPendingFence, refundrequest.StatusProviderProcessing, refundrequest.StatusLedgerReversing),
+	).ForUpdate().Only(ctx)
+	if entdb.IsNotFound(err) {
+		return creditreservation.FenceResult{}, creditreservation.ErrRefundFenceNotFound
+	}
+	if err != nil {
+		return creditreservation.FenceResult{}, fmt.Errorf("lock refund fence: %w", err)
+	}
+	sequence := row.FenceSequence
+	if sequence == "" {
+		sequence = ulid.Make().String()
+		if _, err := t.db.RefundRequest.UpdateOneID(row.ID).SetFenceSequence(sequence).Save(ctx); err != nil {
+			return creditreservation.FenceResult{}, fmt.Errorf("set refund fence sequence: %w", err)
+		}
+	}
+	blocking, err := t.db.CreditReservation.Query().Where(
+		dbcreditreservation.NamespaceEQ(t.customerID.Namespace), dbcreditreservation.CustomerIDEQ(t.customerID.ID),
+		dbcreditreservation.StateIn(string(creditreservation.ReservationStateActive), string(creditreservation.ReservationStateExecuting), string(creditreservation.ReservationStateUnknown), string(creditreservation.ReservationStateManualReview)),
+	).Exist(ctx)
+	if err != nil {
+		return creditreservation.FenceResult{}, fmt.Errorf("check active reservations for refund fence: %w", err)
+	}
+	return creditreservation.FenceResult{Sequence: sequence, Established: !blocking}, nil
+}
+
+func (t *txAdapter) ReleaseRefundFence(ctx context.Context, refundID, sequence string) error {
+	row, err := t.db.RefundRequest.Query().Where(refundrequest.IDEQ(refundID), refundrequest.NamespaceEQ(t.customerID.Namespace), refundrequest.CustomerIDEQ(t.customerID.ID)).ForUpdate().Only(ctx)
+	if entdb.IsNotFound(err) {
+		return creditreservation.ErrRefundFenceNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock refund fence for release: %w", err)
+	}
+	if row.FenceSequence != sequence {
+		return creditreservation.ErrFenceSequenceConflict
+	}
+	return nil
 }
 
 func (t *txAdapter) GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {

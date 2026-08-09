@@ -18,4 +18,6 @@ var (
 	ErrTransitionEvidenceRequired = errors.New("transition evidence is required")
 	ErrInsufficientFunds          = errors.New("insufficient credit funds")
 	ErrCustomerFenced             = errors.New("customer credit reservations are fenced")
+	ErrRefundFenceNotFound        = errors.New("active refund fence not found")
+	ErrFenceSequenceConflict      = errors.New("refund fence sequence conflict")
 )

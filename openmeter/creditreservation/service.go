@@ -64,6 +64,11 @@ type SweepResult struct {
 	Unknown int
 }
 
+type FenceResult struct {
+	Sequence    string
+	Established bool
+}
+
 // Service owns only the synchronous authorization lifecycle. Settlement and
 // ledger posting are deliberately added by the settlement service, keeping a
 // temporary hold from becoming a balance projection.
