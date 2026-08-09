@@ -16,4 +16,6 @@ var (
 	ErrInvalidCommandIdentity     = errors.New("valid idempotency key and payload hash are required")
 	ErrIdempotencyConflict        = errors.New("credit reservation idempotency conflict")
 	ErrTransitionEvidenceRequired = errors.New("transition evidence is required")
+	ErrInsufficientFunds          = errors.New("insufficient credit funds")
+	ErrCustomerFenced             = errors.New("customer credit reservations are fenced")
 )
