@@ -18,6 +18,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	api "github.com/openmeterio/openmeter/api/v3"
@@ -344,6 +345,10 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
 		}
+		if body.Plan != nil && body.RechargeProductId != nil && *body.RechargeProductId != "" {
+			writeStatus(ctx, w, http.StatusBadRequest, errors.New("plan and recharge_product_id cannot be provided together"))
+			return
+		}
 		input := commerce.CreateOrderInput{
 			Namespace:      ns,
 			CustomerID:     body.BillingCustomerId,
@@ -351,8 +356,53 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 			IdempotencyKey: body.IdempotencyKey,
 			Currency:       body.Currency,
 		}
-		if body.RechargeProductId != nil && *body.RechargeProductId != "" {
+		switch input.Kind {
+		case commerce.OrderKindPlanPurchase, commerce.OrderKindSubscriptionRenewal:
+			if body.Plan == nil {
+				writeStatus(ctx, w, http.StatusBadRequest, errors.New("plan is required for plan orders"))
+				return
+			}
+			sku, err := planSKU(*body.Plan)
+			if err != nil {
+				writeStatus(ctx, w, http.StatusBadRequest, err)
+				return
+			}
+			var product *commerce.Product
+			if body.Plan.PlanId != "" {
+				product, err = h.svc.Catalog.GetProduct(ctx, ns, body.Plan.PlanId)
+				if err != nil {
+					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid plan_id: %w", err))
+					return
+				}
+				if !strings.EqualFold(strings.TrimSpace(product.SKU), sku) {
+					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("plan_id does not match plan SKU %s", sku))
+					return
+				}
+			} else {
+				product, err = h.svc.Catalog.GetProductBySKU(ctx, ns, sku)
+				if err != nil {
+					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("unknown plan %s: %w", sku, err))
+					return
+				}
+			}
+			expectedKind := commerce.ProductKindPlanPurchase
+			if input.Kind == commerce.OrderKindSubscriptionRenewal {
+				expectedKind = commerce.ProductKindSubscriptionRenewal
+			}
+			if product.Kind != expectedKind {
+				writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("plan product kind %s does not match order kind %s", product.Kind, input.Kind))
+				return
+			}
+			input.ProductIDs = []string{product.ID}
+		case commerce.OrderKindWalletTopUp:
+			if body.RechargeProductId == nil || *body.RechargeProductId == "" {
+				writeStatus(ctx, w, http.StatusBadRequest, errors.New("recharge_product_id is required for wallet_top_up orders"))
+				return
+			}
 			input.ProductIDs = []string{*body.RechargeProductId}
+		default:
+			writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid order kind: %s", input.Kind))
+			return
 		}
 		order, created, err := h.svc.Orders.CreateOrder(ctx, input)
 		if err != nil {
@@ -365,6 +415,15 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 		}
 		writeJSON(ctx, w, status, toAPIOrder(order))
 	}
+}
+
+func planSKU(ref api.CommercePlanRef) (string, error) {
+	key := strings.ToUpper(strings.TrimSpace(ref.PlanKey))
+	version := strings.ToUpper(strings.TrimSpace(ref.PlanVersion))
+	if key == "" || version == "" {
+		return "", errors.New("plan_key and plan_version are required")
+	}
+	return "PLAN-" + key + "-" + version, nil
 }
 
 func (h *handler) GetOrder() http.HandlerFunc {

@@ -14,7 +14,13 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
+	"github.com/openmeterio/openmeter/pkg/models"
 )
+
+func ptrULID(value string) *api.ULID {
+	id := api.ULID(value)
+	return &id
+}
 
 // ---------------------------------------------------------------------------
 // Mock implementations
@@ -30,15 +36,22 @@ func (m *mockWallet) GetWallet(_ context.Context, _, _ string) (*commerce.Wallet
 }
 
 type mockCatalog struct {
-	products []commerce.Product
-	product  *commerce.Product
-	err      error
+	products     []commerce.Product
+	product      *commerce.Product
+	productBySKU *commerce.Product
+	err          error
 }
 
 func (m *mockCatalog) CreateProduct(_ context.Context, _ commerce.CreateProductInput) (*commerce.Product, error) {
 	return m.product, m.err
 }
 func (m *mockCatalog) GetProduct(_ context.Context, _, _ string) (*commerce.Product, error) {
+	return m.product, m.err
+}
+func (m *mockCatalog) GetProductBySKU(_ context.Context, _, _ string) (*commerce.Product, error) {
+	if m.productBySKU != nil {
+		return m.productBySKU, m.err
+	}
 	return m.product, m.err
 }
 func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, _ bool) ([]commerce.Product, error) {
@@ -49,13 +62,15 @@ func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductI
 }
 
 type mockOrders struct {
-	order    *commerce.Order
-	created  bool
-	err      error
-	conflict bool
+	order     *commerce.Order
+	created   bool
+	err       error
+	conflict  bool
+	lastInput commerce.CreateOrderInput
 }
 
-func (m *mockOrders) CreateOrder(_ context.Context, _ commerce.CreateOrderInput) (*commerce.Order, bool, error) {
+func (m *mockOrders) CreateOrder(_ context.Context, input commerce.CreateOrderInput) (*commerce.Order, bool, error) {
+	m.lastInput = input
 	return m.order, m.created, m.err
 }
 func (m *mockOrders) GetOrder(_ context.Context, _, _ string) (*commerce.Order, error) {
@@ -269,6 +284,7 @@ func TestCreateOrder_Success(t *testing.T) {
 		Kind:              api.CommerceOrderKindWalletTopUp,
 		Currency:          "CNY",
 		IdempotencyKey:    "idem-1",
+		RechargeProductId: ptrULID("product-recharge-100"),
 	}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusCreated {
@@ -293,10 +309,68 @@ func TestCreateOrder_IdempotentReplay(t *testing.T) {
 		Kind:              api.CommerceOrderKindWalletTopUp,
 		Currency:          "CNY",
 		IdempotencyKey:    "idem-1",
+		RechargeProductId: ptrULID("product-recharge-100"),
 	}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200 on idempotent replay, got %d", rr.Code)
+	}
+}
+
+func TestCreateOrderResolvesPlanReferenceToCatalogSKU(t *testing.T) {
+	orderService := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1"}, created: true}
+	plan := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindPlanPurchase, AmountMinor: 9900, Currency: "CNY", Active: true}
+	h := testHandler(Services{Catalog: &mockCatalog{productBySKU: plan}, Orders: orderService})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "plan-idem-1",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"},
+	}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := orderService.lastInput.ProductIDs; len(got) != 1 || got[0] != "product-plan-pro-monthly" {
+		t.Fatalf("resolved product IDs = %v, want [product-plan-pro-monthly]", got)
+	}
+}
+
+func TestCreateOrderRejectsUnknownPlan(t *testing.T) {
+	h := testHandler(Services{Catalog: &mockCatalog{err: commerce.ErrProductNotFound}, Orders: &mockOrders{}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-unknown", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "missing", PlanVersion: "monthly"}}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for unknown plan, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrderRejectsMixedProductReference(t *testing.T) {
+	h := testHandler(Services{Catalog: &mockCatalog{}, Orders: &mockOrders{}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "mixed-idem", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"}, RechargeProductId: ptrULID("recharge-1")}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for mixed product references, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrderRejectsWalletTopUpWithoutProduct(t *testing.T) {
+	h := testHandler(Services{Catalog: &mockCatalog{}, Orders: &mockOrders{}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "wallet-missing-product", Kind: api.CommerceOrderKindWalletTopUp, Currency: "CNY"}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for wallet top-up without product, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrderRejectsMismatchedPlanProductKind(t *testing.T) {
+	product := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-wallet"}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindWalletTopUp, AmountMinor: 1000, Currency: "CNY", Active: true}
+	h := testHandler(Services{Catalog: &mockCatalog{productBySKU: product}, Orders: &mockOrders{}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-kind-mismatch", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"}}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for mismatched plan product kind, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 
@@ -527,6 +601,7 @@ func TestCreateOrder_IdempotencyConflict_409(t *testing.T) {
 		Kind:              api.CommerceOrderKindWalletTopUp,
 		Currency:          "CNY",
 		IdempotencyKey:    "idem-conflict",
+		RechargeProductId: ptrULID("product-recharge-100"),
 	}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusConflict {

@@ -85,6 +85,9 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 		if err != nil {
 			return nil, false, fmt.Errorf("order: resolve product %s: %w", pid, err)
 		}
+		if expected := productKindForOrderKind(in.Kind); expected != "" && product.Kind != expected {
+			return nil, false, fmt.Errorf("order: product %s kind %s does not match order kind %s", pid, product.Kind, in.Kind)
+		}
 
 		line := snapshotProduct(*product)
 		lines = append(lines, line)
@@ -125,6 +128,19 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 	}
 
 	return s.repo.CreateOrder(ctx, order)
+}
+
+func productKindForOrderKind(kind commerce.OrderKind) commerce.ProductKind {
+	switch kind {
+	case commerce.OrderKindPlanPurchase:
+		return commerce.ProductKindPlanPurchase
+	case commerce.OrderKindSubscriptionRenewal:
+		return commerce.ProductKindSubscriptionRenewal
+	case commerce.OrderKindWalletTopUp:
+		return commerce.ProductKindWalletTopUp
+	default:
+		return ""
+	}
 }
 
 // GetOrder retrieves an order by namespace and ID.

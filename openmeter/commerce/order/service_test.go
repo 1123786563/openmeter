@@ -171,6 +171,25 @@ func TestCreateOrderIdempotent(t *testing.T) {
 	}
 }
 
+func TestCreateOrderRejectsProductKindMismatch(t *testing.T) {
+	repo := newMockRepo()
+	lookup := &mockProductLookup{products: map[string]*commerce.Product{
+		"p-wallet": makeProduct("p-wallet", "RECHARGE-100", "100 Credits", commerce.ProductKindWalletTopUp, 100, 1000),
+	}}
+	svc := New(Config{Repo: repo, Products: lookup})
+	_, _, err := svc.CreateOrder(context.Background(), commerce.CreateOrderInput{
+		Namespace:      "ns",
+		CustomerID:     "cust",
+		Kind:           commerce.OrderKindPlanPurchase,
+		IdempotencyKey: "kind-mismatch",
+		Currency:       "CNY",
+		ProductIDs:     []string{"p-wallet"},
+	})
+	if err == nil {
+		t.Fatal("expected product kind mismatch error")
+	}
+}
+
 // TestOrderLineSnapshotIsImmutable verifies that editing a product after order
 // creation does not change the order's line snapshot.
 func TestOrderLineSnapshotIsImmutable(t *testing.T) {

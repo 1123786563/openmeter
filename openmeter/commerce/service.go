@@ -23,6 +23,7 @@ type WalletService interface {
 type CatalogService interface {
 	CreateProduct(ctx context.Context, in CreateProductInput) (*Product, error)
 	GetProduct(ctx context.Context, namespace, id string) (*Product, error)
+	GetProductBySKU(ctx context.Context, namespace, sku string) (*Product, error)
 	ListProducts(ctx context.Context, namespace string, kind *ProductKind, activeOnly bool) ([]Product, error)
 	UpdateProduct(ctx context.Context, in UpdateProductInput) (*Product, error)
 }

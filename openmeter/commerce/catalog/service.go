@@ -30,6 +30,7 @@ type Repository interface {
 type Service interface {
 	CreateProduct(ctx context.Context, in commerce.CreateProductInput) (*commerce.Product, error)
 	GetProduct(ctx context.Context, namespace, id string) (*commerce.Product, error)
+	GetProductBySKU(ctx context.Context, namespace, sku string) (*commerce.Product, error)
 	ListProducts(ctx context.Context, namespace string, kind *commerce.ProductKind, activeOnly bool) ([]commerce.Product, error)
 	UpdateProduct(ctx context.Context, in commerce.UpdateProductInput) (*commerce.Product, error)
 }
@@ -98,6 +99,14 @@ func (s *service) GetProduct(ctx context.Context, namespace, id string) (*commer
 		return nil, fmt.Errorf("product id is required")
 	}
 	return s.repo.GetProduct(ctx, namespace, id)
+}
+
+// GetProductBySKU retrieves a product by namespace and SKU.
+func (s *service) GetProductBySKU(ctx context.Context, namespace, sku string) (*commerce.Product, error) {
+	if sku == "" {
+		return nil, fmt.Errorf("product sku is required")
+	}
+	return s.repo.GetProductBySKU(ctx, namespace, sku)
 }
 
 // ListProducts lists products, optionally filtered by kind and active status.
