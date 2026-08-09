@@ -82,10 +82,10 @@ WITH event_candidates AS (
     pf."provider",
     CASE
       WHEN pf."provider" = 'wechat' THEN COALESCE(
-        NULLIF(pf."signed_payload" ->> 'transaction_id', ''),
         NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),
         NULLIF(pf."signed_payload" ->> 'event_id', ''),
-        NULLIF(pf."signed_payload" ->> 'notify_id', '')
+        NULLIF(pf."signed_payload" ->> 'notify_id', ''),
+        NULLIF(pf."signed_payload" ->> 'transaction_id', '')
       )
       ELSE COALESCE(
         NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),

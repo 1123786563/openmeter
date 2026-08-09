@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T) {
+func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFactsAndRollsBack(t *testing.T) {
 	orderID := ulid.Make().String()
 	attemptID := ulid.Make().String()
 	factID := ulid.Make().String()
@@ -122,7 +122,7 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 					require.NoError(t, err)
 					require.Equal(t, "wx-order-1", providerOrderID)
 					require.Equal(t, "wx-payment-1", providerPaymentID.String)
-					require.Equal(t, "wx-payment-1", providerEventID.String)
+					require.Equal(t, "wx-legacy-event-1", providerEventID.String)
 					require.Equal(t, "merchant-1", merchantID.String)
 					require.Equal(t, "application-1", applicationID.String)
 					require.Equal(t, int64(1234), amountMinor)
@@ -166,10 +166,54 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 						) VALUES (
 							$1, 'default', NOW(), 'duplicate-event-raw-hash', 'wechat',
 							'{}'::jsonb, NOW(), $2, 'different-provider-order',
-							'wx-payment-1', 1234, 'CNY', false
+							'wx-legacy-event-1', 1234, 'CNY', false
 						)
 					`, duplicateEventFactID, attemptID)
 					require.Error(t, err, "provider event IDs must be unique per namespace and provider")
+				},
+			},
+			{
+				version:   20260809000300,
+				direction: directionDown,
+				action: func(t *testing.T, db *sql.DB) {
+					var addedColumnCount int
+					err := db.QueryRow(`
+						SELECT count(*)
+						FROM information_schema.columns
+						WHERE table_schema = current_schema()
+						  AND (
+							(table_name = 'payment_attempts' AND column_name IN (
+								'expected_merchant_id',
+								'expected_application_id'
+							))
+							OR
+							(table_name = 'payment_facts' AND column_name IN (
+								'provider_order_id',
+								'provider_payment_id',
+								'provider_event_id',
+								'merchant_id',
+								'application_id',
+								'amount_minor',
+								'currency',
+								'success'
+							))
+						  )
+					`).Scan(&addedColumnCount)
+					require.NoError(t, err)
+					require.Zero(t, addedColumnCount, "down migration must remove all added payment columns")
+
+					var addedIndexCount int
+					err = db.QueryRow(`
+						SELECT count(*)
+						FROM pg_indexes
+						WHERE schemaname = current_schema()
+						  AND indexname IN (
+							'paymentfact_namespace_provider_provider_event_id',
+							'paymentfact_namespace_provider_provider_order_id'
+						  )
+					`).Scan(&addedIndexCount)
+					require.NoError(t, err)
+					require.Zero(t, addedIndexCount, "down migration must remove all added payment indexes")
 				},
 			},
 		},
