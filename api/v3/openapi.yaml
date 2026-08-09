@@ -4372,8 +4372,11 @@ components:
           description: The reason authorization was denied, when `authorized` is `false`.
         canonical_payload:
           type: object
-          additionalProperties: true
-          description: Canonical JSON payload for consumer-side signature verification.
+          additionalProperties: {}
+          description: |-
+            Canonical JSON payload for consumer-side verification. The raw bytes of
+            the canonicalized authorization object, used to derive the SHA-256 hash
+            and verify the signature.
         canonical_sha256:
           type: string
           description: SHA-256 hash of the canonical payload, hex-encoded.

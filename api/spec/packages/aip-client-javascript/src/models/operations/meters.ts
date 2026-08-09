@@ -3,16 +3,7 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type {
-  CreateMeterRequest as CreateMeterRequestBody,
-  ListMetersParamsFilter,
-  Meter,
-  MeterPagePaginatedResponse,
-  MeterQueryRequestInput,
-  MeterQueryResult,
-  SortQueryInput,
-  UpdateMeterRequest as UpdateMeterRequestBody,
-} from '../types.js'
+import type { CreateMeterRequest as CreateMeterRequestBody, ListMetersParamsFilter, Meter, MeterPagePaginatedResponse, MeterQueryRequestInput, MeterQueryResult, SortQueryInput, UpdateMeterRequest as UpdateMeterRequestBody } from '../types.js'
 
 export type CreateMeterRequest = AcceptDateStrings<CreateMeterRequestBody>
 export type CreateMeterResponse = Meter

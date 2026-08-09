@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { listCustomerEntitlementAccess } from '../funcs/entitlements.js'
+import {
+  listCustomerEntitlementAccess,
+} from '../funcs/entitlements.js'
 import type {
   ListCustomerEntitlementAccessRequest,
   ListCustomerEntitlementAccessResponse,
@@ -20,8 +22,6 @@ export class Entitlements {
     request: ListCustomerEntitlementAccessRequest,
     options?: RequestOptions,
   ): Promise<ListCustomerEntitlementAccessResponse> {
-    return unwrap(
-      await listCustomerEntitlementAccess(this._client, request, options),
-    )
+    return unwrap(await listCustomerEntitlementAccess(this._client, request, options))
   }
 }

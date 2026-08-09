@@ -32,12 +32,9 @@ export function listBillingProfiles(
   options?: RequestOptions,
 ): Promise<Result<ListBillingProfilesResponse>> {
   return request(() => {
-    const query = toWire(
-      {
-        page: req.page,
-      },
-      schemas.listBillingProfilesQueryParams,
-    )
+    const query = toWire({
+      page: req.page,
+    }, schemas.listBillingProfilesQueryParams)
     if (client._options.validate) {
       assertValid(schemas.listBillingProfilesQueryParamsWire, query)
     }
@@ -110,12 +107,7 @@ export function getBillingProfile(
     if (client._options.validate) {
       assertValid(schemas.getBillingProfilePathParamsWire, pathParams)
     }
-    const path = `openmeter/profiles/${(() => {
-      if (pathParams.id === undefined) {
-        throw new Error('missing path parameter: id')
-      }
-      return encodeURIComponent(String(pathParams.id))
-    })()}`
+    const path = `openmeter/profiles/${(() => { if (pathParams.id === undefined) { throw new Error('missing path parameter: id') } return encodeURIComponent(String(pathParams.id)) })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -150,12 +142,7 @@ export function updateBillingProfile(
     if (client._options.validate) {
       assertValid(schemas.updateBillingProfilePathParamsWire, pathParams)
     }
-    const path = `openmeter/profiles/${(() => {
-      if (pathParams.id === undefined) {
-        throw new Error('missing path parameter: id')
-      }
-      return encodeURIComponent(String(pathParams.id))
-    })()}`
+    const path = `openmeter/profiles/${(() => { if (pathParams.id === undefined) { throw new Error('missing path parameter: id') } return encodeURIComponent(String(pathParams.id)) })()}`
     const body = toWire(req.body, schemas.updateBillingProfileBody)
     if (client._options.validate) {
       assertValid(schemas.updateBillingProfileBodyWire, body)
@@ -200,12 +187,7 @@ export function deleteBillingProfile(
     if (client._options.validate) {
       assertValid(schemas.deleteBillingProfilePathParamsWire, pathParams)
     }
-    const path = `openmeter/profiles/${(() => {
-      if (pathParams.id === undefined) {
-        throw new Error('missing path parameter: id')
-      }
-      return encodeURIComponent(String(pathParams.id))
-    })()}`
+    const path = `openmeter/profiles/${(() => { if (pathParams.id === undefined) { throw new Error('missing path parameter: id') } return encodeURIComponent(String(pathParams.id)) })()}`
     await http(client).delete(path, options)
   })
 }

@@ -3,13 +3,7 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type {
-  ListLlmCostPricesParamsFilter,
-  LlmCostOverrideCreate,
-  LlmCostPrice,
-  PricePagePaginatedResponse,
-  SortQueryInput,
-} from '../types.js'
+import type { ListLlmCostPricesParamsFilter, LlmCostOverrideCreate, LlmCostPrice, PricePagePaginatedResponse, SortQueryInput } from '../types.js'
 
 export interface ListLlmCostPricesQuery {
   /** Filter prices. */
@@ -45,12 +39,10 @@ export interface ListLlmCostOverridesQuery {
   page?: { size?: number; number?: number }
 }
 
-export type ListLlmCostOverridesRequest =
-  AcceptDateStrings<ListLlmCostOverridesQuery>
+export type ListLlmCostOverridesRequest = AcceptDateStrings<ListLlmCostOverridesQuery>
 export type ListLlmCostOverridesResponse = PricePagePaginatedResponse
 
-export type CreateLlmCostOverrideRequest =
-  AcceptDateStrings<LlmCostOverrideCreate>
+export type CreateLlmCostOverrideRequest = AcceptDateStrings<LlmCostOverrideCreate>
 export type CreateLlmCostOverrideResponse = LlmCostPrice
 
 export type DeleteLlmCostOverrideRequest = {

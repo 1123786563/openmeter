@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -771,6 +772,14 @@ func TestWechatCallback_NilPayment_501(t *testing.T) {
 func TestPaymentCallback_TxRunnerError_500(t *testing.T) {
 	h := testHandler(Services{
 		Payment: &mockPayment{err: errors.New("paid TxRunner: database connection lost")},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
+}
+
+func TestPaymentCallback_WrappedContextCanceledTransientError_500(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled)},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
 	requireProblemResponse(t, rr, http.StatusInternalServerError)

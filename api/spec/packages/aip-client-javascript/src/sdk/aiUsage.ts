@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginateCursor } from '../lib/paginate.js'
+import {
+  paginateCursor,
+} from '../lib/paginate.js'
 import {
   createAiUsageBatch,
   getAiUsageBatch,
@@ -22,7 +24,9 @@ import type {
   ListAiUsageCreditTransactionsRequest,
   ListAiUsageCreditTransactionsResponse,
 } from '../models/operations/aiUsage.js'
-import type { AiUsageCreditTransaction } from '../models/types.js'
+import type {
+  AiUsageCreditTransaction,
+} from '../models/types.js'
 
 export class AIUsage {
   constructor(private readonly _client: Client) {}
@@ -74,9 +78,7 @@ export class AIUsage {
     request: GetCustomerRuntimeAuthorizationRequest,
     options?: RequestOptions,
   ): Promise<GetCustomerRuntimeAuthorizationResponse> {
-    return unwrap(
-      await getCustomerRuntimeAuthorization(this._client, request, options),
-    )
+    return unwrap(await getCustomerRuntimeAuthorization(this._client, request, options))
   }
 
   /**
@@ -106,9 +108,7 @@ export class AIUsage {
     request: ListAiUsageCreditTransactionsRequest,
     options?: RequestOptions,
   ): Promise<ListAiUsageCreditTransactionsResponse> {
-    return unwrap(
-      await listAiUsageCreditTransactions(this._client, request, options),
-    )
+    return unwrap(await listAiUsageCreditTransactions(this._client, request, options))
   }
 
   /**

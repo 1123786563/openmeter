@@ -582,11 +582,19 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 			}
 			// Database, transaction, timeout, and unknown errors are transient.
 			// Return 500 so the provider retries the callback.
-			writeStatus(ctx, w, http.StatusInternalServerError, cbErr)
+			writeCallbackRetryableError(ctx, w)
 			return
 		}
 		writeCallbackSuccess(w, provider)
 	}
+}
+
+// writeCallbackRetryableError preserves a retryable 500 response for payment
+// providers. It intentionally does not pass the callback error to
+// NewStatusProblem: its global context-cancellation mapping is appropriate for
+// ordinary request clients, but providers must retry transient callback errors.
+func writeCallbackRetryableError(ctx context.Context, w http.ResponseWriter) {
+	models.NewStatusProblem(ctx, nil, http.StatusInternalServerError).Respond(w)
 }
 
 func writeCallbackSuccess(w http.ResponseWriter, provider payment.Provider) {

@@ -75,12 +75,7 @@ export function getAiUsageBatch(
     if (client._options.validate) {
       assertValid(schemas.getAiUsageBatchPathParamsWire, pathParams)
     }
-    const path = `ai-usage-batches/${(() => {
-      if (pathParams.batchId === undefined) {
-        throw new Error('missing path parameter: batchId')
-      }
-      return encodeURIComponent(String(pathParams.batchId))
-    })()}`
+    const path = `ai-usage-batches/${(() => { if (pathParams.batchId === undefined) { throw new Error('missing path parameter: batchId') } return encodeURIComponent(String(pathParams.batchId)) })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -113,29 +108,15 @@ export function getCustomerRuntimeAuthorization(
       customerId: req.customerId,
     }
     const pathParams = client._options.validate
-      ? toPathWire(
-          pathParamsInput,
-          schemas.getCustomerRuntimeAuthorizationPathParams,
-        )
+      ? toPathWire(pathParamsInput, schemas.getCustomerRuntimeAuthorizationPathParams)
       : pathParamsInput
     if (client._options.validate) {
-      assertValid(
-        schemas.getCustomerRuntimeAuthorizationPathParamsWire,
-        pathParams,
-      )
+      assertValid(schemas.getCustomerRuntimeAuthorizationPathParamsWire, pathParams)
     }
-    const path = `customers/${(() => {
-      if (pathParams.customerId === undefined) {
-        throw new Error('missing path parameter: customerId')
-      }
-      return encodeURIComponent(String(pathParams.customerId))
-    })()}/runtime-authorization`
-    const query = toWire(
-      {
-        filter: req.filter,
-      },
-      schemas.getCustomerRuntimeAuthorizationQueryParams,
-    )
+    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/runtime-authorization`
+    const query = toWire({
+      filter: req.filter,
+    }, schemas.getCustomerRuntimeAuthorizationQueryParams)
     if (client._options.validate) {
       assertValid(schemas.getCustomerRuntimeAuthorizationQueryParamsWire, query)
     }
@@ -175,18 +156,10 @@ export function getAiUsageCreditBalance(
     if (client._options.validate) {
       assertValid(schemas.getAiUsageCreditBalancePathParamsWire, pathParams)
     }
-    const path = `customers/${(() => {
-      if (pathParams.customerId === undefined) {
-        throw new Error('missing path parameter: customerId')
-      }
-      return encodeURIComponent(String(pathParams.customerId))
-    })()}/credit-balance`
-    const query = toWire(
-      {
-        timestamp: req.timestamp,
-      },
-      schemas.getAiUsageCreditBalanceQueryParams,
-    )
+    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/credit-balance`
+    const query = toWire({
+      timestamp: req.timestamp,
+    }, schemas.getAiUsageCreditBalanceQueryParams)
     if (client._options.validate) {
       assertValid(schemas.getAiUsageCreditBalanceQueryParamsWire, query)
     }
@@ -221,29 +194,15 @@ export function listAiUsageCreditTransactions(
       customerId: req.customerId,
     }
     const pathParams = client._options.validate
-      ? toPathWire(
-          pathParamsInput,
-          schemas.listAiUsageCreditTransactionsPathParams,
-        )
+      ? toPathWire(pathParamsInput, schemas.listAiUsageCreditTransactionsPathParams)
       : pathParamsInput
     if (client._options.validate) {
-      assertValid(
-        schemas.listAiUsageCreditTransactionsPathParamsWire,
-        pathParams,
-      )
+      assertValid(schemas.listAiUsageCreditTransactionsPathParamsWire, pathParams)
     }
-    const path = `customers/${(() => {
-      if (pathParams.customerId === undefined) {
-        throw new Error('missing path parameter: customerId')
-      }
-      return encodeURIComponent(String(pathParams.customerId))
-    })()}/credit-transactions`
-    const query = toWire(
-      {
-        page: req.page,
-      },
-      schemas.listAiUsageCreditTransactionsQueryParams,
-    )
+    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/credit-transactions`
+    const query = toWire({
+      page: req.page,
+    }, schemas.listAiUsageCreditTransactionsQueryParams)
     if (client._options.validate) {
       assertValid(schemas.listAiUsageCreditTransactionsQueryParamsWire, query)
     }

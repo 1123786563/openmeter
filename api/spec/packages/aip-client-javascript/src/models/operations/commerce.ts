@@ -3,23 +3,7 @@
 import { z } from 'zod'
 import * as schemas from '../schemas.js'
 import type { AcceptDateStrings } from '../../lib/wire.js'
-import type {
-  CommerceCheckoutSession,
-  CommerceCheckoutSessionCreate,
-  CommerceExternalInvoice,
-  CommerceExternalInvoiceUpdate,
-  CommerceOfflinePayment,
-  CommerceOfflinePaymentCreate,
-  CommerceOrder,
-  CommerceOrderCreate,
-  CommerceProviderCallbackAck,
-  CommerceRechargeProductList,
-  CommerceRefund,
-  CommerceRefundCreate,
-  CommerceWallet,
-  CursorPaginationQueryPage,
-  ReceivablePeriodPaginatedResponse,
-} from '../types.js'
+import type { CommerceCheckoutSession, CommerceCheckoutSessionCreate, CommerceExternalInvoice, CommerceExternalInvoiceUpdate, CommerceOfflinePayment, CommerceOfflinePaymentCreate, CommerceOrder, CommerceOrderCreate, CommerceRechargeProductList, CommerceRefund, CommerceRefundCreate, CommerceWallet, CursorPaginationQueryPage, ReceivablePeriodPaginatedResponse } from '../types.js'
 
 export type GetCustomerWalletRequest = {
   customerId: string
@@ -31,8 +15,7 @@ export interface ListRechargeProductsQuery {
   currency?: string
 }
 
-export type ListRechargeProductsRequest =
-  AcceptDateStrings<ListRechargeProductsQuery>
+export type ListRechargeProductsRequest = AcceptDateStrings<ListRechargeProductsQuery>
 export type ListRechargeProductsResponse = CommerceRechargeProductList
 
 export type CreateOrderRequest = AcceptDateStrings<CommerceOrderCreate>
@@ -63,18 +46,16 @@ export type GetRefundRequest = {
 export type GetRefundResponse = CommerceRefund
 
 export type WechatPaymentCallbackRequest = AcceptDateStrings<string>
-export type WechatPaymentCallbackResponse = CommerceProviderCallbackAck
+export type WechatPaymentCallbackResponse = void
 
 export type AlipayPaymentCallbackRequest = AcceptDateStrings<string>
-export type AlipayPaymentCallbackResponse = CommerceProviderCallbackAck
+export type AlipayPaymentCallbackResponse = string
 
 export interface ListReceivablePeriodsQuery {
   page?: CursorPaginationQueryPage
 }
 
-export type ListReceivablePeriodsRequest = AcceptDateStrings<
-  ListReceivablePeriodsQuery & { customerId: string }
->
+export type ListReceivablePeriodsRequest = AcceptDateStrings<ListReceivablePeriodsQuery & { customerId: string }>
 export type ListReceivablePeriodsResponse = ReceivablePeriodPaginatedResponse
 
 export type CreateOfflinePaymentRequest = AcceptDateStrings<{

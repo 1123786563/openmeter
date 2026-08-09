@@ -2,7 +2,9 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginatePages } from '../lib/paginate.js'
+import {
+  paginatePages,
+} from '../lib/paginate.js'
 import {
   createTaxCode,
   getTaxCode,
@@ -22,7 +24,9 @@ import type {
   DeleteTaxCodeRequest,
   DeleteTaxCodeResponse,
 } from '../models/operations/tax.js'
-import type { TaxCode } from '../models/types.js'
+import type {
+  TaxCode,
+} from '../models/types.js'
 
 export class Tax {
   constructor(private readonly _client: Client) {}

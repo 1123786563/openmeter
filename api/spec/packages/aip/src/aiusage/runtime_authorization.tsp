@@ -145,7 +145,7 @@ model RuntimeAuthorization {
    * the canonicalized authorization object, used to derive the SHA-256 hash
    * and verify the signature.
    */
-  canonical_payload?: Record<string, unknown>;
+  canonical_payload?: Record<unknown>;
 
   /**
    * SHA-256 hash of the canonical payload, hex-encoded.
