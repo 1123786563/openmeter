@@ -34,6 +34,17 @@ const (
 	SecretKeyAppID             = "wechat_app_id"
 )
 
+// PlatformPublicKeySecret returns the logical secret key for a WeChat platform
+// public key. WeChat identifies active platform certificates by serial number;
+// an empty serial preserves compatibility with the legacy default key.
+func PlatformPublicKeySecret(serial string) string {
+	if serial == "" {
+		return SecretKeyPlatformPublicKey
+	}
+
+	return SecretKeyPlatformPublicKey + "/" + serial
+}
+
 // Adapter implements payment.Provider for WeChat Pay v3.
 type Adapter struct {
 	secrets payment.SecretProvider
@@ -115,7 +126,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 
 // verifySignature verifies the RSA-SHA256 signature against the platform public key.
 func (a *Adapter) verifySignature(ctx context.Context, serial string, message []byte, signatureB64 string) error {
-	keyPEM, err := a.secrets.Get(ctx, SecretKeyPlatformPublicKey)
+	keyPEM, err := a.secrets.Get(ctx, PlatformPublicKeySecret(serial))
 	if err != nil {
 		return fmt.Errorf("wechat: get platform public key: %w", err)
 	}

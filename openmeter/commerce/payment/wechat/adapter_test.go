@@ -72,13 +72,25 @@ const validCallbackBody = `{
 
 // --- Tests ---
 
+func TestPlatformPublicKeySecret(t *testing.T) {
+	if got := PlatformPublicKeySecret("serial-001"); got != "wechat_platform_public_key/serial-001" {
+		t.Errorf("secret key = %q, want serial-specific key", got)
+	}
+}
+
+func TestPlatformPublicKeySecretEmptySerialFallsBackToDefault(t *testing.T) {
+	if got := PlatformPublicKeySecret(""); got != SecretKeyPlatformPublicKey {
+		t.Errorf("secret key = %q, want %q", got, SecretKeyPlatformPublicKey)
+	}
+}
+
 // TestVerifyCallbackValidSignature verifies that a callback with a valid
 // signature and matching fields returns a successful PaymentFact.
 func TestVerifyCallbackValidSignature(t *testing.T) {
 	key, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, err := New(Config{Secrets: secrets})
@@ -123,12 +135,31 @@ func TestVerifyCallbackValidSignature(t *testing.T) {
 	}
 }
 
+func TestVerifyCallbackEmptySerialUsesDefaultPlatformKey(t *testing.T) {
+	key, pubPEM := generateTestKey(t)
+	adapter, err := New(Config{Secrets: &payment.StaticSecretProvider{
+		Secrets: map[string]string{SecretKeyPlatformPublicKey: pubPEM},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := []byte(validCallbackBody)
+	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
+	signature := signMessage(t, key, []byte(message))
+
+	_, err = adapter.VerifyCallback(context.Background(), makeCallbackHeaders("1234567890", "nonce-abc", signature, ""), body)
+	if err != nil {
+		t.Fatalf("callback without a serial should use the default platform key: %v", err)
+	}
+}
+
 // TestVerifyCallbackInvalidSignature verifies that an invalid signature is rejected.
 func TestVerifyCallbackInvalidSignature(t *testing.T) {
 	_, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, _ := New(Config{Secrets: secrets})
@@ -153,7 +184,7 @@ func TestVerifyCallbackTamperedBody(t *testing.T) {
 	key, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, _ := New(Config{Secrets: secrets})
@@ -177,7 +208,7 @@ func TestVerifyCallbackMissingHeaders(t *testing.T) {
 	_, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, _ := New(Config{Secrets: secrets})
@@ -197,7 +228,7 @@ func TestVerifyCallbackExtractsMerchantAndApp(t *testing.T) {
 	key, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, _ := New(Config{Secrets: secrets})
@@ -228,7 +259,7 @@ func TestVerifyCallbackFailedPayment(t *testing.T) {
 	key, pubPEM := generateTestKey(t)
 	secrets := &payment.StaticSecretProvider{
 		Secrets: map[string]string{
-			SecretKeyPlatformPublicKey: pubPEM,
+			PlatformPublicKeySecret("serial-001"): pubPEM,
 		},
 	}
 	adapter, _ := New(Config{Secrets: secrets})
