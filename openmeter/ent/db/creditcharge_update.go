@@ -89,6 +89,32 @@ func (_u *CreditChargeUpdate) AddAmount(v int64) *CreditChargeUpdate {
 	return _u
 }
 
+// SetRateVersion sets the "rate_version" field.
+func (_u *CreditChargeUpdate) SetRateVersion(v string) *CreditChargeUpdate {
+	_u.mutation.SetRateVersion(v)
+	return _u
+}
+
+// SetNillableRateVersion sets the "rate_version" field if the given value is not nil.
+func (_u *CreditChargeUpdate) SetNillableRateVersion(v *string) *CreditChargeUpdate {
+	if v != nil {
+		_u.SetRateVersion(*v)
+	}
+	return _u
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (_u *CreditChargeUpdate) SetSettlementAllocations(v []json.RawMessage) *CreditChargeUpdate {
+	_u.mutation.SetSettlementAllocations(v)
+	return _u
+}
+
+// AppendSettlementAllocations appends value to the "settlement_allocations" field.
+func (_u *CreditChargeUpdate) AppendSettlementAllocations(v []json.RawMessage) *CreditChargeUpdate {
+	_u.mutation.AppendSettlementAllocations(v)
+	return _u
+}
+
 // SetState sets the "state" field.
 func (_u *CreditChargeUpdate) SetState(v creditcharge.State) *CreditChargeUpdate {
 	_u.mutation.SetState(v)
@@ -237,6 +263,17 @@ func (_u *CreditChargeUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(creditcharge.FieldAmount, field.TypeInt64, value)
 	}
+	if value, ok := _u.mutation.RateVersion(); ok {
+		_spec.SetField(creditcharge.FieldRateVersion, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementAllocations(); ok {
+		_spec.SetField(creditcharge.FieldSettlementAllocations, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSettlementAllocations(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, creditcharge.FieldSettlementAllocations, value)
+		})
+	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(creditcharge.FieldState, field.TypeEnum, value)
 	}
@@ -325,6 +362,32 @@ func (_u *CreditChargeUpdateOne) SetNillableAmount(v *int64) *CreditChargeUpdate
 // AddAmount adds value to the "amount" field.
 func (_u *CreditChargeUpdateOne) AddAmount(v int64) *CreditChargeUpdateOne {
 	_u.mutation.AddAmount(v)
+	return _u
+}
+
+// SetRateVersion sets the "rate_version" field.
+func (_u *CreditChargeUpdateOne) SetRateVersion(v string) *CreditChargeUpdateOne {
+	_u.mutation.SetRateVersion(v)
+	return _u
+}
+
+// SetNillableRateVersion sets the "rate_version" field if the given value is not nil.
+func (_u *CreditChargeUpdateOne) SetNillableRateVersion(v *string) *CreditChargeUpdateOne {
+	if v != nil {
+		_u.SetRateVersion(*v)
+	}
+	return _u
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (_u *CreditChargeUpdateOne) SetSettlementAllocations(v []json.RawMessage) *CreditChargeUpdateOne {
+	_u.mutation.SetSettlementAllocations(v)
+	return _u
+}
+
+// AppendSettlementAllocations appends value to the "settlement_allocations" field.
+func (_u *CreditChargeUpdateOne) AppendSettlementAllocations(v []json.RawMessage) *CreditChargeUpdateOne {
+	_u.mutation.AppendSettlementAllocations(v)
 	return _u
 }
 
@@ -505,6 +568,17 @@ func (_u *CreditChargeUpdateOne) sqlSave(ctx context.Context) (_node *CreditChar
 	}
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(creditcharge.FieldAmount, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.RateVersion(); ok {
+		_spec.SetField(creditcharge.FieldRateVersion, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementAllocations(); ok {
+		_spec.SetField(creditcharge.FieldSettlementAllocations, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedSettlementAllocations(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, creditcharge.FieldSettlementAllocations, value)
+		})
 	}
 	if value, ok := _u.mutation.State(); ok {
 		_spec.SetField(creditcharge.FieldState, field.TypeEnum, value)

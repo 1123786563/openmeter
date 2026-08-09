@@ -182,6 +182,34 @@ func (_u *CreditReservationUpdate) AddSettledCredits(v int64) *CreditReservation
 	return _u
 }
 
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (_u *CreditReservationUpdate) SetSettlementIdempotencyKey(v string) *CreditReservationUpdate {
+	_u.mutation.SetSettlementIdempotencyKey(v)
+	return _u
+}
+
+// SetNillableSettlementIdempotencyKey sets the "settlement_idempotency_key" field if the given value is not nil.
+func (_u *CreditReservationUpdate) SetNillableSettlementIdempotencyKey(v *string) *CreditReservationUpdate {
+	if v != nil {
+		_u.SetSettlementIdempotencyKey(*v)
+	}
+	return _u
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (_u *CreditReservationUpdate) SetSettlementPayloadHash(v string) *CreditReservationUpdate {
+	_u.mutation.SetSettlementPayloadHash(v)
+	return _u
+}
+
+// SetNillableSettlementPayloadHash sets the "settlement_payload_hash" field if the given value is not nil.
+func (_u *CreditReservationUpdate) SetNillableSettlementPayloadHash(v *string) *CreditReservationUpdate {
+	if v != nil {
+		_u.SetSettlementPayloadHash(*v)
+	}
+	return _u
+}
+
 // SetRateVersion sets the "rate_version" field.
 func (_u *CreditReservationUpdate) SetRateVersion(v string) *CreditReservationUpdate {
 	_u.mutation.SetRateVersion(v)
@@ -474,6 +502,12 @@ func (_u *CreditReservationUpdate) sqlSave(ctx context.Context) (_node int, err 
 	if value, ok := _u.mutation.AddedSettledCredits(); ok {
 		_spec.AddField(creditreservation.FieldSettledCredits, field.TypeInt64, value)
 	}
+	if value, ok := _u.mutation.SettlementIdempotencyKey(); ok {
+		_spec.SetField(creditreservation.FieldSettlementIdempotencyKey, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementPayloadHash(); ok {
+		_spec.SetField(creditreservation.FieldSettlementPayloadHash, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.RateVersion(); ok {
 		_spec.SetField(creditreservation.FieldRateVersion, field.TypeString, value)
 	}
@@ -682,6 +716,34 @@ func (_u *CreditReservationUpdateOne) SetNillableSettledCredits(v *int64) *Credi
 // AddSettledCredits adds value to the "settled_credits" field.
 func (_u *CreditReservationUpdateOne) AddSettledCredits(v int64) *CreditReservationUpdateOne {
 	_u.mutation.AddSettledCredits(v)
+	return _u
+}
+
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (_u *CreditReservationUpdateOne) SetSettlementIdempotencyKey(v string) *CreditReservationUpdateOne {
+	_u.mutation.SetSettlementIdempotencyKey(v)
+	return _u
+}
+
+// SetNillableSettlementIdempotencyKey sets the "settlement_idempotency_key" field if the given value is not nil.
+func (_u *CreditReservationUpdateOne) SetNillableSettlementIdempotencyKey(v *string) *CreditReservationUpdateOne {
+	if v != nil {
+		_u.SetSettlementIdempotencyKey(*v)
+	}
+	return _u
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (_u *CreditReservationUpdateOne) SetSettlementPayloadHash(v string) *CreditReservationUpdateOne {
+	_u.mutation.SetSettlementPayloadHash(v)
+	return _u
+}
+
+// SetNillableSettlementPayloadHash sets the "settlement_payload_hash" field if the given value is not nil.
+func (_u *CreditReservationUpdateOne) SetNillableSettlementPayloadHash(v *string) *CreditReservationUpdateOne {
+	if v != nil {
+		_u.SetSettlementPayloadHash(*v)
+	}
 	return _u
 }
 
@@ -1006,6 +1068,12 @@ func (_u *CreditReservationUpdateOne) sqlSave(ctx context.Context) (_node *Credi
 	}
 	if value, ok := _u.mutation.AddedSettledCredits(); ok {
 		_spec.AddField(creditreservation.FieldSettledCredits, field.TypeInt64, value)
+	}
+	if value, ok := _u.mutation.SettlementIdempotencyKey(); ok {
+		_spec.SetField(creditreservation.FieldSettlementIdempotencyKey, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SettlementPayloadHash(); ok {
+		_spec.SetField(creditreservation.FieldSettlementPayloadHash, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RateVersion(); ok {
 		_spec.SetField(creditreservation.FieldRateVersion, field.TypeString, value)

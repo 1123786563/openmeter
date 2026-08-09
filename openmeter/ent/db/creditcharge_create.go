@@ -149,6 +149,26 @@ func (_c *CreditChargeCreate) SetAmount(v int64) *CreditChargeCreate {
 	return _c
 }
 
+// SetRateVersion sets the "rate_version" field.
+func (_c *CreditChargeCreate) SetRateVersion(v string) *CreditChargeCreate {
+	_c.mutation.SetRateVersion(v)
+	return _c
+}
+
+// SetNillableRateVersion sets the "rate_version" field if the given value is not nil.
+func (_c *CreditChargeCreate) SetNillableRateVersion(v *string) *CreditChargeCreate {
+	if v != nil {
+		_c.SetRateVersion(*v)
+	}
+	return _c
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (_c *CreditChargeCreate) SetSettlementAllocations(v []json.RawMessage) *CreditChargeCreate {
+	_c.mutation.SetSettlementAllocations(v)
+	return _c
+}
+
 // SetState sets the "state" field.
 func (_c *CreditChargeCreate) SetState(v creditcharge.State) *CreditChargeCreate {
 	_c.mutation.SetState(v)
@@ -254,6 +274,10 @@ func (_c *CreditChargeCreate) defaults() {
 		v := creditcharge.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.RateVersion(); !ok {
+		v := creditcharge.DefaultRateVersion
+		_c.mutation.SetRateVersion(v)
+	}
 	if _, ok := _c.mutation.SettlementLedgerGroupID(); !ok {
 		v := creditcharge.DefaultSettlementLedgerGroupID
 		_c.mutation.SetSettlementLedgerGroupID(v)
@@ -341,6 +365,12 @@ func (_c *CreditChargeCreate) check() error {
 	}
 	if _, ok := _c.mutation.Amount(); !ok {
 		return &ValidationError{Name: "amount", err: errors.New(`db: missing required field "CreditCharge.amount"`)}
+	}
+	if _, ok := _c.mutation.RateVersion(); !ok {
+		return &ValidationError{Name: "rate_version", err: errors.New(`db: missing required field "CreditCharge.rate_version"`)}
+	}
+	if _, ok := _c.mutation.SettlementAllocations(); !ok {
+		return &ValidationError{Name: "settlement_allocations", err: errors.New(`db: missing required field "CreditCharge.settlement_allocations"`)}
 	}
 	if _, ok := _c.mutation.State(); !ok {
 		return &ValidationError{Name: "state", err: errors.New(`db: missing required field "CreditCharge.state"`)}
@@ -450,6 +480,14 @@ func (_c *CreditChargeCreate) createSpec() (*CreditCharge, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Amount(); ok {
 		_spec.SetField(creditcharge.FieldAmount, field.TypeInt64, value)
 		_node.Amount = value
+	}
+	if value, ok := _c.mutation.RateVersion(); ok {
+		_spec.SetField(creditcharge.FieldRateVersion, field.TypeString, value)
+		_node.RateVersion = value
+	}
+	if value, ok := _c.mutation.SettlementAllocations(); ok {
+		_spec.SetField(creditcharge.FieldSettlementAllocations, field.TypeJSON, value)
+		_node.SettlementAllocations = value
 	}
 	if value, ok := _c.mutation.State(); ok {
 		_spec.SetField(creditcharge.FieldState, field.TypeEnum, value)
@@ -576,6 +614,30 @@ func (u *CreditChargeUpsert) UpdateAmount() *CreditChargeUpsert {
 // AddAmount adds v to the "amount" field.
 func (u *CreditChargeUpsert) AddAmount(v int64) *CreditChargeUpsert {
 	u.Add(creditcharge.FieldAmount, v)
+	return u
+}
+
+// SetRateVersion sets the "rate_version" field.
+func (u *CreditChargeUpsert) SetRateVersion(v string) *CreditChargeUpsert {
+	u.Set(creditcharge.FieldRateVersion, v)
+	return u
+}
+
+// UpdateRateVersion sets the "rate_version" field to the value that was provided on create.
+func (u *CreditChargeUpsert) UpdateRateVersion() *CreditChargeUpsert {
+	u.SetExcluded(creditcharge.FieldRateVersion)
+	return u
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (u *CreditChargeUpsert) SetSettlementAllocations(v []json.RawMessage) *CreditChargeUpsert {
+	u.Set(creditcharge.FieldSettlementAllocations, v)
+	return u
+}
+
+// UpdateSettlementAllocations sets the "settlement_allocations" field to the value that was provided on create.
+func (u *CreditChargeUpsert) UpdateSettlementAllocations() *CreditChargeUpsert {
+	u.SetExcluded(creditcharge.FieldSettlementAllocations)
 	return u
 }
 
@@ -772,6 +834,34 @@ func (u *CreditChargeUpsertOne) AddAmount(v int64) *CreditChargeUpsertOne {
 func (u *CreditChargeUpsertOne) UpdateAmount() *CreditChargeUpsertOne {
 	return u.Update(func(s *CreditChargeUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetRateVersion sets the "rate_version" field.
+func (u *CreditChargeUpsertOne) SetRateVersion(v string) *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetRateVersion(v)
+	})
+}
+
+// UpdateRateVersion sets the "rate_version" field to the value that was provided on create.
+func (u *CreditChargeUpsertOne) UpdateRateVersion() *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateRateVersion()
+	})
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (u *CreditChargeUpsertOne) SetSettlementAllocations(v []json.RawMessage) *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetSettlementAllocations(v)
+	})
+}
+
+// UpdateSettlementAllocations sets the "settlement_allocations" field to the value that was provided on create.
+func (u *CreditChargeUpsertOne) UpdateSettlementAllocations() *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateSettlementAllocations()
 	})
 }
 
@@ -1143,6 +1233,34 @@ func (u *CreditChargeUpsertBulk) AddAmount(v int64) *CreditChargeUpsertBulk {
 func (u *CreditChargeUpsertBulk) UpdateAmount() *CreditChargeUpsertBulk {
 	return u.Update(func(s *CreditChargeUpsert) {
 		s.UpdateAmount()
+	})
+}
+
+// SetRateVersion sets the "rate_version" field.
+func (u *CreditChargeUpsertBulk) SetRateVersion(v string) *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetRateVersion(v)
+	})
+}
+
+// UpdateRateVersion sets the "rate_version" field to the value that was provided on create.
+func (u *CreditChargeUpsertBulk) UpdateRateVersion() *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateRateVersion()
+	})
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (u *CreditChargeUpsertBulk) SetSettlementAllocations(v []json.RawMessage) *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetSettlementAllocations(v)
+	})
+}
+
+// UpdateSettlementAllocations sets the "settlement_allocations" field to the value that was provided on create.
+func (u *CreditChargeUpsertBulk) UpdateSettlementAllocations() *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateSettlementAllocations()
 	})
 }
 

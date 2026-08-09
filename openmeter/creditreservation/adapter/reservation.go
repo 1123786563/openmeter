@@ -168,6 +168,7 @@ type UpdateReservationInput struct {
 	ExecutionDeadline       *time.Time
 	HoldLedgerGroupID       *string
 	SettlementLedgerGroupID *string
+	SettlementIdentity      *creditreservation.CommandIdentity
 	ReleaseLedgerGroupID    *string
 	UsageEventID            *string
 	Evidence                creditreservation.TransitionEvidence
@@ -342,6 +343,10 @@ func (t *txAdapter) UpdateReservation(ctx context.Context, input UpdateReservati
 	if input.SettlementLedgerGroupID != nil {
 		update.SetSettlementLedgerGroupID(*input.SettlementLedgerGroupID)
 	}
+	if input.SettlementIdentity != nil {
+		update.SetSettlementIdempotencyKey(input.SettlementIdentity.IdempotencyKey)
+		update.SetSettlementPayloadHash(input.SettlementIdentity.PayloadHash)
+	}
 	if input.ReleaseLedgerGroupID != nil {
 		update.SetReleaseLedgerGroupID(*input.ReleaseLedgerGroupID)
 	}
@@ -475,7 +480,8 @@ func mapReservation(row *entdb.CreditReservation) (creditreservation.Reservation
 		Lines: lines, TotalCredits: row.CeilingCredits, ExpiresAt: row.AuthorizationExpiresAt,
 		ExecutionDeadline: row.ExecutionDeadline,
 		SettledCredits:    row.SettledCredits, PrepaidHold: row.PrepaidHold, EnterpriseHold: row.EnterpriseHold, SettlementLedgerGroupID: row.SettlementLedgerGroupID,
-		CommandIdentity: creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
+		SettlementIdentity: creditreservation.CommandIdentity{IdempotencyKey: row.SettlementIdempotencyKey, PayloadHash: row.SettlementPayloadHash},
+		CommandIdentity:    creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
 	}, nil
 }
 

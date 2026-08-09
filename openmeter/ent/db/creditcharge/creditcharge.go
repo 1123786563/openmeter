@@ -42,6 +42,10 @@ const (
 	FieldRatedLines = "rated_lines"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
+	// FieldRateVersion holds the string denoting the rate_version field in the database.
+	FieldRateVersion = "rate_version"
+	// FieldSettlementAllocations holds the string denoting the settlement_allocations field in the database.
+	FieldSettlementAllocations = "settlement_allocations"
 	// FieldState holds the string denoting the state field in the database.
 	FieldState = "state"
 	// FieldSettlementLedgerGroupID holds the string denoting the settlement_ledger_group_id field in the database.
@@ -71,6 +75,8 @@ var Columns = []string{
 	FieldCustomCurrencyID,
 	FieldRatedLines,
 	FieldAmount,
+	FieldRateVersion,
+	FieldSettlementAllocations,
 	FieldState,
 	FieldSettlementLedgerGroupID,
 	FieldReversalLedgerGroupID,
@@ -106,6 +112,8 @@ var (
 	IdempotencyKeyValidator func(string) error
 	// PayloadHashValidator is a validator for the "payload_hash" field. It is called by the builders before save.
 	PayloadHashValidator func(string) error
+	// DefaultRateVersion holds the default value on creation for the "rate_version" field.
+	DefaultRateVersion string
 	// DefaultSettlementLedgerGroupID holds the default value on creation for the "settlement_ledger_group_id" field.
 	DefaultSettlementLedgerGroupID string
 	// DefaultReversalLedgerGroupID holds the default value on creation for the "reversal_ledger_group_id" field.
@@ -205,6 +213,11 @@ func ByCustomCurrencyID(opts ...sql.OrderTermOption) OrderOption {
 // ByAmount orders the results by the amount field.
 func ByAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmount, opts...).ToFunc()
+}
+
+// ByRateVersion orders the results by the rate_version field.
+func ByRateVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRateVersion, opts...).ToFunc()
 }
 
 // ByState orders the results by the state field.

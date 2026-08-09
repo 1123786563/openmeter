@@ -139,6 +139,16 @@ func SettledCredits(v int64) predicate.CreditReservation {
 	return predicate.CreditReservation(sql.FieldEQ(FieldSettledCredits, v))
 }
 
+// SettlementIdempotencyKey applies equality check predicate on the "settlement_idempotency_key" field. It's identical to SettlementIdempotencyKeyEQ.
+func SettlementIdempotencyKey(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEQ(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementPayloadHash applies equality check predicate on the "settlement_payload_hash" field. It's identical to SettlementPayloadHashEQ.
+func SettlementPayloadHash(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEQ(FieldSettlementPayloadHash, v))
+}
+
 // RateVersion applies equality check predicate on the "rate_version" field. It's identical to RateVersionEQ.
 func RateVersion(v string) predicate.CreditReservation {
 	return predicate.CreditReservation(sql.FieldEQ(FieldRateVersion, v))
@@ -1022,6 +1032,136 @@ func SettledCreditsLT(v int64) predicate.CreditReservation {
 // SettledCreditsLTE applies the LTE predicate on the "settled_credits" field.
 func SettledCreditsLTE(v int64) predicate.CreditReservation {
 	return predicate.CreditReservation(sql.FieldLTE(FieldSettledCredits, v))
+}
+
+// SettlementIdempotencyKeyEQ applies the EQ predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyEQ(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEQ(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyNEQ applies the NEQ predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyNEQ(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldNEQ(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyIn applies the In predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyIn(vs ...string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldIn(FieldSettlementIdempotencyKey, vs...))
+}
+
+// SettlementIdempotencyKeyNotIn applies the NotIn predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyNotIn(vs ...string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldNotIn(FieldSettlementIdempotencyKey, vs...))
+}
+
+// SettlementIdempotencyKeyGT applies the GT predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyGT(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldGT(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyGTE applies the GTE predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyGTE(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldGTE(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyLT applies the LT predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyLT(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldLT(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyLTE applies the LTE predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyLTE(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldLTE(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyContains applies the Contains predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyContains(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldContains(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyHasPrefix applies the HasPrefix predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyHasPrefix(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldHasPrefix(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyHasSuffix applies the HasSuffix predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyHasSuffix(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldHasSuffix(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyEqualFold applies the EqualFold predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyEqualFold(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEqualFold(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementIdempotencyKeyContainsFold applies the ContainsFold predicate on the "settlement_idempotency_key" field.
+func SettlementIdempotencyKeyContainsFold(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldContainsFold(FieldSettlementIdempotencyKey, v))
+}
+
+// SettlementPayloadHashEQ applies the EQ predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashEQ(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEQ(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashNEQ applies the NEQ predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashNEQ(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldNEQ(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashIn applies the In predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashIn(vs ...string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldIn(FieldSettlementPayloadHash, vs...))
+}
+
+// SettlementPayloadHashNotIn applies the NotIn predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashNotIn(vs ...string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldNotIn(FieldSettlementPayloadHash, vs...))
+}
+
+// SettlementPayloadHashGT applies the GT predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashGT(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldGT(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashGTE applies the GTE predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashGTE(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldGTE(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashLT applies the LT predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashLT(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldLT(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashLTE applies the LTE predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashLTE(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldLTE(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashContains applies the Contains predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashContains(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldContains(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashHasPrefix applies the HasPrefix predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashHasPrefix(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldHasPrefix(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashHasSuffix applies the HasSuffix predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashHasSuffix(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldHasSuffix(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashEqualFold applies the EqualFold predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashEqualFold(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldEqualFold(FieldSettlementPayloadHash, v))
+}
+
+// SettlementPayloadHashContainsFold applies the ContainsFold predicate on the "settlement_payload_hash" field.
+func SettlementPayloadHashContainsFold(v string) predicate.CreditReservation {
+	return predicate.CreditReservation(sql.FieldContainsFold(FieldSettlementPayloadHash, v))
 }
 
 // RateVersionEQ applies the EQ predicate on the "rate_version" field.

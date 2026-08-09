@@ -41,6 +41,9 @@ func (CreditCharge) Fields() []ent.Field {
 		field.JSON("rated_lines", []json.RawMessage{}).
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.Int64("amount"),
+		field.String("rate_version").Default(""),
+		field.JSON("settlement_allocations", []json.RawMessage{}).
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}),
 		field.Enum("state").Values("SETTLED", "REVERSED"),
 		field.String("settlement_ledger_group_id").Default(""),
 		field.String("reversal_ledger_group_id").Default(""),

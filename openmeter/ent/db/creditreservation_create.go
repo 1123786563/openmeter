@@ -203,6 +203,34 @@ func (_c *CreditReservationCreate) SetNillableSettledCredits(v *int64) *CreditRe
 	return _c
 }
 
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (_c *CreditReservationCreate) SetSettlementIdempotencyKey(v string) *CreditReservationCreate {
+	_c.mutation.SetSettlementIdempotencyKey(v)
+	return _c
+}
+
+// SetNillableSettlementIdempotencyKey sets the "settlement_idempotency_key" field if the given value is not nil.
+func (_c *CreditReservationCreate) SetNillableSettlementIdempotencyKey(v *string) *CreditReservationCreate {
+	if v != nil {
+		_c.SetSettlementIdempotencyKey(*v)
+	}
+	return _c
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (_c *CreditReservationCreate) SetSettlementPayloadHash(v string) *CreditReservationCreate {
+	_c.mutation.SetSettlementPayloadHash(v)
+	return _c
+}
+
+// SetNillableSettlementPayloadHash sets the "settlement_payload_hash" field if the given value is not nil.
+func (_c *CreditReservationCreate) SetNillableSettlementPayloadHash(v *string) *CreditReservationCreate {
+	if v != nil {
+		_c.SetSettlementPayloadHash(*v)
+	}
+	return _c
+}
+
 // SetRateVersion sets the "rate_version" field.
 func (_c *CreditReservationCreate) SetRateVersion(v string) *CreditReservationCreate {
 	_c.mutation.SetRateVersion(v)
@@ -422,6 +450,14 @@ func (_c *CreditReservationCreate) defaults() {
 		v := creditreservation.DefaultSettledCredits
 		_c.mutation.SetSettledCredits(v)
 	}
+	if _, ok := _c.mutation.SettlementIdempotencyKey(); !ok {
+		v := creditreservation.DefaultSettlementIdempotencyKey
+		_c.mutation.SetSettlementIdempotencyKey(v)
+	}
+	if _, ok := _c.mutation.SettlementPayloadHash(); !ok {
+		v := creditreservation.DefaultSettlementPayloadHash
+		_c.mutation.SetSettlementPayloadHash(v)
+	}
 	if _, ok := _c.mutation.RateVersion(); !ok {
 		v := creditreservation.DefaultRateVersion
 		_c.mutation.SetRateVersion(v)
@@ -549,6 +585,12 @@ func (_c *CreditReservationCreate) check() error {
 	}
 	if _, ok := _c.mutation.SettledCredits(); !ok {
 		return &ValidationError{Name: "settled_credits", err: errors.New(`db: missing required field "CreditReservation.settled_credits"`)}
+	}
+	if _, ok := _c.mutation.SettlementIdempotencyKey(); !ok {
+		return &ValidationError{Name: "settlement_idempotency_key", err: errors.New(`db: missing required field "CreditReservation.settlement_idempotency_key"`)}
+	}
+	if _, ok := _c.mutation.SettlementPayloadHash(); !ok {
+		return &ValidationError{Name: "settlement_payload_hash", err: errors.New(`db: missing required field "CreditReservation.settlement_payload_hash"`)}
 	}
 	if _, ok := _c.mutation.RateVersion(); !ok {
 		return &ValidationError{Name: "rate_version", err: errors.New(`db: missing required field "CreditReservation.rate_version"`)}
@@ -693,6 +735,14 @@ func (_c *CreditReservationCreate) createSpec() (*CreditReservation, *sqlgraph.C
 	if value, ok := _c.mutation.SettledCredits(); ok {
 		_spec.SetField(creditreservation.FieldSettledCredits, field.TypeInt64, value)
 		_node.SettledCredits = value
+	}
+	if value, ok := _c.mutation.SettlementIdempotencyKey(); ok {
+		_spec.SetField(creditreservation.FieldSettlementIdempotencyKey, field.TypeString, value)
+		_node.SettlementIdempotencyKey = value
+	}
+	if value, ok := _c.mutation.SettlementPayloadHash(); ok {
+		_spec.SetField(creditreservation.FieldSettlementPayloadHash, field.TypeString, value)
+		_node.SettlementPayloadHash = value
 	}
 	if value, ok := _c.mutation.RateVersion(); ok {
 		_spec.SetField(creditreservation.FieldRateVersion, field.TypeString, value)
@@ -931,6 +981,30 @@ func (u *CreditReservationUpsert) UpdateSettledCredits() *CreditReservationUpser
 // AddSettledCredits adds v to the "settled_credits" field.
 func (u *CreditReservationUpsert) AddSettledCredits(v int64) *CreditReservationUpsert {
 	u.Add(creditreservation.FieldSettledCredits, v)
+	return u
+}
+
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (u *CreditReservationUpsert) SetSettlementIdempotencyKey(v string) *CreditReservationUpsert {
+	u.Set(creditreservation.FieldSettlementIdempotencyKey, v)
+	return u
+}
+
+// UpdateSettlementIdempotencyKey sets the "settlement_idempotency_key" field to the value that was provided on create.
+func (u *CreditReservationUpsert) UpdateSettlementIdempotencyKey() *CreditReservationUpsert {
+	u.SetExcluded(creditreservation.FieldSettlementIdempotencyKey)
+	return u
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (u *CreditReservationUpsert) SetSettlementPayloadHash(v string) *CreditReservationUpsert {
+	u.Set(creditreservation.FieldSettlementPayloadHash, v)
+	return u
+}
+
+// UpdateSettlementPayloadHash sets the "settlement_payload_hash" field to the value that was provided on create.
+func (u *CreditReservationUpsert) UpdateSettlementPayloadHash() *CreditReservationUpsert {
+	u.SetExcluded(creditreservation.FieldSettlementPayloadHash)
 	return u
 }
 
@@ -1321,6 +1395,34 @@ func (u *CreditReservationUpsertOne) AddSettledCredits(v int64) *CreditReservati
 func (u *CreditReservationUpsertOne) UpdateSettledCredits() *CreditReservationUpsertOne {
 	return u.Update(func(s *CreditReservationUpsert) {
 		s.UpdateSettledCredits()
+	})
+}
+
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (u *CreditReservationUpsertOne) SetSettlementIdempotencyKey(v string) *CreditReservationUpsertOne {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.SetSettlementIdempotencyKey(v)
+	})
+}
+
+// UpdateSettlementIdempotencyKey sets the "settlement_idempotency_key" field to the value that was provided on create.
+func (u *CreditReservationUpsertOne) UpdateSettlementIdempotencyKey() *CreditReservationUpsertOne {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.UpdateSettlementIdempotencyKey()
+	})
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (u *CreditReservationUpsertOne) SetSettlementPayloadHash(v string) *CreditReservationUpsertOne {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.SetSettlementPayloadHash(v)
+	})
+}
+
+// UpdateSettlementPayloadHash sets the "settlement_payload_hash" field to the value that was provided on create.
+func (u *CreditReservationUpsertOne) UpdateSettlementPayloadHash() *CreditReservationUpsertOne {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.UpdateSettlementPayloadHash()
 	})
 }
 
@@ -1902,6 +2004,34 @@ func (u *CreditReservationUpsertBulk) AddSettledCredits(v int64) *CreditReservat
 func (u *CreditReservationUpsertBulk) UpdateSettledCredits() *CreditReservationUpsertBulk {
 	return u.Update(func(s *CreditReservationUpsert) {
 		s.UpdateSettledCredits()
+	})
+}
+
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (u *CreditReservationUpsertBulk) SetSettlementIdempotencyKey(v string) *CreditReservationUpsertBulk {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.SetSettlementIdempotencyKey(v)
+	})
+}
+
+// UpdateSettlementIdempotencyKey sets the "settlement_idempotency_key" field to the value that was provided on create.
+func (u *CreditReservationUpsertBulk) UpdateSettlementIdempotencyKey() *CreditReservationUpsertBulk {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.UpdateSettlementIdempotencyKey()
+	})
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (u *CreditReservationUpsertBulk) SetSettlementPayloadHash(v string) *CreditReservationUpsertBulk {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.SetSettlementPayloadHash(v)
+	})
+}
+
+// UpdateSettlementPayloadHash sets the "settlement_payload_hash" field to the value that was provided on create.
+func (u *CreditReservationUpsertBulk) UpdateSettlementPayloadHash() *CreditReservationUpsertBulk {
+	return u.Update(func(s *CreditReservationUpsert) {
+		s.UpdateSettlementPayloadHash()
 	})
 }
 

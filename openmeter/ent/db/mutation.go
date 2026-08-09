@@ -88025,33 +88025,36 @@ func (m *CommerceProductMutation) ResetEdge(name string) error {
 // CreditChargeMutation represents an operation that mutates the CreditCharge nodes in the graph.
 type CreditChargeMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *string
-	namespace                  *string
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	deleted_at                 *time.Time
-	reservation_id             *string
-	customer_id                *string
-	subject_id                 *string
-	operation                  *string
-	idempotency_key            *string
-	payload_hash               *string
-	currency                   *currencies.CurrencyReference
-	custom_currency_id         *string
-	rated_lines                *[]json.RawMessage
-	appendrated_lines          []json.RawMessage
-	amount                     *int64
-	addamount                  *int64
-	state                      *creditcharge.State
-	settlement_ledger_group_id *string
-	reversal_ledger_group_id   *string
-	usage_event_id             *string
-	clearedFields              map[string]struct{}
-	done                       bool
-	oldValue                   func(context.Context) (*CreditCharge, error)
-	predicates                 []predicate.CreditCharge
+	op                           Op
+	typ                          string
+	id                           *string
+	namespace                    *string
+	created_at                   *time.Time
+	updated_at                   *time.Time
+	deleted_at                   *time.Time
+	reservation_id               *string
+	customer_id                  *string
+	subject_id                   *string
+	operation                    *string
+	idempotency_key              *string
+	payload_hash                 *string
+	currency                     *currencies.CurrencyReference
+	custom_currency_id           *string
+	rated_lines                  *[]json.RawMessage
+	appendrated_lines            []json.RawMessage
+	amount                       *int64
+	addamount                    *int64
+	rate_version                 *string
+	settlement_allocations       *[]json.RawMessage
+	appendsettlement_allocations []json.RawMessage
+	state                        *creditcharge.State
+	settlement_ledger_group_id   *string
+	reversal_ledger_group_id     *string
+	usage_event_id               *string
+	clearedFields                map[string]struct{}
+	done                         bool
+	oldValue                     func(context.Context) (*CreditCharge, error)
+	predicates                   []predicate.CreditCharge
 }
 
 var _ ent.Mutation = (*CreditChargeMutation)(nil)
@@ -88736,6 +88739,93 @@ func (m *CreditChargeMutation) ResetAmount() {
 	m.addamount = nil
 }
 
+// SetRateVersion sets the "rate_version" field.
+func (m *CreditChargeMutation) SetRateVersion(s string) {
+	m.rate_version = &s
+}
+
+// RateVersion returns the value of the "rate_version" field in the mutation.
+func (m *CreditChargeMutation) RateVersion() (r string, exists bool) {
+	v := m.rate_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateVersion returns the old "rate_version" field's value of the CreditCharge entity.
+// If the CreditCharge object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditChargeMutation) OldRateVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateVersion: %w", err)
+	}
+	return oldValue.RateVersion, nil
+}
+
+// ResetRateVersion resets all changes to the "rate_version" field.
+func (m *CreditChargeMutation) ResetRateVersion() {
+	m.rate_version = nil
+}
+
+// SetSettlementAllocations sets the "settlement_allocations" field.
+func (m *CreditChargeMutation) SetSettlementAllocations(jm []json.RawMessage) {
+	m.settlement_allocations = &jm
+	m.appendsettlement_allocations = nil
+}
+
+// SettlementAllocations returns the value of the "settlement_allocations" field in the mutation.
+func (m *CreditChargeMutation) SettlementAllocations() (r []json.RawMessage, exists bool) {
+	v := m.settlement_allocations
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementAllocations returns the old "settlement_allocations" field's value of the CreditCharge entity.
+// If the CreditCharge object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditChargeMutation) OldSettlementAllocations(ctx context.Context) (v []json.RawMessage, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementAllocations is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementAllocations requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementAllocations: %w", err)
+	}
+	return oldValue.SettlementAllocations, nil
+}
+
+// AppendSettlementAllocations adds jm to the "settlement_allocations" field.
+func (m *CreditChargeMutation) AppendSettlementAllocations(jm []json.RawMessage) {
+	m.appendsettlement_allocations = append(m.appendsettlement_allocations, jm...)
+}
+
+// AppendedSettlementAllocations returns the list of values that were appended to the "settlement_allocations" field in this mutation.
+func (m *CreditChargeMutation) AppendedSettlementAllocations() ([]json.RawMessage, bool) {
+	if len(m.appendsettlement_allocations) == 0 {
+		return nil, false
+	}
+	return m.appendsettlement_allocations, true
+}
+
+// ResetSettlementAllocations resets all changes to the "settlement_allocations" field.
+func (m *CreditChargeMutation) ResetSettlementAllocations() {
+	m.settlement_allocations = nil
+	m.appendsettlement_allocations = nil
+}
+
 // SetState sets the "state" field.
 func (m *CreditChargeMutation) SetState(c creditcharge.State) {
 	m.state = &c
@@ -88914,7 +89004,7 @@ func (m *CreditChargeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CreditChargeMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 20)
 	if m.namespace != nil {
 		fields = append(fields, creditcharge.FieldNamespace)
 	}
@@ -88956,6 +89046,12 @@ func (m *CreditChargeMutation) Fields() []string {
 	}
 	if m.amount != nil {
 		fields = append(fields, creditcharge.FieldAmount)
+	}
+	if m.rate_version != nil {
+		fields = append(fields, creditcharge.FieldRateVersion)
+	}
+	if m.settlement_allocations != nil {
+		fields = append(fields, creditcharge.FieldSettlementAllocations)
 	}
 	if m.state != nil {
 		fields = append(fields, creditcharge.FieldState)
@@ -89005,6 +89101,10 @@ func (m *CreditChargeMutation) Field(name string) (ent.Value, bool) {
 		return m.RatedLines()
 	case creditcharge.FieldAmount:
 		return m.Amount()
+	case creditcharge.FieldRateVersion:
+		return m.RateVersion()
+	case creditcharge.FieldSettlementAllocations:
+		return m.SettlementAllocations()
 	case creditcharge.FieldState:
 		return m.State()
 	case creditcharge.FieldSettlementLedgerGroupID:
@@ -89050,6 +89150,10 @@ func (m *CreditChargeMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldRatedLines(ctx)
 	case creditcharge.FieldAmount:
 		return m.OldAmount(ctx)
+	case creditcharge.FieldRateVersion:
+		return m.OldRateVersion(ctx)
+	case creditcharge.FieldSettlementAllocations:
+		return m.OldSettlementAllocations(ctx)
 	case creditcharge.FieldState:
 		return m.OldState(ctx)
 	case creditcharge.FieldSettlementLedgerGroupID:
@@ -89164,6 +89268,20 @@ func (m *CreditChargeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAmount(v)
+		return nil
+	case creditcharge.FieldRateVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateVersion(v)
+		return nil
+	case creditcharge.FieldSettlementAllocations:
+		v, ok := value.([]json.RawMessage)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementAllocations(v)
 		return nil
 	case creditcharge.FieldState:
 		v, ok := value.(creditcharge.State)
@@ -89319,6 +89437,12 @@ func (m *CreditChargeMutation) ResetField(name string) error {
 		return nil
 	case creditcharge.FieldAmount:
 		m.ResetAmount()
+		return nil
+	case creditcharge.FieldRateVersion:
+		m.ResetRateVersion()
+		return nil
+	case creditcharge.FieldSettlementAllocations:
+		m.ResetSettlementAllocations()
 		return nil
 	case creditcharge.FieldState:
 		m.ResetState()
@@ -91130,6 +91254,8 @@ type CreditReservationMutation struct {
 	addenterprise_hold         *int64
 	settled_credits            *int64
 	addsettled_credits         *int64
+	settlement_idempotency_key *string
+	settlement_payload_hash    *string
 	rate_version               *string
 	state                      *string
 	provider                   *string
@@ -92100,6 +92226,78 @@ func (m *CreditReservationMutation) ResetSettledCredits() {
 	m.addsettled_credits = nil
 }
 
+// SetSettlementIdempotencyKey sets the "settlement_idempotency_key" field.
+func (m *CreditReservationMutation) SetSettlementIdempotencyKey(s string) {
+	m.settlement_idempotency_key = &s
+}
+
+// SettlementIdempotencyKey returns the value of the "settlement_idempotency_key" field in the mutation.
+func (m *CreditReservationMutation) SettlementIdempotencyKey() (r string, exists bool) {
+	v := m.settlement_idempotency_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementIdempotencyKey returns the old "settlement_idempotency_key" field's value of the CreditReservation entity.
+// If the CreditReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationMutation) OldSettlementIdempotencyKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementIdempotencyKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementIdempotencyKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementIdempotencyKey: %w", err)
+	}
+	return oldValue.SettlementIdempotencyKey, nil
+}
+
+// ResetSettlementIdempotencyKey resets all changes to the "settlement_idempotency_key" field.
+func (m *CreditReservationMutation) ResetSettlementIdempotencyKey() {
+	m.settlement_idempotency_key = nil
+}
+
+// SetSettlementPayloadHash sets the "settlement_payload_hash" field.
+func (m *CreditReservationMutation) SetSettlementPayloadHash(s string) {
+	m.settlement_payload_hash = &s
+}
+
+// SettlementPayloadHash returns the value of the "settlement_payload_hash" field in the mutation.
+func (m *CreditReservationMutation) SettlementPayloadHash() (r string, exists bool) {
+	v := m.settlement_payload_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSettlementPayloadHash returns the old "settlement_payload_hash" field's value of the CreditReservation entity.
+// If the CreditReservation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationMutation) OldSettlementPayloadHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSettlementPayloadHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSettlementPayloadHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSettlementPayloadHash: %w", err)
+	}
+	return oldValue.SettlementPayloadHash, nil
+}
+
+// ResetSettlementPayloadHash resets all changes to the "settlement_payload_hash" field.
+func (m *CreditReservationMutation) ResetSettlementPayloadHash() {
+	m.settlement_payload_hash = nil
+}
+
 // SetRateVersion sets the "rate_version" field.
 func (m *CreditReservationMutation) SetRateVersion(s string) {
 	m.rate_version = &s
@@ -92556,7 +92754,7 @@ func (m *CreditReservationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CreditReservationMutation) Fields() []string {
-	fields := make([]string, 0, 30)
+	fields := make([]string, 0, 32)
 	if m.namespace != nil {
 		fields = append(fields, creditreservation.FieldNamespace)
 	}
@@ -92613,6 +92811,12 @@ func (m *CreditReservationMutation) Fields() []string {
 	}
 	if m.settled_credits != nil {
 		fields = append(fields, creditreservation.FieldSettledCredits)
+	}
+	if m.settlement_idempotency_key != nil {
+		fields = append(fields, creditreservation.FieldSettlementIdempotencyKey)
+	}
+	if m.settlement_payload_hash != nil {
+		fields = append(fields, creditreservation.FieldSettlementPayloadHash)
 	}
 	if m.rate_version != nil {
 		fields = append(fields, creditreservation.FieldRateVersion)
@@ -92693,6 +92897,10 @@ func (m *CreditReservationMutation) Field(name string) (ent.Value, bool) {
 		return m.EnterpriseHold()
 	case creditreservation.FieldSettledCredits:
 		return m.SettledCredits()
+	case creditreservation.FieldSettlementIdempotencyKey:
+		return m.SettlementIdempotencyKey()
+	case creditreservation.FieldSettlementPayloadHash:
+		return m.SettlementPayloadHash()
 	case creditreservation.FieldRateVersion:
 		return m.RateVersion()
 	case creditreservation.FieldState:
@@ -92762,6 +92970,10 @@ func (m *CreditReservationMutation) OldField(ctx context.Context, name string) (
 		return m.OldEnterpriseHold(ctx)
 	case creditreservation.FieldSettledCredits:
 		return m.OldSettledCredits(ctx)
+	case creditreservation.FieldSettlementIdempotencyKey:
+		return m.OldSettlementIdempotencyKey(ctx)
+	case creditreservation.FieldSettlementPayloadHash:
+		return m.OldSettlementPayloadHash(ctx)
 	case creditreservation.FieldRateVersion:
 		return m.OldRateVersion(ctx)
 	case creditreservation.FieldState:
@@ -92925,6 +93137,20 @@ func (m *CreditReservationMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSettledCredits(v)
+		return nil
+	case creditreservation.FieldSettlementIdempotencyKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementIdempotencyKey(v)
+		return nil
+	case creditreservation.FieldSettlementPayloadHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSettlementPayloadHash(v)
 		return nil
 	case creditreservation.FieldRateVersion:
 		v, ok := value.(string)
@@ -93192,6 +93418,12 @@ func (m *CreditReservationMutation) ResetField(name string) error {
 		return nil
 	case creditreservation.FieldSettledCredits:
 		m.ResetSettledCredits()
+		return nil
+	case creditreservation.FieldSettlementIdempotencyKey:
+		m.ResetSettlementIdempotencyKey()
+		return nil
+	case creditreservation.FieldSettlementPayloadHash:
+		m.ResetSettlementPayloadHash()
 		return nil
 	case creditreservation.FieldRateVersion:
 		m.ResetRateVersion()

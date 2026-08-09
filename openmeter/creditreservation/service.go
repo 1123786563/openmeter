@@ -66,7 +66,6 @@ type UnknownInput struct {
 type SettleInput struct {
 	ID              models.NamespacedID
 	CommandIdentity CommandIdentity
-	ActualLines     []RatedLine
 	ActualCredits   int64
 	SettledAt       time.Time
 }

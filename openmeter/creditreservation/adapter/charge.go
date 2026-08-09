@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
@@ -26,6 +27,7 @@ type CreateChargeInput struct {
 	SettlementLedgerGroupID string
 	ReversalLedgerGroupID   string
 	UsageEventID            string
+	SettlementAllocations   []creditreservation.SettlementAllocation
 }
 
 func (t *txAdapter) GetChargeByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Charge, bool, error) {
@@ -63,6 +65,10 @@ func (t *txAdapter) CreateCharge(ctx context.Context, input CreateChargeInput) (
 	if err != nil {
 		return creditreservation.Charge{}, false, err
 	}
+	persistedAllocations, err := marshalSettlementAllocations(input.SettlementAllocations)
+	if err != nil {
+		return creditreservation.Charge{}, false, err
+	}
 	create := t.db.CreditCharge.Create().
 		SetNamespace(input.Namespace).
 		SetCustomerID(input.CustomerID).
@@ -73,6 +79,8 @@ func (t *txAdapter) CreateCharge(ctx context.Context, input CreateChargeInput) (
 		SetCurrency(input.Charge.Currency).
 		SetRatedLines(persistedLines).
 		SetAmount(input.Charge.TotalCredits).
+		SetRateVersion(input.Charge.RateVersion).
+		SetSettlementAllocations(persistedAllocations).
 		SetState(dbcreditcharge.State(input.State)).
 		SetSettlementLedgerGroupID(input.SettlementLedgerGroupID).
 		SetReversalLedgerGroupID(input.ReversalLedgerGroupID).
@@ -134,7 +142,7 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 	charge := creditreservation.Charge{
 		ID:           row.ID,
 		Currency:     row.Currency,
-		RateVersion:  "",
+		RateVersion:  row.RateVersion,
 		Lines:        lines,
 		TotalCredits: row.Amount,
 		CommandIdentity: creditreservation.CommandIdentity{
@@ -144,8 +152,37 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 		State: string(row.State), SettlementLedgerGroupID: row.SettlementLedgerGroupID,
 		ReversalLedgerGroupID: row.ReversalLedgerGroupID,
 	}
+	allocations, err := unmarshalSettlementAllocations(row.SettlementAllocations)
+	if err != nil {
+		return creditreservation.Charge{}, err
+	}
+	charge.SettlementAllocations = allocations
 	if row.ReservationID != nil {
 		charge.ReservationID = *row.ReservationID
 	}
 	return charge, nil
+}
+
+func marshalSettlementAllocations(allocations []creditreservation.SettlementAllocation) ([]json.RawMessage, error) {
+	persisted := make([]json.RawMessage, 0, len(allocations))
+	for _, allocation := range allocations {
+		encoded, err := json.Marshal(allocation)
+		if err != nil {
+			return nil, fmt.Errorf("marshal settlement allocation: %w", err)
+		}
+		persisted = append(persisted, encoded)
+	}
+	return persisted, nil
+}
+
+func unmarshalSettlementAllocations(persisted []json.RawMessage) ([]creditreservation.SettlementAllocation, error) {
+	allocations := make([]creditreservation.SettlementAllocation, 0, len(persisted))
+	for _, raw := range persisted {
+		var allocation creditreservation.SettlementAllocation
+		if err := json.Unmarshal(raw, &allocation); err != nil {
+			return nil, fmt.Errorf("unmarshal settlement allocation: %w", err)
+		}
+		allocations = append(allocations, allocation)
+	}
+	return allocations, nil
 }

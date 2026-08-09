@@ -124,6 +124,11 @@ func Amount(v int64) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldEQ(FieldAmount, v))
 }
 
+// RateVersion applies equality check predicate on the "rate_version" field. It's identical to RateVersionEQ.
+func RateVersion(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldRateVersion, v))
+}
+
 // SettlementLedgerGroupID applies equality check predicate on the "settlement_ledger_group_id" field. It's identical to SettlementLedgerGroupIDEQ.
 func SettlementLedgerGroupID(v string) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldEQ(FieldSettlementLedgerGroupID, v))
@@ -847,6 +852,71 @@ func AmountLT(v int64) predicate.CreditCharge {
 // AmountLTE applies the LTE predicate on the "amount" field.
 func AmountLTE(v int64) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldLTE(FieldAmount, v))
+}
+
+// RateVersionEQ applies the EQ predicate on the "rate_version" field.
+func RateVersionEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldRateVersion, v))
+}
+
+// RateVersionNEQ applies the NEQ predicate on the "rate_version" field.
+func RateVersionNEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNEQ(FieldRateVersion, v))
+}
+
+// RateVersionIn applies the In predicate on the "rate_version" field.
+func RateVersionIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldIn(FieldRateVersion, vs...))
+}
+
+// RateVersionNotIn applies the NotIn predicate on the "rate_version" field.
+func RateVersionNotIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNotIn(FieldRateVersion, vs...))
+}
+
+// RateVersionGT applies the GT predicate on the "rate_version" field.
+func RateVersionGT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGT(FieldRateVersion, v))
+}
+
+// RateVersionGTE applies the GTE predicate on the "rate_version" field.
+func RateVersionGTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGTE(FieldRateVersion, v))
+}
+
+// RateVersionLT applies the LT predicate on the "rate_version" field.
+func RateVersionLT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLT(FieldRateVersion, v))
+}
+
+// RateVersionLTE applies the LTE predicate on the "rate_version" field.
+func RateVersionLTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLTE(FieldRateVersion, v))
+}
+
+// RateVersionContains applies the Contains predicate on the "rate_version" field.
+func RateVersionContains(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContains(FieldRateVersion, v))
+}
+
+// RateVersionHasPrefix applies the HasPrefix predicate on the "rate_version" field.
+func RateVersionHasPrefix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasPrefix(FieldRateVersion, v))
+}
+
+// RateVersionHasSuffix applies the HasSuffix predicate on the "rate_version" field.
+func RateVersionHasSuffix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasSuffix(FieldRateVersion, v))
+}
+
+// RateVersionEqualFold applies the EqualFold predicate on the "rate_version" field.
+func RateVersionEqualFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEqualFold(FieldRateVersion, v))
+}
+
+// RateVersionContainsFold applies the ContainsFold predicate on the "rate_version" field.
+func RateVersionContainsFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContainsFold(FieldRateVersion, v))
 }
 
 // StateEQ applies the EQ predicate on the "state" field.

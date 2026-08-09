@@ -2320,16 +2320,20 @@ func init() {
 	creditchargeDescPayloadHash := creditchargeFields[5].Descriptor()
 	// creditcharge.PayloadHashValidator is a validator for the "payload_hash" field. It is called by the builders before save.
 	creditcharge.PayloadHashValidator = creditchargeDescPayloadHash.Validators[0].(func(string) error)
+	// creditchargeDescRateVersion is the schema descriptor for rate_version field.
+	creditchargeDescRateVersion := creditchargeFields[10].Descriptor()
+	// creditcharge.DefaultRateVersion holds the default value on creation for the rate_version field.
+	creditcharge.DefaultRateVersion = creditchargeDescRateVersion.Default.(string)
 	// creditchargeDescSettlementLedgerGroupID is the schema descriptor for settlement_ledger_group_id field.
-	creditchargeDescSettlementLedgerGroupID := creditchargeFields[11].Descriptor()
+	creditchargeDescSettlementLedgerGroupID := creditchargeFields[13].Descriptor()
 	// creditcharge.DefaultSettlementLedgerGroupID holds the default value on creation for the settlement_ledger_group_id field.
 	creditcharge.DefaultSettlementLedgerGroupID = creditchargeDescSettlementLedgerGroupID.Default.(string)
 	// creditchargeDescReversalLedgerGroupID is the schema descriptor for reversal_ledger_group_id field.
-	creditchargeDescReversalLedgerGroupID := creditchargeFields[12].Descriptor()
+	creditchargeDescReversalLedgerGroupID := creditchargeFields[14].Descriptor()
 	// creditcharge.DefaultReversalLedgerGroupID holds the default value on creation for the reversal_ledger_group_id field.
 	creditcharge.DefaultReversalLedgerGroupID = creditchargeDescReversalLedgerGroupID.Default.(string)
 	// creditchargeDescUsageEventID is the schema descriptor for usage_event_id field.
-	creditchargeDescUsageEventID := creditchargeFields[13].Descriptor()
+	creditchargeDescUsageEventID := creditchargeFields[15].Descriptor()
 	// creditcharge.DefaultUsageEventID holds the default value on creation for the usage_event_id field.
 	creditcharge.DefaultUsageEventID = creditchargeDescUsageEventID.Default.(string)
 	// creditchargeDescID is the schema descriptor for id field.
@@ -2459,40 +2463,48 @@ func init() {
 	creditreservationDescSettledCredits := creditreservationFields[14].Descriptor()
 	// creditreservation.DefaultSettledCredits holds the default value on creation for the settled_credits field.
 	creditreservation.DefaultSettledCredits = creditreservationDescSettledCredits.Default.(int64)
+	// creditreservationDescSettlementIdempotencyKey is the schema descriptor for settlement_idempotency_key field.
+	creditreservationDescSettlementIdempotencyKey := creditreservationFields[15].Descriptor()
+	// creditreservation.DefaultSettlementIdempotencyKey holds the default value on creation for the settlement_idempotency_key field.
+	creditreservation.DefaultSettlementIdempotencyKey = creditreservationDescSettlementIdempotencyKey.Default.(string)
+	// creditreservationDescSettlementPayloadHash is the schema descriptor for settlement_payload_hash field.
+	creditreservationDescSettlementPayloadHash := creditreservationFields[16].Descriptor()
+	// creditreservation.DefaultSettlementPayloadHash holds the default value on creation for the settlement_payload_hash field.
+	creditreservation.DefaultSettlementPayloadHash = creditreservationDescSettlementPayloadHash.Default.(string)
 	// creditreservationDescRateVersion is the schema descriptor for rate_version field.
-	creditreservationDescRateVersion := creditreservationFields[15].Descriptor()
+	creditreservationDescRateVersion := creditreservationFields[17].Descriptor()
 	// creditreservation.DefaultRateVersion holds the default value on creation for the rate_version field.
 	creditreservation.DefaultRateVersion = creditreservationDescRateVersion.Default.(string)
 	// creditreservationDescState is the schema descriptor for state field.
-	creditreservationDescState := creditreservationFields[16].Descriptor()
+	creditreservationDescState := creditreservationFields[18].Descriptor()
 	// creditreservation.StateValidator is a validator for the "state" field. It is called by the builders before save.
 	creditreservation.StateValidator = creditreservationDescState.Validators[0].(func(string) error)
 	// creditreservationDescProvider is the schema descriptor for provider field.
-	creditreservationDescProvider := creditreservationFields[17].Descriptor()
+	creditreservationDescProvider := creditreservationFields[19].Descriptor()
 	// creditreservation.DefaultProvider holds the default value on creation for the provider field.
 	creditreservation.DefaultProvider = creditreservationDescProvider.Default.(string)
 	// creditreservationDescModel is the schema descriptor for model field.
-	creditreservationDescModel := creditreservationFields[18].Descriptor()
+	creditreservationDescModel := creditreservationFields[20].Descriptor()
 	// creditreservation.DefaultModel holds the default value on creation for the model field.
 	creditreservation.DefaultModel = creditreservationDescModel.Default.(string)
 	// creditreservationDescRequestID is the schema descriptor for request_id field.
-	creditreservationDescRequestID := creditreservationFields[19].Descriptor()
+	creditreservationDescRequestID := creditreservationFields[21].Descriptor()
 	// creditreservation.DefaultRequestID holds the default value on creation for the request_id field.
 	creditreservation.DefaultRequestID = creditreservationDescRequestID.Default.(string)
 	// creditreservationDescHoldLedgerGroupID is the schema descriptor for hold_ledger_group_id field.
-	creditreservationDescHoldLedgerGroupID := creditreservationFields[22].Descriptor()
+	creditreservationDescHoldLedgerGroupID := creditreservationFields[24].Descriptor()
 	// creditreservation.DefaultHoldLedgerGroupID holds the default value on creation for the hold_ledger_group_id field.
 	creditreservation.DefaultHoldLedgerGroupID = creditreservationDescHoldLedgerGroupID.Default.(string)
 	// creditreservationDescSettlementLedgerGroupID is the schema descriptor for settlement_ledger_group_id field.
-	creditreservationDescSettlementLedgerGroupID := creditreservationFields[23].Descriptor()
+	creditreservationDescSettlementLedgerGroupID := creditreservationFields[25].Descriptor()
 	// creditreservation.DefaultSettlementLedgerGroupID holds the default value on creation for the settlement_ledger_group_id field.
 	creditreservation.DefaultSettlementLedgerGroupID = creditreservationDescSettlementLedgerGroupID.Default.(string)
 	// creditreservationDescReleaseLedgerGroupID is the schema descriptor for release_ledger_group_id field.
-	creditreservationDescReleaseLedgerGroupID := creditreservationFields[24].Descriptor()
+	creditreservationDescReleaseLedgerGroupID := creditreservationFields[26].Descriptor()
 	// creditreservation.DefaultReleaseLedgerGroupID holds the default value on creation for the release_ledger_group_id field.
 	creditreservation.DefaultReleaseLedgerGroupID = creditreservationDescReleaseLedgerGroupID.Default.(string)
 	// creditreservationDescUsageEventID is the schema descriptor for usage_event_id field.
-	creditreservationDescUsageEventID := creditreservationFields[25].Descriptor()
+	creditreservationDescUsageEventID := creditreservationFields[27].Descriptor()
 	// creditreservation.DefaultUsageEventID holds the default value on creation for the usage_event_id field.
 	creditreservation.DefaultUsageEventID = creditreservationDescUsageEventID.Default.(string)
 	// creditreservationDescID is the schema descriptor for id field.

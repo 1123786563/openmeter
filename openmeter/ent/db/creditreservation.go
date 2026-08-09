@@ -57,6 +57,10 @@ type CreditReservation struct {
 	EnterpriseHold int64 `json:"enterprise_hold,omitempty"`
 	// SettledCredits holds the value of the "settled_credits" field.
 	SettledCredits int64 `json:"settled_credits,omitempty"`
+	// SettlementIdempotencyKey holds the value of the "settlement_idempotency_key" field.
+	SettlementIdempotencyKey string `json:"settlement_idempotency_key,omitempty"`
+	// SettlementPayloadHash holds the value of the "settlement_payload_hash" field.
+	SettlementPayloadHash string `json:"settlement_payload_hash,omitempty"`
 	// RateVersion holds the value of the "rate_version" field.
 	RateVersion string `json:"rate_version,omitempty"`
 	// State holds the value of the "state" field.
@@ -91,7 +95,7 @@ func (*CreditReservation) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case creditreservation.FieldCeilingCredits, creditreservation.FieldPrepaidHold, creditreservation.FieldEnterpriseHold, creditreservation.FieldSettledCredits:
 			values[i] = new(sql.NullInt64)
-		case creditreservation.FieldID, creditreservation.FieldNamespace, creditreservation.FieldCustomerID, creditreservation.FieldSubjectID, creditreservation.FieldClientCallID, creditreservation.FieldOperation, creditreservation.FieldIdempotencyKey, creditreservation.FieldPayloadHash, creditreservation.FieldCustomCurrencyID, creditreservation.FieldRateVersion, creditreservation.FieldState, creditreservation.FieldProvider, creditreservation.FieldModel, creditreservation.FieldRequestID, creditreservation.FieldHoldLedgerGroupID, creditreservation.FieldSettlementLedgerGroupID, creditreservation.FieldReleaseLedgerGroupID, creditreservation.FieldUsageEventID:
+		case creditreservation.FieldID, creditreservation.FieldNamespace, creditreservation.FieldCustomerID, creditreservation.FieldSubjectID, creditreservation.FieldClientCallID, creditreservation.FieldOperation, creditreservation.FieldIdempotencyKey, creditreservation.FieldPayloadHash, creditreservation.FieldCustomCurrencyID, creditreservation.FieldSettlementIdempotencyKey, creditreservation.FieldSettlementPayloadHash, creditreservation.FieldRateVersion, creditreservation.FieldState, creditreservation.FieldProvider, creditreservation.FieldModel, creditreservation.FieldRequestID, creditreservation.FieldHoldLedgerGroupID, creditreservation.FieldSettlementLedgerGroupID, creditreservation.FieldReleaseLedgerGroupID, creditreservation.FieldUsageEventID:
 			values[i] = new(sql.NullString)
 		case creditreservation.FieldCreatedAt, creditreservation.FieldUpdatedAt, creditreservation.FieldDeletedAt, creditreservation.FieldAuthorizationExpiresAt, creditreservation.FieldExecutionDeadline:
 			values[i] = new(sql.NullTime)
@@ -239,6 +243,18 @@ func (_m *CreditReservation) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field settled_credits", values[i])
 			} else if value.Valid {
 				_m.SettledCredits = value.Int64
+			}
+		case creditreservation.FieldSettlementIdempotencyKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_idempotency_key", values[i])
+			} else if value.Valid {
+				_m.SettlementIdempotencyKey = value.String
+			}
+		case creditreservation.FieldSettlementPayloadHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_payload_hash", values[i])
+			} else if value.Valid {
+				_m.SettlementPayloadHash = value.String
 			}
 		case creditreservation.FieldRateVersion:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -404,6 +420,12 @@ func (_m *CreditReservation) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("settled_credits=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SettledCredits))
+	builder.WriteString(", ")
+	builder.WriteString("settlement_idempotency_key=")
+	builder.WriteString(_m.SettlementIdempotencyKey)
+	builder.WriteString(", ")
+	builder.WriteString("settlement_payload_hash=")
+	builder.WriteString(_m.SettlementPayloadHash)
 	builder.WriteString(", ")
 	builder.WriteString("rate_version=")
 	builder.WriteString(_m.RateVersion)

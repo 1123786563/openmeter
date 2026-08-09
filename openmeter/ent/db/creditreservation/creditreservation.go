@@ -51,6 +51,10 @@ const (
 	FieldEnterpriseHold = "enterprise_hold"
 	// FieldSettledCredits holds the string denoting the settled_credits field in the database.
 	FieldSettledCredits = "settled_credits"
+	// FieldSettlementIdempotencyKey holds the string denoting the settlement_idempotency_key field in the database.
+	FieldSettlementIdempotencyKey = "settlement_idempotency_key"
+	// FieldSettlementPayloadHash holds the string denoting the settlement_payload_hash field in the database.
+	FieldSettlementPayloadHash = "settlement_payload_hash"
 	// FieldRateVersion holds the string denoting the rate_version field in the database.
 	FieldRateVersion = "rate_version"
 	// FieldState holds the string denoting the state field in the database.
@@ -99,6 +103,8 @@ var Columns = []string{
 	FieldPrepaidHold,
 	FieldEnterpriseHold,
 	FieldSettledCredits,
+	FieldSettlementIdempotencyKey,
+	FieldSettlementPayloadHash,
 	FieldRateVersion,
 	FieldState,
 	FieldProvider,
@@ -151,6 +157,10 @@ var (
 	DefaultEnterpriseHold int64
 	// DefaultSettledCredits holds the default value on creation for the "settled_credits" field.
 	DefaultSettledCredits int64
+	// DefaultSettlementIdempotencyKey holds the default value on creation for the "settlement_idempotency_key" field.
+	DefaultSettlementIdempotencyKey string
+	// DefaultSettlementPayloadHash holds the default value on creation for the "settlement_payload_hash" field.
+	DefaultSettlementPayloadHash string
 	// DefaultRateVersion holds the default value on creation for the "rate_version" field.
 	DefaultRateVersion string
 	// StateValidator is a validator for the "state" field. It is called by the builders before save.
@@ -254,6 +264,16 @@ func ByEnterpriseHold(opts ...sql.OrderTermOption) OrderOption {
 // BySettledCredits orders the results by the settled_credits field.
 func BySettledCredits(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSettledCredits, opts...).ToFunc()
+}
+
+// BySettlementIdempotencyKey orders the results by the settlement_idempotency_key field.
+func BySettlementIdempotencyKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementIdempotencyKey, opts...).ToFunc()
+}
+
+// BySettlementPayloadHash orders the results by the settlement_payload_hash field.
+func BySettlementPayloadHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementPayloadHash, opts...).ToFunc()
 }
 
 // ByRateVersion orders the results by the rate_version field.

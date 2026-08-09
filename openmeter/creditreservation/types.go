@@ -75,6 +75,7 @@ type Reservation struct {
 	PrepaidHold             int64                        `json:"prepaidHold"`
 	EnterpriseHold          int64                        `json:"enterpriseHold"`
 	SettlementLedgerGroupID string                       `json:"settlementLedgerGroupId,omitempty"`
+	SettlementIdentity      CommandIdentity              `json:"settlementIdentity,omitempty"`
 }
 
 func (r Reservation) Validate() error {
@@ -94,6 +95,14 @@ type Charge struct {
 	State                   string                       `json:"state"`
 	SettlementLedgerGroupID string                       `json:"settlementLedgerGroupId,omitempty"`
 	ReversalLedgerGroupID   string                       `json:"reversalLedgerGroupId,omitempty"`
+	SettlementAllocations   []SettlementAllocation       `json:"settlementAllocations,omitempty"`
+}
+
+type SettlementAllocation struct {
+	ID       string `json:"id"`
+	GroupID  string `json:"groupId"`
+	Amount   int64  `json:"amount"`
+	SortHint int    `json:"sortHint"`
 }
 
 // UsageEvent is the standard event payload persisted by the reservation

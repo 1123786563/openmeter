@@ -6,6 +6,7 @@ import (
 	"time"
 
 	decimal "github.com/alpacahq/alpacadecimal"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
@@ -31,30 +32,30 @@ func (s *service) Settle(ctx context.Context, input creditreservation.SettleInpu
 		return creditreservation.Reservation{}, creditreservation.ErrSettlementNotConfigured
 	}
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
-		if err := matchesIdentity(current, input.CommandIdentity.IdempotencyKey, input.CommandIdentity.PayloadHash); err != nil {
-			return creditreservation.Reservation{}, err
-		}
 		if current.State == creditreservation.ReservationStateSettled {
+			if current.SettlementIdentity != input.CommandIdentity {
+				return creditreservation.Reservation{}, creditreservation.ErrIdempotencyConflict
+			}
 			return current, nil
 		}
 		actual := min(input.ActualCredits, current.TotalCredits)
 		if current.State != creditreservation.ReservationStateExecuting && current.State != creditreservation.ReservationStateUnknown {
 			return creditreservation.Reservation{}, creditreservation.ErrStateConflict
 		}
-		groupID, err := s.collect(ctx, current.ID, current.CustomerID, current.Currency, current.Lines, actual, current.EnterpriseHold, input.SettledAt)
+		groupID, _, err := s.collect(ctx, current.Namespace, current.ID, current.CustomerID, current.Currency, current.Lines, actual, current.EnterpriseHold, input.SettledAt)
 		if err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		zero := int64(0)
 		updated, err := tx.UpdateReservation(ctx, reservationadapter.UpdateReservationInput{
 			ID: input.ID, ExpectedStates: []creditreservation.ReservationState{current.State}, State: creditreservation.ReservationStateSettled,
-			ActualLines: input.ActualLines, SettledCredits: &actual, PrepaidHold: &zero, EnterpriseHold: &zero,
+			SettledCredits: &actual, PrepaidHold: &zero, EnterpriseHold: &zero, SettlementIdentity: &input.CommandIdentity,
 			SettlementLedgerGroupID: &groupID, Evidence: creditreservation.TransitionEvidence{Kind: creditreservation.TransitionEvidenceSettlement, Reference: groupID},
 		})
 		if err != nil {
 			return creditreservation.Reservation{}, err
 		}
-		if err := tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: "usage:" + current.ID, AggregateType: "credit_reservation", AggregateID: current.ID, EventType: "openmeter.credit.usage", Payload: map[string]any{"customer_id": current.CustomerID, "reservation_id": current.ID, "lines": input.ActualLines, "credits": actual}}); err != nil {
+		if err := tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: "usage:" + current.ID, AggregateType: "credit_reservation", AggregateID: current.ID, EventType: "openmeter.credit.usage", Payload: map[string]any{"customer_id": current.CustomerID, "reservation_id": current.ID, "credits": actual}}); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		return updated, nil
@@ -113,11 +114,11 @@ func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInpu
 		if err != nil {
 			return err
 		}
-		groupID, err := s.collect(ctx, input.ID.ID, input.CustomerID, priced.Currency, priced.Lines, priced.TotalCredits, split.enterprise, input.BookedAt)
+		groupID, allocations, err := s.collect(ctx, input.ID.Namespace, input.ID.ID, input.CustomerID, priced.Currency, priced.Lines, priced.TotalCredits, split.enterprise, input.BookedAt)
 		if err != nil {
 			return err
 		}
-		result, _, err = tx.CreateCharge(ctx, reservationadapter.CreateChargeInput{Charge: creditreservation.Charge{ID: input.ID.ID, Currency: priced.Currency, RateVersion: priced.RateVersion, Lines: priced.Lines, TotalCredits: priced.TotalCredits, CommandIdentity: input.CommandIdentity}, Namespace: input.ID.Namespace, CustomerID: input.CustomerID, SubjectID: input.SubjectID, Operation: input.Operation, State: reservationadapter.ChargeStateSettled, SettlementLedgerGroupID: groupID, UsageEventID: "usage:" + input.ID.ID})
+		result, _, err = tx.CreateCharge(ctx, reservationadapter.CreateChargeInput{Charge: creditreservation.Charge{ID: input.ID.ID, Currency: priced.Currency, RateVersion: priced.RateVersion, Lines: priced.Lines, TotalCredits: priced.TotalCredits, CommandIdentity: input.CommandIdentity}, Namespace: input.ID.Namespace, CustomerID: input.CustomerID, SubjectID: input.SubjectID, Operation: input.Operation, State: reservationadapter.ChargeStateSettled, SettlementLedgerGroupID: groupID, UsageEventID: "usage:" + input.ID.ID, SettlementAllocations: allocations})
 		if err != nil {
 			return err
 		}
@@ -136,23 +137,27 @@ func (s *service) ReverseCharge(_ context.Context, input creditreservation.Rever
 	return creditreservation.Charge{}, creditreservation.ErrSettlementProvenanceAbsent
 }
 
-func (s *service) collect(ctx context.Context, chargeID, customerID string, currency currencies.CurrencyReference, lines []creditreservation.RatedLine, credits, enterpriseHold int64, bookedAt time.Time) (string, error) {
+func (s *service) collect(ctx context.Context, namespace, chargeID, customerID string, currency currencies.CurrencyReference, lines []creditreservation.RatedLine, credits, enterpriseHold int64, bookedAt time.Time) (string, []creditreservation.SettlementAllocation, error) {
 	if len(lines) == 0 {
-		return "", creditreservation.ErrResourceLinesRequired
+		return "", nil, creditreservation.ErrResourceLinesRequired
 	}
 	var receivableLimit *decimal.Decimal
 	if enterpriseHold > 0 {
 		value := decimal.NewFromInt(enterpriseHold)
 		receivableLimit = &value
 	}
-	allocations, err := s.settlement.CollectToAccrued(ctx, collector.CollectToAccruedInput{Namespace: "", ChargeID: chargeID, CustomerID: customerID, BookedAt: bookedAt, SourceBalanceAsOf: bookedAt, Currency: currency, FeatureKey: lines[0].FeatureKey, SettlementMode: productcatalog.CreditOnlySettlementMode, ServicePeriod: timeutil.ClosedPeriod{From: bookedAt, To: bookedAt}, Amount: decimal.NewFromInt(credits), ReceivableLimit: receivableLimit})
+	allocations, err := s.settlement.CollectToAccrued(ctx, collector.CollectToAccruedInput{Namespace: namespace, ChargeID: chargeID, CustomerID: customerID, BookedAt: bookedAt, SourceBalanceAsOf: bookedAt, Currency: currency, FeatureKey: lines[0].FeatureKey, SettlementMode: productcatalog.CreditOnlySettlementMode, ServicePeriod: timeutil.ClosedPeriod{From: bookedAt, To: bookedAt}, Amount: decimal.NewFromInt(credits), ReceivableLimit: receivableLimit})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if len(allocations) == 0 {
-		return "", fmt.Errorf("collector returned no ledger provenance")
+		return "", nil, fmt.Errorf("collector returned no ledger provenance")
 	}
-	return allocations[0].LedgerTransaction.TransactionGroupID, nil
+	provenance := make([]creditreservation.SettlementAllocation, 0, len(allocations))
+	for index, allocation := range allocations {
+		provenance = append(provenance, creditreservation.SettlementAllocation{ID: ulid.Make().String(), GroupID: allocation.LedgerTransaction.TransactionGroupID, Amount: allocation.Amount.IntPart(), SortHint: index})
+	}
+	return allocations[0].LedgerTransaction.TransactionGroupID, provenance, nil
 }
 
 func validateSettleInput(input creditreservation.SettleInput) error {

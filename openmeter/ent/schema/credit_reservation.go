@@ -51,6 +51,8 @@ func (CreditReservation) Fields() []ent.Field {
 		field.Int64("prepaid_hold").Default(0),
 		field.Int64("enterprise_hold").Default(0),
 		field.Int64("settled_credits").Default(0),
+		field.String("settlement_idempotency_key").Default(""),
+		field.String("settlement_payload_hash").Default(""),
 		field.String("rate_version").Default(""),
 		field.String("state").NotEmpty(),
 		field.String("provider").Default(""),

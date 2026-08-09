@@ -1,4 +1,4 @@
-h1:8w5vYClb51Xpflg8KuodQpiDLj5dnAq8lPEgzTRodOk=
+h1:rhqjDh4AjNT20sn6yPVc8G+G9SVJ9TxsYfN0If9c54w=
 20240826120919_init.down.sql h1:AIbgwwngjkJEYa3yRZsIXQyBa2+qoZttwMXHxXEbHLI=
 20240826120919_init.up.sql h1:/hYHWF3Z3dab8SMKnw99ixVktCuJe2bAw5wstCZIEN8=
 20240903155435_entitlement-expired-index.down.sql h1:np2xgYs3KQ2z7qPBcobtGNhqWQ3V8NwEP9E5U3TmpSA=
@@ -509,3 +509,5 @@ h1:8w5vYClb51Xpflg8KuodQpiDLj5dnAq8lPEgzTRodOk=
 20260809000300_aiusage_ratecard_price_default.up.sql h1:Q+qHIGI/tnwQZGGOHmjA08VM/5VvZ1L+ncpJVYM3J3Q=
 20260809000400_credit_reservation_v2.down.sql h1:OA7y5N2JiNjG1oPlKP4nrxC0M1Wl0i4c2P9aQXAhnZ8=
 20260809000400_credit_reservation_v2.up.sql h1:g3Xo1hxhT3t002ml9q/ZMejv23AoNPpJGd6zw5BzUEA=
+20260810000100_credit_reservation_settlement_provenance.down.sql h1:nYtS1NB+6FCcwvx0UZyilC71PBTqK0KXUcvjZfU/wmQ=
+20260810000100_credit_reservation_settlement_provenance.up.sql h1:MEAjpWvFwaNWRG2Xi2VFDt9RqT1Vo3uc5YvlUqv0dYo=

@@ -3994,6 +3994,8 @@ var (
 		{Name: "custom_currency_id", Type: field.TypeString, Nullable: true},
 		{Name: "rated_lines", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "amount", Type: field.TypeInt64},
+		{Name: "rate_version", Type: field.TypeString, Default: ""},
+		{Name: "settlement_allocations", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"SETTLED", "REVERSED"}},
 		{Name: "settlement_ledger_group_id", Type: field.TypeString, Default: ""},
 		{Name: "reversal_ledger_group_id", Type: field.TypeString, Default: ""},
@@ -4145,6 +4147,8 @@ var (
 		{Name: "prepaid_hold", Type: field.TypeInt64, Default: 0},
 		{Name: "enterprise_hold", Type: field.TypeInt64, Default: 0},
 		{Name: "settled_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "settlement_idempotency_key", Type: field.TypeString, Default: ""},
+		{Name: "settlement_payload_hash", Type: field.TypeString, Default: ""},
 		{Name: "rate_version", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeString},
 		{Name: "provider", Type: field.TypeString, Default: ""},
@@ -4186,7 +4190,7 @@ var (
 			{
 				Name:    "credit_reservation_active_holds",
 				Unique:  false,
-				Columns: []*schema.Column{CreditReservationsColumns[1], CreditReservationsColumns[5], CreditReservationsColumns[12], CreditReservationsColumns[21]},
+				Columns: []*schema.Column{CreditReservationsColumns[1], CreditReservationsColumns[5], CreditReservationsColumns[12], CreditReservationsColumns[23]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "state IN ('ACTIVE', 'EXECUTING', 'UNKNOWN', 'MANUAL_REVIEW')",
 				},

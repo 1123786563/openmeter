@@ -47,6 +47,10 @@ type CreditCharge struct {
 	RatedLines []json.RawMessage `json:"rated_lines,omitempty"`
 	// Amount holds the value of the "amount" field.
 	Amount int64 `json:"amount,omitempty"`
+	// RateVersion holds the value of the "rate_version" field.
+	RateVersion string `json:"rate_version,omitempty"`
+	// SettlementAllocations holds the value of the "settlement_allocations" field.
+	SettlementAllocations []json.RawMessage `json:"settlement_allocations,omitempty"`
 	// State holds the value of the "state" field.
 	State creditcharge.State `json:"state,omitempty"`
 	// SettlementLedgerGroupID holds the value of the "settlement_ledger_group_id" field.
@@ -63,11 +67,11 @@ func (*CreditCharge) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case creditcharge.FieldCurrency, creditcharge.FieldRatedLines:
+		case creditcharge.FieldCurrency, creditcharge.FieldRatedLines, creditcharge.FieldSettlementAllocations:
 			values[i] = new([]byte)
 		case creditcharge.FieldAmount:
 			values[i] = new(sql.NullInt64)
-		case creditcharge.FieldID, creditcharge.FieldNamespace, creditcharge.FieldReservationID, creditcharge.FieldCustomerID, creditcharge.FieldSubjectID, creditcharge.FieldOperation, creditcharge.FieldIdempotencyKey, creditcharge.FieldPayloadHash, creditcharge.FieldCustomCurrencyID, creditcharge.FieldState, creditcharge.FieldSettlementLedgerGroupID, creditcharge.FieldReversalLedgerGroupID, creditcharge.FieldUsageEventID:
+		case creditcharge.FieldID, creditcharge.FieldNamespace, creditcharge.FieldReservationID, creditcharge.FieldCustomerID, creditcharge.FieldSubjectID, creditcharge.FieldOperation, creditcharge.FieldIdempotencyKey, creditcharge.FieldPayloadHash, creditcharge.FieldCustomCurrencyID, creditcharge.FieldRateVersion, creditcharge.FieldState, creditcharge.FieldSettlementLedgerGroupID, creditcharge.FieldReversalLedgerGroupID, creditcharge.FieldUsageEventID:
 			values[i] = new(sql.NullString)
 		case creditcharge.FieldCreatedAt, creditcharge.FieldUpdatedAt, creditcharge.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -183,6 +187,20 @@ func (_m *CreditCharge) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Amount = value.Int64
 			}
+		case creditcharge.FieldRateVersion:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field rate_version", values[i])
+			} else if value.Valid {
+				_m.RateVersion = value.String
+			}
+		case creditcharge.FieldSettlementAllocations:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field settlement_allocations", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.SettlementAllocations); err != nil {
+					return fmt.Errorf("unmarshal field settlement_allocations: %w", err)
+				}
+			}
 		case creditcharge.FieldState:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field state", values[i])
@@ -290,6 +308,12 @@ func (_m *CreditCharge) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
+	builder.WriteString(", ")
+	builder.WriteString("rate_version=")
+	builder.WriteString(_m.RateVersion)
+	builder.WriteString(", ")
+	builder.WriteString("settlement_allocations=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SettlementAllocations))
 	builder.WriteString(", ")
 	builder.WriteString("state=")
 	builder.WriteString(fmt.Sprintf("%v", _m.State))
