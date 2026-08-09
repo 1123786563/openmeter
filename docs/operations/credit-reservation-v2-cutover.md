@@ -74,16 +74,29 @@ pattern ./internal/models/...: directory prefix internal/models does not contain
 切换和删除前在生产副本执行；将每条命令的时间、操作者、结果和证据链接附入变更单。
 
 ```sql
--- WeKnora: 每个收费 tenant 必须有显式 v2 engine；先归档完整清单，再确认违规清单为 0 行。
-SELECT ea.tenant_id, COALESCE(te.engine, '<missing>') AS billing_engine, te.updated_at, te.updated_by
-FROM billing_external_accounts AS ea
-LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = ea.tenant_id
-ORDER BY ea.tenant_id;
-SELECT ea.tenant_id, COALESCE(te.engine, '<missing>') AS billing_engine
-FROM billing_external_accounts AS ea
-LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = ea.tenant_id
-WHERE COALESCE(te.engine, '') <> 'openmeter_reservation_v2'
-ORDER BY ea.tenant_id;
+-- WeKnora: canonical tenant universe is active, non-deleted `tenants`, not
+-- `billing_external_accounts`. The Stage 3 engine migration must extend
+-- billing_tenant_engines.engine with explicit `exempt`; a missing row is never
+-- an exemption. Archive this complete classification before approving deletion.
+SELECT t.id AS tenant_id, t.status, COALESCE(te.engine, '<missing>') AS billing_engine,
+       CASE
+         WHEN te.engine = 'openmeter_reservation_v2' THEN 'charge-v2'
+         WHEN te.engine = 'exempt' THEN 'explicit-non-charge'
+         ELSE 'non-compliant'
+       END AS cutover_class, te.updated_at, te.updated_by
+FROM tenants AS t
+LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = t.id
+WHERE t.deleted_at IS NULL AND t.status = 'active'
+ORDER BY t.id;
+-- This violation query must return 0 rows. `exempt` rows remain in the
+-- archived full listing with updated_by/updated_at and are the explicit record
+-- for free/non-charge tenants.
+SELECT t.id AS tenant_id, COALESCE(te.engine, '<missing>') AS billing_engine
+FROM tenants AS t
+LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = t.id
+WHERE t.deleted_at IS NULL AND t.status = 'active'
+  AND COALESCE(te.engine, '') NOT IN ('openmeter_reservation_v2', 'exempt')
+ORDER BY t.id;
 
 -- WeKnora: 旧 pending 状态，以及本地 provider-call 执行证据的状态/年龄。
 -- receipt 不是货币真相；它只用于关联 call、provider request 和 OpenMeter Reservation。
@@ -135,7 +148,7 @@ sqlite3 "$WEKNORA_SQLITE_RESTORE_DB" 'PRAGMA integrity_check; PRAGMA foreign_key
 
 ## 不可逆删除门
 
-- [ ] 所有收费租户的 `billing_engine` 为 `openmeter_reservation_v2`
+- [ ] 所有收费租户的 `billing_engine` 为 `openmeter_reservation_v2`，所有免计费 tenant 在 `billing_tenant_engines` 中显式记录为 `exempt`
 - [ ] 旧 `billing_pending_usage` 无 ready/accepted/unresolved 行
 - [ ] 旧 OpenMeter `ai_usage_outboxes` 无未发布或 dead-letter 行
 - [ ] ACTIVE/EXECUTING/UNKNOWN v2 Reservation 已核对且无超龄异常
