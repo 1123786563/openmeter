@@ -49,6 +49,7 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 							$1, 'default', NOW(), 'historical-raw-hash', 'wechat',
 							'{
 								"out_trade_no":"wx-order-1",
+								"event_id":"wx-legacy-event-1",
 								"transaction_id":"wx-payment-1",
 								"mchid":"merchant-1",
 								"appid":"application-1",

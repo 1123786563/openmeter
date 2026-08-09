@@ -80,12 +80,20 @@ WITH event_candidates AS (
     pf."id",
     pf."namespace",
     pf."provider",
-    COALESCE(
-      NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),
-      NULLIF(pf."signed_payload" ->> 'event_id', ''),
-      NULLIF(pf."signed_payload" ->> 'transaction_id', ''),
-      NULLIF(pf."signed_payload" ->> 'notify_id', '')
-    ) AS event_id
+    CASE
+      WHEN pf."provider" = 'wechat' THEN COALESCE(
+        NULLIF(pf."signed_payload" ->> 'transaction_id', ''),
+        NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),
+        NULLIF(pf."signed_payload" ->> 'event_id', ''),
+        NULLIF(pf."signed_payload" ->> 'notify_id', '')
+      )
+      ELSE COALESCE(
+        NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),
+        NULLIF(pf."signed_payload" ->> 'event_id', ''),
+        NULLIF(pf."signed_payload" ->> 'transaction_id', ''),
+        NULLIF(pf."signed_payload" ->> 'notify_id', '')
+      )
+    END AS event_id
   FROM "payment_facts" AS pf
 ), unique_event_candidates AS (
   SELECT
