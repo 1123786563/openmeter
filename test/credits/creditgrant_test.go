@@ -91,6 +91,7 @@ func (s *CreditGrantTestSuite) SetupSuite() {
 		BillingService:        s.BillingService,
 		CustomerService:       s.CustomerService,
 		CreditVoidService:     creditvoid.NewNoopService(),
+		CurrenciesService:     s.CurrencyService,
 		TransactionManager:    enttx.NewCreator(s.DBClient),
 	})
 	s.Require().NoError(err)

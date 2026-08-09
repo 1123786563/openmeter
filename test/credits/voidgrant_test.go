@@ -17,6 +17,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
 	creditgrant "github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	creditgrantservice "github.com/openmeterio/openmeter/openmeter/billing/creditgrant/service"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
+	currencytestutils "github.com/openmeterio/openmeter/openmeter/currencies/testutils"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	enttx "github.com/openmeterio/openmeter/openmeter/ent/tx"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
@@ -51,10 +53,99 @@ func (s *VoidGrantTestSuite) SetupSuite() {
 		BillingService:        s.BillingService,
 		CustomerService:       s.CustomerService,
 		CreditVoidService:     s.CreditVoidService,
+		CurrenciesService:     s.CurrencyService,
 		TransactionManager:    enttx.NewCreator(s.DBClient),
 	})
 	s.Require().NoError(err)
 	s.CreditGrantService = creditGrantService
+}
+
+func (s *VoidGrantTestSuite) TestCreateAndVoidManagedCustomCreditGrant() {
+	ctx := s.T().Context()
+	ns := s.GetUniqueNamespace("voidgrant-managed-credit")
+	cust := s.setupVoidTestCustomer(ctx, ns)
+
+	createCurrencyInput := currencytestutils.NewCreateCurrencyInput(ns, "CREDIT", "Credits", "cr")
+	createCurrencyInput.Precision = 0
+	credit, err := s.CurrencyService.CreateCurrency(ctx, createCurrencyInput)
+	s.Require().NoError(err)
+	creditReference := credit.Reference()
+
+	requireManagedCreditReference := func(actual currencies.CurrencyReference) {
+		s.Equal("CREDIT", actual.Code.String())
+		s.Require().NotNil(actual.CustomCurrencyID)
+		s.Equal(credit.ID, *actual.CustomCurrencyID)
+
+		snapshot, ok := actual.CustomCurrency()
+		s.Require().True(ok, "managed CREDIT reference must retain its immutable snapshot")
+		s.Equal(uint32(0), snapshot.Details().Precision)
+	}
+
+	fundedAt := datetime.MustParseTimeInLocation(s.T(), "2026-03-01T00:00:00Z", time.UTC).AsTime()
+	clock.FreezeTime(fundedAt)
+	defer clock.UnFreeze()
+
+	grant, err := s.CreditGrantService.Create(ctx, creditgrant.CreateInput{
+		Namespace:     ns,
+		CustomerID:    cust.ID,
+		Name:          "managed CREDIT promotional grant",
+		Currency:      "CREDIT",
+		Amount:        alpacadecimal.NewFromInt(100),
+		FundingMethod: creditgrant.FundingMethodNone,
+	})
+	s.Require().NoError(err)
+	requireManagedCreditReference(grant.Intent.Currency.Reference())
+
+	customerAccounts, err := s.LedgerResolver.GetCustomerAccounts(ctx, cust.GetID())
+	s.Require().NoError(err)
+	remainingGrantBalance := func() alpacadecimal.Decimal {
+		buckets, err := s.BalanceQuerier.GetBalanceBuckets(ctx, ledger.BalanceBucketQuery{
+			Namespace: ns,
+			Filters: ledger.Filters{
+				AccountID:      lo.ToPtr(customerAccounts.FBOAccount.ID().ID),
+				SourceChargeID: mo.Some(&grant.ID),
+				Route: ledger.RouteFilter{
+					Currency: creditReference,
+				},
+			},
+			GroupBy: []string{ledger.BalanceBucketGroupBySourceChargeID},
+		})
+		s.Require().NoError(err)
+
+		remaining := alpacadecimal.Zero
+		for _, bucket := range buckets {
+			requireManagedCreditReference(bucket.Address.Route().Route().Currency)
+			remaining = remaining.Add(bucket.SettledAmount)
+		}
+
+		return remaining
+	}
+
+	s.AssertDecimalEqual(alpacadecimal.NewFromInt(100), remainingGrantBalance(), "managed CREDIT grant must fund its exact source bucket")
+
+	voidedAt := fundedAt.Add(time.Hour)
+	clock.FreezeTime(voidedAt)
+	voidedGrant, err := s.CreditGrantService.Void(ctx, creditgrant.VoidInput{
+		Namespace:  ns,
+		CustomerID: cust.ID,
+		ChargeID:   grant.ID,
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(voidedGrant.State.VoidedAt)
+	requireManagedCreditReference(voidedGrant.Intent.Currency.Reference())
+	s.AssertDecimalEqual(alpacadecimal.Zero, remainingGrantBalance(), "formal void must clear only the target grant's managed CREDIT balance")
+
+	voidedImpacts, err := s.CreditVoidService.ListVoidedCreditImpacts(ctx, creditvoid.ListVoidedCreditImpactsInput{
+		CustomerID: cust.GetID(),
+		Currency:   &creditReference,
+		AsOf:       voidedAt.Add(time.Second),
+		Limit:      10,
+	})
+	s.Require().NoError(err)
+	s.Require().Len(voidedImpacts.Items, 1)
+	requireManagedCreditReference(voidedImpacts.Items[0].Currency)
+	s.Equal(grant.ID, voidedImpacts.Items[0].Annotations[ledger.AnnotationChargeID])
+	s.AssertDecimalEqual(alpacadecimal.NewFromInt(-100), voidedImpacts.Items[0].Amount, "void record must retain the exact managed CREDIT identity")
 }
 
 func (s *VoidGrantTestSuite) TestVoidFullyUnusedGrant() {
@@ -107,7 +198,7 @@ func (s *VoidGrantTestSuite) TestVoidFullyUnusedGrant() {
 
 	voidedImpacts, err := s.CreditVoidService.ListVoidedCreditImpacts(ctx, creditvoid.ListVoidedCreditImpactsInput{
 		CustomerID: cust.GetID(),
-		Currency:   lo.ToPtr(USD),
+		Currency:   lo.ToPtr(currencies.NewCurrencyReference(USD)),
 		AsOf:       voidedAt.Add(time.Second),
 		Limit:      10,
 	})
@@ -670,7 +761,7 @@ func (s *VoidGrantTestSuite) TestConcurrentVoidsDoNotDoubleBook() {
 			_, err := s.CreditVoidService.VoidCreditPurchase(ctx, creditvoid.VoidCreditPurchaseInput{
 				CustomerID: cust.GetID(),
 				ChargeID:   funding.Charge.ID,
-				Currency:   USD,
+				Currency:   currencies.NewCurrencyReference(USD),
 				Annotations: ledger.ChargeAnnotations(models.NamespacedID{
 					Namespace: ns,
 					ID:        funding.Charge.ID,
