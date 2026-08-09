@@ -15,6 +15,7 @@ package payment
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -83,10 +84,17 @@ type RefundInput struct {
 	ProviderOrderID   string
 	ProviderPaymentID string
 	AmountMinor       int64
-	Currency          string
-	Reason            string
-	IdempotencyKey    string
+	// TotalAmountMinor is the original transaction total required by providers
+	// that cryptographically bind refund requests to the paid amount.
+	TotalAmountMinor int64
+	Currency         string
+	Reason           string
+	IdempotencyKey   string
 }
+
+// ErrPermanentProviderProtocol marks a provider response that cannot succeed
+// on retry without correcting provider configuration or protocol handling.
+var ErrPermanentProviderProtocol = errors.New("permanent provider protocol error")
 
 // RefundSubmission is the result of submitting a refund to a provider. The
 // provider refund ID is used to query the refund status later.

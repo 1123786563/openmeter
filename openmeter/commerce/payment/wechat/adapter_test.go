@@ -1,312 +1,488 @@
 package wechat
 
 import (
-	"context"
 	"crypto"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 )
 
-// --- Test key fixtures ---
+const (
+	testAPIv3Key = "0123456789abcdef0123456789abcdef"
+	testNowUnix  = int64(1_800_000_000)
+)
 
-// generateTestKey creates an RSA key pair for testing. Never committed as
-// static material — generated fresh on every test run.
-func generateTestKey(t *testing.T) (*rsa.PrivateKey, string) {
+type testKeys struct {
+	merchantPrivate    *rsa.PrivateKey
+	merchantPrivatePEM string
+	platformPrivate    *rsa.PrivateKey
+	platformPublicPEM  string
+}
+
+func newTestKeys(t *testing.T) testKeys {
 	t.Helper()
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate RSA key: %v", err)
+	merchant, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	platform, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	merchantDER := x509.MarshalPKCS1PrivateKey(merchant)
+	platformDER, err := x509.MarshalPKIXPublicKey(&platform.PublicKey)
+	require.NoError(t, err)
+
+	return testKeys{
+		merchantPrivate: merchant,
+		merchantPrivatePEM: string(pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: merchantDER,
+		})),
+		platformPrivate: platform,
+		platformPublicPEM: string(pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: platformDER,
+		})),
 	}
-	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	if err != nil {
-		t.Fatalf("marshal public key: %v", err)
-	}
-	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
-	return key, string(pemBytes)
 }
 
-// signMessage signs a message with RSA-SHA256/PKCS1v15, returning base64.
-func signMessage(t *testing.T, key *rsa.PrivateKey, message []byte) string {
+func newTestAdapter(t *testing.T, baseURL string, keys testKeys) *Adapter {
 	t.Helper()
-	hashed := sha256.Sum256(message)
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hashed[:])
-	if err != nil {
-		t.Fatalf("sign message: %v", err)
-	}
-	return base64.StdEncoding.EncodeToString(sig)
+	adapter, err := New(Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			SecretKeyMerchantPrivateKey:                keys.merchantPrivatePEM,
+			SecretKeyAPIv3:                             testAPIv3Key,
+			PlatformPublicKeySecret("platform-serial"): keys.platformPublicPEM,
+		}},
+		Client:           &http.Client{Timeout: 2 * time.Second},
+		BaseURL:          baseURL,
+		AppID:            "wx-app",
+		MerchantID:       "wx-mch",
+		MerchantSerial:   "merchant-serial",
+		NotifyURL:        "https://merchant.example/wechat/notify",
+		RefundNotifyURL:  "https://merchant.example/wechat/refund-notify",
+		Now:              func() time.Time { return time.Unix(testNowUnix, 0) },
+		CallbackMaxAge:   5 * time.Minute,
+		MaxResponseBytes: 1 << 20,
+		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	require.NoError(t, err)
+	return adapter
 }
 
-// makeCallbackHeaders builds the WeChat Pay callback headers.
-func makeCallbackHeaders(timestamp, nonce, signature, serial string) http.Header {
-	h := http.Header{}
-	h.Set("Wechatpay-Timestamp", timestamp)
-	h.Set("Wechatpay-Nonce", nonce)
-	h.Set("Wechatpay-Signature", signature)
-	h.Set("Wechatpay-Serial", serial)
-	return h
+func signWechatMessage(t *testing.T, key *rsa.PrivateKey, message string) string {
+	t.Helper()
+	digest := sha256.Sum256([]byte(message))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
+	require.NoError(t, err)
+	return base64.StdEncoding.EncodeToString(signature)
 }
 
-// validCallbackBody is a well-formed WeChat Pay v3 callback body for a
-// successful payment of 1.00 CNY (100 fen) for out_trade_no "ORDER-123".
-const validCallbackBody = `{
-	"appid": "wx_test_app",
-	"mchid": "1230000109",
-	"out_trade_no": "ORDER-123",
-	"transaction_id": "4200001234202501010001234567",
-	"trade_type": "NATIVE",
-	"trade_state": "SUCCESS",
-	"bank_type": "OTHERS",
-	"attach": "",
-	"success_time": "2025-01-01T12:00:00+08:00",
-	"payer": {"openid": "oUpF8_test"},
-	"amount": {"total": 100, "payer_currency": "CNY", "currency": "CNY"}
-}`
-
-// --- Tests ---
-
-func TestPlatformPublicKeySecret(t *testing.T) {
-	if got := PlatformPublicKeySecret("serial-001"); got != "wechat_platform_public_key/serial-001" {
-		t.Errorf("secret key = %q, want serial-specific key", got)
-	}
+func writeSignedWechatResponse(t *testing.T, key *rsa.PrivateKey, w http.ResponseWriter, status int, body string) {
+	t.Helper()
+	timestamp := strconv.FormatInt(testNowUnix, 10)
+	nonce := "response-nonce"
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Wechatpay-Timestamp", timestamp)
+	w.Header().Set("Wechatpay-Nonce", nonce)
+	w.Header().Set("Wechatpay-Serial", "platform-serial")
+	w.Header().Set("Wechatpay-Signature", signWechatMessage(t, key, timestamp+"\n"+nonce+"\n"+body+"\n"))
+	w.WriteHeader(status)
+	_, err := io.WriteString(w, body)
+	require.NoError(t, err)
 }
 
-func TestPlatformPublicKeySecretEmptySerialFallsBackToDefault(t *testing.T) {
-	if got := PlatformPublicKeySecret(""); got != SecretKeyPlatformPublicKey {
-		t.Errorf("secret key = %q, want %q", got, SecretKeyPlatformPublicKey)
+func requireValidRequestAuthorization(t *testing.T, key *rsa.PrivateKey, r *http.Request, body []byte) {
+	t.Helper()
+	header := r.Header.Get("Authorization")
+	require.True(t, strings.HasPrefix(header, "WECHATPAY2-SHA256-RSA2048 "))
+	attributes := map[string]string{}
+	for _, item := range strings.Split(strings.TrimPrefix(header, "WECHATPAY2-SHA256-RSA2048 "), ",") {
+		parts := strings.SplitN(strings.TrimSpace(item), "=", 2)
+		require.Len(t, parts, 2)
+		attributes[parts[0]] = strings.Trim(parts[1], `"`)
 	}
+	require.Equal(t, "wx-mch", attributes["mchid"])
+	require.Equal(t, "merchant-serial", attributes["serial_no"])
+	require.NotEmpty(t, attributes["nonce_str"])
+	require.Equal(t, strconv.FormatInt(testNowUnix, 10), attributes["timestamp"])
+
+	signature, err := base64.StdEncoding.DecodeString(attributes["signature"])
+	require.NoError(t, err)
+	canonicalURL := r.URL.EscapedPath()
+	if r.URL.RawQuery != "" {
+		canonicalURL += "?" + r.URL.RawQuery
+	}
+	message := r.Method + "\n" + canonicalURL + "\n" + attributes["timestamp"] + "\n" + attributes["nonce_str"] + "\n" + string(body) + "\n"
+	digest := sha256.Sum256([]byte(message))
+	require.NoError(t, rsa.VerifyPKCS1v15(&key.PublicKey, crypto.SHA256, digest[:], signature))
 }
 
-// TestVerifyCallbackValidSignature verifies that a callback with a valid
-// signature and matching fields returns a successful PaymentFact.
-func TestVerifyCallbackValidSignature(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
-	}
-	adapter, err := New(Config{Secrets: secrets})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	body := []byte(validCallbackBody)
-	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
-	sig := signMessage(t, key, []byte(message))
-
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", sig, "serial-001")
-
-	fact, err := adapter.VerifyCallback(context.Background(), headers, body)
-	if err != nil {
-		t.Fatalf("valid callback should succeed: %v", err)
-	}
-
-	if !fact.Success {
-		t.Error("fact should be success")
-	}
-	if fact.ProviderOrderID != "ORDER-123" {
-		t.Errorf("provider_order_id = %s, want ORDER-123", fact.ProviderOrderID)
-	}
-	if fact.AmountMinor != 100 {
-		t.Errorf("amount_minor = %d, want 100", fact.AmountMinor)
-	}
-	if fact.Currency != "CNY" {
-		t.Errorf("currency = %s, want CNY", fact.Currency)
-	}
-	if fact.ApplicationID != "wx_test_app" {
-		t.Errorf("app_id = %s, want wx_test_app", fact.ApplicationID)
-	}
-	if fact.MerchantID != "1230000109" {
-		t.Errorf("mch_id = %s, want 1230000109", fact.MerchantID)
-	}
-	if fact.ProviderPaymentID != "4200001234202501010001234567" {
-		t.Errorf("transaction_id = %s", fact.ProviderPaymentID)
-	}
-	if fact.RawHash == "" {
-		t.Error("raw_hash should be set")
+func encryptNotificationResource(t *testing.T, apiKey, plaintext string) encryptedResource {
+	t.Helper()
+	block, err := aes.NewCipher([]byte(apiKey))
+	require.NoError(t, err)
+	gcm, err := cipher.NewGCM(block)
+	require.NoError(t, err)
+	nonce := []byte("notify-nonce")
+	associatedData := "transaction"
+	ciphertext := gcm.Seal(nil, nonce, []byte(plaintext), []byte(associatedData))
+	return encryptedResource{
+		Algorithm:      "AEAD_AES_256_GCM",
+		Ciphertext:     base64.StdEncoding.EncodeToString(ciphertext),
+		Nonce:          string(nonce),
+		AssociatedData: associatedData,
+		OriginalType:   "transaction",
 	}
 }
 
-func TestVerifyCallbackEmptySerialUsesDefaultPlatformKey(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	adapter, err := New(Config{Secrets: &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyPlatformPublicKey: pubPEM},
-	}})
-	if err != nil {
-		t.Fatal(err)
+func encryptedCallback(t *testing.T, key *rsa.PrivateKey, apiKey string, timestamp int64) (http.Header, []byte) {
+	t.Helper()
+	resource := encryptNotificationResource(t, apiKey, `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4200000001","trade_state":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"total":10000,"currency":"CNY"}}`)
+	body, err := json.Marshal(notification{
+		ID:         "notification-id",
+		CreateTime: "2027-01-15T08:00:00+08:00",
+		EventType:  "TRANSACTION.SUCCESS",
+		Resource:   resource,
+	})
+	require.NoError(t, err)
+	timestampString := strconv.FormatInt(timestamp, 10)
+	nonce := "callback-signature-nonce"
+	headers := http.Header{}
+	headers.Set("Wechatpay-Timestamp", timestampString)
+	headers.Set("Wechatpay-Nonce", nonce)
+	headers.Set("Wechatpay-Serial", "platform-serial")
+	headers.Set("Wechatpay-Signature", signWechatMessage(t, key, timestampString+"\n"+nonce+"\n"+string(body)+"\n"))
+	return headers, body
+}
+
+func TestCreateQRCodeCallsWechatNativeAPI(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v3/pay/transactions/native", r.URL.Path)
+		bodyBytes, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		requireValidRequestAuthorization(t, keys.merchantPrivate, r, bodyBytes)
+		var body nativeCreateRequest
+		require.NoError(t, json.Unmarshal(bodyBytes, &body))
+		require.Equal(t, "wx-app", body.AppID)
+		require.Equal(t, "wx-mch", body.MchID)
+		require.Equal(t, "01ORDER", body.OutTradeNo)
+		require.Equal(t, "https://merchant.example/wechat/notify", body.NotifyURL)
+		require.Equal(t, int64(10000), body.Amount.Total)
+		require.Equal(t, "CNY", body.Amount.Currency)
+		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"code_url":"weixin://wxpay/bizpayurl?pr=test"}`)
+	}))
+	defer server.Close()
+
+	fact, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY",
+		Description: "WeKnora recharge", IdempotencyKey: "idem-1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Empty(t, fact.ProviderPaymentID)
+	require.Equal(t, "weixin://wxpay/bizpayurl?pr=test", fact.QRCodeURL)
+}
+
+func TestCreateQRCodeRejectsNonCNYBeforeCallingProvider(t *testing.T) {
+	keys := newTestKeys(t)
+	_, err := newTestAdapter(t, "http://127.0.0.1:1", keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "USD", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestVerifyEncryptedCallback(t *testing.T) {
+	keys := newTestKeys(t)
+	headers, body := encryptedCallback(t, keys.platformPrivate, testAPIv3Key, testNowUnix)
+
+	t.Run("valid", func(t *testing.T) {
+		fact, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), headers, body)
+		require.NoError(t, err)
+		require.Equal(t, "notification-id", fact.ProviderEventID)
+		require.Equal(t, "4200000001", fact.ProviderPaymentID)
+		require.Equal(t, "01ORDER", fact.ProviderOrderID)
+		require.Equal(t, "wx-mch", fact.MerchantID)
+		require.Equal(t, "wx-app", fact.ApplicationID)
+		require.Equal(t, int64(10000), fact.AmountMinor)
+		require.Equal(t, "CNY", fact.Currency)
+		require.True(t, fact.Success)
+		require.NotEmpty(t, fact.RawHash)
+		require.NotContains(t, fmt.Sprint(fact.SignedPayload), "ciphertext")
+	})
+
+	t.Run("tampered body", func(t *testing.T) {
+		tampered := append([]byte(nil), body...)
+		tampered[len(tampered)-2] ^= 1
+		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), headers, tampered)
+		require.ErrorIs(t, err, payment.ErrInvalidSignature)
+	})
+
+	t.Run("unknown serial", func(t *testing.T) {
+		unknownHeaders := headers.Clone()
+		unknownHeaders.Set("Wechatpay-Serial", "unknown-serial")
+		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), unknownHeaders, body)
+		require.Error(t, err)
+	})
+
+	t.Run("timestamp outside five minute window", func(t *testing.T) {
+		oldHeaders, oldBody := encryptedCallback(t, keys.platformPrivate, testAPIv3Key, testNowUnix-int64((5*time.Minute)/time.Second)-1)
+		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), oldHeaders, oldBody)
+		require.Error(t, err)
+	})
+
+	t.Run("wrong API v3 key", func(t *testing.T) {
+		wrongHeaders, wrongBody := encryptedCallback(t, keys.platformPrivate, "abcdef0123456789abcdef0123456789", testNowUnix)
+		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), wrongHeaders, wrongBody)
+		require.Error(t, err)
+	})
+}
+
+func TestVerifyEncryptedCallbackRejectsPaymentIdentityAndMoneyMismatch(t *testing.T) {
+	keys := newTestKeys(t)
+	tests := []struct {
+		name      string
+		plaintext string
+	}{
+		{name: "application", plaintext: `{"appid":"other-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":10000,"currency":"CNY"}}`},
+		{name: "merchant", plaintext: `{"appid":"wx-app","mchid":"other-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":10000,"currency":"CNY"}}`},
+		{name: "amount", plaintext: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":0,"currency":"CNY"}}`},
+		{name: "currency", plaintext: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":10000,"currency":"USD"}}`},
 	}
-
-	body := []byte(validCallbackBody)
-	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
-	signature := signMessage(t, key, []byte(message))
-
-	_, err = adapter.VerifyCallback(context.Background(), makeCallbackHeaders("1234567890", "nonce-abc", signature, ""), body)
-	if err != nil {
-		t.Fatalf("callback without a serial should use the default platform key: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resource := encryptNotificationResource(t, testAPIv3Key, tt.plaintext)
+			body, err := json.Marshal(notification{ID: "notification-id", CreateTime: "2027-01-15T08:00:00+08:00", Resource: resource})
+			require.NoError(t, err)
+			timestamp := strconv.FormatInt(testNowUnix, 10)
+			headers := http.Header{
+				"Wechatpay-Timestamp": []string{timestamp},
+				"Wechatpay-Nonce":     []string{"nonce"},
+				"Wechatpay-Serial":    []string{"platform-serial"},
+			}
+			headers.Set("Wechatpay-Signature", signWechatMessage(t, keys.platformPrivate, timestamp+"\nnonce\n"+string(body)+"\n"))
+			_, err = newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), headers, body)
+			require.Error(t, err)
+		})
 	}
 }
 
-// TestVerifyCallbackInvalidSignature verifies that an invalid signature is rejected.
-func TestVerifyCallbackInvalidSignature(t *testing.T) {
-	_, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
+func TestQueryPaymentUsesOutTradeNumberAndMapsOnlySuccess(t *testing.T) {
+	keys := newTestKeys(t)
+	states := []struct {
+		state   string
+		success bool
+	}{
+		{state: "SUCCESS", success: true},
+		{state: "NOTPAY"},
+		{state: "USERPAYING"},
+		{state: "CLOSED"},
+		{state: "PAYERROR"},
 	}
-	adapter, _ := New(Config{Secrets: secrets})
+	for _, tt := range states {
+		t.Run(tt.state, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "/v3/pay/transactions/out-trade-no/ORDER%2F1", r.URL.EscapedPath())
+				require.Equal(t, "wx-mch", r.URL.Query().Get("mchid"))
+				requireValidRequestAuthorization(t, keys.merchantPrivate, r, nil)
+				body := fmt.Sprintf(`{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"ORDER/1","transaction_id":"4200000001","trade_state":%q,"success_time":"2027-01-15T08:00:00+08:00","amount":{"total":10000,"currency":"CNY"}}`, tt.state)
+				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, body)
+			}))
+			defer server.Close()
 
-	body := []byte(validCallbackBody)
-
-	// Sign with a different message so the signature doesn't match.
-	otherKey, _ := generateTestKey(t)
-	wrongSig := signMessage(t, otherKey, []byte("different message"))
-
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", wrongSig, "serial-001")
-
-	_, err := adapter.VerifyCallback(context.Background(), headers, body)
-	if err == nil {
-		t.Fatal("invalid signature should fail")
-	}
-}
-
-// TestVerifyCallbackTamperedBody verifies that a body tampered after signing
-// fails verification.
-func TestVerifyCallbackTamperedBody(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	body := []byte(validCallbackBody)
-	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
-	sig := signMessage(t, key, []byte(message))
-
-	// Tamper with the body after signing.
-	tamperedBody := []byte(`{"appid":"wx_test_app","mchid":"1230000109","out_trade_no":"ORDER-999"}`)
-
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", sig, "serial-001")
-	_, err := adapter.VerifyCallback(context.Background(), headers, tamperedBody)
-	if err == nil {
-		t.Fatal("tampered body should fail signature verification")
+			fact, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "ORDER/1")
+			require.NoError(t, err)
+			require.Equal(t, tt.success, fact.Success)
+			require.Equal(t, "ORDER/1", fact.ProviderOrderID)
+			require.Equal(t, int64(10000), fact.AmountMinor)
+		})
 	}
 }
 
-// TestVerifyCallbackMissingHeaders verifies that missing required headers fail.
-func TestVerifyCallbackMissingHeaders(t *testing.T) {
-	_, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
+func TestQueryPaymentRejectsMismatchedProviderOrder(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"OTHER","trade_state":"SUCCESS","amount":{"total":10000,"currency":"CNY"}}`)
+	}))
+	defer server.Close()
+	_, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "01ORDER")
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
 
-	// Missing signature header.
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", "", "serial-001")
-	_, err := adapter.VerifyCallback(context.Background(), headers, []byte("{}"))
-	if err == nil {
-		t.Fatal("missing signature should fail")
+func TestRefundAndQueryRefund(t *testing.T) {
+	keys := newTestKeys(t)
+	var baseURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bodyBytes, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		requireValidRequestAuthorization(t, keys.merchantPrivate, r, bodyBytes)
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v3/refund/domestic/refunds":
+			var body refundRequest
+			require.NoError(t, json.Unmarshal(bodyBytes, &body))
+			require.Equal(t, "01ORDER", body.OutTradeNo)
+			require.Equal(t, "refund-idem", body.OutRefundNo)
+			require.Equal(t, "customer request", body.Reason)
+			require.Equal(t, "https://merchant.example/wechat/refund-notify", body.NotifyURL)
+			require.Equal(t, int64(3000), body.Amount.Refund)
+			require.Equal(t, int64(10000), body.Amount.Total)
+			require.Equal(t, "CNY", body.Amount.Currency)
+			writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
+		case r.Method == http.MethodGet && r.URL.EscapedPath() == "/v3/refund/domestic/refunds/refund-idem":
+			writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
+		default:
+			http.Error(w, "unexpected request", http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	baseURL = server.URL
+	adapter := newTestAdapter(t, baseURL, keys)
+
+	submission, err := adapter.Refund(t.Context(), payment.RefundInput{
+		ProviderOrderID: "01ORDER", AmountMinor: 3000, TotalAmountMinor: 10000, Currency: "CNY",
+		Reason: "customer request", IdempotencyKey: "refund-idem",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "refund-idem", submission.ProviderRefundID)
+	require.Equal(t, "processing", submission.Status)
+
+	fact, err := adapter.QueryRefund(t.Context(), "refund-idem")
+	require.NoError(t, err)
+	require.True(t, fact.Success)
+	require.Equal(t, "refund-idem", fact.ProviderRefundID)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Equal(t, int64(3000), fact.AmountMinor)
+	require.Equal(t, "CNY", fact.Currency)
+}
+
+func TestQueryRefundMapsTerminalFailuresWithRawHash(t *testing.T) {
+	keys := newTestKeys(t)
+	for _, status := range []string{"CLOSED", "ABNORMAL"} {
+		t.Run(status, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body := fmt.Sprintf(`{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":%q,"amount":{"refund":3000,"total":10000,"currency":"CNY"}}`, status)
+				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, body)
+			}))
+			defer server.Close()
+			fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+			require.NoError(t, err)
+			require.False(t, fact.Success)
+			require.NotEmpty(t, fact.RawHash)
+		})
 	}
 }
 
-// TestVerifyCallbackWrongMerchant verifies that the merchant ID is extracted
-// from the verified body (not matched against a config here — the domain
-// service does that match).
-func TestVerifyCallbackExtractsMerchantAndApp(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
+func TestQueryRefundProcessingHasNoDefinitiveFailureHash(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
+	}))
+	defer server.Close()
+	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+	require.NoError(t, err)
+	require.False(t, fact.Success)
+	require.Empty(t, fact.RawHash)
+}
 
-	body := []byte(validCallbackBody)
-	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
-	sig := signMessage(t, key, []byte(message))
+func TestSuccessfulAPIResponseRequiresValidSignature(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := io.WriteString(w, `{"code_url":"weixin://unsigned"}`)
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+	_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrInvalidSignature)
+}
 
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", sig, "serial-001")
-	fact, err := adapter.VerifyCallback(context.Background(), headers, body)
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestAPIResponseBodyLimit(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := io.WriteString(w, strings.Repeat("x", 65))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+	adapter := newTestAdapter(t, server.URL, keys)
+	adapter.maxResponseBytes = 64
+	_, err := adapter.CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.Error(t, err)
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
 
-	// The domain service will verify these match the configured merchant/app.
-	// Here we just confirm they are extracted.
-	if fact.MerchantID == "" {
-		t.Error("merchant_id should be extracted")
+func TestIdentity(t *testing.T) {
+	keys := newTestKeys(t)
+	merchantID, applicationID := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).Identity()
+	require.Equal(t, "wx-mch", merchantID)
+	require.Equal(t, "wx-app", applicationID)
+}
+
+func TestPlatformPublicKeySecretTrimsSerial(t *testing.T) {
+	require.Equal(t, "wechat_platform_public_key/serial-001", PlatformPublicKeySecret(" serial-001 "))
+}
+
+func TestNewRequiresProductionDependencies(t *testing.T) {
+	valid := Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{}},
+		Client:  &http.Client{Timeout: 2 * time.Second}, BaseURL: "https://api.mch.weixin.qq.com",
+		AppID: "wx-app", MerchantID: "wx-mch", MerchantSerial: "serial",
+		NotifyURL: "https://merchant.example/notify", RefundNotifyURL: "https://merchant.example/refund",
+		Now: time.Now, CallbackMaxAge: 5 * time.Minute, MaxResponseBytes: 1024,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
-	if fact.ApplicationID == "" {
-		t.Error("application_id should be extracted")
+	_, err := New(valid)
+	require.NoError(t, err)
+	tests := []struct {
+		name   string
+		mutate func(*Config)
+	}{
+		{name: "secrets", mutate: func(c *Config) { c.Secrets = nil }},
+		{name: "client", mutate: func(c *Config) { c.Client = nil }},
+		{name: "base URL", mutate: func(c *Config) { c.BaseURL = "" }},
+		{name: "application ID", mutate: func(c *Config) { c.AppID = "" }},
+		{name: "merchant ID", mutate: func(c *Config) { c.MerchantID = "" }},
+		{name: "merchant serial", mutate: func(c *Config) { c.MerchantSerial = "" }},
+		{name: "notify URL", mutate: func(c *Config) { c.NotifyURL = "" }},
+		{name: "refund notify URL", mutate: func(c *Config) { c.RefundNotifyURL = "" }},
+		{name: "clock", mutate: func(c *Config) { c.Now = nil }},
+		{name: "callback max age", mutate: func(c *Config) { c.CallbackMaxAge = 0 }},
+		{name: "response size", mutate: func(c *Config) { c.MaxResponseBytes = 0 }},
+		{name: "logger", mutate: func(c *Config) { c.Logger = nil }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := valid
+			tt.mutate(&cfg)
+			_, err := New(cfg)
+			require.Error(t, err)
+		})
 	}
 }
 
-// TestVerifyCallbackFailedPayment verifies that a callback for a failed payment
-// (non-SUCCESS trade state) returns Success=false.
-func TestVerifyCallbackFailedPayment(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{
-			PlatformPublicKeySecret("serial-001"): pubPEM,
-		},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	body := []byte(`{
-		"appid": "wx_test_app",
-		"mchid": "1230000109",
-		"out_trade_no": "ORDER-FAIL",
-		"transaction_id": "4200001234202501010009999999",
-		"trade_state": "CLOSED",
-		"amount": {"total": 100, "currency": "CNY"}
-	}`)
-	message := "1234567890\nnonce-abc\n" + string(body) + "\n"
-	sig := signMessage(t, key, []byte(message))
-
-	headers := makeCallbackHeaders("1234567890", "nonce-abc", sig, "serial-001")
-	fact, err := adapter.VerifyCallback(context.Background(), headers, body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fact.Success {
-		t.Error("CLOSED trade state should not be success")
-	}
-}
-
-// TestQueryPayment verifies the query interface returns the correct provider.
-func TestQueryPayment(t *testing.T) {
-	secrets := &payment.StaticSecretProvider{Secrets: map[string]string{}}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	fact, err := adapter.QueryPayment(context.Background(), "ORDER-123")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fact.Provider != payment.ProviderWeChat {
-		t.Errorf("provider = %s, want wechat", fact.Provider)
-	}
-	if fact.ProviderOrderID != "ORDER-123" {
-		t.Errorf("provider_order_id = %s, want ORDER-123", fact.ProviderOrderID)
-	}
-}
-
-// TestName verifies the provider name.
-func TestName(t *testing.T) {
-	secrets := &payment.StaticSecretProvider{Secrets: map[string]string{}}
-	adapter, _ := New(Config{Secrets: secrets})
-	if adapter.Name() != payment.ProviderWeChat {
-		t.Errorf("name = %s, want wechat", adapter.Name())
-	}
+func TestRequestCanonicalURLPreservesEncodedPathAndQuery(t *testing.T) {
+	u, err := url.Parse("https://example.com/v3/pay/transactions/out-trade-no/ORDER%2F1?mchid=wx-mch")
+	require.NoError(t, err)
+	require.Equal(t, "/v3/pay/transactions/out-trade-no/ORDER%2F1", u.EscapedPath())
 }
