@@ -54,6 +54,77 @@ func TestCommerceConfigurationValidateAllowsTestWeChatBaseURL(t *testing.T) {
 	}
 }
 
+func TestCommerceConfigurationValidateAllowsPhase2LocalProviderURLs(t *testing.T) {
+	cfg := validCommerceConfiguration()
+	cfg.Payment.WeChat.Enabled = true
+	cfg.Payment.WeChat.BaseURL = "http://payment-provider:8080"
+	cfg.Payment.WeChat.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/callback"
+	cfg.Payment.WeChat.RefundNotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/callback"
+	cfg.Payment.Alipay.Enabled = true
+	cfg.Payment.Alipay.GatewayURL = "http://payment-provider:8080/gateway.do"
+	cfg.Payment.Alipay.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/alipay/callback"
+
+	require.NoError(t, cfg.Validate())
+}
+
+func TestCommerceConfigurationValidateRejectsExternalHTTPProviderURLs(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(*CommerceConfiguration)
+		want  string
+	}{
+		{
+			name: "wechat base URL",
+			setup: func(cfg *CommerceConfiguration) {
+				cfg.Payment.WeChat.Enabled = true
+				cfg.Payment.WeChat.BaseURL = "http://example.com:8080"
+			},
+			want: "commerce.payment.wechat.base_url must be a valid HTTPS URL",
+		},
+		{
+			name: "wechat callback URL",
+			setup: func(cfg *CommerceConfiguration) {
+				cfg.Payment.WeChat.Enabled = true
+				cfg.Payment.WeChat.NotifyURL = "http://example.com/wechat/callback"
+			},
+			want: "commerce.payment.wechat.notify_url must be a valid HTTPS URL",
+		},
+		{
+			name: "wechat refund callback URL",
+			setup: func(cfg *CommerceConfiguration) {
+				cfg.Payment.WeChat.Enabled = true
+				cfg.Payment.WeChat.RefundNotifyURL = "http://example.com/wechat/refund-callback"
+			},
+			want: "commerce.payment.wechat.refund_notify_url must be a valid HTTPS URL",
+		},
+		{
+			name: "alipay gateway URL",
+			setup: func(cfg *CommerceConfiguration) {
+				cfg.Payment.Alipay.Enabled = true
+				cfg.Payment.Alipay.GatewayURL = "http://example.com/gateway.do"
+			},
+			want: "commerce.payment.alipay.gateway_url must be a valid HTTPS URL",
+		},
+		{
+			name: "alipay callback URL",
+			setup: func(cfg *CommerceConfiguration) {
+				cfg.Payment.Alipay.Enabled = true
+				cfg.Payment.Alipay.NotifyURL = "http://example.com/alipay/callback"
+			},
+			want: "commerce.payment.alipay.notify_url must be a valid HTTPS URL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validCommerceConfiguration()
+			tt.setup(&cfg)
+
+			require.ErrorContains(t, cfg.Validate(), tt.want)
+		})
+	}
+}
+
 func TestCommerceConfigurationValidateRejectsInsecureProviderURL(t *testing.T) {
 	cfg := validCommerceConfiguration()
 	cfg.Payment.Alipay.Enabled = true

@@ -109,8 +109,8 @@ func (c WeChatPaymentConfiguration) validate() []error {
 		}
 	}
 
-	errs = append(errs, validateRequiredCommerceURL(prefix+".notify_url", c.NotifyURL, false))
-	errs = append(errs, validateRequiredCommerceURL(prefix+".refund_notify_url", c.RefundNotifyURL, false))
+	errs = append(errs, validateRequiredCommerceURL(prefix+".notify_url", c.NotifyURL, true))
+	errs = append(errs, validateRequiredCommerceURL(prefix+".refund_notify_url", c.RefundNotifyURL, true))
 
 	if c.CallbackMaxAge <= 0 {
 		errs = append(errs, fmt.Errorf("%s.callback_max_age must be positive", prefix))
@@ -135,11 +135,11 @@ func (c AlipayPaymentConfiguration) validate() []error {
 
 	if strings.TrimSpace(c.GatewayURL) == "" {
 		errs = append(errs, fmt.Errorf("%s.gateway_url is required", prefix))
-	} else if err := validateCommerceURL(c.GatewayURL, false); err != nil {
+	} else if err := validateCommerceURL(c.GatewayURL, true); err != nil {
 		errs = append(errs, fmt.Errorf("%s.gateway_url must be a valid HTTPS URL: %w", prefix, err))
 	}
 
-	errs = append(errs, validateRequiredCommerceURL(prefix+".notify_url", c.NotifyURL, false))
+	errs = append(errs, validateRequiredCommerceURL(prefix+".notify_url", c.NotifyURL, true))
 
 	return errs
 }
@@ -177,11 +177,20 @@ func validateCommerceURL(rawURL string, allowTestHTTP bool) error {
 		return nil
 	}
 
-	if allowTestHTTP && parsed.Scheme == "http" && (parsed.Hostname() == "127.0.0.1" || parsed.Hostname() == "payment-provider") {
+	if allowTestHTTP && parsed.Scheme == "http" && isCommerceLocalHTTPHost(parsed.Hostname()) {
 		return nil
 	}
 
 	return errors.New("HTTPS is required")
+}
+
+func isCommerceLocalHTTPHost(host string) bool {
+	switch strings.ToLower(host) {
+	case "127.0.0.1", "payment-provider", "openmeter":
+		return true
+	default:
+		return false
+	}
 }
 
 func ConfigureCommerce(v *viper.Viper) {
