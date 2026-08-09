@@ -141,9 +141,8 @@ type ProviderAdapter interface {
 	Name() Provider
 }
 
-// SecretProvider supplies secrets from a secret manager. Keys are never
-// embedded in configuration, logs, or Ent files. Implementations read from
-// the platform secret store (e.g. Vault, cloud secret manager).
+// SecretProvider supplies secrets from a secret manager or mounted files. Keys
+// are never embedded in configuration, logs, or Ent files.
 type SecretProvider interface {
 	// Get returns the secret value for the given key, or an error if not found.
 	Get(ctx context.Context, key string) (string, error)
