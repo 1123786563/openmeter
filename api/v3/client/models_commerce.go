@@ -250,14 +250,6 @@ type CommercePlanRef struct {
 	PlanVersion string `json:"plan_version"`
 }
 
-// Acknowledgment returned to a payment provider callback. The body is a
-// provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay
-// "success").
-type CommerceProviderCallbackAck struct {
-	// Provider-specific acknowledgment text.
-	Ack string `json:"ack"`
-}
-
 // An enterprise receivable period representing one monthly settlement cycle.
 // Enterprise customers with approved contracts can consume on credit and settle
 // via offline payments against these periods.

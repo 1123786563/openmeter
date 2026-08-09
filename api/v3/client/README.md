@@ -345,6 +345,7 @@ The full call path, HTTP route, and a short description are listed below.
 | `om.Commerce.GetRefund` | `GET /refunds/{refundId}` | Retrieve a refund by its ID. |
 | `om.Commerce.WechatPaymentCallback` | `POST /payment-providers/wechat/callback` | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
 | `om.Commerce.AlipayPaymentCallback` | `POST /payment-providers/alipay/callback` | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
+| `om.Commerce.AlipayPaymentCallbackStream` | `POST /payment-providers/alipay/callback` | Streaming variant of `AlipayPaymentCallback` returning an `io.ReadCloser`. |
 | `om.Commerce.ListReceivablePeriods` | `GET /customers/{customerId}/receivable-periods` | List receivable periods for a customer. |
 | `om.Commerce.CreateOfflinePayment` | `POST /customers/{customerId}/offline-payments` | Record an offline payment (bank transfer, enterprise remittance) for a customer. The payment is held for reconciliation before being applied to a receivable period. |
 | `om.Commerce.UpdateExternalInvoice` | `PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice` | Attach or update an external invoice reference on a receivable period. |

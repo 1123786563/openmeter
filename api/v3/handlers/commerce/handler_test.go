@@ -325,20 +325,95 @@ func TestPaymentCallback_NoNamespace(t *testing.T) {
 	}
 }
 
-func TestPaymentCallback_Success(t *testing.T) {
+func TestWechatCallbackAckIsNoContent(t *testing.T) {
 	h := testHandler(Services{
 		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Body.String(); got != "" {
+		t.Fatalf("expected empty body, got %q", got)
+	}
+	if got := rr.Header().Get("Content-Type"); got != "" {
+		t.Fatalf("expected no content type, got %q", got)
+	}
+}
+
+func TestAlipayCallbackAckIsPlainSuccess(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
-	var ack api.CommerceProviderCallbackAck
-	if err := json.NewDecoder(rr.Body).Decode(&ack); err != nil {
-		t.Fatalf("decode: %v", err)
+	if got := rr.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("expected text/plain content type, got %q", got)
 	}
-	if ack.Ack == "" {
-		t.Error("expected non-empty ack")
+	if got := rr.Body.String(); got != "success" {
+		t.Fatalf("expected success body, got %q", got)
+	}
+}
+
+func TestPaymentCallbackBodyLimit(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
+	})
+	oversized := string(make([]byte, 1<<20+1))
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", oversized, nil)
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413 for oversized body, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestPaymentCallbackSignatureRejectionIsBadRequest(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: payment.ErrInvalidSignature},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 on invalid signature, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Body.String(); got == "success" || containsStr(got, "<xml>") {
+		t.Fatalf("invalid signature must not receive provider success ACK, got %q", got)
+	}
+}
+
+func TestPaymentCallbackFactMismatchIsBadRequest(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: payment.ErrPaymentFactMismatch},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 on payment fact mismatch, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if rr.Body.Len() == 0 {
+		t.Fatal("expected validation error body")
+	}
+}
+
+func TestPaymentCallbackContradictoryFactIsConflict(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: payment.ErrContradictoryPaymentFact},
+	})
+	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected 409 on contradictory payment fact, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestPaymentCallbackDuplicateEventIsProviderSuccess(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: payment.ErrDuplicateProviderEvent},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 on duplicate callback, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Body.String(); got != "success" {
+		t.Fatalf("expected provider success ACK on duplicate callback, got %q", got)
 	}
 }
 
@@ -616,14 +691,14 @@ func TestPaymentCallback_TransientError_500(t *testing.T) {
 	}
 }
 
-func TestPaymentCallback_SignatureRejection_200(t *testing.T) {
-	// Signature verification failures are ValidationIssues — definitive, so ACK (200)
+func TestPaymentCallback_SignatureRejection_400(t *testing.T) {
+	// Signature verification failures are deterministic client errors.
 	h := testHandler(Services{
-		Payment: &mockPayment{err: commerce.ErrOrderNotFound},
+		Payment: &mockPayment{err: payment.ErrInvalidSignature},
 	})
 	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 on definitive rejection, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 on definitive rejection, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 

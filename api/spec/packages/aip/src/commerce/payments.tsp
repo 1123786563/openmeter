@@ -1,3 +1,4 @@
+import "@typespec/http";
 import "../shared/index.tsp";
 import "./models.tsp";
 
@@ -69,14 +70,21 @@ model PaymentFact {
 }
 
 /**
- * Acknowledgment returned to a payment provider callback. The body is a
- * provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay
- * "success").
+ * Successful WeChat Pay callback response. WeChat treats an empty 204 response
+ * as the native acknowledgment and will retry any response with a body.
  */
-@friendlyName("CommerceProviderCallbackAck")
-model ProviderCallbackAck {
-  /**
-   * Provider-specific acknowledgment text.
-   */
-  ack: string;
+@friendlyName("WechatCallbackSuccess")
+model WechatCallbackSuccess {
+  @Http.statusCode _: 204;
+}
+
+/**
+ * Successful Alipay callback response. Alipay requires a plain-text success
+ * token and retries when the response body differs from exactly "success".
+ */
+@friendlyName("AlipayCallbackSuccess")
+model AlipayCallbackSuccess {
+  @Http.statusCode _: 200;
+  @Http.header contentType: "text/plain";
+  @Http.body body: string;
 }

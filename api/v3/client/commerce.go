@@ -5,6 +5,7 @@ package openmeter
 import (
 	"context"
 	"fmt"
+	"io"
 	"iter"
 	"net/http"
 	"net/url"
@@ -214,38 +215,45 @@ func (s *CommerceService) GetRefund(ctx context.Context, refundID string) (*Comm
 
 // WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
 // payment fact, and fulfills the order.
-func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request string) (*CommerceProviderCallbackAck, error) {
+func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request string) error {
 	path := "/payment-providers/wechat/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "application/json")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var out CommerceProviderCallbackAck
-	if err := s.client.doJSON(req, &out); err != nil {
-		return nil, err
-	}
-
-	return &out, nil
+	_, err = s.client.doRaw(req)
+	return err
 }
 
 // Alipay payment callback. OpenMeter verifies the signature, confirms the payment
 // fact, and fulfills the order.
-func (s *CommerceService) AlipayPaymentCallback(ctx context.Context, request string) (*CommerceProviderCallbackAck, error) {
+func (s *CommerceService) AlipayPaymentCallback(ctx context.Context, request string) ([]byte, error) {
 	path := "/payment-providers/alipay/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "application/json")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "text/plain")
 	if err != nil {
 		return nil, err
 	}
 
-	var out CommerceProviderCallbackAck
-	if err := s.client.doJSON(req, &out); err != nil {
+	return s.client.doRaw(req)
+}
+
+func (s *CommerceService) AlipayPaymentCallbackStream(ctx context.Context, request string) (io.ReadCloser, error) {
+	path := "/payment-providers/alipay/callback"
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "text/plain")
+	if err != nil {
 		return nil, err
 	}
 
-	return &out, nil
+	resp, err := s.client.doStream(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
 
 // List receivable periods for a customer.

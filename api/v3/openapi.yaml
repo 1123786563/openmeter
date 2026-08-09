@@ -4024,17 +4024,21 @@ paths:
         fact, and fulfills the order.
       responses:
         '200':
-          description: ProviderCallbackAck response.
+          description: |-
+            Successful Alipay callback response. Alipay requires a plain-text success
+            token and retries when the response body differs from exactly "success".
           content:
-            application/json:
+            text/plain:
               schema:
-                $ref: '#/components/schemas/CommerceProviderCallbackAck'
+                type: string
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
       tags:
         - Commerce
       requestBody:
@@ -4052,18 +4056,18 @@ paths:
         WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
         payment fact, and fulfills the order.
       responses:
-        '200':
-          description: ProviderCallbackAck response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommerceProviderCallbackAck'
+        '204':
+          description: |-
+            Successful WeChat Pay callback response. WeChat treats an empty 204 response
+            as the native acknowledgment and will retry any response with a body.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
       tags:
         - Commerce
       requestBody:
@@ -10612,19 +10616,6 @@ components:
       description: |-
         A lightweight reference to a plan in the product catalog, embedded in order and
         catalog responses without duplicating the full plan definition.
-    CommerceProviderCallbackAck:
-      type: object
-      required:
-        - ack
-      properties:
-        ack:
-          type: string
-          description: Provider-specific acknowledgment text.
-      additionalProperties: false
-      description: |-
-        Acknowledgment returned to a payment provider callback. The body is a
-        provider-appropriate plain text response (e.g. WeChat XML/JSON or Alipay
-        "success").
     CommerceReceivablePeriod:
       type: object
       required:
@@ -15576,6 +15567,21 @@ components:
               example: kong:trace:1234567890
             detail:
               example: Gone
+    PayloadTooLargeError:
+      allOf:
+        - $ref: '#/components/schemas/BaseError'
+        - type: object
+          properties:
+            status:
+              example: 413
+            title:
+              example: Payload Too Large
+            type:
+              example: https://httpstatuses.com/413
+            instance:
+              example: kong:trace:1234567890
+            detail:
+              example: Payload Too Large
   responses:
     BadRequest:
       description: Bad Request
@@ -15622,6 +15628,12 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/GoneError'
+    PayloadTooLarge:
+      description: Payload Too Large
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/PayloadTooLargeError'
   examples:
     UnauthorizedExample:
       value:

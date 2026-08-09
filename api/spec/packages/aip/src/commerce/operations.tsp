@@ -172,8 +172,9 @@ interface WechatCallbackOperations {
   @operationId("wechat-payment-callback")
   @summary("WeChat Pay callback")
   callback(@body body: string):
-    | Shared.GetResponse<ProviderCallbackAck>
+    | WechatCallbackSuccess
     | Common.BadRequest
+    | Common.PayloadTooLarge
     | Common.ErrorResponses;
 }
 
@@ -190,8 +191,9 @@ interface AlipayCallbackOperations {
   @operationId("alipay-payment-callback")
   @summary("Alipay callback")
   callback(@body body: string):
-    | Shared.GetResponse<ProviderCallbackAck>
+    | AlipayCallbackSuccess
     | Common.BadRequest
+    | Common.PayloadTooLarge
     | Common.ErrorResponses;
 }
 

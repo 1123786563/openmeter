@@ -429,15 +429,15 @@ func (h *handler) CreateCheckoutSession() http.HandlerFunc {
 			AmountMinor:    order.AmountMinor,
 			Currency:       order.Currency,
 		})
-	if err != nil {
-		writeCommerceError(ctx, w, err)
-		return
-	}
-	checkout, err := h.svc.Payment.InitiateCheckout(ctx, ns, attempt.ID)
-	if err != nil {
-		writeCommerceError(ctx, w, err)
-		return
-	}
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		checkout, err := h.svc.Payment.InitiateCheckout(ctx, ns, attempt.ID)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
 		writeJSON(ctx, w, http.StatusCreated, toAPICheckoutSession(checkout))
 	}
 }
@@ -494,9 +494,16 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, errors.New("namespace could not be resolved for callback"))
 			return
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeStatus(ctx, w, http.StatusBadRequest, err)
+			r.Body.Close()
+			status := http.StatusBadRequest
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				status = http.StatusRequestEntityTooLarge
+			}
+			writeStatus(ctx, w, status, err)
 			return
 		}
 		r.Body.Close()
@@ -504,41 +511,90 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 		_, cbErr := h.svc.Payment.HandleCallback(ctx, ns, provider, r.Header, body)
 		if cbErr != nil {
 			h.logger.WarnContext(ctx, "commerce: payment callback error", "provider", provider, "error", cbErr)
-			// Return 500 on transient/internal errors so the provider retries.
-			// Only ACK (200) when the callback was processed successfully or
-			// was definitively rejected (e.g. invalid signature — those are
-			// non-retryable and ACK prevents infinite retries).
-			if isRetryableCallbackError(cbErr) {
-				writeStatus(ctx, w, http.StatusInternalServerError, cbErr)
+			if isSuccessfulCallbackError(cbErr) {
+				writeCallbackSuccess(w, provider)
 				return
 			}
-			// Definitive rejection (bad signature, mismatch) — ACK so the
-			// provider stops retrying a genuinely bad callback.
-			writeJSON(ctx, w, http.StatusOK, api.CommerceProviderCallbackAck{
-				Ack: providerCallbackAck(provider),
-			})
+			// Deterministic callback failures (bad signature, malformed provider
+			// fields, or a payment fact mismatch) must not be acknowledged: a
+			// success ACK would make the provider discard a request we rejected.
+			if status := callbackErrorStatus(cbErr); status >= http.StatusBadRequest && status < http.StatusInternalServerError {
+				writeStatus(ctx, w, status, cbErr)
+				return
+			}
+			// Database, transaction, timeout, and unknown errors are transient.
+			// Return 500 so the provider retries the callback.
+			writeStatus(ctx, w, http.StatusInternalServerError, cbErr)
 			return
 		}
-		// Success — ACK the provider.
-		writeJSON(ctx, w, http.StatusOK, api.CommerceProviderCallbackAck{
-			Ack: providerCallbackAck(provider),
-		})
+		writeCallbackSuccess(w, provider)
+	}
+}
+
+func writeCallbackSuccess(w http.ResponseWriter, provider payment.Provider) {
+	switch provider {
+	case payment.ProviderWeChat:
+		writeWechatCallbackSuccess(w)
+	case payment.ProviderAlipay:
+		writeAlipayCallbackSuccess(w)
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func writeWechatCallbackSuccess(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeAlipayCallbackSuccess(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.WriteString(w, "success")
+}
+
+func isSuccessfulCallbackError(err error) bool {
+	return errors.Is(err, payment.ErrDuplicateProviderEvent) ||
+		errors.Is(err, payment.ErrFulfillmentAlreadyDone)
+}
+
+// callbackErrorStatus returns a 4xx status for deterministic callback errors.
+// Non-deterministic errors return 500 so the provider retries them.
+func callbackErrorStatus(err error) int {
+	switch {
+	case errors.Is(err, payment.ErrInvalidSignature),
+		errors.Is(err, payment.ErrPaymentFactMismatch):
+		return http.StatusBadRequest
+	case errors.Is(err, payment.ErrContradictoryPaymentFact):
+		return http.StatusConflict
+	case errors.Is(err, payment.ErrPermanentProviderProtocol):
+		return http.StatusBadRequest
+	}
+
+	var vi models.ValidationIssue
+	if !errors.As(err, &vi) {
+		return http.StatusInternalServerError
+	}
+
+	switch vi.Code() {
+	case payment.ErrCodePaymentAttemptNotFound:
+		return http.StatusNotFound
+	case payment.ErrCodePaymentNotVerified:
+		return http.StatusPaymentRequired
+	case payment.ErrCodeFulfillmentFailed:
+		return http.StatusInternalServerError
+	default:
+		return httpStatusForIssue(vi)
 	}
 }
 
 // isRetryableCallbackError reports whether a payment callback error is
-// transient and should cause the provider to retry. Signature verification
-// failures, amount mismatches, and contradictory facts are definitive (the
-// provider should stop retrying). Database errors, network timeouts, and
-// unknown errors are transient (the provider should retry).
+// transient and should cause the provider to retry. It is retained as a small
+// helper for callers/tests that need to inspect the retry classification.
 func isRetryableCallbackError(err error) bool {
-	// Signature/verification errors are definitive — retrying won't help.
-	var ve models.ValidationIssue
-	if errors.As(err, &ve) {
-		return false // validation issues (mismatch, contradiction) are definitive
+	if isSuccessfulCallbackError(err) {
+		return false
 	}
-	// Unknown errors are treated as transient so the provider retries.
-	return true
+	return callbackErrorStatus(err) >= http.StatusInternalServerError
 }
 
 // ---------------------------------------------------------------------------
@@ -892,17 +948,6 @@ func mapAPIOrderKind(k api.CommerceOrderKind) commerce.OrderKind {
 
 func mapAPIProvider(p api.CommercePaymentProvider) payment.Provider {
 	return payment.Provider(p)
-}
-
-func providerCallbackAck(p payment.Provider) string {
-	switch p {
-	case payment.ProviderWeChat:
-		return `<xml><return_code><![CDATA[SUCCESS]]></return_code></xml>`
-	case payment.ProviderAlipay:
-		return "success"
-	default:
-		return "ok"
-	}
 }
 
 func strPtrOrNil(s string) *string {
