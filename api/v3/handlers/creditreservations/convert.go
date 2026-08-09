@@ -44,10 +44,10 @@ type executeRequest struct {
 }
 
 type settleRequest struct {
-	IdempotencyKey string    `json:"idempotency_key"`
-	PayloadHash    string    `json:"payload_hash"`
-	ActualCredits  int64     `json:"actual_credits"`
-	SettledAt      time.Time `json:"settled_at"`
+	IdempotencyKey string                `json:"idempotency_key"`
+	PayloadHash    string                `json:"payload_hash"`
+	ActualLines    []resourceLineRequest `json:"actual_lines"`
+	SettledAt      time.Time             `json:"settled_at"`
 }
 
 type releaseRequest struct {
@@ -184,7 +184,11 @@ func toSettleInput(namespace, id string, request settleRequest) (creditreservati
 	if err := required("reservation_id", id); err != nil {
 		return creditreservation.SettleInput{}, err
 	}
-	return creditreservation.SettleInput{ID: models.NamespacedID{Namespace: namespace, ID: id}, CommandIdentity: creditreservation.CommandIdentity{IdempotencyKey: request.IdempotencyKey, PayloadHash: request.PayloadHash}, ActualCredits: request.ActualCredits, SettledAt: request.SettledAt}, nil
+	lines, err := toResourceLines(request.ActualLines)
+	if err != nil {
+		return creditreservation.SettleInput{}, err
+	}
+	return creditreservation.SettleInput{ID: models.NamespacedID{Namespace: namespace, ID: id}, CommandIdentity: creditreservation.CommandIdentity{IdempotencyKey: request.IdempotencyKey, PayloadHash: request.PayloadHash}, ActualLines: lines, SettledAt: request.SettledAt}, nil
 }
 
 func toReleaseInput(namespace, id string, request releaseRequest) (creditreservation.ReleaseInput, error) {

@@ -64,6 +64,30 @@ func TestExecuteMapsInsufficientFundsToPaymentRequired(t *testing.T) {
 	require.Equal(t, http.StatusPaymentRequired, rec.Code)
 }
 
+func TestSettleDecodesActualResourceLinesWithoutCallerCredits(t *testing.T) {
+	var received creditreservation.SettleInput
+	h := New(func(context.Context) (string, error) { return "acme", nil }, stubService{
+		settle: func(_ context.Context, input creditreservation.SettleInput) (creditreservation.Reservation, error) {
+			received = input
+			return testReservation(), nil
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/credit-reservations/reserve-1/settle", strings.NewReader(`{
+		"idempotency_key":"settle-key","payload_hash":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"actual_lines":[{"feature_key":"ai_usage","resource_code":"input_tokens","quantity":21,"provider":"openai","model":"gpt-5"}],
+		"settled_at":"2026-08-10T12:00:00Z"
+	}`))
+	req.SetPathValue("reservationId", "reserve-1")
+	rec := httptest.NewRecorder()
+
+	h.Settle().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "acme", received.ID.Namespace)
+	require.Equal(t, int64(21), received.ActualLines[0].Quantity)
+	require.Equal(t, "openai", received.ActualLines[0].Provider)
+}
+
 func TestGetMapsNotFoundToNotFound(t *testing.T) {
 	h := New(func(context.Context) (string, error) { return "acme", nil }, stubService{
 		get: func(context.Context, models.NamespacedID) (creditreservation.Reservation, error) {

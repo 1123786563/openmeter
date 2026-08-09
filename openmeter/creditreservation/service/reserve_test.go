@@ -186,6 +186,7 @@ type memoryAdapter struct {
 	fenced   bool
 	sequence string
 	outbox   int
+	events   []creditreservation.UsageEvent
 }
 
 func (m *memoryAdapter) WithCustomerLock(ctx context.Context, _ customer.CustomerID, fn func(reservationadapter.TxAdapter) error) error {
@@ -300,13 +301,26 @@ func (t memoryTx) UpdateReservation(_ context.Context, input reservationadapter.
 	if input.ExecutionDeadline != nil {
 		row.ExecutionDeadline = input.ExecutionDeadline
 	}
+	if input.ActualLines != nil {
+		row.ActualLines = input.ActualLines
+	}
+	if input.SettledCredits != nil {
+		row.SettledCredits = *input.SettledCredits
+	}
+	if input.PrepaidHold != nil {
+		row.PrepaidHold = *input.PrepaidHold
+	}
+	if input.EnterpriseHold != nil {
+		row.EnterpriseHold = *input.EnterpriseHold
+	}
 	t.m.rows[row.ID] = row
 	return row, nil
 }
 func (t memoryTx) CreateCharge(context.Context, reservationadapter.CreateChargeInput) (creditreservation.Charge, bool, error) {
 	return creditreservation.Charge{}, false, fmt.Errorf("unused")
 }
-func (t memoryTx) AppendUsageEvent(context.Context, creditreservation.UsageEvent) error {
+func (t memoryTx) AppendUsageEvent(_ context.Context, event creditreservation.UsageEvent) error {
 	t.m.outbox++
+	t.m.events = append(t.m.events, event)
 	return nil
 }

@@ -478,10 +478,14 @@ func mapReservation(row *entdb.CreditReservation) (creditreservation.Reservation
 	if err != nil {
 		return creditreservation.Reservation{}, err
 	}
+	actualLines, err := unmarshalRatedLines(row.ActualLines)
+	if err != nil {
+		return creditreservation.Reservation{}, err
+	}
 	return creditreservation.Reservation{
 		ID: row.ID, Namespace: row.Namespace, CustomerID: row.CustomerID, Currency: row.Currency,
 		State: creditreservation.ReservationState(row.State), RateVersion: row.RateVersion,
-		Lines: lines, TotalCredits: row.CeilingCredits, ExpiresAt: row.AuthorizationExpiresAt,
+		Lines: lines, ActualLines: actualLines, TotalCredits: row.CeilingCredits, ExpiresAt: row.AuthorizationExpiresAt,
 		ExecutionDeadline: row.ExecutionDeadline,
 		SettledCredits:    row.SettledCredits, PrepaidHold: row.PrepaidHold, EnterpriseHold: row.EnterpriseHold, SettlementLedgerGroupID: row.SettlementLedgerGroupID,
 		SettlementIdentity: creditreservation.CommandIdentity{IdempotencyKey: row.SettlementIdempotencyKey, PayloadHash: row.SettlementPayloadHash},

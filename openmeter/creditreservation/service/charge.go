@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"maps"
+	"math"
+	"math/big"
 	"time"
 
 	decimal "github.com/alpacahq/alpacadecimal"
@@ -42,24 +45,28 @@ func (s *service) Settle(ctx context.Context, input creditreservation.SettleInpu
 			}
 			return current, nil
 		}
-		actual := min(input.ActualCredits, current.TotalCredits)
 		if current.State != creditreservation.ReservationStateExecuting && current.State != creditreservation.ReservationStateUnknown {
 			return creditreservation.Reservation{}, creditreservation.ErrStateConflict
 		}
-		groupID, _, err := s.collect(ctx, current.Namespace, current.ID, current.CustomerID, current.Currency, current.Lines, actual, current.EnterpriseHold, input.SettledAt)
+		actualLines, actualCredits, err := rateActualUsage(current.Lines, input.ActualLines)
+		if err != nil {
+			return creditreservation.Reservation{}, err
+		}
+		actual := min(actualCredits, current.TotalCredits)
+		groupID, _, err := s.collect(ctx, current.Namespace, current.ID, current.CustomerID, current.Currency, actualLines, actual, current.EnterpriseHold, input.SettledAt)
 		if err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		zero := int64(0)
 		updated, err := tx.UpdateReservation(ctx, reservationadapter.UpdateReservationInput{
 			ID: input.ID, ExpectedStates: []creditreservation.ReservationState{current.State}, State: creditreservation.ReservationStateSettled,
-			SettledCredits: &actual, PrepaidHold: &zero, EnterpriseHold: &zero, SettlementIdentity: &input.CommandIdentity,
+			ActualLines: actualLines, SettledCredits: &actual, PrepaidHold: &zero, EnterpriseHold: &zero, SettlementIdentity: &input.CommandIdentity,
 			SettlementLedgerGroupID: &groupID, Evidence: creditreservation.TransitionEvidence{Kind: creditreservation.TransitionEvidenceSettlement, Reference: groupID},
 		})
 		if err != nil {
 			return creditreservation.Reservation{}, err
 		}
-		if err := tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: "usage:" + current.ID, AggregateType: "credit_reservation", AggregateID: current.ID, EventType: "openmeter.credit.usage", Payload: map[string]any{"customer_id": current.CustomerID, "reservation_id": current.ID, "credits": actual}}); err != nil {
+		if err := tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: "usage:" + current.ID, AggregateType: "credit_reservation", AggregateID: current.ID, EventType: "openmeter.credit.usage", Payload: map[string]any{"customer_id": current.CustomerID, "reservation_id": current.ID, "lines": actualLines, "credits": actual, "rated_actual_credits": actualCredits, "actual_over_ceiling": actualCredits > current.TotalCredits}}); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		return updated, nil
@@ -217,10 +224,80 @@ func validateSettleInput(input creditreservation.SettleInput) error {
 	if err := input.CommandIdentity.Validate(); err != nil {
 		return err
 	}
-	if input.ActualCredits < 0 || input.SettledAt.IsZero() {
+	if len(input.ActualLines) == 0 || input.SettledAt.IsZero() {
 		return fmt.Errorf("invalid settle input")
 	}
 	return nil
+}
+
+// rateActualUsage applies the immutable reservation rate snapshot to observed
+// resource quantities. The selected rate card/version is copied from the
+// reservation; no current catalog or caller-supplied credit amount is read.
+func rateActualUsage(reserved []creditreservation.RatedLine, observed []creditreservation.ResourceLine) ([]creditreservation.RatedLine, int64, error) {
+	if len(reserved) == 0 || len(observed) == 0 {
+		return nil, 0, creditreservation.ErrResourceLinesRequired
+	}
+	actual := make([]creditreservation.RatedLine, 0, len(observed))
+	var total int64
+	for _, line := range observed {
+		if line.Quantity < 0 {
+			return nil, 0, creditreservation.ErrInvalidQuantity
+		}
+		var snapshot *creditreservation.RatedLine
+		for index := range reserved {
+			candidate := &reserved[index]
+			if sameResourceLine(candidate.ResourceLine, line) {
+				snapshot = candidate
+				break
+			}
+		}
+		if snapshot == nil || snapshot.Quantity <= 0 {
+			return nil, 0, creditreservation.ErrRateNotFound
+		}
+		credits, err := creditsForSnapshot(line.Quantity, snapshot.Snapshot)
+		if err != nil {
+			return nil, 0, err
+		}
+		if credits > math.MaxInt64-total {
+			return nil, 0, creditreservation.ErrCreditOverflow
+		}
+		total += credits
+		actual = append(actual, creditreservation.RatedLine{ResourceLine: line, RateCardKey: snapshot.RateCardKey, RateVersion: snapshot.RateVersion, Credits: credits, Snapshot: snapshot.Snapshot})
+	}
+	return actual, total, nil
+}
+
+func creditsForSnapshot(quantity int64, snapshot creditreservation.RateSnapshot) (int64, error) {
+	if quantity < 0 || snapshot.UnitAmount.IsNegative() {
+		return 0, creditreservation.ErrInvalidQuantity
+	}
+	if !snapshot.UnitPriceSet {
+		return 0, creditreservation.ErrRateNotFound
+	}
+	if quantity == 0 || snapshot.UnitAmount.IsZero() {
+		return 0, nil
+	}
+	billingQuantity := decimal.NewFromInt(quantity)
+	if snapshot.UnitConfig != nil {
+		if err := snapshot.UnitConfig.Validate(); err != nil {
+			return 0, creditreservation.ErrRateNotFound
+		}
+		_, billingQuantity = snapshot.UnitConfig.Apply(billingQuantity)
+	}
+	credits := billingQuantity.Mul(snapshot.UnitAmount).RoundCeil(0)
+	integer, ok := new(big.Int).SetString(credits.String(), 10)
+	if !ok || !integer.IsInt64() {
+		return 0, creditreservation.ErrCreditOverflow
+	}
+	return integer.Int64(), nil
+}
+
+func sameResourceLine(reserved, observed creditreservation.ResourceLine) bool {
+	return reserved.FeatureKey == observed.FeatureKey &&
+		reserved.ResourceCode == observed.ResourceCode &&
+		reserved.Provider == observed.Provider &&
+		reserved.Model == observed.Model &&
+		maps.Equal(reserved.Dimensions, observed.Dimensions)
 }
 
 func validateChargeInput(input creditreservation.ChargeInput) error {

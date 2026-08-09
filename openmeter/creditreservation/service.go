@@ -59,14 +59,13 @@ type UnknownInput struct {
 	PayloadHash    string
 }
 
-// SettleInput supplies the observed, already rate-version-pinned usage for an
-// executed reservation. ActualCredits may never exceed the persisted ceiling.
-// The settlement command is identity-bound independently from authorization so
-// a caller cannot accidentally change observed usage on retry.
+// SettleInput supplies observed resource usage for an executed reservation.
+// OpenMeter rates the lines against the reservation's persisted rate snapshot;
+// callers never submit an authoritative credit amount.
 type SettleInput struct {
 	ID              models.NamespacedID
 	CommandIdentity CommandIdentity
-	ActualCredits   int64
+	ActualLines     []ResourceLine
 	SettledAt       time.Time
 }
 

@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
+	decimal "github.com/alpacahq/alpacadecimal"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
+	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 )
 
 type ReservationState string
@@ -34,9 +36,19 @@ type ResourceLine struct {
 
 type RatedLine struct {
 	ResourceLine
-	RateCardKey string `json:"rateCardKey"`
-	RateVersion string `json:"rateVersion"`
-	Credits     int64  `json:"credits"`
+	RateCardKey string       `json:"rateCardKey"`
+	RateVersion string       `json:"rateVersion"`
+	Credits     int64        `json:"credits"`
+	Snapshot    RateSnapshot `json:"snapshot"`
+}
+
+// RateSnapshot is the minimal persisted unit-price rule needed to rate actual
+// provider usage after the catalog changes. It is stored with reservation
+// rated_lines and never comes from a caller.
+type RateSnapshot struct {
+	UnitAmount   decimal.Decimal            `json:"unitAmount"`
+	UnitPriceSet bool                       `json:"unitPriceSet"`
+	UnitConfig   *productcatalog.UnitConfig `json:"unitConfig,omitempty"`
 }
 
 // CommandIdentity binds an idempotency key to the exact command payload. A
@@ -67,6 +79,7 @@ type Reservation struct {
 	State                   ReservationState             `json:"state"`
 	RateVersion             string                       `json:"rateVersion"`
 	Lines                   []RatedLine                  `json:"lines"`
+	ActualLines             []RatedLine                  `json:"actualLines,omitempty"`
 	TotalCredits            int64                        `json:"totalCredits"`
 	ExpiresAt               *time.Time                   `json:"expiresAt,omitempty"`
 	ExecutionDeadline       *time.Time                   `json:"executionDeadline,omitempty"`

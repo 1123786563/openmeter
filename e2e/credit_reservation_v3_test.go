@@ -40,7 +40,7 @@ func TestCreditReservationV3Acceptance(t *testing.T) {
 		created := postReservation(t, f.address+"/api/v3/credit-reservations", reserve, http.StatusCreated)
 		require.Equal(t, id, created.ID)
 		postReservation(t, f.address+"/api/v3/credit-reservations/"+id+"/execute", map[string]any{"idempotency_key": key, "payload_hash": strings.Repeat("a", 64), "execution_deadline": time.Now().UTC().Add(5 * time.Minute)}, http.StatusOK)
-		settled := postReservation(t, f.address+"/api/v3/credit-reservations/"+id+"/settle", map[string]any{"idempotency_key": acceptanceID("settle"), "payload_hash": strings.Repeat("b", 64), "actual_credits": 1, "settled_at": time.Now().UTC()}, http.StatusOK)
+		settled := postReservation(t, f.address+"/api/v3/credit-reservations/"+id+"/settle", map[string]any{"idempotency_key": acceptanceID("settle"), "payload_hash": strings.Repeat("b", 64), "actual_lines": reserve["lines"], "settled_at": time.Now().UTC()}, http.StatusOK)
 		require.Equal(t, "settled", strings.ToLower(settled.State))
 		loaded := getReservation(t, f.address+"/api/v3/credit-reservations/"+id, http.StatusOK)
 		require.Equal(t, int64(1), loaded.SettledCredits)

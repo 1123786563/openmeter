@@ -113,10 +113,10 @@ type CreditReservationRelease struct {
 }
 
 type CreditReservationSettle struct {
-	IdempotencyKey string    `json:"idempotency_key"`
-	PayloadHash    string    `json:"payload_hash"`
-	ActualCredits  int64     `json:"actual_credits"`
-	SettledAt      time.Time `json:"settled_at"`
+	IdempotencyKey string               `json:"idempotency_key"`
+	PayloadHash    string               `json:"payload_hash"`
+	ActualLines    []CreditResourceLine `json:"actual_lines"`
+	SettledAt      time.Time            `json:"settled_at"`
 }
 
 type CreditReservationState string

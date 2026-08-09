@@ -97,7 +97,7 @@ model ReservationExecute {
 model ReservationSettle {
   idempotency_key: string;
   payload_hash: string;
-  actual_credits: int64;
+  actual_lines: ResourceLine[];
   settled_at: Shared.DateTime;
 }
 

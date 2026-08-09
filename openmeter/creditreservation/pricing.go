@@ -101,6 +101,7 @@ func (r *catalogPriceResolver) Resolve(ctx context.Context, input ResolvePriceIn
 			ResourceLine: selectedRate.line,
 			RateCardKey:  selectedRate.card.Key(),
 			Credits:      credits,
+			Snapshot:     rateSnapshot(selectedRate.card.AsMeta()),
 		})
 	}
 
@@ -118,6 +119,21 @@ func (r *catalogPriceResolver) Resolve(ctx context.Context, input ResolvePriceIn
 		Lines:        rated,
 		TotalCredits: total,
 	}, nil
+}
+
+func rateSnapshot(meta productcatalog.RateCardMeta) RateSnapshot {
+	snapshot := RateSnapshot{}
+	if meta.Price != nil {
+		if unit, err := meta.Price.AsUnit(); err == nil {
+			snapshot.UnitAmount = unit.Amount
+			snapshot.UnitPriceSet = true
+		}
+	}
+	if meta.UnitConfig != nil {
+		clone := *meta.UnitConfig
+		snapshot.UnitConfig = &clone
+	}
+	return snapshot
 }
 
 func (r *catalogPriceResolver) activeSubscription(ctx context.Context, input ResolvePriceInput) (subscription.SubscriptionView, error) {
