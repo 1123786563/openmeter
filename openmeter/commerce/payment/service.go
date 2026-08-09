@@ -225,7 +225,7 @@ type Config struct {
 	Attempts  AttemptRepository
 	Facts     FactRepository
 	Orders    OrderStatusUpdater
-	TxRunner  PaidTxRunner // optional: if nil, falls back to sequential calls
+	TxRunner  PaidTxRunner
 	Providers map[Provider]ProviderAdapter
 	Logger    *slog.Logger
 }
@@ -249,6 +249,9 @@ func New(cfg Config) (Service, error) {
 	}
 	if cfg.Orders == nil {
 		return nil, errors.New("payment service: orders port is required")
+	}
+	if cfg.TxRunner == nil {
+		return nil, errors.New("payment service: paid transaction runner is required")
 	}
 	if cfg.Providers == nil {
 		return nil, errors.New("payment service: providers map is required")
@@ -418,7 +421,7 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.RawHash != "" {
 		existing, err := s.facts.GetFactByRawHash(ctx, namespace, pf.RawHash)
 		if err == nil && existing != nil {
-			return CallbackResult{Attempt: attempt, Fact: existing, AlreadyPaid: attempt.Status == AttemptStatusSucceeded}, nil
+			return s.resultForExistingFact(ctx, namespace, attempt, existing)
 		}
 	}
 
@@ -426,7 +429,7 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.ProviderEventID != "" {
 		existing, err := s.facts.GetFactByProviderEvent(ctx, namespace, pf.Provider, pf.ProviderEventID)
 		if err == nil && existing != nil {
-			return CallbackResult{Attempt: attempt, Fact: existing, AlreadyPaid: attempt.Status == AttemptStatusSucceeded}, nil
+			return s.resultForExistingFact(ctx, namespace, attempt, existing)
 		}
 	}
 
@@ -471,61 +474,44 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 		return CallbackResult{Attempt: attempt, Fact: saved}, nil
 	}
 
-	// Check if the order is already paid or fulfilled (idempotent replay).
-	order, _ := s.orders.GetOrder(ctx, namespace, attempt.OrderID)
-	if order != nil && (order.Status == commerce.OrderStatusPaid || order.Status == commerce.OrderStatusFulfilled) {
-		// Still persist the fact if it hasn't been seen.
-		saved, _, _ := s.facts.InsertFact(ctx, record)
-		return CallbackResult{Attempt: attempt, Fact: saved, AlreadyPaid: true}, nil
-	}
-
-	// Atomically: attempt -> succeeded (best-effort under concurrency).
-	if _, err := s.attempts.UpdateAttemptStatus(ctx, namespace, attempt.ID, attempt.Status, AttemptStatusSucceeded); err != nil {
-		s.logger.InfoContext(ctx, "payment: attempt status update (may be concurrent)", "error", err)
-	}
-
-	// Transition order to paid within a single transaction. If a TxRunner is
-	// configured, it wraps: insert fact + order awaiting_payment -> paid +
-	// create fulfillment request + write outbox. If no TxRunner, fall back to
-	// sequential calls (used by tests and the mock path).
-	if s.txRunner != nil {
-		result, err := s.txRunner.RunPaidTransition(ctx, PaidTransitionInput{
-			Namespace: namespace,
-			Attempt:   attempt,
-			Fact:      record,
-			FulfillmentReq: FulfillmentRequestCreate{
-				OrderID:    attempt.OrderID,
-				CustomerID: attempt.CustomerID,
-			},
-		})
-		if err != nil {
-			s.logger.InfoContext(ctx, "payment: tx paid transition (may be concurrent or already paid)", "order_id", attempt.OrderID, "error", err)
-		}
-
-		// Reload attempt for the result.
-		attempt, _ = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
-		fact := result.Fact
-		if fact == nil {
-			fact = &record
-		}
-		return CallbackResult{Attempt: attempt, Fact: fact, AlreadyPaid: result.AlreadyPaid}, nil
-	}
-
-	// Fallback: sequential calls (no transaction boundary). Used when TxRunner
-	// is not wired (e.g. unit tests with mocks).
-	saved, _, err := s.facts.InsertFact(ctx, record)
+	result, err := s.txRunner.RunPaidTransition(ctx, PaidTransitionInput{
+		Namespace: namespace,
+		Attempt:   attempt,
+		Fact:      record,
+		FulfillmentReq: FulfillmentRequestCreate{
+			OrderID:    attempt.OrderID,
+			CustomerID: attempt.CustomerID,
+		},
+	})
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+		return CallbackResult{}, fmt.Errorf("payment: paid transition: %w", err)
+	}
+	if result.Fact == nil {
+		return CallbackResult{}, errors.New("payment: paid transition returned no payment fact")
+	}
+	attempt, err = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
+	if err != nil {
+		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt after paid transition: %w", err)
 	}
 
-	if _, err := s.orders.UpdateOrderStatus(ctx, namespace, attempt.OrderID, commerce.OrderStatusAwaitingPayment, commerce.OrderStatusPaid); err != nil {
-		s.logger.InfoContext(ctx, "payment: order transition to paid returned (may be concurrent or already paid)", "order_id", attempt.OrderID, "error", err)
+	return CallbackResult{Attempt: attempt, Fact: result.Fact, AlreadyPaid: result.AlreadyPaid}, nil
+}
+
+func (s *service) resultForExistingFact(
+	ctx context.Context,
+	namespace string,
+	attempt *PaymentAttempt,
+	fact *PaymentFactRecord,
+) (CallbackResult, error) {
+	current, err := s.attempts.GetAttempt(ctx, namespace, attempt.ID)
+	if err != nil {
+		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt for existing fact: %w", err)
 	}
-
-	// Reload attempt for the result.
-	attempt, _ = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
-
-	return CallbackResult{Attempt: attempt, Fact: saved}, nil
+	return CallbackResult{
+		Attempt:     current,
+		Fact:        fact,
+		AlreadyPaid: current.Status == AttemptStatusSucceeded,
+	}, nil
 }
 
 // matchFactToAttempt verifies the payment fact matches the attempt:

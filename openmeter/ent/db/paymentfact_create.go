@@ -62,6 +62,86 @@ func (_c *PaymentFactCreate) SetProvider(v paymentfact.Provider) *PaymentFactCre
 	return _c
 }
 
+// SetProviderOrderID sets the "provider_order_id" field.
+func (_c *PaymentFactCreate) SetProviderOrderID(v string) *PaymentFactCreate {
+	_c.mutation.SetProviderOrderID(v)
+	return _c
+}
+
+// SetProviderPaymentID sets the "provider_payment_id" field.
+func (_c *PaymentFactCreate) SetProviderPaymentID(v string) *PaymentFactCreate {
+	_c.mutation.SetProviderPaymentID(v)
+	return _c
+}
+
+// SetNillableProviderPaymentID sets the "provider_payment_id" field if the given value is not nil.
+func (_c *PaymentFactCreate) SetNillableProviderPaymentID(v *string) *PaymentFactCreate {
+	if v != nil {
+		_c.SetProviderPaymentID(*v)
+	}
+	return _c
+}
+
+// SetProviderEventID sets the "provider_event_id" field.
+func (_c *PaymentFactCreate) SetProviderEventID(v string) *PaymentFactCreate {
+	_c.mutation.SetProviderEventID(v)
+	return _c
+}
+
+// SetNillableProviderEventID sets the "provider_event_id" field if the given value is not nil.
+func (_c *PaymentFactCreate) SetNillableProviderEventID(v *string) *PaymentFactCreate {
+	if v != nil {
+		_c.SetProviderEventID(*v)
+	}
+	return _c
+}
+
+// SetMerchantID sets the "merchant_id" field.
+func (_c *PaymentFactCreate) SetMerchantID(v string) *PaymentFactCreate {
+	_c.mutation.SetMerchantID(v)
+	return _c
+}
+
+// SetNillableMerchantID sets the "merchant_id" field if the given value is not nil.
+func (_c *PaymentFactCreate) SetNillableMerchantID(v *string) *PaymentFactCreate {
+	if v != nil {
+		_c.SetMerchantID(*v)
+	}
+	return _c
+}
+
+// SetApplicationID sets the "application_id" field.
+func (_c *PaymentFactCreate) SetApplicationID(v string) *PaymentFactCreate {
+	_c.mutation.SetApplicationID(v)
+	return _c
+}
+
+// SetNillableApplicationID sets the "application_id" field if the given value is not nil.
+func (_c *PaymentFactCreate) SetNillableApplicationID(v *string) *PaymentFactCreate {
+	if v != nil {
+		_c.SetApplicationID(*v)
+	}
+	return _c
+}
+
+// SetAmountMinor sets the "amount_minor" field.
+func (_c *PaymentFactCreate) SetAmountMinor(v int64) *PaymentFactCreate {
+	_c.mutation.SetAmountMinor(v)
+	return _c
+}
+
+// SetCurrency sets the "currency" field.
+func (_c *PaymentFactCreate) SetCurrency(v string) *PaymentFactCreate {
+	_c.mutation.SetCurrency(v)
+	return _c
+}
+
+// SetSuccess sets the "success" field.
+func (_c *PaymentFactCreate) SetSuccess(v bool) *PaymentFactCreate {
+	_c.mutation.SetSuccess(v)
+	return _c
+}
+
 // SetSignedPayload sets the "signed_payload" field.
 func (_c *PaymentFactCreate) SetSignedPayload(v map[string]interface{}) *PaymentFactCreate {
 	_c.mutation.SetSignedPayload(v)
@@ -176,6 +256,33 @@ func (_c *PaymentFactCreate) check() error {
 			return &ValidationError{Name: "provider", err: fmt.Errorf(`db: validator failed for field "PaymentFact.provider": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.ProviderOrderID(); !ok {
+		return &ValidationError{Name: "provider_order_id", err: errors.New(`db: missing required field "PaymentFact.provider_order_id"`)}
+	}
+	if v, ok := _c.mutation.ProviderOrderID(); ok {
+		if err := paymentfact.ProviderOrderIDValidator(v); err != nil {
+			return &ValidationError{Name: "provider_order_id", err: fmt.Errorf(`db: validator failed for field "PaymentFact.provider_order_id": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.AmountMinor(); !ok {
+		return &ValidationError{Name: "amount_minor", err: errors.New(`db: missing required field "PaymentFact.amount_minor"`)}
+	}
+	if v, ok := _c.mutation.AmountMinor(); ok {
+		if err := paymentfact.AmountMinorValidator(v); err != nil {
+			return &ValidationError{Name: "amount_minor", err: fmt.Errorf(`db: validator failed for field "PaymentFact.amount_minor": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Currency(); !ok {
+		return &ValidationError{Name: "currency", err: errors.New(`db: missing required field "PaymentFact.currency"`)}
+	}
+	if v, ok := _c.mutation.Currency(); ok {
+		if err := paymentfact.CurrencyValidator(v); err != nil {
+			return &ValidationError{Name: "currency", err: fmt.Errorf(`db: validator failed for field "PaymentFact.currency": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Success(); !ok {
+		return &ValidationError{Name: "success", err: errors.New(`db: missing required field "PaymentFact.success"`)}
+	}
 	if _, ok := _c.mutation.SignedPayload(); !ok {
 		return &ValidationError{Name: "signed_payload", err: errors.New(`db: missing required field "PaymentFact.signed_payload"`)}
 	}
@@ -236,6 +343,38 @@ func (_c *PaymentFactCreate) createSpec() (*PaymentFact, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Provider(); ok {
 		_spec.SetField(paymentfact.FieldProvider, field.TypeEnum, value)
 		_node.Provider = value
+	}
+	if value, ok := _c.mutation.ProviderOrderID(); ok {
+		_spec.SetField(paymentfact.FieldProviderOrderID, field.TypeString, value)
+		_node.ProviderOrderID = value
+	}
+	if value, ok := _c.mutation.ProviderPaymentID(); ok {
+		_spec.SetField(paymentfact.FieldProviderPaymentID, field.TypeString, value)
+		_node.ProviderPaymentID = &value
+	}
+	if value, ok := _c.mutation.ProviderEventID(); ok {
+		_spec.SetField(paymentfact.FieldProviderEventID, field.TypeString, value)
+		_node.ProviderEventID = &value
+	}
+	if value, ok := _c.mutation.MerchantID(); ok {
+		_spec.SetField(paymentfact.FieldMerchantID, field.TypeString, value)
+		_node.MerchantID = &value
+	}
+	if value, ok := _c.mutation.ApplicationID(); ok {
+		_spec.SetField(paymentfact.FieldApplicationID, field.TypeString, value)
+		_node.ApplicationID = &value
+	}
+	if value, ok := _c.mutation.AmountMinor(); ok {
+		_spec.SetField(paymentfact.FieldAmountMinor, field.TypeInt64, value)
+		_node.AmountMinor = value
+	}
+	if value, ok := _c.mutation.Currency(); ok {
+		_spec.SetField(paymentfact.FieldCurrency, field.TypeString, value)
+		_node.Currency = value
+	}
+	if value, ok := _c.mutation.Success(); ok {
+		_spec.SetField(paymentfact.FieldSuccess, field.TypeBool, value)
+		_node.Success = value
 	}
 	if value, ok := _c.mutation.SignedPayload(); ok {
 		_spec.SetField(paymentfact.FieldSignedPayload, field.TypeJSON, value)
@@ -345,6 +484,30 @@ func (u *PaymentFactUpsertOne) UpdateNewValues() *PaymentFactUpsertOne {
 		}
 		if _, exists := u.create.mutation.Provider(); exists {
 			s.SetIgnore(paymentfact.FieldProvider)
+		}
+		if _, exists := u.create.mutation.ProviderOrderID(); exists {
+			s.SetIgnore(paymentfact.FieldProviderOrderID)
+		}
+		if _, exists := u.create.mutation.ProviderPaymentID(); exists {
+			s.SetIgnore(paymentfact.FieldProviderPaymentID)
+		}
+		if _, exists := u.create.mutation.ProviderEventID(); exists {
+			s.SetIgnore(paymentfact.FieldProviderEventID)
+		}
+		if _, exists := u.create.mutation.MerchantID(); exists {
+			s.SetIgnore(paymentfact.FieldMerchantID)
+		}
+		if _, exists := u.create.mutation.ApplicationID(); exists {
+			s.SetIgnore(paymentfact.FieldApplicationID)
+		}
+		if _, exists := u.create.mutation.AmountMinor(); exists {
+			s.SetIgnore(paymentfact.FieldAmountMinor)
+		}
+		if _, exists := u.create.mutation.Currency(); exists {
+			s.SetIgnore(paymentfact.FieldCurrency)
+		}
+		if _, exists := u.create.mutation.Success(); exists {
+			s.SetIgnore(paymentfact.FieldSuccess)
 		}
 		if _, exists := u.create.mutation.SignedPayload(); exists {
 			s.SetIgnore(paymentfact.FieldSignedPayload)
@@ -580,6 +743,30 @@ func (u *PaymentFactUpsertBulk) UpdateNewValues() *PaymentFactUpsertBulk {
 			}
 			if _, exists := b.mutation.Provider(); exists {
 				s.SetIgnore(paymentfact.FieldProvider)
+			}
+			if _, exists := b.mutation.ProviderOrderID(); exists {
+				s.SetIgnore(paymentfact.FieldProviderOrderID)
+			}
+			if _, exists := b.mutation.ProviderPaymentID(); exists {
+				s.SetIgnore(paymentfact.FieldProviderPaymentID)
+			}
+			if _, exists := b.mutation.ProviderEventID(); exists {
+				s.SetIgnore(paymentfact.FieldProviderEventID)
+			}
+			if _, exists := b.mutation.MerchantID(); exists {
+				s.SetIgnore(paymentfact.FieldMerchantID)
+			}
+			if _, exists := b.mutation.ApplicationID(); exists {
+				s.SetIgnore(paymentfact.FieldApplicationID)
+			}
+			if _, exists := b.mutation.AmountMinor(); exists {
+				s.SetIgnore(paymentfact.FieldAmountMinor)
+			}
+			if _, exists := b.mutation.Currency(); exists {
+				s.SetIgnore(paymentfact.FieldCurrency)
+			}
+			if _, exists := b.mutation.Success(); exists {
+				s.SetIgnore(paymentfact.FieldSuccess)
 			}
 			if _, exists := b.mutation.SignedPayload(); exists {
 				s.SetIgnore(paymentfact.FieldSignedPayload)

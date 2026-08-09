@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"os"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
@@ -15,8 +15,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/alipay"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/wechat"
-	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/commerce/reconciliation"
+	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/commerce/wallet"
 	"github.com/openmeterio/openmeter/openmeter/commerce/worker"
 	"github.com/openmeterio/openmeter/openmeter/credit"
@@ -94,10 +94,10 @@ func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnect
 
 	// Payment service: uses EntAdapter-backed repositories + PaidTxRunner.
 	testSecrets := map[string]string{
-		"wechat_app_id":             "test-wechat-app-id",
-		"wechat_mch_id":             "test-wechat-mch-id",
-		"wechat_api_key":            "test-wechat-api-key",
-		"alipay_app_id":             "test-alipay-app-id",
+		"wechat_app_id":  "test-wechat-app-id",
+		"wechat_mch_id":  "test-wechat-mch-id",
+		"wechat_api_key": "test-wechat-api-key",
+		"alipay_app_id":  "test-alipay-app-id",
 	}
 	// Load test RSA public key for WeChat callback signature verification.
 	// In production, this comes from the platform secret manager.
@@ -282,22 +282,35 @@ type entPaidTxRunner struct {
 // RunPaidTransition implements payment.PaidTxRunner. It delegates to the
 // EntAdapter's transactional RunPaidTransition, then maps the result.
 func (r *entPaidTxRunner) RunPaidTransition(ctx context.Context, in payment.PaidTransitionInput) (payment.PaidTransitionResult, error) {
-	err := r.adapter.RunPaidTransition(ctx, commerce.PaidTransitionParams{
-		Namespace:        in.Namespace,
-		CustomerID:       in.Attempt.CustomerID,
-		OrderID:          in.Attempt.OrderID,
-		PaymentAttemptID: in.Attempt.ID,
-		RawHash:          in.Fact.RawHash,
-		Provider:         string(in.Attempt.Provider),
-		SignedPayload:    in.Fact.SignedPayload,
+	result, err := r.adapter.RunPaidTransition(ctx, commerce.PaidTransitionParams{
+		Namespace:         in.Namespace,
+		CustomerID:        in.Attempt.CustomerID,
+		OrderID:           in.Attempt.OrderID,
+		PaymentAttemptID:  in.Attempt.ID,
+		PaymentFactID:     in.Fact.ID,
+		RawHash:           in.Fact.RawHash,
+		Provider:          string(in.Fact.Provider),
+		ProviderOrderID:   in.Fact.ProviderOrderID,
+		ProviderPaymentID: in.Fact.ProviderPaymentID,
+		ProviderEventID:   in.Fact.ProviderEventID,
+		MerchantID:        in.Fact.MerchantID,
+		ApplicationID:     in.Fact.ApplicationID,
+		AmountMinor:       in.Fact.AmountMinor,
+		Currency:          in.Fact.Currency,
+		Success:           in.Fact.Success,
+		SignedPayload:     in.Fact.SignedPayload,
+		Timestamp:         in.Fact.Timestamp,
+		CreatedAt:         in.Fact.CreatedAt,
 	})
 	if err != nil {
 		return payment.PaidTransitionResult{}, err
 	}
 	return payment.PaidTransitionResult{
-		Fact: &in.Fact,
+		Fact:        mapWireToPaymentFact(result.Fact),
+		AlreadyPaid: result.AlreadyPaid,
 	}, nil
 }
+
 // Code generated for commerce adapters. Appended to commerce.go.
 
 // ---------------------------------------------------------------------------
@@ -310,17 +323,19 @@ type paymentAttemptRepoAdapter struct {
 
 func (a paymentAttemptRepoAdapter) CreateAttempt(ctx context.Context, attempt payment.PaymentAttempt) (*payment.PaymentAttempt, bool, error) {
 	w, fresh, err := a.EntAdapter.CreatePaymentAttempt(ctx, commerce.PaymentAttemptWire{
-		ID:             attempt.ID,
-		Namespace:      attempt.Namespace,
-		OrderID:        attempt.OrderID,
-		CustomerID:     attempt.CustomerID,
-		Provider:       string(attempt.Provider),
-		Status:         string(attempt.Status),
-		IdempotencyKey: attempt.IdempotencyKey,
-		AmountMinor:    attempt.AmountMinor,
-		Currency:       attempt.Currency,
-		CreatedAt:      attempt.CreatedAt,
-		UpdatedAt:      attempt.UpdatedAt,
+		ID:                    attempt.ID,
+		Namespace:             attempt.Namespace,
+		OrderID:               attempt.OrderID,
+		CustomerID:            attempt.CustomerID,
+		Provider:              string(attempt.Provider),
+		ExpectedMerchantID:    attempt.ExpectedMerchantID,
+		ExpectedApplicationID: attempt.ExpectedApplicationID,
+		Status:                string(attempt.Status),
+		IdempotencyKey:        attempt.IdempotencyKey,
+		AmountMinor:           attempt.AmountMinor,
+		Currency:              attempt.Currency,
+		CreatedAt:             attempt.CreatedAt,
+		UpdatedAt:             attempt.UpdatedAt,
 	})
 	if err != nil {
 		return nil, false, err
@@ -370,20 +385,22 @@ func (a paymentAttemptRepoAdapter) SetProviderIDs(ctx context.Context, namespace
 
 func mapWireToPaymentAttempt(w *commerce.PaymentAttemptWire) *payment.PaymentAttempt {
 	return &payment.PaymentAttempt{
-		ID:                w.ID,
-		Namespace:         w.Namespace,
-		OrderID:           w.OrderID,
-		CustomerID:        w.CustomerID,
-		Provider:          payment.Provider(w.Provider),
-		ProviderOrderID:   w.ProviderOrderID,
-		ProviderPaymentID: w.ProviderPaymentID,
-		ProviderSessionID: w.ProviderSessionID,
-		Status:            payment.AttemptStatus(w.Status),
-		IdempotencyKey:    w.IdempotencyKey,
-		AmountMinor:       w.AmountMinor,
-		Currency:          w.Currency,
-		CreatedAt:         w.CreatedAt,
-		UpdatedAt:         w.UpdatedAt,
+		ID:                    w.ID,
+		Namespace:             w.Namespace,
+		OrderID:               w.OrderID,
+		CustomerID:            w.CustomerID,
+		Provider:              payment.Provider(w.Provider),
+		ProviderOrderID:       w.ProviderOrderID,
+		ProviderPaymentID:     w.ProviderPaymentID,
+		ProviderSessionID:     w.ProviderSessionID,
+		ExpectedMerchantID:    w.ExpectedMerchantID,
+		ExpectedApplicationID: w.ExpectedApplicationID,
+		Status:                payment.AttemptStatus(w.Status),
+		IdempotencyKey:        w.IdempotencyKey,
+		AmountMinor:           w.AmountMinor,
+		Currency:              w.Currency,
+		CreatedAt:             w.CreatedAt,
+		UpdatedAt:             w.UpdatedAt,
 	}
 }
 
@@ -397,14 +414,22 @@ type paymentFactRepoAdapter struct {
 
 func (a paymentFactRepoAdapter) InsertFact(ctx context.Context, fact payment.PaymentFactRecord) (*payment.PaymentFactRecord, bool, error) {
 	w, fresh, err := a.EntAdapter.InsertPaymentFact(ctx, commerce.PaymentFactWire{
-		ID:            fact.ID,
-		Namespace:     fact.Namespace,
-		AttemptID:     fact.AttemptID,
-		Provider:      string(fact.Provider),
-		RawHash:       fact.RawHash,
-		SignedPayload: fact.SignedPayload,
-		Timestamp:     fact.Timestamp,
-		CreatedAt:     fact.CreatedAt,
+		ID:                fact.ID,
+		Namespace:         fact.Namespace,
+		AttemptID:         fact.AttemptID,
+		Provider:          string(fact.Provider),
+		ProviderOrderID:   fact.ProviderOrderID,
+		ProviderPaymentID: fact.ProviderPaymentID,
+		ProviderEventID:   fact.ProviderEventID,
+		MerchantID:        fact.MerchantID,
+		ApplicationID:     fact.ApplicationID,
+		AmountMinor:       fact.AmountMinor,
+		Currency:          fact.Currency,
+		Success:           fact.Success,
+		RawHash:           fact.RawHash,
+		SignedPayload:     fact.SignedPayload,
+		Timestamp:         fact.Timestamp,
+		CreatedAt:         fact.CreatedAt,
 	})
 	if err != nil {
 		return nil, false, err
@@ -441,15 +466,26 @@ func (a paymentFactRepoAdapter) GetFactByProviderEvent(ctx context.Context, name
 }
 
 func mapWireToPaymentFact(w *commerce.PaymentFactWire) *payment.PaymentFactRecord {
+	if w == nil {
+		return nil
+	}
 	return &payment.PaymentFactRecord{
-		ID:            w.ID,
-		Namespace:     w.Namespace,
-		AttemptID:     w.AttemptID,
-		Provider:      payment.Provider(w.Provider),
-		RawHash:       w.RawHash,
-		SignedPayload: w.SignedPayload,
-		Timestamp:     w.Timestamp,
-		CreatedAt:     w.CreatedAt,
+		ID:                w.ID,
+		Namespace:         w.Namespace,
+		AttemptID:         w.AttemptID,
+		Provider:          payment.Provider(w.Provider),
+		ProviderOrderID:   w.ProviderOrderID,
+		ProviderPaymentID: w.ProviderPaymentID,
+		ProviderEventID:   w.ProviderEventID,
+		MerchantID:        w.MerchantID,
+		ApplicationID:     w.ApplicationID,
+		AmountMinor:       w.AmountMinor,
+		Currency:          w.Currency,
+		Success:           w.Success,
+		RawHash:           w.RawHash,
+		SignedPayload:     w.SignedPayload,
+		Timestamp:         w.Timestamp,
+		CreatedAt:         w.CreatedAt,
 	}
 }
 
@@ -463,19 +499,19 @@ type refundRepoAdapter struct {
 
 func (a refundRepoAdapter) CreateRefund(ctx context.Context, req refund.RefundRequest) (*refund.RefundRequest, bool, error) {
 	w, fresh, err := a.EntAdapter.CreateRefundRequest(ctx, commerce.RefundRequestWire{
-		ID:              req.ID,
-		Namespace:       req.Namespace,
-		OrderID:         req.CommerceOrderID,
-		CustomerID:      req.CustomerID,
-		AmountMinor:     req.AmountCents,
-		Currency:        req.Currency,
-		Status:          string(req.Status),
-		Reason:          req.Reason,
-		IdempotencyKey:  req.IdempotencyKey,
-		CreditQuantum:   req.CreditQuantum,
+		ID:               req.ID,
+		Namespace:        req.Namespace,
+		OrderID:          req.CommerceOrderID,
+		CustomerID:       req.CustomerID,
+		AmountMinor:      req.AmountCents,
+		Currency:         req.Currency,
+		Status:           string(req.Status),
+		Reason:           req.Reason,
+		IdempotencyKey:   req.IdempotencyKey,
+		CreditQuantum:    req.CreditQuantum,
 		RefundQuantumFen: req.RefundQuantumFen,
-		CreatedAt:       req.CreatedAt,
-		UpdatedAt:       req.UpdatedAt,
+		CreatedAt:        req.CreatedAt,
+		UpdatedAt:        req.UpdatedAt,
 	})
 	if err != nil {
 		return nil, false, err
@@ -647,14 +683,14 @@ func mapWireToRefundRequest(w *commerce.RefundRequestWire) *refund.RefundRequest
 
 func mapWireToRefundFact(w *commerce.RefundFactWire) *refund.RefundFactRecord {
 	return &refund.RefundFactRecord{
-		ID:               w.ID,
-		Namespace:        w.Namespace,
-		RefundRequestID:  w.RefundRequestID,
-		Provider:         payment.Provider(w.Provider),
-		RawHash:          w.RawHash,
-		SignedPayload:    w.SignedPayload,
-		Timestamp:        w.Timestamp,
-		CreatedAt:        w.CreatedAt,
+		ID:              w.ID,
+		Namespace:       w.Namespace,
+		RefundRequestID: w.RefundRequestID,
+		Provider:        payment.Provider(w.Provider),
+		RawHash:         w.RawHash,
+		SignedPayload:   w.SignedPayload,
+		Timestamp:       w.Timestamp,
+		CreatedAt:       w.CreatedAt,
 	}
 }
 
@@ -673,9 +709,9 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 		Priority:    1,
 		EffectiveAt: now,
 		Metadata: map[string]string{
-			"source":           string(in.Source),
-			"order_id":         in.OrderID,
-			"idempotency_key":  in.IdempotencyKey,
+			"source":          string(in.Source),
+			"order_id":        in.OrderID,
+			"idempotency_key": in.IdempotencyKey,
 		},
 	}
 	if in.ValidityDays > 0 {

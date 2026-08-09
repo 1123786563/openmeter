@@ -70,14 +70,22 @@ func TestPaidTxRunner_AtomicTransition(t *testing.T) {
 	}
 
 	// Run the paid transition.
-	err = adapter.RunPaidTransition(ctx, commerce.PaidTransitionParams{
-		Namespace:        testNS,
-		CustomerID:       "cust-paid-tx",
-		OrderID:          order.ID,
-		PaymentAttemptID: attempt.ID,
-		RawHash:          "hash-paid-tx-001",
-		Provider:         "wechat",
-		SignedPayload:    map[string]any{"amount": 1000, "currency": "CNY"},
+	_, err = adapter.RunPaidTransition(ctx, commerce.PaidTransitionParams{
+		Namespace:         testNS,
+		CustomerID:        "cust-paid-tx",
+		OrderID:           order.ID,
+		PaymentAttemptID:  attempt.ID,
+		RawHash:           "hash-paid-tx-001",
+		Provider:          "wechat",
+		ProviderOrderID:   "provider-order-paid-tx-001",
+		ProviderPaymentID: "provider-payment-paid-tx-001",
+		ProviderEventID:   "provider-event-paid-tx-001",
+		AmountMinor:       1000,
+		Currency:          "CNY",
+		Success:           true,
+		SignedPayload:     map[string]any{"amount": 1000, "currency": "CNY"},
+		Timestamp:         time.Now(),
+		CreatedAt:         time.Now(),
 	})
 	if err != nil {
 		t.Fatalf("RunPaidTransition: %v", err)
@@ -174,16 +182,23 @@ func TestPaidTxRunner_IdempotentReplay(t *testing.T) {
 		PaymentAttemptID: attempt.ID,
 		RawHash:          "hash-idem-001",
 		Provider:         "wechat",
+		ProviderOrderID:  "provider-order-idem-001",
+		ProviderEventID:  "provider-event-idem-001",
+		AmountMinor:      500,
+		Currency:         "CNY",
+		Success:          true,
 		SignedPayload:    map[string]any{"amount": 500},
+		Timestamp:        time.Now(),
+		CreatedAt:        time.Now(),
 	}
 
 	// First run.
-	if err := adapter.RunPaidTransition(ctx, params); err != nil {
+	if _, err := adapter.RunPaidTransition(ctx, params); err != nil {
 		t.Fatalf("first RunPaidTransition: %v", err)
 	}
 
 	// Second run (idempotent replay — should not error and not duplicate).
-	if err := adapter.RunPaidTransition(ctx, params); err != nil {
+	if _, err := adapter.RunPaidTransition(ctx, params); err != nil {
 		t.Fatalf("second RunPaidTransition: %v", err)
 	}
 
@@ -208,13 +223,35 @@ func TestPaidTxRunner_IdempotentReplay(t *testing.T) {
 func TestPaidTxRunner_UniqueHashDedup(t *testing.T) {
 	c := newTestClient(t)
 	ctx := context.Background()
+	firstOrder := createOrderX(ctx, t, c, "fact-dedup-1")
+	secondOrder := createOrderX(ctx, t, c, "fact-dedup-2")
+	firstAttempt := c.PaymentAttempt.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(firstOrder.ID).
+		SetCustomerID("cust-fact-dedup-1").
+		SetProvider(paymentattempt.ProviderWechat).
+		SetIdempotencyKey("attempt-fact-dedup-1").
+		SetAmountCents(100).
+		SaveX(ctx)
+	secondAttempt := c.PaymentAttempt.Create().
+		SetNamespace(testNS).
+		SetCommerceOrderID(secondOrder.ID).
+		SetCustomerID("cust-fact-dedup-2").
+		SetProvider(paymentattempt.ProviderAlipay).
+		SetIdempotencyKey("attempt-fact-dedup-2").
+		SetAmountCents(100).
+		SaveX(ctx)
 
 	// Insert a fact directly.
 	_, err := c.PaymentFact.Create().
 		SetNamespace(testNS).
-		SetPaymentAttemptID("attempt-dedup").
+		SetPaymentAttemptID(firstAttempt.ID).
 		SetRawHash("hash-dedup-unique").
 		SetProvider(paymentfact.ProviderWechat).
+		SetProviderOrderID("provider-order-dedup-1").
+		SetAmountMinor(100).
+		SetCurrency("CNY").
+		SetSuccess(true).
 		SetSignedPayload(map[string]any{}).
 		SetTimestamp(time.Now()).
 		Save(ctx)
@@ -226,9 +263,13 @@ func TestPaidTxRunner_UniqueHashDedup(t *testing.T) {
 	// due to the unique index.
 	_, err = c.PaymentFact.Create().
 		SetNamespace(testNS).
-		SetPaymentAttemptID("attempt-dedup-2").
+		SetPaymentAttemptID(secondAttempt.ID).
 		SetRawHash("hash-dedup-unique").
 		SetProvider(paymentfact.ProviderAlipay).
+		SetProviderOrderID("provider-order-dedup-2").
+		SetAmountMinor(100).
+		SetCurrency("CNY").
+		SetSuccess(true).
 		SetSignedPayload(map[string]any{}).
 		SetTimestamp(time.Now()).
 		Save(ctx)

@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -19,8 +20,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/receivableperiod"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/refundfact"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/pkg/clock"
 )
 
@@ -29,14 +30,14 @@ import (
 // ===========================================================================
 
 var (
-	ErrPaymentAttemptNotFound      = errors.New("payment attempt not found")
-	ErrPaymentFactNotFound         = errors.New("payment fact not found")
-	ErrInvalidAttemptTransition    = errors.New("invalid payment attempt transition")
-	ErrFulfillmentNotFound         = errors.New("fulfillment not found")
-	ErrFulfillmentAlreadyClaimed   = errors.New("fulfillment already claimed")
+	ErrPaymentAttemptNotFound       = errors.New("payment attempt not found")
+	ErrPaymentFactNotFound          = errors.New("payment fact not found")
+	ErrInvalidAttemptTransition     = errors.New("invalid payment attempt transition")
+	ErrFulfillmentNotFound          = errors.New("fulfillment not found")
+	ErrFulfillmentAlreadyClaimed    = errors.New("fulfillment already claimed")
 	ErrInvalidFulfillmentTransition = errors.New("invalid fulfillment transition")
-	ErrRefundNotFound              = errors.New("refund not found")
-	ErrReceivablePeriodNotFound    = errors.New("receivable period not found")
+	ErrRefundNotFound               = errors.New("refund not found")
+	ErrReceivablePeriodNotFound     = errors.New("receivable period not found")
 )
 
 // ===========================================================================
@@ -54,32 +55,42 @@ type RefundStatusWire = string
 
 // PaymentAttemptWire is the wire format for a payment attempt.
 type PaymentAttemptWire struct {
-	ID                string
-	Namespace         string
-	OrderID           string
-	CustomerID        string
-	Provider          PaymentProviderWire
-	ProviderOrderID   string
-	ProviderPaymentID string
-	ProviderSessionID string
-	Status            AttemptStatusWire
-	IdempotencyKey    string
-	AmountMinor       int64
-	Currency          string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                    string
+	Namespace             string
+	OrderID               string
+	CustomerID            string
+	Provider              PaymentProviderWire
+	ProviderOrderID       string
+	ProviderPaymentID     string
+	ProviderSessionID     string
+	ExpectedMerchantID    string
+	ExpectedApplicationID string
+	Status                AttemptStatusWire
+	IdempotencyKey        string
+	AmountMinor           int64
+	Currency              string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 // PaymentFactWire is the wire format for a payment fact.
 type PaymentFactWire struct {
-	ID            string
-	Namespace     string
-	AttemptID     string
-	Provider      PaymentProviderWire
-	RawHash       string
-	SignedPayload map[string]any
-	Timestamp     time.Time
-	CreatedAt     time.Time
+	ID                string
+	Namespace         string
+	AttemptID         string
+	Provider          PaymentProviderWire
+	ProviderOrderID   string
+	ProviderPaymentID string
+	ProviderEventID   string
+	MerchantID        string
+	ApplicationID     string
+	AmountMinor       int64
+	Currency          string
+	Success           bool
+	RawHash           string
+	SignedPayload     map[string]any
+	Timestamp         time.Time
+	CreatedAt         time.Time
 }
 
 // FulfillmentCreateWire is the input for creating a fulfillment.
@@ -131,23 +142,23 @@ type RefundRequestWire struct {
 
 // OfflinePaymentWire is the wire format for an offline payment.
 type OfflinePaymentWire struct {
-	ID                 string
-	Namespace          string
-	AccountID          string
-	AmountMinor        int64
-	Currency           string
-	ConfirmedBy        string
-	ConfirmedAt        time.Time
-	Reference          string
-	Note               string
+	ID          string
+	Namespace   string
+	AccountID   string
+	AmountMinor int64
+	Currency    string
+	ConfirmedBy string
+	ConfirmedAt time.Time
+	Reference   string
+	Note        string
 }
 
 // ReceivablePeriodWire is the wire format for a receivable period.
 type ReceivablePeriodWire struct {
-	ID         string
-	Namespace  string
-	AccountID  string
-	Status     string
+	ID          string
+	Namespace   string
+	AccountID   string
+	Status      string
 	PeriodStart time.Time
 	PeriodEnd   time.Time
 	TotalMinor  int64
@@ -191,6 +202,8 @@ func (a *EntAdapter) CreatePaymentAttempt(ctx context.Context, attempt PaymentAt
 		SetCustomerID(attempt.CustomerID).
 		SetProvider(provider).
 		SetStatus(paymentattempt.StatusCreated).
+		SetNillableExpectedMerchantID(nonEmptyPtr(attempt.ExpectedMerchantID)).
+		SetNillableExpectedApplicationID(nonEmptyPtr(attempt.ExpectedApplicationID)).
 		SetIdempotencyKey(attempt.IdempotencyKey).
 		SetAmountCents(attempt.AmountMinor).
 		SetCurrency(attempt.Currency).
@@ -292,9 +305,9 @@ func (a *EntAdapter) UpdatePaymentAttemptStatus(ctx context.Context, namespace, 
 func (a *EntAdapter) SetPaymentAttemptProviderIDs(ctx context.Context, namespace, id, providerOrderID, providerPaymentID, sessionID string) (*PaymentAttemptWire, error) {
 	n, err := a.db.PaymentAttempt.Update().
 		Where(paymentattempt.IDEQ(id), paymentattempt.NamespaceEQ(namespace)).
-		SetProviderOrderID(providerOrderID).
-		SetProviderPaymentID(providerPaymentID).
-		SetProviderSessionID(sessionID).
+		SetNillableProviderOrderID(nonEmptyPtr(providerOrderID)).
+		SetNillableProviderPaymentID(nonEmptyPtr(providerPaymentID)).
+		SetNillableProviderSessionID(nonEmptyPtr(sessionID)).
 		SetUpdatedAt(clock.Now()).
 		Save(ctx)
 	if err != nil {
@@ -324,15 +337,24 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 		return nil, false, err
 	}
 
-	saved, err := a.db.PaymentFact.Create().
+	create := a.db.PaymentFact.Create().
+		SetID(fact.ID).
 		SetNamespace(fact.Namespace).
 		SetPaymentAttemptID(fact.AttemptID).
 		SetRawHash(fact.RawHash).
 		SetProvider(provider).
+		SetProviderOrderID(fact.ProviderOrderID).
+		SetNillableProviderPaymentID(nonEmptyPtr(fact.ProviderPaymentID)).
+		SetNillableProviderEventID(nonEmptyPtr(fact.ProviderEventID)).
+		SetNillableMerchantID(nonEmptyPtr(fact.MerchantID)).
+		SetNillableApplicationID(nonEmptyPtr(fact.ApplicationID)).
+		SetAmountMinor(fact.AmountMinor).
+		SetCurrency(fact.Currency).
+		SetSuccess(fact.Success).
 		SetSignedPayload(fact.SignedPayload).
 		SetTimestamp(fact.Timestamp).
-		SetCreatedAt(clock.Now()).
-		Save(ctx)
+		SetCreatedAt(fact.CreatedAt)
+	saved, err := create.Save(ctx)
 	if err != nil {
 		if entdb.IsConstraintError(err) {
 			existing, gErr := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
@@ -371,17 +393,15 @@ func (a *EntAdapter) GetPaymentFactsByProviderOrder(ctx context.Context, namespa
 		Where(
 			paymentfact.NamespaceEQ(namespace),
 			paymentfact.ProviderEQ(entProvider),
+			paymentfact.ProviderOrderIDEQ(providerOrderID),
 		).
-		WithAttempt().
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ent: get facts by provider order: %w", err)
 	}
-	result := make([]PaymentFactWire, 0)
-	for _, f := range facts {
-		if f.Edges.Attempt != nil && f.Edges.Attempt.ProviderOrderID != nil && *f.Edges.Attempt.ProviderOrderID == providerOrderID {
-			result = append(result, *mapEntPaymentFact(f))
-		}
+	result := make([]PaymentFactWire, len(facts))
+	for i, f := range facts {
+		result[i] = *mapEntPaymentFact(f)
 	}
 	return result, nil
 }
@@ -717,7 +737,7 @@ func (a *EntAdapter) UpdateExternalInvoiceRef(ctx context.Context, namespace str
 			_, uErr := a.db.ExternalInvoiceRef.Update().
 				Where(
 					externalinvoiceref.NamespaceEQ(namespace),
-				externalinvoiceref.ReceivablePeriodIDEQ(ref.PeriodID),
+					externalinvoiceref.ReceivablePeriodIDEQ(ref.PeriodID),
 				).
 				SetNillableInvoiceURL(&ref.InvoiceURL).
 				Save(ctx)
@@ -758,20 +778,43 @@ func mapEntPaymentAttempt(epa *entdb.PaymentAttempt) *PaymentAttemptWire {
 	if epa.ProviderSessionID != nil {
 		w.ProviderSessionID = *epa.ProviderSessionID
 	}
+	if epa.ExpectedMerchantID != nil {
+		w.ExpectedMerchantID = *epa.ExpectedMerchantID
+	}
+	if epa.ExpectedApplicationID != nil {
+		w.ExpectedApplicationID = *epa.ExpectedApplicationID
+	}
 	return w
 }
 
 func mapEntPaymentFact(epf *entdb.PaymentFact) *PaymentFactWire {
-	return &PaymentFactWire{
-		ID:            epf.ID,
-		Namespace:     epf.Namespace,
-		AttemptID:     epf.PaymentAttemptID,
-		Provider:      string(epf.Provider),
-		RawHash:       epf.RawHash,
-		SignedPayload: epf.SignedPayload,
-		Timestamp:     epf.Timestamp,
-		CreatedAt:     epf.CreatedAt,
+	w := &PaymentFactWire{
+		ID:              epf.ID,
+		Namespace:       epf.Namespace,
+		AttemptID:       epf.PaymentAttemptID,
+		Provider:        string(epf.Provider),
+		ProviderOrderID: epf.ProviderOrderID,
+		AmountMinor:     epf.AmountMinor,
+		Currency:        epf.Currency,
+		Success:         epf.Success,
+		RawHash:         epf.RawHash,
+		SignedPayload:   epf.SignedPayload,
+		Timestamp:       epf.Timestamp,
+		CreatedAt:       epf.CreatedAt,
 	}
+	if epf.ProviderPaymentID != nil {
+		w.ProviderPaymentID = *epf.ProviderPaymentID
+	}
+	if epf.ProviderEventID != nil {
+		w.ProviderEventID = *epf.ProviderEventID
+	}
+	if epf.MerchantID != nil {
+		w.MerchantID = *epf.MerchantID
+	}
+	if epf.ApplicationID != nil {
+		w.ApplicationID = *epf.ApplicationID
+	}
+	return w
 }
 
 func mapEntFulfillment(ef *entdb.Fulfillment) *FulfillmentWire {
@@ -1142,11 +1185,30 @@ func mapEntRefundFact(ef *entdb.RefundFact) *RefundFactWire {
 	}
 }
 
-// GetPaymentFactByProviderEvent is not directly supported by the current
-// PaymentFact schema (no provider_event_id field). It queries by raw_hash as
-// a fallback. This satisfies the FactRepository interface.
 func (a *EntAdapter) GetPaymentFactByProviderEvent(ctx context.Context, namespace string, provider PaymentProviderWire, providerEventID string) (*PaymentFactWire, error) {
-	// The payment_fact table does not have a provider_event_id column.
-	// We use the raw_hash (which may encode the event ID) as a lookup.
-	return a.GetPaymentFactByRawHash(ctx, namespace, providerEventID)
+	entProvider, err := mapFactProviderToEnt(provider)
+	if err != nil {
+		return nil, err
+	}
+	ep, err := a.db.PaymentFact.Query().
+		Where(
+			paymentfact.NamespaceEQ(namespace),
+			paymentfact.ProviderEQ(entProvider),
+			paymentfact.ProviderEventIDEQ(providerEventID),
+		).
+		First(ctx)
+	if err != nil {
+		if entdb.IsNotFound(err) {
+			return nil, ErrPaymentFactNotFound
+		}
+		return nil, fmt.Errorf("ent: get fact by provider event: %w", err)
+	}
+	return mapEntPaymentFact(ep), nil
+}
+
+func nonEmptyPtr(v string) *string {
+	if strings.TrimSpace(v) == "" {
+		return nil
+	}
+	return &v
 }

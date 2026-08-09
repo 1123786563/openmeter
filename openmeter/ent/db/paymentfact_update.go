@@ -79,6 +79,18 @@ func (_u *PaymentFactUpdate) sqlSave(ctx context.Context) (_node int, err error)
 			}
 		}
 	}
+	if _u.mutation.ProviderPaymentIDCleared() {
+		_spec.ClearField(paymentfact.FieldProviderPaymentID, field.TypeString)
+	}
+	if _u.mutation.ProviderEventIDCleared() {
+		_spec.ClearField(paymentfact.FieldProviderEventID, field.TypeString)
+	}
+	if _u.mutation.MerchantIDCleared() {
+		_spec.ClearField(paymentfact.FieldMerchantID, field.TypeString)
+	}
+	if _u.mutation.ApplicationIDCleared() {
+		_spec.ClearField(paymentfact.FieldApplicationID, field.TypeString)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentfact.Label}
@@ -180,6 +192,18 @@ func (_u *PaymentFactUpdateOne) sqlSave(ctx context.Context) (_node *PaymentFact
 				ps[i](selector)
 			}
 		}
+	}
+	if _u.mutation.ProviderPaymentIDCleared() {
+		_spec.ClearField(paymentfact.FieldProviderPaymentID, field.TypeString)
+	}
+	if _u.mutation.ProviderEventIDCleared() {
+		_spec.ClearField(paymentfact.FieldProviderEventID, field.TypeString)
+	}
+	if _u.mutation.MerchantIDCleared() {
+		_spec.ClearField(paymentfact.FieldMerchantID, field.TypeString)
+	}
+	if _u.mutation.ApplicationIDCleared() {
+		_spec.ClearField(paymentfact.FieldApplicationID, field.TypeString)
 	}
 	_node = &PaymentFact{config: _u.config}
 	_spec.Assign = _node.assignValues

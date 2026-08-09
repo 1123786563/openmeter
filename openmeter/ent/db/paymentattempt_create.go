@@ -147,6 +147,34 @@ func (_c *PaymentAttemptCreate) SetNillableProviderSessionID(v *string) *Payment
 	return _c
 }
 
+// SetExpectedMerchantID sets the "expected_merchant_id" field.
+func (_c *PaymentAttemptCreate) SetExpectedMerchantID(v string) *PaymentAttemptCreate {
+	_c.mutation.SetExpectedMerchantID(v)
+	return _c
+}
+
+// SetNillableExpectedMerchantID sets the "expected_merchant_id" field if the given value is not nil.
+func (_c *PaymentAttemptCreate) SetNillableExpectedMerchantID(v *string) *PaymentAttemptCreate {
+	if v != nil {
+		_c.SetExpectedMerchantID(*v)
+	}
+	return _c
+}
+
+// SetExpectedApplicationID sets the "expected_application_id" field.
+func (_c *PaymentAttemptCreate) SetExpectedApplicationID(v string) *PaymentAttemptCreate {
+	_c.mutation.SetExpectedApplicationID(v)
+	return _c
+}
+
+// SetNillableExpectedApplicationID sets the "expected_application_id" field if the given value is not nil.
+func (_c *PaymentAttemptCreate) SetNillableExpectedApplicationID(v *string) *PaymentAttemptCreate {
+	if v != nil {
+		_c.SetExpectedApplicationID(*v)
+	}
+	return _c
+}
+
 // SetIdempotencyKey sets the "idempotency_key" field.
 func (_c *PaymentAttemptCreate) SetIdempotencyKey(v string) *PaymentAttemptCreate {
 	_c.mutation.SetIdempotencyKey(v)
@@ -411,6 +439,14 @@ func (_c *PaymentAttemptCreate) createSpec() (*PaymentAttempt, *sqlgraph.CreateS
 		_spec.SetField(paymentattempt.FieldProviderSessionID, field.TypeString, value)
 		_node.ProviderSessionID = &value
 	}
+	if value, ok := _c.mutation.ExpectedMerchantID(); ok {
+		_spec.SetField(paymentattempt.FieldExpectedMerchantID, field.TypeString, value)
+		_node.ExpectedMerchantID = &value
+	}
+	if value, ok := _c.mutation.ExpectedApplicationID(); ok {
+		_spec.SetField(paymentattempt.FieldExpectedApplicationID, field.TypeString, value)
+		_node.ExpectedApplicationID = &value
+	}
 	if value, ok := _c.mutation.IdempotencyKey(); ok {
 		_spec.SetField(paymentattempt.FieldIdempotencyKey, field.TypeString, value)
 		_node.IdempotencyKey = value
@@ -635,6 +671,12 @@ func (u *PaymentAttemptUpsertOne) UpdateNewValues() *PaymentAttemptUpsertOne {
 		}
 		if _, exists := u.create.mutation.Provider(); exists {
 			s.SetIgnore(paymentattempt.FieldProvider)
+		}
+		if _, exists := u.create.mutation.ExpectedMerchantID(); exists {
+			s.SetIgnore(paymentattempt.FieldExpectedMerchantID)
+		}
+		if _, exists := u.create.mutation.ExpectedApplicationID(); exists {
+			s.SetIgnore(paymentattempt.FieldExpectedApplicationID)
 		}
 		if _, exists := u.create.mutation.IdempotencyKey(); exists {
 			s.SetIgnore(paymentattempt.FieldIdempotencyKey)
@@ -985,6 +1027,12 @@ func (u *PaymentAttemptUpsertBulk) UpdateNewValues() *PaymentAttemptUpsertBulk {
 			}
 			if _, exists := b.mutation.Provider(); exists {
 				s.SetIgnore(paymentattempt.FieldProvider)
+			}
+			if _, exists := b.mutation.ExpectedMerchantID(); exists {
+				s.SetIgnore(paymentattempt.FieldExpectedMerchantID)
+			}
+			if _, exists := b.mutation.ExpectedApplicationID(); exists {
+				s.SetIgnore(paymentattempt.FieldExpectedApplicationID)
 			}
 			if _, exists := b.mutation.IdempotencyKey(); exists {
 				s.SetIgnore(paymentattempt.FieldIdempotencyKey)

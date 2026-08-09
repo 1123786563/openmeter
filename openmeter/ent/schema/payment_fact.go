@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -38,6 +39,14 @@ func (PaymentFact) Fields() []ent.Field {
 		field.Enum("provider").
 			Values("wechat", "alipay", "offline").
 			Immutable(),
+		field.String("provider_order_id").NotEmpty().Immutable(),
+		field.String("provider_payment_id").Optional().Nillable().Immutable(),
+		field.String("provider_event_id").Optional().Nillable().Immutable(),
+		field.String("merchant_id").Optional().Nillable().Immutable(),
+		field.String("application_id").Optional().Nillable().Immutable(),
+		field.Int64("amount_minor").Min(0).Immutable(),
+		field.String("currency").NotEmpty().Immutable(),
+		field.Bool("success").Immutable(),
 		// signed_payload stores verified fields extracted from the callback, not the raw body.
 		field.JSON("signed_payload", map[string]any{}).
 			Immutable().
@@ -51,12 +60,12 @@ func (PaymentFact) Fields() []ent.Field {
 
 func (PaymentFact) Edges() []ent.Edge {
 	return []ent.Edge{
-	edge.From("attempt", PaymentAttempt.Type).
-		Ref("facts").
-		Field("payment_attempt_id").
-		Required().
-		Immutable().
-		Unique(),
+		edge.From("attempt", PaymentAttempt.Type).
+			Ref("facts").
+			Field("payment_attempt_id").
+			Required().
+			Immutable().
+			Unique(),
 	}
 }
 
@@ -64,5 +73,9 @@ func (PaymentFact) Indexes() []ent.Index {
 	return []ent.Index{
 		// DB-enforced callback dedup: one fact per raw_hash within a namespace.
 		index.Fields("namespace", "raw_hash").Unique(),
+		index.Fields("namespace", "provider", "provider_event_id").
+			Annotations(entsql.IndexWhere("provider_event_id IS NOT NULL")).
+			Unique(),
+		index.Fields("namespace", "provider", "provider_order_id"),
 	}
 }

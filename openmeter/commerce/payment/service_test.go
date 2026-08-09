@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/pkg/models"
+	"github.com/stretchr/testify/require"
 )
 
 // --- Mock implementations ---
@@ -19,7 +21,7 @@ type mockAttemptRepo struct {
 	mu       sync.Mutex
 	attempts map[string]*PaymentAttempt
 	byIdem   map[string]string
-	statusN  atomic.Int64
+	updateN  atomic.Int64
 }
 
 func newMockAttemptRepo() *mockAttemptRepo {
@@ -80,7 +82,7 @@ func (m *mockAttemptRepo) GetAttemptByProviderOrder(_ context.Context, namespace
 func (m *mockAttemptRepo) UpdateAttemptStatus(_ context.Context, namespace, id string, expectedFrom, to AttemptStatus) (*PaymentAttempt, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.statusN.Add(1)
+	m.updateN.Add(1)
 	a, ok := m.attempts[id]
 	if !ok || a.Namespace != namespace {
 		return nil, ErrPaymentAttemptNotFound
@@ -256,6 +258,58 @@ type testHarness struct {
 	facts    *mockFactRepo
 	orders   *mockOrderStatusUpdater
 	provider *mockProvider
+	paidTx   *mockPaidTxRunner
+}
+
+type failingPaidTxRunner struct{ err error }
+
+func (r failingPaidTxRunner) RunPaidTransition(context.Context, PaidTransitionInput) (PaidTransitionResult, error) {
+	return PaidTransitionResult{}, r.err
+}
+
+type mockPaidTxRunner struct {
+	mu           sync.Mutex
+	attempts     *mockAttemptRepo
+	facts        *mockFactRepo
+	orders       *mockOrderStatusUpdater
+	fulfillmentN atomic.Int64
+	outboxN      atomic.Int64
+}
+
+func (r *mockPaidTxRunner) RunPaidTransition(ctx context.Context, in PaidTransitionInput) (PaidTransitionResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	attempt, err := r.attempts.GetAttempt(ctx, in.Namespace, in.Attempt.ID)
+	if err != nil {
+		return PaidTransitionResult{}, err
+	}
+	saved, _, err := r.facts.InsertFact(ctx, in.Fact)
+	if err != nil {
+		return PaidTransitionResult{}, err
+	}
+	if attempt.Status == AttemptStatusPending {
+		attempt, err = r.attempts.UpdateAttemptStatus(ctx, in.Namespace, attempt.ID, AttemptStatusPending, AttemptStatusSucceeded)
+		if err != nil {
+			return PaidTransitionResult{}, err
+		}
+	}
+
+	order, err := r.orders.GetOrder(ctx, in.Namespace, in.Attempt.OrderID)
+	if err != nil {
+		return PaidTransitionResult{}, err
+	}
+	alreadyPaid := order.Status == commerce.OrderStatusPaid || order.Status == commerce.OrderStatusFulfilled
+	if !alreadyPaid {
+		order, err = r.orders.UpdateOrderStatus(ctx, in.Namespace, order.ID, commerce.OrderStatusAwaitingPayment, commerce.OrderStatusPaid)
+		if err != nil {
+			return PaidTransitionResult{}, err
+		}
+		r.fulfillmentN.Add(1)
+		r.outboxN.Add(1)
+	}
+
+	return PaidTransitionResult{Order: order, Fact: saved, AlreadyPaid: alreadyPaid}, nil
 }
 
 func newTestHarness(t *testing.T) *testHarness {
@@ -264,18 +318,20 @@ func newTestHarness(t *testing.T) *testHarness {
 	facts := newMockFactRepo()
 	orders := newMockOrderUpdater()
 	prov := &mockProvider{name: ProviderWeChat}
+	paidTx := &mockPaidTxRunner{attempts: attempts, facts: facts, orders: orders}
 
 	svc, err := New(Config{
 		Attempts:  attempts,
 		Facts:     facts,
 		Orders:    orders,
+		TxRunner:  paidTx,
 		Providers: map[Provider]ProviderAdapter{ProviderWeChat: prov},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return &testHarness{svc: svc, attempts: attempts, facts: facts, orders: orders, provider: prov}
+	return &testHarness{svc: svc, attempts: attempts, facts: facts, orders: orders, provider: prov, paidTx: paidTx}
 }
 
 // setupPaidOrder creates an order + attempt and transitions the order to awaiting_payment.
@@ -313,6 +369,39 @@ func (h *testHarness) setupPaidOrder(namespace, customerID, orderID, providerOrd
 }
 
 // --- Tests ---
+
+func TestApplyPaymentFact_PaidTransitionFailureIsRetryable(t *testing.T) {
+	h := newTestHarness(t)
+	_, attempt := h.setupPaidOrder("default", "customer-1", "order-1", "provider-order-1", 100)
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		return PaymentFact{
+			Provider:          ProviderWeChat,
+			ProviderOrderID:   "provider-order-1",
+			ProviderEventID:   "event-1",
+			ProviderPaymentID: "payment-1",
+			AmountMinor:       100,
+			Currency:          "CNY",
+			Success:           true,
+			RawHash:           HashRawBody(body),
+		}, nil
+	}
+	h.attempts.updateN.Store(0)
+	svc, err := New(Config{
+		Attempts: h.attempts,
+		Facts:    h.facts,
+		Orders:   h.orders,
+		TxRunner: failingPaidTxRunner{err: errors.New("database unavailable")},
+		Providers: map[Provider]ProviderAdapter{
+			ProviderWeChat: h.provider,
+		},
+	})
+	require.NoError(t, err)
+
+	_, err = svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
+	require.ErrorContains(t, err, "database unavailable")
+	require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
+	require.Zero(t, h.attempts.updateN.Load())
+}
 
 // TestHandleCallbackValidPayment verifies the happy path: valid callback moves
 // the order to paid (not fulfilled).

@@ -29,6 +29,22 @@ type PaymentFact struct {
 	RawHash string `json:"raw_hash,omitempty"`
 	// Provider holds the value of the "provider" field.
 	Provider paymentfact.Provider `json:"provider,omitempty"`
+	// ProviderOrderID holds the value of the "provider_order_id" field.
+	ProviderOrderID string `json:"provider_order_id,omitempty"`
+	// ProviderPaymentID holds the value of the "provider_payment_id" field.
+	ProviderPaymentID *string `json:"provider_payment_id,omitempty"`
+	// ProviderEventID holds the value of the "provider_event_id" field.
+	ProviderEventID *string `json:"provider_event_id,omitempty"`
+	// MerchantID holds the value of the "merchant_id" field.
+	MerchantID *string `json:"merchant_id,omitempty"`
+	// ApplicationID holds the value of the "application_id" field.
+	ApplicationID *string `json:"application_id,omitempty"`
+	// AmountMinor holds the value of the "amount_minor" field.
+	AmountMinor int64 `json:"amount_minor,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency string `json:"currency,omitempty"`
+	// Success holds the value of the "success" field.
+	Success bool `json:"success,omitempty"`
 	// SignedPayload holds the value of the "signed_payload" field.
 	SignedPayload map[string]interface{} `json:"signed_payload,omitempty"`
 	// Timestamp holds the value of the "timestamp" field.
@@ -66,7 +82,11 @@ func (*PaymentFact) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case paymentfact.FieldSignedPayload:
 			values[i] = new([]byte)
-		case paymentfact.FieldID, paymentfact.FieldNamespace, paymentfact.FieldPaymentAttemptID, paymentfact.FieldRawHash, paymentfact.FieldProvider:
+		case paymentfact.FieldSuccess:
+			values[i] = new(sql.NullBool)
+		case paymentfact.FieldAmountMinor:
+			values[i] = new(sql.NullInt64)
+		case paymentfact.FieldID, paymentfact.FieldNamespace, paymentfact.FieldPaymentAttemptID, paymentfact.FieldRawHash, paymentfact.FieldProvider, paymentfact.FieldProviderOrderID, paymentfact.FieldProviderPaymentID, paymentfact.FieldProviderEventID, paymentfact.FieldMerchantID, paymentfact.FieldApplicationID, paymentfact.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case paymentfact.FieldCreatedAt, paymentfact.FieldTimestamp:
 			values[i] = new(sql.NullTime)
@@ -120,6 +140,58 @@ func (_m *PaymentFact) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field provider", values[i])
 			} else if value.Valid {
 				_m.Provider = paymentfact.Provider(value.String)
+			}
+		case paymentfact.FieldProviderOrderID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_order_id", values[i])
+			} else if value.Valid {
+				_m.ProviderOrderID = value.String
+			}
+		case paymentfact.FieldProviderPaymentID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_payment_id", values[i])
+			} else if value.Valid {
+				_m.ProviderPaymentID = new(string)
+				*_m.ProviderPaymentID = value.String
+			}
+		case paymentfact.FieldProviderEventID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_event_id", values[i])
+			} else if value.Valid {
+				_m.ProviderEventID = new(string)
+				*_m.ProviderEventID = value.String
+			}
+		case paymentfact.FieldMerchantID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field merchant_id", values[i])
+			} else if value.Valid {
+				_m.MerchantID = new(string)
+				*_m.MerchantID = value.String
+			}
+		case paymentfact.FieldApplicationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field application_id", values[i])
+			} else if value.Valid {
+				_m.ApplicationID = new(string)
+				*_m.ApplicationID = value.String
+			}
+		case paymentfact.FieldAmountMinor:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_minor", values[i])
+			} else if value.Valid {
+				_m.AmountMinor = value.Int64
+			}
+		case paymentfact.FieldCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
+			} else if value.Valid {
+				_m.Currency = value.String
+			}
+		case paymentfact.FieldSuccess:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field success", values[i])
+			} else if value.Valid {
+				_m.Success = value.Bool
 			}
 		case paymentfact.FieldSignedPayload:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -190,6 +262,38 @@ func (_m *PaymentFact) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("provider=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Provider))
+	builder.WriteString(", ")
+	builder.WriteString("provider_order_id=")
+	builder.WriteString(_m.ProviderOrderID)
+	builder.WriteString(", ")
+	if v := _m.ProviderPaymentID; v != nil {
+		builder.WriteString("provider_payment_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ProviderEventID; v != nil {
+		builder.WriteString("provider_event_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.MerchantID; v != nil {
+		builder.WriteString("merchant_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ApplicationID; v != nil {
+		builder.WriteString("application_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("amount_minor=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountMinor))
+	builder.WriteString(", ")
+	builder.WriteString("currency=")
+	builder.WriteString(_m.Currency)
+	builder.WriteString(", ")
+	builder.WriteString("success=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Success))
 	builder.WriteString(", ")
 	builder.WriteString("signed_payload=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SignedPayload))

@@ -110,6 +110,16 @@ func ProviderSessionID(v string) predicate.PaymentAttempt {
 	return predicate.PaymentAttempt(sql.FieldEQ(FieldProviderSessionID, v))
 }
 
+// ExpectedMerchantID applies equality check predicate on the "expected_merchant_id" field. It's identical to ExpectedMerchantIDEQ.
+func ExpectedMerchantID(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEQ(FieldExpectedMerchantID, v))
+}
+
+// ExpectedApplicationID applies equality check predicate on the "expected_application_id" field. It's identical to ExpectedApplicationIDEQ.
+func ExpectedApplicationID(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEQ(FieldExpectedApplicationID, v))
+}
+
 // IdempotencyKey applies equality check predicate on the "idempotency_key" field. It's identical to IdempotencyKeyEQ.
 func IdempotencyKey(v string) predicate.PaymentAttempt {
 	return predicate.PaymentAttempt(sql.FieldEQ(FieldIdempotencyKey, v))
@@ -713,6 +723,156 @@ func ProviderSessionIDEqualFold(v string) predicate.PaymentAttempt {
 // ProviderSessionIDContainsFold applies the ContainsFold predicate on the "provider_session_id" field.
 func ProviderSessionIDContainsFold(v string) predicate.PaymentAttempt {
 	return predicate.PaymentAttempt(sql.FieldContainsFold(FieldProviderSessionID, v))
+}
+
+// ExpectedMerchantIDEQ applies the EQ predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDEQ(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEQ(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDNEQ applies the NEQ predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDNEQ(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNEQ(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDIn applies the In predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDIn(vs ...string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldIn(FieldExpectedMerchantID, vs...))
+}
+
+// ExpectedMerchantIDNotIn applies the NotIn predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDNotIn(vs ...string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNotIn(FieldExpectedMerchantID, vs...))
+}
+
+// ExpectedMerchantIDGT applies the GT predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDGT(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldGT(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDGTE applies the GTE predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDGTE(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldGTE(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDLT applies the LT predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDLT(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldLT(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDLTE applies the LTE predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDLTE(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldLTE(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDContains applies the Contains predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDContains(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldContains(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDHasPrefix applies the HasPrefix predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDHasPrefix(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldHasPrefix(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDHasSuffix applies the HasSuffix predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDHasSuffix(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldHasSuffix(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDIsNil applies the IsNil predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDIsNil() predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldIsNull(FieldExpectedMerchantID))
+}
+
+// ExpectedMerchantIDNotNil applies the NotNil predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDNotNil() predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNotNull(FieldExpectedMerchantID))
+}
+
+// ExpectedMerchantIDEqualFold applies the EqualFold predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDEqualFold(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEqualFold(FieldExpectedMerchantID, v))
+}
+
+// ExpectedMerchantIDContainsFold applies the ContainsFold predicate on the "expected_merchant_id" field.
+func ExpectedMerchantIDContainsFold(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldContainsFold(FieldExpectedMerchantID, v))
+}
+
+// ExpectedApplicationIDEQ applies the EQ predicate on the "expected_application_id" field.
+func ExpectedApplicationIDEQ(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEQ(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDNEQ applies the NEQ predicate on the "expected_application_id" field.
+func ExpectedApplicationIDNEQ(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNEQ(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDIn applies the In predicate on the "expected_application_id" field.
+func ExpectedApplicationIDIn(vs ...string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldIn(FieldExpectedApplicationID, vs...))
+}
+
+// ExpectedApplicationIDNotIn applies the NotIn predicate on the "expected_application_id" field.
+func ExpectedApplicationIDNotIn(vs ...string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNotIn(FieldExpectedApplicationID, vs...))
+}
+
+// ExpectedApplicationIDGT applies the GT predicate on the "expected_application_id" field.
+func ExpectedApplicationIDGT(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldGT(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDGTE applies the GTE predicate on the "expected_application_id" field.
+func ExpectedApplicationIDGTE(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldGTE(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDLT applies the LT predicate on the "expected_application_id" field.
+func ExpectedApplicationIDLT(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldLT(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDLTE applies the LTE predicate on the "expected_application_id" field.
+func ExpectedApplicationIDLTE(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldLTE(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDContains applies the Contains predicate on the "expected_application_id" field.
+func ExpectedApplicationIDContains(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldContains(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDHasPrefix applies the HasPrefix predicate on the "expected_application_id" field.
+func ExpectedApplicationIDHasPrefix(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldHasPrefix(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDHasSuffix applies the HasSuffix predicate on the "expected_application_id" field.
+func ExpectedApplicationIDHasSuffix(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldHasSuffix(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDIsNil applies the IsNil predicate on the "expected_application_id" field.
+func ExpectedApplicationIDIsNil() predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldIsNull(FieldExpectedApplicationID))
+}
+
+// ExpectedApplicationIDNotNil applies the NotNil predicate on the "expected_application_id" field.
+func ExpectedApplicationIDNotNil() predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldNotNull(FieldExpectedApplicationID))
+}
+
+// ExpectedApplicationIDEqualFold applies the EqualFold predicate on the "expected_application_id" field.
+func ExpectedApplicationIDEqualFold(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldEqualFold(FieldExpectedApplicationID, v))
+}
+
+// ExpectedApplicationIDContainsFold applies the ContainsFold predicate on the "expected_application_id" field.
+func ExpectedApplicationIDContainsFold(v string) predicate.PaymentAttempt {
+	return predicate.PaymentAttempt(sql.FieldContainsFold(FieldExpectedApplicationID, v))
 }
 
 // IdempotencyKeyEQ applies the EQ predicate on the "idempotency_key" field.

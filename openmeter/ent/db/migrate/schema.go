@@ -5835,6 +5835,8 @@ var (
 		{Name: "provider_payment_id", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"created", "pending", "succeeded", "failed", "closed"}, Default: "created"},
 		{Name: "provider_session_id", Type: field.TypeString, Nullable: true},
+		{Name: "expected_merchant_id", Type: field.TypeString, Nullable: true},
+		{Name: "expected_application_id", Type: field.TypeString, Nullable: true},
 		{Name: "idempotency_key", Type: field.TypeString},
 		{Name: "amount_cents", Type: field.TypeInt64},
 		{Name: "currency", Type: field.TypeString, Default: "CNY"},
@@ -5848,7 +5850,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_attempts_commerce_orders_payment_attempts",
-				Columns:    []*schema.Column{PaymentAttemptsColumns[14]},
+				Columns:    []*schema.Column{PaymentAttemptsColumns[16]},
 				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -5867,7 +5869,7 @@ var (
 			{
 				Name:    "paymentattempt_namespace_customer_id_idempotency_key",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[5], PaymentAttemptsColumns[11]},
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[5], PaymentAttemptsColumns[13]},
 			},
 			{
 				Name:    "paymentattempt_namespace_provider_provider_order_id",
@@ -5888,7 +5890,7 @@ var (
 			{
 				Name:    "paymentattempt_namespace_commerce_order_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[14]},
+				Columns: []*schema.Column{PaymentAttemptsColumns[1], PaymentAttemptsColumns[16]},
 			},
 			{
 				Name:    "paymentattempt_namespace_customer_id_status",
@@ -5904,6 +5906,14 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "raw_hash", Type: field.TypeString},
 		{Name: "provider", Type: field.TypeEnum, Enums: []string{"wechat", "alipay", "offline"}},
+		{Name: "provider_order_id", Type: field.TypeString},
+		{Name: "provider_payment_id", Type: field.TypeString, Nullable: true},
+		{Name: "provider_event_id", Type: field.TypeString, Nullable: true},
+		{Name: "merchant_id", Type: field.TypeString, Nullable: true},
+		{Name: "application_id", Type: field.TypeString, Nullable: true},
+		{Name: "amount_minor", Type: field.TypeInt64},
+		{Name: "currency", Type: field.TypeString},
+		{Name: "success", Type: field.TypeBool},
 		{Name: "signed_payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "timestamp", Type: field.TypeTime},
 		{Name: "payment_attempt_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -5916,7 +5926,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_facts_payment_attempts_facts",
-				Columns:    []*schema.Column{PaymentFactsColumns[7]},
+				Columns:    []*schema.Column{PaymentFactsColumns[15]},
 				RefColumns: []*schema.Column{PaymentAttemptsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -5936,6 +5946,19 @@ var (
 				Name:    "paymentfact_namespace_raw_hash",
 				Unique:  true,
 				Columns: []*schema.Column{PaymentFactsColumns[1], PaymentFactsColumns[3]},
+			},
+			{
+				Name:    "paymentfact_namespace_provider_provider_event_id",
+				Unique:  true,
+				Columns: []*schema.Column{PaymentFactsColumns[1], PaymentFactsColumns[4], PaymentFactsColumns[7]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "provider_event_id IS NOT NULL",
+				},
+			},
+			{
+				Name:    "paymentfact_namespace_provider_provider_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{PaymentFactsColumns[1], PaymentFactsColumns[4], PaymentFactsColumns[5]},
 			},
 		},
 	}

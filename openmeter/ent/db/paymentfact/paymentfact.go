@@ -25,6 +25,22 @@ const (
 	FieldRawHash = "raw_hash"
 	// FieldProvider holds the string denoting the provider field in the database.
 	FieldProvider = "provider"
+	// FieldProviderOrderID holds the string denoting the provider_order_id field in the database.
+	FieldProviderOrderID = "provider_order_id"
+	// FieldProviderPaymentID holds the string denoting the provider_payment_id field in the database.
+	FieldProviderPaymentID = "provider_payment_id"
+	// FieldProviderEventID holds the string denoting the provider_event_id field in the database.
+	FieldProviderEventID = "provider_event_id"
+	// FieldMerchantID holds the string denoting the merchant_id field in the database.
+	FieldMerchantID = "merchant_id"
+	// FieldApplicationID holds the string denoting the application_id field in the database.
+	FieldApplicationID = "application_id"
+	// FieldAmountMinor holds the string denoting the amount_minor field in the database.
+	FieldAmountMinor = "amount_minor"
+	// FieldCurrency holds the string denoting the currency field in the database.
+	FieldCurrency = "currency"
+	// FieldSuccess holds the string denoting the success field in the database.
+	FieldSuccess = "success"
 	// FieldSignedPayload holds the string denoting the signed_payload field in the database.
 	FieldSignedPayload = "signed_payload"
 	// FieldTimestamp holds the string denoting the timestamp field in the database.
@@ -50,6 +66,14 @@ var Columns = []string{
 	FieldPaymentAttemptID,
 	FieldRawHash,
 	FieldProvider,
+	FieldProviderOrderID,
+	FieldProviderPaymentID,
+	FieldProviderEventID,
+	FieldMerchantID,
+	FieldApplicationID,
+	FieldAmountMinor,
+	FieldCurrency,
+	FieldSuccess,
 	FieldSignedPayload,
 	FieldTimestamp,
 }
@@ -71,6 +95,12 @@ var (
 	DefaultCreatedAt func() time.Time
 	// RawHashValidator is a validator for the "raw_hash" field. It is called by the builders before save.
 	RawHashValidator func(string) error
+	// ProviderOrderIDValidator is a validator for the "provider_order_id" field. It is called by the builders before save.
+	ProviderOrderIDValidator func(string) error
+	// AmountMinorValidator is a validator for the "amount_minor" field. It is called by the builders before save.
+	AmountMinorValidator func(int64) error
+	// CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	CurrencyValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -130,6 +160,46 @@ func ByRawHash(opts ...sql.OrderTermOption) OrderOption {
 // ByProvider orders the results by the provider field.
 func ByProvider(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProvider, opts...).ToFunc()
+}
+
+// ByProviderOrderID orders the results by the provider_order_id field.
+func ByProviderOrderID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderOrderID, opts...).ToFunc()
+}
+
+// ByProviderPaymentID orders the results by the provider_payment_id field.
+func ByProviderPaymentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderPaymentID, opts...).ToFunc()
+}
+
+// ByProviderEventID orders the results by the provider_event_id field.
+func ByProviderEventID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderEventID, opts...).ToFunc()
+}
+
+// ByMerchantID orders the results by the merchant_id field.
+func ByMerchantID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMerchantID, opts...).ToFunc()
+}
+
+// ByApplicationID orders the results by the application_id field.
+func ByApplicationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldApplicationID, opts...).ToFunc()
+}
+
+// ByAmountMinor orders the results by the amount_minor field.
+func ByAmountMinor(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAmountMinor, opts...).ToFunc()
+}
+
+// ByCurrency orders the results by the currency field.
+func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCurrency, opts...).ToFunc()
+}
+
+// BySuccess orders the results by the success field.
+func BySuccess(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSuccess, opts...).ToFunc()
 }
 
 // ByTimestamp orders the results by the timestamp field.

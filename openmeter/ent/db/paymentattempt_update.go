@@ -261,6 +261,12 @@ func (_u *PaymentAttemptUpdate) sqlSave(ctx context.Context) (_node int, err err
 	if _u.mutation.ProviderSessionIDCleared() {
 		_spec.ClearField(paymentattempt.FieldProviderSessionID, field.TypeString)
 	}
+	if _u.mutation.ExpectedMerchantIDCleared() {
+		_spec.ClearField(paymentattempt.FieldExpectedMerchantID, field.TypeString)
+	}
+	if _u.mutation.ExpectedApplicationIDCleared() {
+		_spec.ClearField(paymentattempt.FieldExpectedApplicationID, field.TypeString)
+	}
 	if _u.mutation.FactsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -587,6 +593,12 @@ func (_u *PaymentAttemptUpdateOne) sqlSave(ctx context.Context) (_node *PaymentA
 	}
 	if _u.mutation.ProviderSessionIDCleared() {
 		_spec.ClearField(paymentattempt.FieldProviderSessionID, field.TypeString)
+	}
+	if _u.mutation.ExpectedMerchantIDCleared() {
+		_spec.ClearField(paymentattempt.FieldExpectedMerchantID, field.TypeString)
+	}
+	if _u.mutation.ExpectedApplicationIDCleared() {
+		_spec.ClearField(paymentattempt.FieldExpectedApplicationID, field.TypeString)
 	}
 	if _u.mutation.FactsCleared() {
 		edge := &sqlgraph.EdgeSpec{

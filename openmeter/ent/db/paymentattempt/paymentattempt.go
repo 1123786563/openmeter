@@ -37,6 +37,10 @@ const (
 	FieldStatus = "status"
 	// FieldProviderSessionID holds the string denoting the provider_session_id field in the database.
 	FieldProviderSessionID = "provider_session_id"
+	// FieldExpectedMerchantID holds the string denoting the expected_merchant_id field in the database.
+	FieldExpectedMerchantID = "expected_merchant_id"
+	// FieldExpectedApplicationID holds the string denoting the expected_application_id field in the database.
+	FieldExpectedApplicationID = "expected_application_id"
 	// FieldIdempotencyKey holds the string denoting the idempotency_key field in the database.
 	FieldIdempotencyKey = "idempotency_key"
 	// FieldAmountCents holds the string denoting the amount_cents field in the database.
@@ -79,6 +83,8 @@ var Columns = []string{
 	FieldProviderPaymentID,
 	FieldStatus,
 	FieldProviderSessionID,
+	FieldExpectedMerchantID,
+	FieldExpectedApplicationID,
 	FieldIdempotencyKey,
 	FieldAmountCents,
 	FieldCurrency,
@@ -229,6 +235,16 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByProviderSessionID orders the results by the provider_session_id field.
 func ByProviderSessionID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProviderSessionID, opts...).ToFunc()
+}
+
+// ByExpectedMerchantID orders the results by the expected_merchant_id field.
+func ByExpectedMerchantID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpectedMerchantID, opts...).ToFunc()
+}
+
+// ByExpectedApplicationID orders the results by the expected_application_id field.
+func ByExpectedApplicationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpectedApplicationID, opts...).ToFunc()
 }
 
 // ByIdempotencyKey orders the results by the idempotency_key field.

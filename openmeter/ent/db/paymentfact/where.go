@@ -85,6 +85,46 @@ func RawHash(v string) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldEQ(FieldRawHash, v))
 }
 
+// ProviderOrderID applies equality check predicate on the "provider_order_id" field. It's identical to ProviderOrderIDEQ.
+func ProviderOrderID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderOrderID, v))
+}
+
+// ProviderPaymentID applies equality check predicate on the "provider_payment_id" field. It's identical to ProviderPaymentIDEQ.
+func ProviderPaymentID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderPaymentID, v))
+}
+
+// ProviderEventID applies equality check predicate on the "provider_event_id" field. It's identical to ProviderEventIDEQ.
+func ProviderEventID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderEventID, v))
+}
+
+// MerchantID applies equality check predicate on the "merchant_id" field. It's identical to MerchantIDEQ.
+func MerchantID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldMerchantID, v))
+}
+
+// ApplicationID applies equality check predicate on the "application_id" field. It's identical to ApplicationIDEQ.
+func ApplicationID(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldApplicationID, v))
+}
+
+// AmountMinor applies equality check predicate on the "amount_minor" field. It's identical to AmountMinorEQ.
+func AmountMinor(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldAmountMinor, v))
+}
+
+// Currency applies equality check predicate on the "currency" field. It's identical to CurrencyEQ.
+func Currency(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldCurrency, v))
+}
+
+// Success applies equality check predicate on the "success" field. It's identical to SuccessEQ.
+func Success(v bool) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldSuccess, v))
+}
+
 // Timestamp applies equality check predicate on the "timestamp" field. It's identical to TimestampEQ.
 func Timestamp(v time.Time) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldEQ(FieldTimestamp, v))
@@ -343,6 +383,486 @@ func ProviderIn(vs ...Provider) predicate.PaymentFact {
 // ProviderNotIn applies the NotIn predicate on the "provider" field.
 func ProviderNotIn(vs ...Provider) predicate.PaymentFact {
 	return predicate.PaymentFact(sql.FieldNotIn(FieldProvider, vs...))
+}
+
+// ProviderOrderIDEQ applies the EQ predicate on the "provider_order_id" field.
+func ProviderOrderIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDNEQ applies the NEQ predicate on the "provider_order_id" field.
+func ProviderOrderIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDIn applies the In predicate on the "provider_order_id" field.
+func ProviderOrderIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldProviderOrderID, vs...))
+}
+
+// ProviderOrderIDNotIn applies the NotIn predicate on the "provider_order_id" field.
+func ProviderOrderIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldProviderOrderID, vs...))
+}
+
+// ProviderOrderIDGT applies the GT predicate on the "provider_order_id" field.
+func ProviderOrderIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDGTE applies the GTE predicate on the "provider_order_id" field.
+func ProviderOrderIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDLT applies the LT predicate on the "provider_order_id" field.
+func ProviderOrderIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDLTE applies the LTE predicate on the "provider_order_id" field.
+func ProviderOrderIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDContains applies the Contains predicate on the "provider_order_id" field.
+func ProviderOrderIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDHasPrefix applies the HasPrefix predicate on the "provider_order_id" field.
+func ProviderOrderIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDHasSuffix applies the HasSuffix predicate on the "provider_order_id" field.
+func ProviderOrderIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDEqualFold applies the EqualFold predicate on the "provider_order_id" field.
+func ProviderOrderIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldProviderOrderID, v))
+}
+
+// ProviderOrderIDContainsFold applies the ContainsFold predicate on the "provider_order_id" field.
+func ProviderOrderIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldProviderOrderID, v))
+}
+
+// ProviderPaymentIDEQ applies the EQ predicate on the "provider_payment_id" field.
+func ProviderPaymentIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDNEQ applies the NEQ predicate on the "provider_payment_id" field.
+func ProviderPaymentIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDIn applies the In predicate on the "provider_payment_id" field.
+func ProviderPaymentIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldProviderPaymentID, vs...))
+}
+
+// ProviderPaymentIDNotIn applies the NotIn predicate on the "provider_payment_id" field.
+func ProviderPaymentIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldProviderPaymentID, vs...))
+}
+
+// ProviderPaymentIDGT applies the GT predicate on the "provider_payment_id" field.
+func ProviderPaymentIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDGTE applies the GTE predicate on the "provider_payment_id" field.
+func ProviderPaymentIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDLT applies the LT predicate on the "provider_payment_id" field.
+func ProviderPaymentIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDLTE applies the LTE predicate on the "provider_payment_id" field.
+func ProviderPaymentIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDContains applies the Contains predicate on the "provider_payment_id" field.
+func ProviderPaymentIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDHasPrefix applies the HasPrefix predicate on the "provider_payment_id" field.
+func ProviderPaymentIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDHasSuffix applies the HasSuffix predicate on the "provider_payment_id" field.
+func ProviderPaymentIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDIsNil applies the IsNil predicate on the "provider_payment_id" field.
+func ProviderPaymentIDIsNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIsNull(FieldProviderPaymentID))
+}
+
+// ProviderPaymentIDNotNil applies the NotNil predicate on the "provider_payment_id" field.
+func ProviderPaymentIDNotNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotNull(FieldProviderPaymentID))
+}
+
+// ProviderPaymentIDEqualFold applies the EqualFold predicate on the "provider_payment_id" field.
+func ProviderPaymentIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldProviderPaymentID, v))
+}
+
+// ProviderPaymentIDContainsFold applies the ContainsFold predicate on the "provider_payment_id" field.
+func ProviderPaymentIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldProviderPaymentID, v))
+}
+
+// ProviderEventIDEQ applies the EQ predicate on the "provider_event_id" field.
+func ProviderEventIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldProviderEventID, v))
+}
+
+// ProviderEventIDNEQ applies the NEQ predicate on the "provider_event_id" field.
+func ProviderEventIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldProviderEventID, v))
+}
+
+// ProviderEventIDIn applies the In predicate on the "provider_event_id" field.
+func ProviderEventIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldProviderEventID, vs...))
+}
+
+// ProviderEventIDNotIn applies the NotIn predicate on the "provider_event_id" field.
+func ProviderEventIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldProviderEventID, vs...))
+}
+
+// ProviderEventIDGT applies the GT predicate on the "provider_event_id" field.
+func ProviderEventIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldProviderEventID, v))
+}
+
+// ProviderEventIDGTE applies the GTE predicate on the "provider_event_id" field.
+func ProviderEventIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldProviderEventID, v))
+}
+
+// ProviderEventIDLT applies the LT predicate on the "provider_event_id" field.
+func ProviderEventIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldProviderEventID, v))
+}
+
+// ProviderEventIDLTE applies the LTE predicate on the "provider_event_id" field.
+func ProviderEventIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldProviderEventID, v))
+}
+
+// ProviderEventIDContains applies the Contains predicate on the "provider_event_id" field.
+func ProviderEventIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldProviderEventID, v))
+}
+
+// ProviderEventIDHasPrefix applies the HasPrefix predicate on the "provider_event_id" field.
+func ProviderEventIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldProviderEventID, v))
+}
+
+// ProviderEventIDHasSuffix applies the HasSuffix predicate on the "provider_event_id" field.
+func ProviderEventIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldProviderEventID, v))
+}
+
+// ProviderEventIDIsNil applies the IsNil predicate on the "provider_event_id" field.
+func ProviderEventIDIsNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIsNull(FieldProviderEventID))
+}
+
+// ProviderEventIDNotNil applies the NotNil predicate on the "provider_event_id" field.
+func ProviderEventIDNotNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotNull(FieldProviderEventID))
+}
+
+// ProviderEventIDEqualFold applies the EqualFold predicate on the "provider_event_id" field.
+func ProviderEventIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldProviderEventID, v))
+}
+
+// ProviderEventIDContainsFold applies the ContainsFold predicate on the "provider_event_id" field.
+func ProviderEventIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldProviderEventID, v))
+}
+
+// MerchantIDEQ applies the EQ predicate on the "merchant_id" field.
+func MerchantIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldMerchantID, v))
+}
+
+// MerchantIDNEQ applies the NEQ predicate on the "merchant_id" field.
+func MerchantIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldMerchantID, v))
+}
+
+// MerchantIDIn applies the In predicate on the "merchant_id" field.
+func MerchantIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldMerchantID, vs...))
+}
+
+// MerchantIDNotIn applies the NotIn predicate on the "merchant_id" field.
+func MerchantIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldMerchantID, vs...))
+}
+
+// MerchantIDGT applies the GT predicate on the "merchant_id" field.
+func MerchantIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldMerchantID, v))
+}
+
+// MerchantIDGTE applies the GTE predicate on the "merchant_id" field.
+func MerchantIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldMerchantID, v))
+}
+
+// MerchantIDLT applies the LT predicate on the "merchant_id" field.
+func MerchantIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldMerchantID, v))
+}
+
+// MerchantIDLTE applies the LTE predicate on the "merchant_id" field.
+func MerchantIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldMerchantID, v))
+}
+
+// MerchantIDContains applies the Contains predicate on the "merchant_id" field.
+func MerchantIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldMerchantID, v))
+}
+
+// MerchantIDHasPrefix applies the HasPrefix predicate on the "merchant_id" field.
+func MerchantIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldMerchantID, v))
+}
+
+// MerchantIDHasSuffix applies the HasSuffix predicate on the "merchant_id" field.
+func MerchantIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldMerchantID, v))
+}
+
+// MerchantIDIsNil applies the IsNil predicate on the "merchant_id" field.
+func MerchantIDIsNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIsNull(FieldMerchantID))
+}
+
+// MerchantIDNotNil applies the NotNil predicate on the "merchant_id" field.
+func MerchantIDNotNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotNull(FieldMerchantID))
+}
+
+// MerchantIDEqualFold applies the EqualFold predicate on the "merchant_id" field.
+func MerchantIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldMerchantID, v))
+}
+
+// MerchantIDContainsFold applies the ContainsFold predicate on the "merchant_id" field.
+func MerchantIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldMerchantID, v))
+}
+
+// ApplicationIDEQ applies the EQ predicate on the "application_id" field.
+func ApplicationIDEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldApplicationID, v))
+}
+
+// ApplicationIDNEQ applies the NEQ predicate on the "application_id" field.
+func ApplicationIDNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldApplicationID, v))
+}
+
+// ApplicationIDIn applies the In predicate on the "application_id" field.
+func ApplicationIDIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldApplicationID, vs...))
+}
+
+// ApplicationIDNotIn applies the NotIn predicate on the "application_id" field.
+func ApplicationIDNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldApplicationID, vs...))
+}
+
+// ApplicationIDGT applies the GT predicate on the "application_id" field.
+func ApplicationIDGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldApplicationID, v))
+}
+
+// ApplicationIDGTE applies the GTE predicate on the "application_id" field.
+func ApplicationIDGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldApplicationID, v))
+}
+
+// ApplicationIDLT applies the LT predicate on the "application_id" field.
+func ApplicationIDLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldApplicationID, v))
+}
+
+// ApplicationIDLTE applies the LTE predicate on the "application_id" field.
+func ApplicationIDLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldApplicationID, v))
+}
+
+// ApplicationIDContains applies the Contains predicate on the "application_id" field.
+func ApplicationIDContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldApplicationID, v))
+}
+
+// ApplicationIDHasPrefix applies the HasPrefix predicate on the "application_id" field.
+func ApplicationIDHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldApplicationID, v))
+}
+
+// ApplicationIDHasSuffix applies the HasSuffix predicate on the "application_id" field.
+func ApplicationIDHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldApplicationID, v))
+}
+
+// ApplicationIDIsNil applies the IsNil predicate on the "application_id" field.
+func ApplicationIDIsNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIsNull(FieldApplicationID))
+}
+
+// ApplicationIDNotNil applies the NotNil predicate on the "application_id" field.
+func ApplicationIDNotNil() predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotNull(FieldApplicationID))
+}
+
+// ApplicationIDEqualFold applies the EqualFold predicate on the "application_id" field.
+func ApplicationIDEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldApplicationID, v))
+}
+
+// ApplicationIDContainsFold applies the ContainsFold predicate on the "application_id" field.
+func ApplicationIDContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldApplicationID, v))
+}
+
+// AmountMinorEQ applies the EQ predicate on the "amount_minor" field.
+func AmountMinorEQ(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldAmountMinor, v))
+}
+
+// AmountMinorNEQ applies the NEQ predicate on the "amount_minor" field.
+func AmountMinorNEQ(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldAmountMinor, v))
+}
+
+// AmountMinorIn applies the In predicate on the "amount_minor" field.
+func AmountMinorIn(vs ...int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldAmountMinor, vs...))
+}
+
+// AmountMinorNotIn applies the NotIn predicate on the "amount_minor" field.
+func AmountMinorNotIn(vs ...int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldAmountMinor, vs...))
+}
+
+// AmountMinorGT applies the GT predicate on the "amount_minor" field.
+func AmountMinorGT(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldAmountMinor, v))
+}
+
+// AmountMinorGTE applies the GTE predicate on the "amount_minor" field.
+func AmountMinorGTE(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldAmountMinor, v))
+}
+
+// AmountMinorLT applies the LT predicate on the "amount_minor" field.
+func AmountMinorLT(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldAmountMinor, v))
+}
+
+// AmountMinorLTE applies the LTE predicate on the "amount_minor" field.
+func AmountMinorLTE(v int64) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldAmountMinor, v))
+}
+
+// CurrencyEQ applies the EQ predicate on the "currency" field.
+func CurrencyEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldCurrency, v))
+}
+
+// CurrencyNEQ applies the NEQ predicate on the "currency" field.
+func CurrencyNEQ(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldCurrency, v))
+}
+
+// CurrencyIn applies the In predicate on the "currency" field.
+func CurrencyIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldIn(FieldCurrency, vs...))
+}
+
+// CurrencyNotIn applies the NotIn predicate on the "currency" field.
+func CurrencyNotIn(vs ...string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNotIn(FieldCurrency, vs...))
+}
+
+// CurrencyGT applies the GT predicate on the "currency" field.
+func CurrencyGT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGT(FieldCurrency, v))
+}
+
+// CurrencyGTE applies the GTE predicate on the "currency" field.
+func CurrencyGTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldGTE(FieldCurrency, v))
+}
+
+// CurrencyLT applies the LT predicate on the "currency" field.
+func CurrencyLT(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLT(FieldCurrency, v))
+}
+
+// CurrencyLTE applies the LTE predicate on the "currency" field.
+func CurrencyLTE(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldLTE(FieldCurrency, v))
+}
+
+// CurrencyContains applies the Contains predicate on the "currency" field.
+func CurrencyContains(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContains(FieldCurrency, v))
+}
+
+// CurrencyHasPrefix applies the HasPrefix predicate on the "currency" field.
+func CurrencyHasPrefix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasPrefix(FieldCurrency, v))
+}
+
+// CurrencyHasSuffix applies the HasSuffix predicate on the "currency" field.
+func CurrencyHasSuffix(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldHasSuffix(FieldCurrency, v))
+}
+
+// CurrencyEqualFold applies the EqualFold predicate on the "currency" field.
+func CurrencyEqualFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEqualFold(FieldCurrency, v))
+}
+
+// CurrencyContainsFold applies the ContainsFold predicate on the "currency" field.
+func CurrencyContainsFold(v string) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldContainsFold(FieldCurrency, v))
+}
+
+// SuccessEQ applies the EQ predicate on the "success" field.
+func SuccessEQ(v bool) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldEQ(FieldSuccess, v))
+}
+
+// SuccessNEQ applies the NEQ predicate on the "success" field.
+func SuccessNEQ(v bool) predicate.PaymentFact {
+	return predicate.PaymentFact(sql.FieldNEQ(FieldSuccess, v))
 }
 
 // TimestampEQ applies the EQ predicate on the "timestamp" field.

@@ -40,6 +40,10 @@ type PaymentAttempt struct {
 	Status paymentattempt.Status `json:"status,omitempty"`
 	// ProviderSessionID holds the value of the "provider_session_id" field.
 	ProviderSessionID *string `json:"provider_session_id,omitempty"`
+	// ExpectedMerchantID holds the value of the "expected_merchant_id" field.
+	ExpectedMerchantID *string `json:"expected_merchant_id,omitempty"`
+	// ExpectedApplicationID holds the value of the "expected_application_id" field.
+	ExpectedApplicationID *string `json:"expected_application_id,omitempty"`
 	// IdempotencyKey holds the value of the "idempotency_key" field.
 	IdempotencyKey string `json:"idempotency_key,omitempty"`
 	// AmountCents holds the value of the "amount_cents" field.
@@ -90,7 +94,7 @@ func (*PaymentAttempt) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case paymentattempt.FieldAmountCents:
 			values[i] = new(sql.NullInt64)
-		case paymentattempt.FieldID, paymentattempt.FieldNamespace, paymentattempt.FieldCommerceOrderID, paymentattempt.FieldCustomerID, paymentattempt.FieldProvider, paymentattempt.FieldProviderOrderID, paymentattempt.FieldProviderPaymentID, paymentattempt.FieldStatus, paymentattempt.FieldProviderSessionID, paymentattempt.FieldIdempotencyKey, paymentattempt.FieldCurrency:
+		case paymentattempt.FieldID, paymentattempt.FieldNamespace, paymentattempt.FieldCommerceOrderID, paymentattempt.FieldCustomerID, paymentattempt.FieldProvider, paymentattempt.FieldProviderOrderID, paymentattempt.FieldProviderPaymentID, paymentattempt.FieldStatus, paymentattempt.FieldProviderSessionID, paymentattempt.FieldExpectedMerchantID, paymentattempt.FieldExpectedApplicationID, paymentattempt.FieldIdempotencyKey, paymentattempt.FieldCurrency:
 			values[i] = new(sql.NullString)
 		case paymentattempt.FieldCreatedAt, paymentattempt.FieldUpdatedAt, paymentattempt.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -184,6 +188,20 @@ func (_m *PaymentAttempt) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ProviderSessionID = new(string)
 				*_m.ProviderSessionID = value.String
+			}
+		case paymentattempt.FieldExpectedMerchantID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field expected_merchant_id", values[i])
+			} else if value.Valid {
+				_m.ExpectedMerchantID = new(string)
+				*_m.ExpectedMerchantID = value.String
+			}
+		case paymentattempt.FieldExpectedApplicationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field expected_application_id", values[i])
+			} else if value.Valid {
+				_m.ExpectedApplicationID = new(string)
+				*_m.ExpectedApplicationID = value.String
 			}
 		case paymentattempt.FieldIdempotencyKey:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -287,6 +305,16 @@ func (_m *PaymentAttempt) String() string {
 	builder.WriteString(", ")
 	if v := _m.ProviderSessionID; v != nil {
 		builder.WriteString("provider_session_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ExpectedMerchantID; v != nil {
+		builder.WriteString("expected_merchant_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.ExpectedApplicationID; v != nil {
+		builder.WriteString("expected_application_id=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

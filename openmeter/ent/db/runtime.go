@@ -3397,15 +3397,15 @@ func init() {
 	// paymentattempt.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
 	paymentattempt.CustomerIDValidator = paymentattemptDescCustomerID.Validators[0].(func(string) error)
 	// paymentattemptDescIdempotencyKey is the schema descriptor for idempotency_key field.
-	paymentattemptDescIdempotencyKey := paymentattemptFields[7].Descriptor()
+	paymentattemptDescIdempotencyKey := paymentattemptFields[9].Descriptor()
 	// paymentattempt.IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
 	paymentattempt.IdempotencyKeyValidator = paymentattemptDescIdempotencyKey.Validators[0].(func(string) error)
 	// paymentattemptDescAmountCents is the schema descriptor for amount_cents field.
-	paymentattemptDescAmountCents := paymentattemptFields[8].Descriptor()
+	paymentattemptDescAmountCents := paymentattemptFields[10].Descriptor()
 	// paymentattempt.AmountCentsValidator is a validator for the "amount_cents" field. It is called by the builders before save.
 	paymentattempt.AmountCentsValidator = paymentattemptDescAmountCents.Validators[0].(func(int64) error)
 	// paymentattemptDescCurrency is the schema descriptor for currency field.
-	paymentattemptDescCurrency := paymentattemptFields[9].Descriptor()
+	paymentattemptDescCurrency := paymentattemptFields[11].Descriptor()
 	// paymentattempt.DefaultCurrency holds the default value on creation for the currency field.
 	paymentattempt.DefaultCurrency = paymentattemptDescCurrency.Default.(string)
 	// paymentattemptDescID is the schema descriptor for id field.
@@ -3431,6 +3431,18 @@ func init() {
 	paymentfactDescRawHash := paymentfactFields[2].Descriptor()
 	// paymentfact.RawHashValidator is a validator for the "raw_hash" field. It is called by the builders before save.
 	paymentfact.RawHashValidator = paymentfactDescRawHash.Validators[0].(func(string) error)
+	// paymentfactDescProviderOrderID is the schema descriptor for provider_order_id field.
+	paymentfactDescProviderOrderID := paymentfactFields[4].Descriptor()
+	// paymentfact.ProviderOrderIDValidator is a validator for the "provider_order_id" field. It is called by the builders before save.
+	paymentfact.ProviderOrderIDValidator = paymentfactDescProviderOrderID.Validators[0].(func(string) error)
+	// paymentfactDescAmountMinor is the schema descriptor for amount_minor field.
+	paymentfactDescAmountMinor := paymentfactFields[9].Descriptor()
+	// paymentfact.AmountMinorValidator is a validator for the "amount_minor" field. It is called by the builders before save.
+	paymentfact.AmountMinorValidator = paymentfactDescAmountMinor.Validators[0].(func(int64) error)
+	// paymentfactDescCurrency is the schema descriptor for currency field.
+	paymentfactDescCurrency := paymentfactFields[10].Descriptor()
+	// paymentfact.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	paymentfact.CurrencyValidator = paymentfactDescCurrency.Validators[0].(func(string) error)
 	// paymentfactDescID is the schema descriptor for id field.
 	paymentfactDescID := paymentfactMixinFields0[0].Descriptor()
 	// paymentfact.DefaultID holds the default value on creation for the id field.

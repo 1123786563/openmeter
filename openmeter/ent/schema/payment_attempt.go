@@ -45,6 +45,8 @@ func (PaymentAttempt) Fields() []ent.Field {
 			Default("created"),
 		// provider_session_id carries provider-specific session data (e.g. WeChat prepay_id).
 		field.String("provider_session_id").Optional().Nillable(),
+		field.String("expected_merchant_id").Optional().Nillable().Immutable(),
+		field.String("expected_application_id").Optional().Nillable().Immutable(),
 		field.String("idempotency_key").NotEmpty().Immutable(),
 		field.Int64("amount_cents").Min(0).Immutable(),
 		field.String("currency").Default("CNY").Immutable(),
