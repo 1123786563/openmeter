@@ -196,6 +196,18 @@ func TestComplete(t *testing.T) {
 			Enabled:                 false,
 			EnableCreditThenInvoice: false,
 		},
+		CreditReservation: CreditReservationConfiguration{
+			Enabled:                  false,
+			AuthorizationTTL:         "5m",
+			ExecutionDeadline:        "10m",
+			UnknownManualReviewAfter: "1h",
+			Worker: CreditReservationWorkerConfiguration{
+				PollInterval:  "5s",
+				LeaseDuration: "30s",
+				BatchSize:     50,
+				MaxClaimCount: 3,
+			},
+		},
 		UnitConfig: UnitConfigConfiguration{
 			Enabled: false,
 		},

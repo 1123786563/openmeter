@@ -7,7 +7,7 @@ import "github.com/go-chi/chi/v5"
 // The configuration gate keeps the routes absent (rather than merely returning
 // an error) when credit reservations are disabled.
 func (s *Server) registerCreditReservationRoutes(r chi.Router) {
-	if !s.Credits.Enabled || !s.Credits.ReservationsEnabled || s.creditReservationsHandler == nil {
+	if !s.Credits.Enabled || !s.Credits.ReservationsEnabled || !s.CreditReservation.Enabled || s.creditReservationsHandler == nil {
 		return
 	}
 

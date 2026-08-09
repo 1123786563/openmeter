@@ -89,6 +89,7 @@ type Config struct {
 	Middlewares         []server.MiddlewareFunc
 	PostAuthMiddlewares []server.MiddlewareFunc
 	Credits             config.CreditsConfiguration
+	CreditReservation   config.CreditReservationConfiguration
 	ResponseValidation  config.ResponseValidationConfig
 	UnitConfig          config.UnitConfigConfiguration
 

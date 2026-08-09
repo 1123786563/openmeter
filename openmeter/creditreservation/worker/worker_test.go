@@ -8,6 +8,9 @@ import (
 
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/openmeterio/openmeter/openmeter/creditreservation/worker"
 )
@@ -46,6 +49,47 @@ func TestProcessOnceRetriesThenDeadLettersWithoutPublishing(t *testing.T) {
 	require.NoError(t, w.ProcessOnce(t.Context()))
 	require.False(t, repo.rows[0].Published)
 	require.True(t, repo.rows[0].DeadLettered)
+}
+
+func TestProcessOnceRecordsBoundedOutcomeMetric(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	repo := &memoryRepo{rows: []worker.OutboxRow{{
+		ID: "outbox-1", Namespace: "tenant-a", EventType: "openmeter.credit.usage",
+	}}}
+	w, err := worker.New(worker.Config{
+		Repo:      repo,
+		Collector: &recordingCollector{},
+		OwnerID:   "worker-1",
+		Meter:     provider.Meter("test"),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, w.ProcessOnce(t.Context()))
+
+	var metrics metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &metrics))
+
+	var point metricdata.DataPoint[int64]
+	found := false
+	for _, scope := range metrics.ScopeMetrics {
+		for _, metric := range scope.Metrics {
+			if metric.Name != "openmeter.credit_reservation.outbox.processed" {
+				continue
+			}
+			sum, ok := metric.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, sum.DataPoints, 1)
+			point = sum.DataPoints[0]
+			found = true
+		}
+	}
+
+	require.True(t, found)
+	require.EqualValues(t, 1, point.Value)
+	require.Equal(t, attribute.NewSet(attribute.String("outcome", "published")), point.Attributes)
 }
 
 type memoryRepo struct{ rows []worker.OutboxRow }

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/cloudevents/sdk-go/v2/event"
+	"go.opentelemetry.io/otel/metric"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/openmeterio/openmeter/openmeter/ingest"
 )
@@ -46,6 +48,7 @@ type Config struct {
 	BatchSize     int
 	LeaseDuration time.Duration
 	MaxClaimCount int
+	Meter         metric.Meter
 }
 
 type Worker struct {
@@ -55,6 +58,7 @@ type Worker struct {
 	batchSize     int
 	leaseDuration time.Duration
 	maxClaimCount int
+	metrics       outboxMetrics
 }
 
 func New(config Config) (*Worker, error) {
@@ -76,7 +80,15 @@ func New(config Config) (*Worker, error) {
 	if config.MaxClaimCount <= 0 {
 		config.MaxClaimCount = 3
 	}
-	return &Worker{repo: config.Repo, collector: config.Collector, ownerID: config.OwnerID, batchSize: config.BatchSize, leaseDuration: config.LeaseDuration, maxClaimCount: config.MaxClaimCount}, nil
+	meter := config.Meter
+	if meter == nil {
+		meter = metricnoop.NewMeterProvider().Meter("openmeter.credit_reservation")
+	}
+	metrics, err := newOutboxMetrics(meter)
+	if err != nil {
+		return nil, err
+	}
+	return &Worker{repo: config.Repo, collector: config.Collector, ownerID: config.OwnerID, batchSize: config.BatchSize, leaseDuration: config.LeaseDuration, maxClaimCount: config.MaxClaimCount, metrics: metrics}, nil
 }
 
 // ProcessOnce processes one claimed batch. A publish failure releases only its
@@ -92,19 +104,27 @@ func (w *Worker) ProcessOnce(ctx context.Context) error {
 			reason := fmt.Sprintf("exceeded max claim count (%d)", w.maxClaimCount)
 			if err := w.repo.MarkDeadLetter(ctx, w.ownerID, row.ID, reason); err != nil {
 				errs = append(errs, fmt.Errorf("dead-letter %s: %w", row.ID, err))
+				w.metrics.record(ctx, outboxOutcomeDeadLetterFailed)
+			} else {
+				w.metrics.record(ctx, outboxOutcomeDeadLettered)
 			}
 			continue
 		}
 		if err := w.collector.Ingest(ctx, row.Namespace, usageEvent(row)); err != nil {
 			if releaseErr := w.repo.Release(ctx, w.ownerID, row.ID); releaseErr != nil {
 				errs = append(errs, fmt.Errorf("publish %s: %w (release lease: %v)", row.ID, err, releaseErr))
+				w.metrics.record(ctx, outboxOutcomeReleaseFailed)
 			} else {
 				errs = append(errs, fmt.Errorf("publish %s: %w", row.ID, err))
+				w.metrics.record(ctx, outboxOutcomeRetry)
 			}
 			continue
 		}
 		if err := w.repo.MarkPublished(ctx, w.ownerID, row.ID); err != nil {
 			errs = append(errs, fmt.Errorf("mark published %s: %w", row.ID, err))
+			w.metrics.record(ctx, outboxOutcomeAckFailed)
+		} else {
+			w.metrics.record(ctx, outboxOutcomePublished)
 		}
 	}
 	return errors.Join(errs...)
