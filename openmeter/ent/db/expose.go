@@ -217,6 +217,8 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		CreditReservation: NewCreditReservationClient(config),
 
+		CreditReservationCommand: NewCreditReservationCommandClient(config),
+
 		CreditReservationOutbox: NewCreditReservationOutboxClient(config),
 
 		CurrencyCostBasis: NewCurrencyCostBasisClient(config),

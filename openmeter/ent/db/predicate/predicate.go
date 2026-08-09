@@ -363,6 +363,9 @@ type CreditRealizationLineageSegment func(*sql.Selector)
 // CreditReservation is the predicate function for creditreservation builders.
 type CreditReservation func(*sql.Selector)
 
+// CreditReservationCommand is the predicate function for creditreservationcommand builders.
+type CreditReservationCommand func(*sql.Selector)
+
 // CreditReservationOutbox is the predicate function for creditreservationoutbox builders.
 type CreditReservationOutbox func(*sql.Selector)
 

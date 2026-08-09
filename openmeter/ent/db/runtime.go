@@ -73,6 +73,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
@@ -2519,6 +2520,41 @@ func init() {
 	creditreservationDescID := creditreservationMixinFields0[0].Descriptor()
 	// creditreservation.DefaultID holds the default value on creation for the id field.
 	creditreservation.DefaultID = creditreservationDescID.Default.(func() string)
+	creditreservationcommandMixin := schema.CreditReservationCommand{}.Mixin()
+	creditreservationcommandMixinFields0 := creditreservationcommandMixin[0].Fields()
+	_ = creditreservationcommandMixinFields0
+	creditreservationcommandMixinFields1 := creditreservationcommandMixin[1].Fields()
+	_ = creditreservationcommandMixinFields1
+	creditreservationcommandFields := schema.CreditReservationCommand{}.Fields()
+	_ = creditreservationcommandFields
+	// creditreservationcommandDescNamespace is the schema descriptor for namespace field.
+	creditreservationcommandDescNamespace := creditreservationcommandMixinFields1[0].Descriptor()
+	// creditreservationcommand.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	creditreservationcommand.NamespaceValidator = creditreservationcommandDescNamespace.Validators[0].(func(string) error)
+	// creditreservationcommandDescCreatedAt is the schema descriptor for created_at field.
+	creditreservationcommandDescCreatedAt := creditreservationcommandFields[0].Descriptor()
+	// creditreservationcommand.DefaultCreatedAt holds the default value on creation for the created_at field.
+	creditreservationcommand.DefaultCreatedAt = creditreservationcommandDescCreatedAt.Default.(func() time.Time)
+	// creditreservationcommandDescReservationID is the schema descriptor for reservation_id field.
+	creditreservationcommandDescReservationID := creditreservationcommandFields[1].Descriptor()
+	// creditreservationcommand.ReservationIDValidator is a validator for the "reservation_id" field. It is called by the builders before save.
+	creditreservationcommand.ReservationIDValidator = creditreservationcommandDescReservationID.Validators[0].(func(string) error)
+	// creditreservationcommandDescCommandKind is the schema descriptor for command_kind field.
+	creditreservationcommandDescCommandKind := creditreservationcommandFields[2].Descriptor()
+	// creditreservationcommand.CommandKindValidator is a validator for the "command_kind" field. It is called by the builders before save.
+	creditreservationcommand.CommandKindValidator = creditreservationcommandDescCommandKind.Validators[0].(func(string) error)
+	// creditreservationcommandDescIdempotencyKey is the schema descriptor for idempotency_key field.
+	creditreservationcommandDescIdempotencyKey := creditreservationcommandFields[3].Descriptor()
+	// creditreservationcommand.IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
+	creditreservationcommand.IdempotencyKeyValidator = creditreservationcommandDescIdempotencyKey.Validators[0].(func(string) error)
+	// creditreservationcommandDescPayloadHash is the schema descriptor for payload_hash field.
+	creditreservationcommandDescPayloadHash := creditreservationcommandFields[4].Descriptor()
+	// creditreservationcommand.PayloadHashValidator is a validator for the "payload_hash" field. It is called by the builders before save.
+	creditreservationcommand.PayloadHashValidator = creditreservationcommandDescPayloadHash.Validators[0].(func(string) error)
+	// creditreservationcommandDescID is the schema descriptor for id field.
+	creditreservationcommandDescID := creditreservationcommandMixinFields0[0].Descriptor()
+	// creditreservationcommand.DefaultID holds the default value on creation for the id field.
+	creditreservationcommand.DefaultID = creditreservationcommandDescID.Default.(func() string)
 	creditreservationoutboxMixin := schema.CreditReservationOutbox{}.Mixin()
 	creditreservationoutboxMixinFields0 := creditreservationoutboxMixin[0].Fields()
 	_ = creditreservationoutboxMixinFields0

@@ -31,7 +31,7 @@ func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteIn
 		input.ExecutionDeadline = s.now().Add(s.executionDeadline)
 	}
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
-		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
+		if _, err := tx.EnsureLifecycleCommand(ctx, input.ID, "execute", creditreservation.CommandIdentity{IdempotencyKey: input.IdempotencyKey, PayloadHash: input.PayloadHash}); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		if current.State == creditreservation.ReservationStateExecuting {
@@ -44,7 +44,7 @@ func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteIn
 func (s *service) Release(ctx context.Context, input creditreservation.ReleaseInput) (reservation creditreservation.Reservation, err error) {
 	defer func() { s.metrics.commandOutcome(ctx, "release", err) }()
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
-		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
+		if _, err := tx.EnsureLifecycleCommand(ctx, input.ID, "release", creditreservation.CommandIdentity{IdempotencyKey: input.IdempotencyKey, PayloadHash: input.PayloadHash}); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		if current.State == creditreservation.ReservationStateReleased {
@@ -60,7 +60,7 @@ func (s *service) Release(ctx context.Context, input creditreservation.ReleaseIn
 func (s *service) MarkUnknown(ctx context.Context, input creditreservation.UnknownInput) (reservation creditreservation.Reservation, err error) {
 	defer func() { s.metrics.commandOutcome(ctx, "unknown", err) }()
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
-		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
+		if _, err := tx.EnsureLifecycleCommand(ctx, input.ID, "unknown", creditreservation.CommandIdentity{IdempotencyKey: input.IdempotencyKey, PayloadHash: input.PayloadHash}); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 		if current.State == creditreservation.ReservationStateUnknown {

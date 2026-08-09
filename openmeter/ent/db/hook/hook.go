@@ -765,6 +765,18 @@ func (f CreditReservationFunc) Mutate(ctx context.Context, m db.Mutation) (db.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CreditReservationMutation", m)
 }
 
+// The CreditReservationCommandFunc type is an adapter to allow the use of ordinary
+// function as CreditReservationCommand mutator.
+type CreditReservationCommandFunc func(context.Context, *db.CreditReservationCommandMutation) (db.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CreditReservationCommandFunc) Mutate(ctx context.Context, m db.Mutation) (db.Value, error) {
+	if mv, ok := m.(*db.CreditReservationCommandMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *db.CreditReservationCommandMutation", m)
+}
+
 // The CreditReservationOutboxFunc type is an adapter to allow the use of ordinary
 // function as CreditReservationOutbox mutator.
 type CreditReservationOutboxFunc func(context.Context, *db.CreditReservationOutboxMutation) (db.Value, error)

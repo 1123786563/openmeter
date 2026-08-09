@@ -58,6 +58,7 @@ type TxAdapter interface {
 	UpdateReservation(ctx context.Context, input UpdateReservationInput) (creditreservation.Reservation, error)
 	CreateCharge(ctx context.Context, input CreateChargeInput) (creditreservation.Charge, bool, error)
 	AppendUsageEvent(ctx context.Context, event creditreservation.UsageEvent) error
+	EnsureLifecycleCommand(ctx context.Context, reservationID models.NamespacedID, kind string, identity creditreservation.CommandIdentity) (replay bool, err error)
 }
 
 type adapter struct {

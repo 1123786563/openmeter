@@ -91,6 +91,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
@@ -227,6 +228,7 @@ const (
 	TypeCreditRealizationLineage                         = "CreditRealizationLineage"
 	TypeCreditRealizationLineageSegment                  = "CreditRealizationLineageSegment"
 	TypeCreditReservation                                = "CreditReservation"
+	TypeCreditReservationCommand                         = "CreditReservationCommand"
 	TypeCreditReservationOutbox                          = "CreditReservationOutbox"
 	TypeCurrencyCostBasis                                = "CurrencyCostBasis"
 	TypeCustomCurrency                                   = "CustomCurrency"
@@ -93616,6 +93618,608 @@ func (m *CreditReservationMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *CreditReservationMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown CreditReservation edge %s", name)
+}
+
+// CreditReservationCommandMutation represents an operation that mutates the CreditReservationCommand nodes in the graph.
+type CreditReservationCommandMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *string
+	namespace       *string
+	created_at      *time.Time
+	reservation_id  *string
+	command_kind    *string
+	idempotency_key *string
+	payload_hash    *string
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*CreditReservationCommand, error)
+	predicates      []predicate.CreditReservationCommand
+}
+
+var _ ent.Mutation = (*CreditReservationCommandMutation)(nil)
+
+// creditreservationcommandOption allows management of the mutation configuration using functional options.
+type creditreservationcommandOption func(*CreditReservationCommandMutation)
+
+// newCreditReservationCommandMutation creates new mutation for the CreditReservationCommand entity.
+func newCreditReservationCommandMutation(c config, op Op, opts ...creditreservationcommandOption) *CreditReservationCommandMutation {
+	m := &CreditReservationCommandMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCreditReservationCommand,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCreditReservationCommandID sets the ID field of the mutation.
+func withCreditReservationCommandID(id string) creditreservationcommandOption {
+	return func(m *CreditReservationCommandMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *CreditReservationCommand
+		)
+		m.oldValue = func(ctx context.Context) (*CreditReservationCommand, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().CreditReservationCommand.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCreditReservationCommand sets the old CreditReservationCommand of the mutation.
+func withCreditReservationCommand(node *CreditReservationCommand) creditreservationcommandOption {
+	return func(m *CreditReservationCommandMutation) {
+		m.oldValue = func(context.Context) (*CreditReservationCommand, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CreditReservationCommandMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CreditReservationCommandMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of CreditReservationCommand entities.
+func (m *CreditReservationCommandMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CreditReservationCommandMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CreditReservationCommandMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().CreditReservationCommand.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *CreditReservationCommandMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *CreditReservationCommandMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *CreditReservationCommandMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *CreditReservationCommandMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *CreditReservationCommandMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *CreditReservationCommandMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetReservationID sets the "reservation_id" field.
+func (m *CreditReservationCommandMutation) SetReservationID(s string) {
+	m.reservation_id = &s
+}
+
+// ReservationID returns the value of the "reservation_id" field in the mutation.
+func (m *CreditReservationCommandMutation) ReservationID() (r string, exists bool) {
+	v := m.reservation_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservationID returns the old "reservation_id" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldReservationID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservationID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservationID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservationID: %w", err)
+	}
+	return oldValue.ReservationID, nil
+}
+
+// ResetReservationID resets all changes to the "reservation_id" field.
+func (m *CreditReservationCommandMutation) ResetReservationID() {
+	m.reservation_id = nil
+}
+
+// SetCommandKind sets the "command_kind" field.
+func (m *CreditReservationCommandMutation) SetCommandKind(s string) {
+	m.command_kind = &s
+}
+
+// CommandKind returns the value of the "command_kind" field in the mutation.
+func (m *CreditReservationCommandMutation) CommandKind() (r string, exists bool) {
+	v := m.command_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCommandKind returns the old "command_kind" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldCommandKind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCommandKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCommandKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCommandKind: %w", err)
+	}
+	return oldValue.CommandKind, nil
+}
+
+// ResetCommandKind resets all changes to the "command_kind" field.
+func (m *CreditReservationCommandMutation) ResetCommandKind() {
+	m.command_kind = nil
+}
+
+// SetIdempotencyKey sets the "idempotency_key" field.
+func (m *CreditReservationCommandMutation) SetIdempotencyKey(s string) {
+	m.idempotency_key = &s
+}
+
+// IdempotencyKey returns the value of the "idempotency_key" field in the mutation.
+func (m *CreditReservationCommandMutation) IdempotencyKey() (r string, exists bool) {
+	v := m.idempotency_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIdempotencyKey returns the old "idempotency_key" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldIdempotencyKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIdempotencyKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIdempotencyKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIdempotencyKey: %w", err)
+	}
+	return oldValue.IdempotencyKey, nil
+}
+
+// ResetIdempotencyKey resets all changes to the "idempotency_key" field.
+func (m *CreditReservationCommandMutation) ResetIdempotencyKey() {
+	m.idempotency_key = nil
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (m *CreditReservationCommandMutation) SetPayloadHash(s string) {
+	m.payload_hash = &s
+}
+
+// PayloadHash returns the value of the "payload_hash" field in the mutation.
+func (m *CreditReservationCommandMutation) PayloadHash() (r string, exists bool) {
+	v := m.payload_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayloadHash returns the old "payload_hash" field's value of the CreditReservationCommand entity.
+// If the CreditReservationCommand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditReservationCommandMutation) OldPayloadHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayloadHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayloadHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayloadHash: %w", err)
+	}
+	return oldValue.PayloadHash, nil
+}
+
+// ResetPayloadHash resets all changes to the "payload_hash" field.
+func (m *CreditReservationCommandMutation) ResetPayloadHash() {
+	m.payload_hash = nil
+}
+
+// Where appends a list predicates to the CreditReservationCommandMutation builder.
+func (m *CreditReservationCommandMutation) Where(ps ...predicate.CreditReservationCommand) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CreditReservationCommandMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CreditReservationCommandMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CreditReservationCommand, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CreditReservationCommandMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CreditReservationCommandMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (CreditReservationCommand).
+func (m *CreditReservationCommandMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CreditReservationCommandMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.namespace != nil {
+		fields = append(fields, creditreservationcommand.FieldNamespace)
+	}
+	if m.created_at != nil {
+		fields = append(fields, creditreservationcommand.FieldCreatedAt)
+	}
+	if m.reservation_id != nil {
+		fields = append(fields, creditreservationcommand.FieldReservationID)
+	}
+	if m.command_kind != nil {
+		fields = append(fields, creditreservationcommand.FieldCommandKind)
+	}
+	if m.idempotency_key != nil {
+		fields = append(fields, creditreservationcommand.FieldIdempotencyKey)
+	}
+	if m.payload_hash != nil {
+		fields = append(fields, creditreservationcommand.FieldPayloadHash)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CreditReservationCommandMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case creditreservationcommand.FieldNamespace:
+		return m.Namespace()
+	case creditreservationcommand.FieldCreatedAt:
+		return m.CreatedAt()
+	case creditreservationcommand.FieldReservationID:
+		return m.ReservationID()
+	case creditreservationcommand.FieldCommandKind:
+		return m.CommandKind()
+	case creditreservationcommand.FieldIdempotencyKey:
+		return m.IdempotencyKey()
+	case creditreservationcommand.FieldPayloadHash:
+		return m.PayloadHash()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CreditReservationCommandMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case creditreservationcommand.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case creditreservationcommand.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case creditreservationcommand.FieldReservationID:
+		return m.OldReservationID(ctx)
+	case creditreservationcommand.FieldCommandKind:
+		return m.OldCommandKind(ctx)
+	case creditreservationcommand.FieldIdempotencyKey:
+		return m.OldIdempotencyKey(ctx)
+	case creditreservationcommand.FieldPayloadHash:
+		return m.OldPayloadHash(ctx)
+	}
+	return nil, fmt.Errorf("unknown CreditReservationCommand field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CreditReservationCommandMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case creditreservationcommand.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case creditreservationcommand.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case creditreservationcommand.FieldReservationID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservationID(v)
+		return nil
+	case creditreservationcommand.FieldCommandKind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCommandKind(v)
+		return nil
+	case creditreservationcommand.FieldIdempotencyKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIdempotencyKey(v)
+		return nil
+	case creditreservationcommand.FieldPayloadHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayloadHash(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CreditReservationCommand field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CreditReservationCommandMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CreditReservationCommandMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CreditReservationCommandMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown CreditReservationCommand numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CreditReservationCommandMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CreditReservationCommandMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CreditReservationCommandMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown CreditReservationCommand nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CreditReservationCommandMutation) ResetField(name string) error {
+	switch name {
+	case creditreservationcommand.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case creditreservationcommand.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case creditreservationcommand.FieldReservationID:
+		m.ResetReservationID()
+		return nil
+	case creditreservationcommand.FieldCommandKind:
+		m.ResetCommandKind()
+		return nil
+	case creditreservationcommand.FieldIdempotencyKey:
+		m.ResetIdempotencyKey()
+		return nil
+	case creditreservationcommand.FieldPayloadHash:
+		m.ResetPayloadHash()
+		return nil
+	}
+	return fmt.Errorf("unknown CreditReservationCommand field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CreditReservationCommandMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CreditReservationCommandMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CreditReservationCommandMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CreditReservationCommandMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CreditReservationCommandMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CreditReservationCommandMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CreditReservationCommandMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown CreditReservationCommand unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CreditReservationCommandMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown CreditReservationCommand edge %s", name)
 }
 
 // CreditReservationOutboxMutation represents an operation that mutates the CreditReservationOutbox nodes in the graph.

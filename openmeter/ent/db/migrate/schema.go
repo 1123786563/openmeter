@@ -4199,6 +4199,39 @@ var (
 			},
 		},
 	}
+	// CreditReservationCommandsColumns holds the columns for the "credit_reservation_commands" table.
+	CreditReservationCommandsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "reservation_id", Type: field.TypeString},
+		{Name: "command_kind", Type: field.TypeString},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "payload_hash", Type: field.TypeString},
+	}
+	// CreditReservationCommandsTable holds the schema information for the "credit_reservation_commands" table.
+	CreditReservationCommandsTable = &schema.Table{
+		Name:       "credit_reservation_commands",
+		Columns:    CreditReservationCommandsColumns,
+		PrimaryKey: []*schema.Column{CreditReservationCommandsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "creditreservationcommand_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[0]},
+			},
+			{
+				Name:    "creditreservationcommand_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[1]},
+			},
+			{
+				Name:    "creditreservationcommand_namespace_reservation_id_command_kind_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[1], CreditReservationCommandsColumns[3], CreditReservationCommandsColumns[4], CreditReservationCommandsColumns[5]},
+			},
+		},
+	}
 	// CreditReservationOutboxesColumns holds the columns for the "credit_reservation_outboxes" table.
 	CreditReservationOutboxesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -7312,6 +7345,7 @@ var (
 		CreditRealizationLineagesTable,
 		CreditRealizationLineageSegmentsTable,
 		CreditReservationsTable,
+		CreditReservationCommandsTable,
 		CreditReservationOutboxesTable,
 		CurrencyCostBasesTable,
 		CustomCurrenciesTable,

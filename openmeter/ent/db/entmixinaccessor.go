@@ -2527,6 +2527,14 @@ func (e *CreditReservation) GetDeletedAt() *time.Time {
 	return e.DeletedAt
 }
 
+func (e *CreditReservationCommand) GetID() string {
+	return e.ID
+}
+
+func (e *CreditReservationCommand) GetNamespace() string {
+	return e.Namespace
+}
+
 func (e *CreditReservationOutbox) GetID() string {
 	return e.ID
 }

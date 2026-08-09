@@ -142,6 +142,8 @@ type Tx struct {
 	CreditRealizationLineageSegment *CreditRealizationLineageSegmentClient
 	// CreditReservation is the client for interacting with the CreditReservation builders.
 	CreditReservation *CreditReservationClient
+	// CreditReservationCommand is the client for interacting with the CreditReservationCommand builders.
+	CreditReservationCommand *CreditReservationCommandClient
 	// CreditReservationOutbox is the client for interacting with the CreditReservationOutbox builders.
 	CreditReservationOutbox *CreditReservationOutboxClient
 	// CurrencyCostBasis is the client for interacting with the CurrencyCostBasis builders.
@@ -435,6 +437,7 @@ func (tx *Tx) init() {
 	tx.CreditRealizationLineage = NewCreditRealizationLineageClient(tx.config)
 	tx.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(tx.config)
 	tx.CreditReservation = NewCreditReservationClient(tx.config)
+	tx.CreditReservationCommand = NewCreditReservationCommandClient(tx.config)
 	tx.CreditReservationOutbox = NewCreditReservationOutboxClient(tx.config)
 	tx.CurrencyCostBasis = NewCurrencyCostBasisClient(tx.config)
 	tx.CustomCurrency = NewCustomCurrencyClient(tx.config)

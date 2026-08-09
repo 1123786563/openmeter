@@ -225,6 +225,10 @@ func (m *memoryAdapter) outboxCount() int      { m.mu.Lock(); defer m.mu.Unlock(
 
 type memoryTx struct{ m *memoryAdapter }
 
+func (t memoryTx) EnsureLifecycleCommand(_ context.Context, _ models.NamespacedID, _ string, _ creditreservation.CommandIdentity) (bool, error) {
+	return false, nil
+}
+
 func (t memoryTx) GetReservation(_ context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {
 	row, ok := t.m.rows[id.ID]
 	if !ok {

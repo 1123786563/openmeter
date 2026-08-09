@@ -13,6 +13,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	dbcreditreservation "github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -35,6 +36,26 @@ type CreateReservationInput struct {
 	ExecutionDeadline *time.Time
 	HoldLedgerGroupID string
 	UsageEventID      string
+}
+
+func (t *txAdapter) EnsureLifecycleCommand(ctx context.Context, id models.NamespacedID, kind string, identity creditreservation.CommandIdentity) (bool, error) {
+	existing, err := t.db.CreditReservationCommand.Query().Where(
+		creditreservationcommand.NamespaceEQ(id.Namespace), creditreservationcommand.ReservationIDEQ(id.ID),
+		creditreservationcommand.CommandKindEQ(kind), creditreservationcommand.IdempotencyKeyEQ(identity.IdempotencyKey),
+	).Only(ctx)
+	if err == nil {
+		if existing.PayloadHash != identity.PayloadHash {
+			return false, creditreservation.ErrIdempotencyConflict
+		}
+		return true, nil
+	}
+	if !entdb.IsNotFound(err) {
+		return false, err
+	}
+	if _, err = t.db.CreditReservationCommand.Create().SetNamespace(id.Namespace).SetReservationID(id.ID).SetCommandKind(kind).SetIdempotencyKey(identity.IdempotencyKey).SetPayloadHash(identity.PayloadHash).Save(ctx); err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func (t *txAdapter) EstablishRefundFence(ctx context.Context, refundID string) (creditreservation.FenceResult, error) {

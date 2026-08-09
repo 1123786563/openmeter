@@ -77,6 +77,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
@@ -254,6 +255,7 @@ func checkColumn(t, c string) error {
 			creditrealizationlineage.Table:                         creditrealizationlineage.ValidColumn,
 			creditrealizationlineagesegment.Table:                  creditrealizationlineagesegment.ValidColumn,
 			creditreservation.Table:                                creditreservation.ValidColumn,
+			creditreservationcommand.Table:                         creditreservationcommand.ValidColumn,
 			creditreservationoutbox.Table:                          creditreservationoutbox.ValidColumn,
 			currencycostbasis.Table:                                currencycostbasis.ValidColumn,
 			customcurrency.Table:                                   customcurrency.ValidColumn,
