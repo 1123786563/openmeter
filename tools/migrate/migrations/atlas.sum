@@ -1,4 +1,4 @@
-h1:jhb0VK5bcJPUgYQhXm8RQa82XFGQ8z2ZMi70X8hSSVg=
+h1:bGdSCE/nZlGCANgH3+vXw/E5HsUbu4zxEMU5telKs6w=
 20240826120919_init.down.sql h1:AIbgwwngjkJEYa3yRZsIXQyBa2+qoZttwMXHxXEbHLI=
 20240826120919_init.up.sql h1:/hYHWF3Z3dab8SMKnw99ixVktCuJe2bAw5wstCZIEN8=
 20240903155435_entitlement-expired-index.down.sql h1:np2xgYs3KQ2z7qPBcobtGNhqWQ3V8NwEP9E5U3TmpSA=
@@ -513,3 +513,5 @@ h1:jhb0VK5bcJPUgYQhXm8RQa82XFGQ8z2ZMi70X8hSSVg=
 20260810000100_credit_reservation_settlement_provenance.up.sql h1:MEAjpWvFwaNWRG2Xi2VFDt9RqT1Vo3uc5YvlUqv0dYo=
 20260810000200_credit_charge_reversal_identity.down.sql h1:hDZFE2ZjlmsWh0G5zdhP3ksXD/guA4+IgpXyFCfoeOU=
 20260810000200_credit_charge_reversal_identity.up.sql h1:+NW7XvvSc9CF0GQXRD4iiiji1Srtzk3R3VHfAONN9WQ=
+20260810000300_credit_reservation_commands.down.sql h1:NPN+Nf/7MtzIjRy6EcqGOH5FPubrAEzqLyRURyhZvvU=
+20260810000300_credit_reservation_commands.up.sql h1:iZu8fyZ7SXehoJFQw17JLTEhTZIOUx/3SOPnodCIKds=
