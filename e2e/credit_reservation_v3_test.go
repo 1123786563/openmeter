@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,8 +18,12 @@ import (
 
 type creditReservationFixture struct{ address, customer, subject, feature, resource, provider, model string }
 type reservationEnvelope struct {
-	ID    string `json:"id"`
-	State string `json:"state"`
+	ID             string `json:"id"`
+	State          string `json:"state"`
+	SettledCredits int64  `json:"settled_credits"`
+	Funding        struct {
+		EnterpriseHold int64 `json:"enterprise_hold"`
+	} `json:"funding"`
 }
 
 func TestCreditReservationV3Acceptance(t *testing.T) {
@@ -37,9 +42,38 @@ func TestCreditReservationV3Acceptance(t *testing.T) {
 		postReservation(t, f.address+"/api/v3/credit-reservations/"+id+"/execute", map[string]any{"idempotency_key": key, "payload_hash": strings.Repeat("a", 64), "execution_deadline": time.Now().UTC().Add(5 * time.Minute)}, http.StatusOK)
 		settled := postReservation(t, f.address+"/api/v3/credit-reservations/"+id+"/settle", map[string]any{"idempotency_key": acceptanceID("settle"), "payload_hash": strings.Repeat("b", 64), "actual_credits": 1, "settled_at": time.Now().UTC()}, http.StatusOK)
 		require.Equal(t, "settled", strings.ToLower(settled.State))
-		getReservation(t, f.address+"/api/v3/credit-reservations/"+id, http.StatusOK)
-		postReservation(t, f.address+"/api/v3/credit-reservations", reserve, http.StatusCreated)
+		loaded := getReservation(t, f.address+"/api/v3/credit-reservations/"+id, http.StatusOK)
+		require.Equal(t, int64(1), loaded.SettledCredits)
+		replay := postReservation(t, f.address+"/api/v3/credit-reservations", reserve, http.StatusCreated)
+		require.Equal(t, created, replay)
 		postReservation(t, f.address+"/api/v3/credit-reservations", f.reserve(id, key, strings.Repeat("c", 64)), http.StatusConflict)
+	})
+
+	t.Run("insufficient prepaid rejects", func(t *testing.T) {
+		customer := os.Getenv("OPENMETER_CR_INSUFFICIENT_CUSTOMER_ID")
+		require.NotEmpty(t, customer, "OPENMETER_CR_INSUFFICIENT_CUSTOMER_ID is required")
+		req := f.reserve(acceptanceID("insufficient"), acceptanceID("key"), strings.Repeat("e", 64))
+		req["customer_id"] = customer
+		postReservation(t, f.address+"/api/v3/credit-reservations", req, http.StatusPaymentRequired)
+	})
+
+	t.Run("bounded enterprise receivable", func(t *testing.T) {
+		customer, want := os.Getenv("OPENMETER_CR_ENTERPRISE_CUSTOMER_ID"), os.Getenv("OPENMETER_CR_ENTERPRISE_HOLD")
+		require.NotEmpty(t, customer, "OPENMETER_CR_ENTERPRISE_CUSTOMER_ID is required")
+		require.NotEmpty(t, want, "OPENMETER_CR_ENTERPRISE_HOLD is required")
+		expected, err := strconv.ParseInt(want, 10, 64)
+		require.NoError(t, err)
+		req := f.reserve(acceptanceID("enterprise"), acceptanceID("key"), strings.Repeat("f", 64))
+		req["customer_id"] = customer
+		created := postReservation(t, f.address+"/api/v3/credit-reservations", req, http.StatusCreated)
+		require.Equal(t, expected, created.Funding.EnterpriseHold)
+	})
+
+	t.Run("direct charge and reverse", func(t *testing.T) {
+		id, key := acceptanceID("charge"), acceptanceID("key")
+		charge := map[string]any{"id": id, "customer_id": f.customer, "subject_id": f.subject, "operation": "credit_reservation_acceptance", "idempotency_key": key, "payload_hash": strings.Repeat("1", 64), "booked_at": time.Now().UTC(), "lines": []any{map[string]any{"feature_key": f.feature, "resource_code": f.resource, "quantity": 1}}}
+		postReservation(t, f.address+"/api/v3/credit-charges", charge, http.StatusCreated)
+		postReservation(t, f.address+"/api/v3/credit-charges/"+id+"/reverse", map[string]any{"idempotency_key": acceptanceID("reverse"), "payload_hash": strings.Repeat("2", 64), "reversed_at": time.Now().UTC()}, http.StatusOK)
 	})
 
 	t.Run("unknown release has provider evidence", func(t *testing.T) {
@@ -51,7 +85,7 @@ func TestCreditReservationV3Acceptance(t *testing.T) {
 		require.Equal(t, "released", strings.ToLower(released.State))
 	})
 
-	for _, env := range []string{"OPENMETER_CR_CRASH_EVIDENCE_URL", "OPENMETER_CR_OUTBOX_EVIDENCE_URL"} {
+	for _, env := range []string{"OPENMETER_CR_CRASH_ASSERTION_URL", "OPENMETER_CR_OUTBOX_ASSERTION_URL"} {
 		env := env
 		t.Run(env, func(t *testing.T) {
 			url := os.Getenv(env)
@@ -59,7 +93,14 @@ func TestCreditReservationV3Acceptance(t *testing.T) {
 			response, err := http.Get(url)
 			require.NoError(t, err)
 			t.Cleanup(func() { _ = response.Body.Close() })
-			require.Equal(t, http.StatusOK, response.StatusCode, "%s must expose accepted crash/outbox evidence", env)
+			require.Equal(t, http.StatusOK, response.StatusCode, "%s must expose executable crash/outbox assertion", env)
+			var assertion struct {
+				Passed  bool   `json:"passed"`
+				EventID string `json:"event_id"`
+			}
+			require.NoError(t, json.NewDecoder(response.Body).Decode(&assertion))
+			require.True(t, assertion.Passed, "%s did not observe recovery", env)
+			require.NotEmpty(t, assertion.EventID, "%s must prove a stable event ID", env)
 		})
 	}
 }
