@@ -186,7 +186,7 @@ config.yaml:
 server: ## Run sink-worker
 	@ if [ config.yaml -ot config.example.yaml ]; then diff -u config.yaml config.example.yaml || (echo "!!! The configuration example changed. Please update your config.yaml file accordingly (or at least touch it). !!!" && false); fi
 	$(call print-target)
-	air -c ./cmd/server/.air.toml
+	air -c ./cmd/server/.air.toml  
 
 .PHONY: sink-worker
 sink-worker: ## Run sink-worker

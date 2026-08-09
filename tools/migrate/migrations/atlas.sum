@@ -1,4 +1,4 @@
-h1:KAImv322cdOZTUabe8S02GUKOdzEAKa7e5bUbIhAgIs=
+h1:Y8i8eRcrd1MBhFQtmyDa8f+zjF/HvIDJ5PXoaZAzMYw=
 20240826120919_init.down.sql h1:AIbgwwngjkJEYa3yRZsIXQyBa2+qoZttwMXHxXEbHLI=
 20240826120919_init.up.sql h1:/hYHWF3Z3dab8SMKnw99ixVktCuJe2bAw5wstCZIEN8=
 20240903155435_entitlement-expired-index.down.sql h1:np2xgYs3KQ2z7qPBcobtGNhqWQ3V8NwEP9E5U3TmpSA=
@@ -501,3 +501,9 @@ h1:KAImv322cdOZTUabe8S02GUKOdzEAKa7e5bUbIhAgIs=
 20260803000100_ai_billing_core.up.sql h1:L9Bi4Y16pp4xDnd/oQGCvUjhP/iVCHpHMKGQdgqpMZo=
 20260803000200_commerce.down.sql h1:+sJWbERxd9bbtYRIhKI5TurmF9RSJAzLogfxALis79k=
 20260803000200_commerce.up.sql h1:1zcEhShkboN9bQbcFXyEtRZ92KAkkxzd57TkcJq60lc=
+20260809000100_ai_usage_ratecard_units.down.sql h1:ipkoUdnMzzjZjLrO1KXC8on8p1zhbK+vbwUSZ3WMSaE=
+20260809000100_ai_usage_ratecard_units.up.sql h1:8BwyVRs/cluoFUg+yrgNpJJAMjGJX7HeXE7TympbV9Q=
+20260809000200_aiusage_ratecard_price_nullable.down.sql h1:X8k5eQbJdsx6EXOBzMduhTvf+kKE0SY/6NwcTt94j+c=
+20260809000200_aiusage_ratecard_price_nullable.up.sql h1:/GFhWQ5nkO1Q3jdAX9S7fhMIr93FKGy7E0SsQiv+eYM=
+20260809000300_aiusage_ratecard_price_default.down.sql h1:EeCI/3lnPhWMAzsomF5boSM1zgbCylKZ2byll8oW5js=
+20260809000300_aiusage_ratecard_price_default.up.sql h1:Q+qHIGI/tnwQZGGOHmjA08VM/5VvZ1L+ncpJVYM3J3Q=

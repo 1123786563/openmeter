@@ -37,3 +37,4 @@ server
 
 # SDD worktrees
 .worktrees/
+.idea/

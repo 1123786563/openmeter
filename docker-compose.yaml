@@ -4,16 +4,16 @@ services:
       file: docker-compose.base.yaml
       service: kafka
     ports:
-      - "127.0.0.1:29092:29092"
+      - "0.0.0.0:29092:29092"
 
   clickhouse:
     extends:
       file: docker-compose.base.yaml
       service: clickhouse
     ports:
-      - "127.0.0.1:8123:8123"
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9009:9009"
+      - "0.0.0.0:8123:8123"
+      - "0.0.0.0:9000:9000"
+      - "0.0.0.0:9009:9009"
 
   ch-ui:
     extends:
@@ -30,10 +30,8 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: redis
-    profiles:
-      - redis
     ports:
-      - "127.0.0.1:6380:6379"
+      - "0.0.0.0:6380:6379"
 
   # Development
   # docker compose --profile dev up
@@ -44,7 +42,7 @@ services:
     profiles:
       - dev
     ports:
-      - "127.0.0.1:8084:8080"
+      - "0.0.0.0:8084:8080"
 
   # Credit
   # docker compose --profile postgres up
@@ -53,21 +51,15 @@ services:
       file: docker-compose.base.yaml
       service: postgres
     ports:
-      - "127.0.0.1:5433:5432"
+      - "0.0.0.0:5433:5432"
 
   svix:
     extends:
       file: docker-compose.base.yaml
       service: svix
-    profiles:
-      - webhook
     ports:
-      - "127.0.0.1:8071:8071"
+      - "0.0.0.0:8071:8071"
 
 configs:
   svix_sql:
-    content: |
-      CREATE USER svix WITH PASSWORD 'svix';
-      CREATE DATABASE svix;
-      GRANT ALL PRIVILEGES ON DATABASE svix TO svix;
-      ALTER DATABASE svix OWNER TO svix;
+    file: ./svix.sql
