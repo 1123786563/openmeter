@@ -1,4 +1,4 @@
-h1:Y8i8eRcrd1MBhFQtmyDa8f+zjF/HvIDJ5PXoaZAzMYw=
+h1:kMeV6jnbW3vXWloeb4y9uVrMJ6PmBeMTJ2G49TVzeJg=
 20240826120919_init.down.sql h1:AIbgwwngjkJEYa3yRZsIXQyBa2+qoZttwMXHxXEbHLI=
 20240826120919_init.up.sql h1:/hYHWF3Z3dab8SMKnw99ixVktCuJe2bAw5wstCZIEN8=
 20240903155435_entitlement-expired-index.down.sql h1:np2xgYs3KQ2z7qPBcobtGNhqWQ3V8NwEP9E5U3TmpSA=
@@ -507,3 +507,5 @@ h1:Y8i8eRcrd1MBhFQtmyDa8f+zjF/HvIDJ5PXoaZAzMYw=
 20260809000200_aiusage_ratecard_price_nullable.up.sql h1:/GFhWQ5nkO1Q3jdAX9S7fhMIr93FKGy7E0SsQiv+eYM=
 20260809000300_aiusage_ratecard_price_default.down.sql h1:EeCI/3lnPhWMAzsomF5boSM1zgbCylKZ2byll8oW5js=
 20260809000300_aiusage_ratecard_price_default.up.sql h1:Q+qHIGI/tnwQZGGOHmjA08VM/5VvZ1L+ncpJVYM3J3Q=
+20260809113159_payment_fact_provider_fields.down.sql h1:ZusosI0YskkBo3H7hNYX3sdKDVQtP2Osycx1pV8JVu0=
+20260809113159_payment_fact_provider_fields.up.sql h1:LoRKQVPEK/VhcK7Yuw0JNqR5X/QQJofzwXlJio++TTw=

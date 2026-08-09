@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
@@ -125,6 +127,46 @@ func TestSetProviderIDsEmpty(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, first.ProviderPaymentID)
 	require.Nil(t, second.ProviderPaymentID)
+}
+
+func TestInsertPaymentFactProviderEventDedupDifferentRawHashNonSuccess(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	_, attempt := createPaidTransitionFixture(t, client, "provider-event-dedup")
+	now := time.Date(2026, 8, 9, 11, 0, 0, 0, time.UTC)
+	first := PaymentFactWire{
+		ID:              ulid.Make().String(),
+		Namespace:       "default",
+		AttemptID:       attempt.ID,
+		Provider:        "wechat",
+		ProviderOrderID: "provider-order-event-dedup",
+		ProviderEventID: "provider-event-dedup",
+		AmountMinor:     100,
+		Currency:        "CNY",
+		Success:         false,
+		RawHash:         "raw-hash-event-dedup-first",
+		SignedPayload:   map[string]any{"trade_state": "NOTPAY"},
+		Timestamp:       now,
+		CreatedAt:       now,
+	}
+	saved, fresh, err := adapter.InsertPaymentFact(t.Context(), first)
+	require.NoError(t, err)
+	require.True(t, fresh)
+
+	second := first
+	second.ID = ulid.Make().String()
+	second.RawHash = "raw-hash-event-dedup-second"
+	replayed, fresh, err := adapter.InsertPaymentFact(t.Context(), second)
+	require.NoError(t, err)
+	require.False(t, fresh)
+	require.Equal(t, saved.ID, replayed.ID)
+	require.Equal(t, first.RawHash, replayed.RawHash)
+	require.False(t, replayed.Success)
+	require.Equal(t, 1, countPaymentFacts(t, client, first.ProviderEventID))
 }
 
 func createPaidTransitionFixture(t *testing.T, client *db.Client, suffix string) (*db.CommerceOrder, *db.PaymentAttempt) {

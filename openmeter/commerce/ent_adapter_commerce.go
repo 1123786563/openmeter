@@ -358,10 +358,19 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 	if err != nil {
 		if entdb.IsConstraintError(err) {
 			existing, gErr := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
-			if gErr != nil {
+			if gErr == nil {
+				return existing, false, nil
+			}
+			if !errors.Is(gErr, ErrPaymentFactNotFound) {
 				return nil, false, fmt.Errorf("ent: concurrent fact recovery: %w", gErr)
 			}
-			return existing, false, nil
+			if fact.ProviderEventID != "" {
+				existing, gErr = a.GetPaymentFactByProviderEvent(ctx, fact.Namespace, fact.Provider, fact.ProviderEventID)
+				if gErr == nil {
+					return existing, false, nil
+				}
+			}
+			return nil, false, fmt.Errorf("ent: concurrent fact recovery: %w", gErr)
 		}
 		return nil, false, fmt.Errorf("ent: insert payment fact: %w", err)
 	}
