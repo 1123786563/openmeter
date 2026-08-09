@@ -464,6 +464,7 @@ func newChargesRegistry(
 
 	creditLimitService, err := creditlimit.NewService(creditlimit.Config{
 		Client: db, BalanceQuerier: balanceQuerier, AccountService: accountResolver, AccountLocker: accountService,
+		ActiveHoldReader: creditlimit.NoActiveHoldReader{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credit limit service: %w", err)

@@ -4349,7 +4349,7 @@ var (
 			},
 			{
 				Name:    "customercreditlimit_namespace_customer_id_custom_currency_id_enabled",
-				Unique:  false,
+				Unique:  true,
 				Columns: []*schema.Column{CustomerCreditLimitsColumns[1], CustomerCreditLimitsColumns[5], CustomerCreditLimitsColumns[7], CustomerCreditLimitsColumns[11]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",

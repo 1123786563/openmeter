@@ -75,6 +75,17 @@ type ActiveHoldInput struct {
 
 var ErrActiveHoldReaderUnavailable = errors.New("active enterprise hold reader is required")
 
+// NoActiveHoldReader is the Phase 1 production reader while Reservation
+// persistence does not yet exist. It is explicit wiring, not a nil fallback:
+// there is no durable reservation source in this phase, therefore its active
+// held amount is authoritatively zero. Task 3 must replace this reader once it
+// introduces reservation persistence; a missing reader remains fail-closed.
+type NoActiveHoldReader struct{}
+
+func (NoActiveHoldReader) ActiveHeldAmount(context.Context, ActiveHoldInput) (alpacadecimal.Decimal, error) {
+	return alpacadecimal.Zero, nil
+}
+
 // NoopAllowanceResolver is an explicit "no active limit" dependency for
 // callers that do not provision enterprise credit policy.
 type NoopAllowanceResolver struct{}
