@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	dbcreditreservation "github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -33,6 +35,70 @@ type CreateReservationInput struct {
 	UsageEventID      string
 }
 
+func (t *txAdapter) GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {
+	if id.Namespace != t.customerID.Namespace {
+		return creditreservation.Reservation{}, fmt.Errorf("reservation namespace must match customer lock")
+	}
+	return getReservation(ctx, t.db, id)
+}
+
+func (t *txAdapter) GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error) {
+	if namespace != t.customerID.Namespace {
+		return creditreservation.Reservation{}, false, fmt.Errorf("reservation namespace must match customer lock")
+	}
+	row, err := findReservationByIdempotencyKey(ctx, t.db, namespace, idempotencyKey)
+	if err != nil || row == nil {
+		return creditreservation.Reservation{}, false, err
+	}
+	reservation, err := mapReservation(row)
+	return reservation, err == nil, err
+}
+
+// ActivePrepaidHold returns every active hold for the customer and managed
+// currency. It is intentionally conservative across features: counting a
+// broader set can only reject a call, never over-authorize one.
+func (t *txAdapter) ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference) (int64, error) {
+	rows, err := t.db.CreditReservation.Query().Where(
+		dbcreditreservation.NamespaceEQ(t.customerID.Namespace),
+		dbcreditreservation.CustomerIDEQ(t.customerID.ID),
+		dbcreditreservation.StateIn(
+			string(creditreservation.ReservationStateActive),
+			string(creditreservation.ReservationStateExecuting),
+			string(creditreservation.ReservationStateUnknown),
+			string(creditreservation.ReservationStateManualReview),
+		),
+	).All(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("list active reservation holds: %w", err)
+	}
+	var held int64
+	for _, row := range rows {
+		if !row.Currency.Equal(currency) {
+			continue
+		}
+		if row.PrepaidHold > 0 && held > int64(^uint64(0)>>1)-row.PrepaidHold {
+			return 0, creditreservation.ErrCreditOverflow
+		}
+		held += row.PrepaidHold
+	}
+	return held, nil
+}
+
+// HasActiveRefundFence reads the existing refund request in the same
+// customer-lock transaction as Reserve. Any pre-terminal refund is a fence;
+// this makes the pending_fence row authoritative before provider work starts.
+func (t *txAdapter) HasActiveRefundFence(ctx context.Context) (bool, error) {
+	return t.db.RefundRequest.Query().Where(
+		refundrequest.NamespaceEQ(t.customerID.Namespace),
+		refundrequest.CustomerIDEQ(t.customerID.ID),
+		refundrequest.StatusIn(
+			refundrequest.StatusPendingFence,
+			refundrequest.StatusProviderProcessing,
+			refundrequest.StatusLedgerReversing,
+		),
+	).Exist(ctx)
+}
+
 type UpdateReservationInput struct {
 	ID                      models.NamespacedID
 	ExpectedStates          []creditreservation.ReservationState
@@ -53,6 +119,7 @@ type UpdateReservationInput struct {
 	SettlementLedgerGroupID *string
 	ReleaseLedgerGroupID    *string
 	UsageEventID            *string
+	Evidence                creditreservation.TransitionEvidence
 }
 
 func (t *txAdapter) CreateReservation(ctx context.Context, input CreateReservationInput) (creditreservation.Reservation, bool, error) {
@@ -154,7 +221,7 @@ func (t *txAdapter) UpdateReservation(ctx context.Context, input UpdateReservati
 		return creditreservation.Reservation{}, creditreservation.ErrStateConflict
 	}
 	for _, from := range input.ExpectedStates {
-		if err := creditreservation.ValidateTransition(from, input.State); err != nil {
+		if err := creditreservation.ValidateTransitionWithEvidence(from, input.State, input.Evidence); err != nil {
 			return creditreservation.Reservation{}, err
 		}
 	}
@@ -258,6 +325,36 @@ func getReservation(ctx context.Context, db *entdb.Client, id models.NamespacedI
 	return mapReservation(row)
 }
 
+func (a *adapter) ListExpiredReservations(ctx context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	rows, err := a.db.CreditReservation.Query().Where(
+		dbcreditreservation.Or(
+			dbcreditreservation.And(
+				dbcreditreservation.StateEQ(string(creditreservation.ReservationStateActive)),
+				dbcreditreservation.AuthorizationExpiresAtLTE(now),
+			),
+			dbcreditreservation.And(
+				dbcreditreservation.StateEQ(string(creditreservation.ReservationStateExecuting)),
+				dbcreditreservation.ExecutionDeadlineLTE(now),
+			),
+		),
+	).Limit(limit).All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list expired reservations: %w", err)
+	}
+	reservations := make([]creditreservation.Reservation, 0, len(rows))
+	for _, row := range rows {
+		reservation, err := mapReservation(row)
+		if err != nil {
+			return nil, err
+		}
+		reservations = append(reservations, reservation)
+	}
+	return reservations, nil
+}
+
 func findReservationCommand(ctx context.Context, db *entdb.Client, namespace, idempotencyKey, clientCallID string) (*entdb.CreditReservation, error) {
 	byIdempotencyKey, err := findReservationByIdempotencyKey(ctx, db, namespace, idempotencyKey)
 	if err != nil {
@@ -325,7 +422,8 @@ func mapReservation(row *entdb.CreditReservation) (creditreservation.Reservation
 		ID: row.ID, Namespace: row.Namespace, CustomerID: row.CustomerID, Currency: row.Currency,
 		State: creditreservation.ReservationState(row.State), RateVersion: row.RateVersion,
 		Lines: lines, TotalCredits: row.CeilingCredits, ExpiresAt: row.AuthorizationExpiresAt,
-		CommandIdentity: creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
+		ExecutionDeadline: row.ExecutionDeadline,
+		CommandIdentity:   creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
 	}, nil
 }
 

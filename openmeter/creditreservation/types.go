@@ -60,16 +60,17 @@ func (c CommandIdentity) Validate() error {
 // Reservation is the temporary authorization hold for a CREDIT-denominated
 // resource call. Ledger posting is intentionally outside this package.
 type Reservation struct {
-	ID              string                       `json:"id"`
-	Namespace       string                       `json:"namespace"`
-	CustomerID      string                       `json:"customerId"`
-	Currency        currencies.CurrencyReference `json:"currency"`
-	State           ReservationState             `json:"state"`
-	RateVersion     string                       `json:"rateVersion"`
-	Lines           []RatedLine                  `json:"lines"`
-	TotalCredits    int64                        `json:"totalCredits"`
-	ExpiresAt       *time.Time                   `json:"expiresAt,omitempty"`
-	CommandIdentity CommandIdentity              `json:"commandIdentity"`
+	ID                string                       `json:"id"`
+	Namespace         string                       `json:"namespace"`
+	CustomerID        string                       `json:"customerId"`
+	Currency          currencies.CurrencyReference `json:"currency"`
+	State             ReservationState             `json:"state"`
+	RateVersion       string                       `json:"rateVersion"`
+	Lines             []RatedLine                  `json:"lines"`
+	TotalCredits      int64                        `json:"totalCredits"`
+	ExpiresAt         *time.Time                   `json:"expiresAt,omitempty"`
+	ExecutionDeadline *time.Time                   `json:"executionDeadline,omitempty"`
+	CommandIdentity   CommandIdentity              `json:"commandIdentity"`
 }
 
 func (r Reservation) Validate() error {

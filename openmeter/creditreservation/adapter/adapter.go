@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/billingcustomerlock"
@@ -38,9 +40,14 @@ func (c Config) Validate() error {
 type Adapter interface {
 	WithCustomerLock(ctx context.Context, id customer.CustomerID, fn func(TxAdapter) error) error
 	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
+	ListExpiredReservations(ctx context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error)
 }
 
 type TxAdapter interface {
+	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
+	GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error)
+	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference) (int64, error)
+	HasActiveRefundFence(ctx context.Context) (bool, error)
 	CreateReservation(ctx context.Context, input CreateReservationInput) (creditreservation.Reservation, bool, error)
 	UpdateReservation(ctx context.Context, input UpdateReservationInput) (creditreservation.Reservation, error)
 	CreateCharge(ctx context.Context, input CreateChargeInput) (creditreservation.Charge, bool, error)
