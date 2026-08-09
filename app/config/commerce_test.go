@@ -62,6 +62,14 @@ func TestCommerceConfigurationValidateRejectsInsecureProviderURL(t *testing.T) {
 	require.ErrorContains(t, cfg.Validate(), "commerce.payment.alipay.gateway_url must be a valid HTTPS URL")
 }
 
+func TestCommerceConfigurationValidateRequiresAlipayGatewayURL(t *testing.T) {
+	cfg := validCommerceConfiguration()
+	cfg.Payment.Alipay.Enabled = true
+	cfg.Payment.Alipay.GatewayURL = ""
+
+	require.ErrorContains(t, cfg.Validate(), "commerce.payment.alipay.gateway_url is required")
+}
+
 func TestConfigureCommerceDefaults(t *testing.T) {
 	v := viper.New()
 	ConfigureCommerce(v)

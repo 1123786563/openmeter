@@ -133,7 +133,12 @@ func (c AlipayPaymentConfiguration) validate() []error {
 		"notify_url":             c.NotifyURL,
 	})
 
-	errs = append(errs, validateRequiredCommerceURL(prefix+".gateway_url", c.GatewayURL, false))
+	if strings.TrimSpace(c.GatewayURL) == "" {
+		errs = append(errs, fmt.Errorf("%s.gateway_url is required", prefix))
+	} else if err := validateCommerceURL(c.GatewayURL, false); err != nil {
+		errs = append(errs, fmt.Errorf("%s.gateway_url must be a valid HTTPS URL: %w", prefix, err))
+	}
+
 	errs = append(errs, validateRequiredCommerceURL(prefix+".notify_url", c.NotifyURL, false))
 
 	return errs
