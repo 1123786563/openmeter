@@ -2,7 +2,10 @@
 
 package openmeter
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Cursor paginated response.
 type AICreditTransactionPaginatedResponse struct {
@@ -133,17 +136,17 @@ type AIUsageRuntimeAuthorization struct {
 	// Canonical JSON payload for consumer-side verification. The raw bytes of
 	// the canonicalized authorization object, used to derive the SHA-256 hash
 	// and verify the signature.
-	CanonicalPayload map[string]any `json:"canonical_payload,omitempty"`
+	CanonicalPayload json.RawMessage `json:"canonical_payload,omitempty"`
 	// SHA-256 hash of the canonical payload, hex-encoded.
-	CanonicalSha256 *string `json:"canonical_sha256,omitempty"`
+	CanonicalSHA256 string `json:"canonical_sha256,omitempty"`
 	// The key ID used to sign the authorization.
-	KeyID *string `json:"key_id,omitempty"`
+	KeyID string `json:"key_id,omitempty"`
 	// Base64-encoded signature over the canonical payload.
-	Signature *string `json:"signature,omitempty"`
+	Signature string `json:"signature,omitempty"`
 	// The snapshot version for watermark tracking.
-	SnapshotVersion *int64 `json:"snapshot_version,omitempty"`
+	SnapshotVersion int64 `json:"snapshot_version,omitempty"`
 	// The subject or tenant key this authorization applies to.
-	SubjectKey *string `json:"subject_key,omitempty"`
+	SubjectKey string `json:"subject_key,omitempty"`
 	// The timestamp until which this authorization is valid.
 	ValidUntil *time.Time `json:"valid_until,omitempty"`
 }

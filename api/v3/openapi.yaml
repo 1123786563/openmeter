@@ -4377,22 +4377,32 @@ components:
             Canonical JSON payload for consumer-side verification. The raw bytes of
             the canonicalized authorization object, used to derive the SHA-256 hash
             and verify the signature.
+          x-go-type-skip-optional-pointer: true
+          x-go-type: json.RawMessage
+          x-go-name: CanonicalPayload
         canonical_sha256:
           type: string
           description: SHA-256 hash of the canonical payload, hex-encoded.
+          x-go-type-skip-optional-pointer: true
+          x-go-name: CanonicalSHA256
         key_id:
           type: string
           description: The key ID used to sign the authorization.
+          x-go-type-skip-optional-pointer: true
+          x-go-name: KeyID
         signature:
           type: string
           description: Base64-encoded signature over the canonical payload.
+          x-go-type-skip-optional-pointer: true
         snapshot_version:
           type: integer
           format: int64
           description: The snapshot version for watermark tracking.
+          x-go-type-skip-optional-pointer: true
         subject_key:
           type: string
           description: The subject or tenant key this authorization applies to.
+          x-go-type-skip-optional-pointer: true
         valid_until:
           allOf:
             - $ref: '#/components/schemas/DateTime'

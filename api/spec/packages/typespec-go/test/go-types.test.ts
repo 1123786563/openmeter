@@ -1,10 +1,11 @@
 import { createTestHost, createTestRunner } from '@typespec/compiler/testing'
+import { OpenAPITestLibrary } from '@typespec/openapi/testing'
 import { describe, expect, it } from 'vitest'
-import { goType } from '../dist/go-types.js'
+import { goFields, goType } from '../dist/go-types.js'
 import type { Program } from '@typespec/compiler'
 
 async function compileTypes(code: string): Promise<Program> {
-  const host = await createTestHost()
+  const host = await createTestHost({ libraries: [OpenAPITestLibrary] })
   const runner = await createTestRunner(host)
   await runner.compile(code)
   return runner.program
@@ -96,5 +97,52 @@ describe('Go type mapping', () => {
     expect(() =>
       goType(program, sample.properties.get('forbidden')!.type),
     ).toThrow('intrinsic type null is not representable in Go')
+  })
+
+  it('honors property Go extensions for names, raw JSON, and optional value fields', async () => {
+    const program = await compileTypes(`
+      using TypeSpec.OpenAPI;
+
+      model RuntimeAuthorization {
+        @extension("x-go-name", "CanonicalPayload")
+        @extension("x-go-type", "json.RawMessage")
+        @extension("x-go-type-skip-optional-pointer", true)
+        canonical_payload?: Record<unknown>;
+
+        @extension("x-go-name", "CanonicalSHA256")
+        @extension("x-go-type-skip-optional-pointer", true)
+        canonical_sha256?: string;
+
+        @extension("x-go-name", "KeyID")
+        @extension("x-go-type-skip-optional-pointer", true)
+        key_id?: string;
+
+        @extension("x-go-type-skip-optional-pointer", true)
+        snapshot_version?: int64;
+
+        valid_until?: utcDateTime;
+      }
+    `)
+
+    const model = program
+      .getGlobalNamespaceType()
+      .models.get('RuntimeAuthorization')!
+    const fields = Object.fromEntries(
+      goFields(program, model).map((field) => [
+        field.wireName,
+        { name: field.name, type: field.typeText },
+      ]),
+    )
+
+    expect(fields).toEqual({
+      canonical_payload: {
+        name: 'CanonicalPayload',
+        type: 'json.RawMessage',
+      },
+      canonical_sha256: { name: 'CanonicalSHA256', type: 'string' },
+      key_id: { name: 'KeyID', type: 'string' },
+      snapshot_version: { name: 'SnapshotVersion', type: 'int64' },
+      valid_until: { name: 'ValidUntil', type: '*time.Time' },
+    })
   })
 })

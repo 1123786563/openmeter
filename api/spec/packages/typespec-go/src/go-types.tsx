@@ -12,6 +12,8 @@ import {
 } from '@typespec/compiler'
 import { $ } from '@typespec/compiler/typekit'
 import { isHeader, isStatusCode, isVisible, Visibility } from '@typespec/http'
+import { getExtensions } from '@typespec/openapi'
+import { json } from './stdlib.js'
 
 const stripNamePrefixes = new WeakMap<Program, readonly string[]>()
 const resolvedTypeNames = new WeakMap<Program, Map<string, string>>()
@@ -182,16 +184,24 @@ export function goFields(
       continue
     }
 
-    const mapped = goType(program, property.type, options)
+    const extensions = getExtensions(program, property)
+    const mapped = goPropertyType(program, property, options)
     const optional =
       property.optional ||
       (options.mode === 'input' && property.defaultValue !== undefined)
+    const skipOptionalPointer =
+      extensions.get('x-go-type-skip-optional-pointer') === true
     const pointerOptional =
       optional &&
+      !skipOptionalPointer &&
       !mapped.jsonNullable &&
       (!mapped.nilable || options.mode === 'input')
+    const nameOverride = extensions.get('x-go-name')
     fields.push({
-      name: goExportedName(property.name),
+      name:
+        typeof nameOverride === 'string'
+          ? nameOverride
+          : goExportedName(property.name),
       wireName: resolveEncodedName(
         program,
         property as ModelProperty & { name: string },
@@ -213,6 +223,30 @@ export function goFields(
   }
 
   return fields
+}
+
+function goPropertyType(
+  program: Program,
+  property: ModelProperty,
+  options: GoTypeOptions,
+): GoTypeResult {
+  const extensions = getExtensions(program, property)
+  const typeOverride = extensions.get('x-go-type')
+  if (typeOverride === undefined) {
+    return goType(program, property.type, options)
+  }
+
+  if (typeOverride === 'json.RawMessage') {
+    return {
+      type: json.RawMessage,
+      text: 'json.RawMessage',
+      nilable: true,
+    }
+  }
+
+  throw new Error(
+    `unsupported property x-go-type override ${String(typeOverride)}`,
+  )
 }
 
 export function goType(

@@ -1,4 +1,7 @@
+import "@typespec/openapi";
 import "../shared/index.tsp";
+
+using TypeSpec.OpenAPI;
 
 namespace AIUsage;
 
@@ -144,32 +147,42 @@ model RuntimeAuthorization {
    * Canonical JSON payload for consumer-side verification. The raw bytes of
    * the canonicalized authorization object, used to derive the SHA-256 hash
    * and verify the signature.
-   */
+  */
+  @extension("x-go-name", "CanonicalPayload")
+  @extension("x-go-type", "json.RawMessage")
+  @extension("x-go-type-skip-optional-pointer", true)
   canonical_payload?: Record<unknown>;
 
   /**
    * SHA-256 hash of the canonical payload, hex-encoded.
    */
+  @extension("x-go-name", "CanonicalSHA256")
+  @extension("x-go-type-skip-optional-pointer", true)
   canonical_sha256?: string;
 
   /**
    * The key ID used to sign the authorization.
    */
+  @extension("x-go-name", "KeyID")
+  @extension("x-go-type-skip-optional-pointer", true)
   key_id?: string;
 
   /**
    * Base64-encoded signature over the canonical payload.
    */
+  @extension("x-go-type-skip-optional-pointer", true)
   signature?: string;
 
   /**
    * The snapshot version for watermark tracking.
    */
+  @extension("x-go-type-skip-optional-pointer", true)
   snapshot_version?: int64;
 
   /**
    * The subject or tenant key this authorization applies to.
    */
+  @extension("x-go-type-skip-optional-pointer", true)
   subject_key?: string;
 
   /**
