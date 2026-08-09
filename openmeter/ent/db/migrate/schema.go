@@ -4347,14 +4347,6 @@ var (
 					Where: "deleted_at IS NULL",
 				},
 			},
-			{
-				Name:    "customercreditlimit_namespace_customer_id_custom_currency_id_enabled",
-				Unique:  true,
-				Columns: []*schema.Column{CustomerCreditLimitsColumns[1], CustomerCreditLimitsColumns[5], CustomerCreditLimitsColumns[7], CustomerCreditLimitsColumns[11]},
-				Annotation: &entsql.IndexAnnotation{
-					Where: "deleted_at IS NULL",
-				},
-			},
 		},
 	}
 	// CustomerSubjectsColumns holds the columns for the "customer_subjects" table.

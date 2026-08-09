@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	"entgo.io/ent/dialect/sql"
+	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/billingcustomerlock"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -53,7 +55,23 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 	if err != nil {
 		return nil, fmt.Errorf("serialize currency: %w", err)
 	}
-	overlaps, err := a.db.CustomerCreditLimit.Query().Where(
+	// BillingCustomerLock serializes all limit creation for a customer across
+	// processes. The overlap read and insert happen under the same FOR UPDATE
+	// transaction, so two overlapping enabled intervals cannot both commit.
+	if err := a.db.BillingCustomerLock.Create().SetNamespace(input.Namespace).SetCustomerID(input.CustomerID).OnConflict(entsql.DoNothing()).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("upsert customer limit lock: %w", err)
+	}
+	tx, err := a.db.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin customer limit transaction: %w", err)
+	}
+	defer tx.Rollback()
+	if _, err := tx.BillingCustomerLock.Query().Where(
+		billingcustomerlock.Namespace(input.Namespace), billingcustomerlock.CustomerID(input.CustomerID),
+	).ForUpdate().First(ctx); err != nil {
+		return nil, fmt.Errorf("lock customer credit limits: %w", err)
+	}
+	overlaps, err := tx.CustomerCreditLimit.Query().Where(
 		customercreditlimit.NamespaceEQ(input.Namespace),
 		customercreditlimit.CustomerIDEQ(input.CustomerID),
 		customercreditlimit.CurrencyEQ(string(currency)),
@@ -71,7 +89,7 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 		if input.EffectiveTo == nil {
 			return nil, fmt.Errorf("an overlapping active credit limit already exists for customer and currency")
 		}
-		overlaps, err = a.db.CustomerCreditLimit.Query().Where(
+		overlaps, err = tx.CustomerCreditLimit.Query().Where(
 			customercreditlimit.NamespaceEQ(input.Namespace),
 			customercreditlimit.CustomerIDEQ(input.CustomerID),
 			customercreditlimit.CurrencyEQ(string(currency)),
@@ -87,7 +105,7 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 			return nil, fmt.Errorf("an overlapping active credit limit already exists for customer and currency")
 		}
 	}
-	row, err := a.db.CustomerCreditLimit.Create().
+	row, err := tx.CustomerCreditLimit.Create().
 		SetNamespace(input.Namespace).
 		SetCustomerID(input.CustomerID).
 		SetCurrency(string(currency)).
@@ -98,6 +116,9 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create credit limit: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit customer credit limit: %w", err)
 	}
 	return mapLimit(row)
 }

@@ -46,8 +46,5 @@ func (CustomerCreditLimit) Indexes() []ent.Index {
 		index.Fields("namespace", "customer_id", "custom_currency_id", "effective_from").
 			Annotations(entsql.IndexWhere("deleted_at IS NULL")).
 			Unique(),
-		index.Fields("namespace", "customer_id", "custom_currency_id", "enabled").
-			Unique().
-			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
 	}
 }

@@ -462,9 +462,13 @@ func newChargesRegistry(
 		return nil, err
 	}
 
+	activeHoldReader, err := activeHoldReaderForCredits(creditsConfig)
+	if err != nil {
+		return nil, err
+	}
 	creditLimitService, err := creditlimit.NewService(creditlimit.Config{
 		Client: db, BalanceQuerier: balanceQuerier, AccountService: accountResolver, AccountLocker: accountService,
-		ActiveHoldReader: creditlimit.NoActiveHoldReader{},
+		ActiveHoldReader: activeHoldReader,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credit limit service: %w", err)
@@ -591,4 +595,11 @@ func newChargesRegistry(
 		CreditPurchaseService: creditPurchaseSvc,
 		RecognizerService:     recognizerService,
 	}, nil
+}
+
+func activeHoldReaderForCredits(creditsConfig config.CreditsConfiguration) (creditlimit.ActiveHoldReader, error) {
+	if creditsConfig.ReservationsEnabled {
+		return nil, fmt.Errorf("reservation persistence is enabled but no durable active hold reader is wired")
+	}
+	return creditlimit.NoActiveHoldReader{}, nil
 }
