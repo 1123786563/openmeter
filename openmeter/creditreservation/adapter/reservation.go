@@ -474,7 +474,8 @@ func mapReservation(row *entdb.CreditReservation) (creditreservation.Reservation
 		State: creditreservation.ReservationState(row.State), RateVersion: row.RateVersion,
 		Lines: lines, TotalCredits: row.CeilingCredits, ExpiresAt: row.AuthorizationExpiresAt,
 		ExecutionDeadline: row.ExecutionDeadline,
-		CommandIdentity:   creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
+		SettledCredits:    row.SettledCredits, PrepaidHold: row.PrepaidHold, EnterpriseHold: row.EnterpriseHold, SettlementLedgerGroupID: row.SettlementLedgerGroupID,
+		CommandIdentity: creditreservation.CommandIdentity{IdempotencyKey: row.IdempotencyKey, PayloadHash: row.PayloadHash},
 	}, nil
 }
 

@@ -28,6 +28,18 @@ type CreateChargeInput struct {
 	UsageEventID            string
 }
 
+func (t *txAdapter) GetChargeByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Charge, bool, error) {
+	if namespace != t.customerID.Namespace {
+		return creditreservation.Charge{}, false, fmt.Errorf("charge namespace must match customer lock")
+	}
+	row, err := findCharge(ctx, t.db, namespace, idempotencyKey)
+	if err != nil || row == nil {
+		return creditreservation.Charge{}, false, err
+	}
+	charge, err := mapCharge(row)
+	return charge, err == nil, err
+}
+
 func (t *txAdapter) CreateCharge(ctx context.Context, input CreateChargeInput) (creditreservation.Charge, bool, error) {
 	if err := input.Charge.Validate(); err != nil {
 		return creditreservation.Charge{}, false, fmt.Errorf("validate charge: %w", err)
@@ -65,6 +77,9 @@ func (t *txAdapter) CreateCharge(ctx context.Context, input CreateChargeInput) (
 		SetSettlementLedgerGroupID(input.SettlementLedgerGroupID).
 		SetReversalLedgerGroupID(input.ReversalLedgerGroupID).
 		SetUsageEventID(input.UsageEventID)
+	if input.Charge.ID != "" {
+		create.SetID(input.Charge.ID)
+	}
 	if input.Charge.ReservationID != "" {
 		create.SetReservationID(input.Charge.ReservationID)
 	}
@@ -117,6 +132,7 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 		return creditreservation.Charge{}, err
 	}
 	charge := creditreservation.Charge{
+		ID:           row.ID,
 		Currency:     row.Currency,
 		RateVersion:  "",
 		Lines:        lines,
@@ -125,6 +141,8 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 			IdempotencyKey: row.IdempotencyKey,
 			PayloadHash:    row.PayloadHash,
 		},
+		State: string(row.State), SettlementLedgerGroupID: row.SettlementLedgerGroupID,
+		ReversalLedgerGroupID: row.ReversalLedgerGroupID,
 	}
 	if row.ReservationID != nil {
 		charge.ReservationID = *row.ReservationID

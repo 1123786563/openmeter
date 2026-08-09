@@ -20,4 +20,6 @@ var (
 	ErrCustomerFenced             = errors.New("customer credit reservations are fenced")
 	ErrRefundFenceNotFound        = errors.New("active refund fence not found")
 	ErrFenceSequenceConflict      = errors.New("refund fence sequence conflict")
+	ErrSettlementNotConfigured    = errors.New("credit settlement collector is not configured")
+	ErrSettlementProvenanceAbsent = errors.New("credit settlement provenance is not persisted")
 )

@@ -215,6 +215,9 @@ func (t memoryTx) GetReservationByCommand(_ context.Context, _ string, key strin
 	}
 	return creditreservation.Reservation{}, false, nil
 }
+func (t memoryTx) GetChargeByCommand(context.Context, string, string) (creditreservation.Charge, bool, error) {
+	return creditreservation.Charge{}, false, nil
+}
 func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference, _ string) (int64, error) {
 	var held int64
 	for _, row := range t.m.rows {

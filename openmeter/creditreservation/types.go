@@ -60,17 +60,21 @@ func (c CommandIdentity) Validate() error {
 // Reservation is the temporary authorization hold for a CREDIT-denominated
 // resource call. Ledger posting is intentionally outside this package.
 type Reservation struct {
-	ID                string                       `json:"id"`
-	Namespace         string                       `json:"namespace"`
-	CustomerID        string                       `json:"customerId"`
-	Currency          currencies.CurrencyReference `json:"currency"`
-	State             ReservationState             `json:"state"`
-	RateVersion       string                       `json:"rateVersion"`
-	Lines             []RatedLine                  `json:"lines"`
-	TotalCredits      int64                        `json:"totalCredits"`
-	ExpiresAt         *time.Time                   `json:"expiresAt,omitempty"`
-	ExecutionDeadline *time.Time                   `json:"executionDeadline,omitempty"`
-	CommandIdentity   CommandIdentity              `json:"commandIdentity"`
+	ID                      string                       `json:"id"`
+	Namespace               string                       `json:"namespace"`
+	CustomerID              string                       `json:"customerId"`
+	Currency                currencies.CurrencyReference `json:"currency"`
+	State                   ReservationState             `json:"state"`
+	RateVersion             string                       `json:"rateVersion"`
+	Lines                   []RatedLine                  `json:"lines"`
+	TotalCredits            int64                        `json:"totalCredits"`
+	ExpiresAt               *time.Time                   `json:"expiresAt,omitempty"`
+	ExecutionDeadline       *time.Time                   `json:"executionDeadline,omitempty"`
+	CommandIdentity         CommandIdentity              `json:"commandIdentity"`
+	SettledCredits          int64                        `json:"settledCredits"`
+	PrepaidHold             int64                        `json:"prepaidHold"`
+	EnterpriseHold          int64                        `json:"enterpriseHold"`
+	SettlementLedgerGroupID string                       `json:"settlementLedgerGroupId,omitempty"`
 }
 
 func (r Reservation) Validate() error {
@@ -80,12 +84,16 @@ func (r Reservation) Validate() error {
 // Charge records a settlement instruction derived from a reservation. It does
 // not represent a booked ledger entry.
 type Charge struct {
-	ReservationID   string                       `json:"reservationId"`
-	Currency        currencies.CurrencyReference `json:"currency"`
-	RateVersion     string                       `json:"rateVersion"`
-	Lines           []RatedLine                  `json:"lines"`
-	TotalCredits    int64                        `json:"totalCredits"`
-	CommandIdentity CommandIdentity              `json:"commandIdentity"`
+	ID                      string                       `json:"id"`
+	ReservationID           string                       `json:"reservationId"`
+	Currency                currencies.CurrencyReference `json:"currency"`
+	RateVersion             string                       `json:"rateVersion"`
+	Lines                   []RatedLine                  `json:"lines"`
+	TotalCredits            int64                        `json:"totalCredits"`
+	CommandIdentity         CommandIdentity              `json:"commandIdentity"`
+	State                   string                       `json:"state"`
+	SettlementLedgerGroupID string                       `json:"settlementLedgerGroupId,omitempty"`
+	ReversalLedgerGroupID   string                       `json:"reversalLedgerGroupId,omitempty"`
 }
 
 // UsageEvent is the standard event payload persisted by the reservation

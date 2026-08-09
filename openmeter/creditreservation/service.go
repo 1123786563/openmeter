@@ -59,6 +59,39 @@ type UnknownInput struct {
 	PayloadHash    string
 }
 
+// SettleInput supplies the observed, already rate-version-pinned usage for an
+// executed reservation. ActualCredits may never exceed the persisted ceiling.
+// The settlement command is identity-bound independently from authorization so
+// a caller cannot accidentally change observed usage on retry.
+type SettleInput struct {
+	ID              models.NamespacedID
+	CommandIdentity CommandIdentity
+	ActualLines     []RatedLine
+	ActualCredits   int64
+	SettledAt       time.Time
+}
+
+// ChargeInput is the no-reservation path. It still uses the same command
+// identity, customer lock and collector boundary as Settle.
+type ChargeInput struct {
+	ID              models.NamespacedID
+	CustomerID      string
+	SubjectID       string
+	Operation       string
+	CommandIdentity CommandIdentity
+	Lines           []ResourceLine
+	BookedAt        time.Time
+}
+
+// ReverseChargeInput requests exactly one correction of a previously settled
+// direct charge. The service must use the stored collector realization
+// provenance; it must not infer a reversal from the current customer balance.
+type ReverseChargeInput struct {
+	ID              models.NamespacedID
+	CommandIdentity CommandIdentity
+	ReversedAt      time.Time
+}
+
 type SweepResult struct {
 	Expired int
 	Unknown int
@@ -79,4 +112,7 @@ type Service interface {
 	Release(context.Context, ReleaseInput) (Reservation, error)
 	MarkUnknown(context.Context, UnknownInput) (Reservation, error)
 	SweepExpired(context.Context, time.Time, int) (SweepResult, error)
+	Settle(context.Context, SettleInput) (Reservation, error)
+	Charge(context.Context, ChargeInput) (Charge, error)
+	ReverseCharge(context.Context, ReverseChargeInput) (Charge, error)
 }

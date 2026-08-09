@@ -20,11 +20,12 @@ type collectableReader interface {
 }
 
 type Config struct {
-	Adapter     reservationadapter.Adapter
-	Prices      creditreservation.PriceResolver
-	Collector   collectableReader
-	CreditLimit creditlimit.AllowanceResolver
-	Now         func() time.Time
+	Adapter             reservationadapter.Adapter
+	Prices              creditreservation.PriceResolver
+	Collector           collectableReader
+	SettlementCollector settlementCollector
+	CreditLimit         creditlimit.AllowanceResolver
+	Now                 func() time.Time
 }
 
 func (c Config) Validate() error {
@@ -38,6 +39,7 @@ type service struct {
 	adapter     reservationadapter.Adapter
 	prices      creditreservation.PriceResolver
 	collector   collectableReader
+	settlement  settlementCollector
 	creditLimit creditlimit.AllowanceResolver
 	now         func() time.Time
 }
@@ -56,7 +58,7 @@ func New(config Config) (creditreservation.Service, error) {
 	if limit == nil {
 		limit = creditlimit.NoopAllowanceResolver{}
 	}
-	return &service{adapter: config.Adapter, prices: config.Prices, collector: config.Collector, creditLimit: limit, now: now}, nil
+	return &service{adapter: config.Adapter, prices: config.Prices, collector: config.Collector, settlement: config.SettlementCollector, creditLimit: limit, now: now}, nil
 }
 
 func (s *service) Get(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {
