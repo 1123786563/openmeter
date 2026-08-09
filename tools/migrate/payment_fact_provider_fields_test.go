@@ -50,7 +50,6 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 							'{
 								"out_trade_no":"wx-order-1",
 								"transaction_id":"wx-payment-1",
-								"event_id":"wx-event-1",
 								"mchid":"merchant-1",
 								"appid":"application-1",
 								"amount":{"total":1234,"currency":"CNY"},
@@ -122,7 +121,7 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 					require.NoError(t, err)
 					require.Equal(t, "wx-order-1", providerOrderID)
 					require.Equal(t, "wx-payment-1", providerPaymentID.String)
-					require.Equal(t, "wx-event-1", providerEventID.String)
+					require.Equal(t, "wx-payment-1", providerEventID.String)
 					require.Equal(t, "merchant-1", merchantID.String)
 					require.Equal(t, "application-1", applicationID.String)
 					require.Equal(t, int64(1234), amountMinor)
@@ -166,7 +165,7 @@ func TestPaymentFactProviderFieldsMigrationBackfillsHistoricalFacts(t *testing.T
 						) VALUES (
 							$1, 'default', NOW(), 'duplicate-event-raw-hash', 'wechat',
 							'{}'::jsonb, NOW(), $2, 'different-provider-order',
-							'wx-event-1', 1234, 'CNY', false
+							'wx-payment-1', 1234, 'CNY', false
 						)
 					`, duplicateEventFactID, attemptID)
 					require.Error(t, err, "provider event IDs must be unique per namespace and provider")

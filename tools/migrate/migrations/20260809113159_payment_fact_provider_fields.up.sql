@@ -83,6 +83,7 @@ WITH event_candidates AS (
     COALESCE(
       NULLIF(pf."signed_payload" ->> 'provider_event_id', ''),
       NULLIF(pf."signed_payload" ->> 'event_id', ''),
+      NULLIF(pf."signed_payload" ->> 'transaction_id', ''),
       NULLIF(pf."signed_payload" ->> 'notify_id', '')
     ) AS event_id
   FROM "payment_facts" AS pf
