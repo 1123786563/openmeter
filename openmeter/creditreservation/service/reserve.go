@@ -50,7 +50,7 @@ func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveIn
 		if err != nil {
 			return err
 		}
-		held, err := tx.ActivePrepaidHold(ctx, priced.Currency)
+		held, err := tx.ActivePrepaidHold(ctx, priced.Currency, priced.Lines[0].FeatureKey)
 		if err != nil {
 			return err
 		}
@@ -95,6 +95,12 @@ func validateReserve(input creditreservation.ReserveInput) error {
 	}
 	if err := input.CommandIdentity.Validate(); err != nil {
 		return err
+	}
+	featureKey := input.Lines[0].FeatureKey
+	for _, line := range input.Lines[1:] {
+		if line.FeatureKey != featureKey {
+			return fmt.Errorf("a reservation must contain one feature")
+		}
 	}
 	return nil
 }

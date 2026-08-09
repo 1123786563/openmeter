@@ -185,7 +185,7 @@ func (t memoryTx) GetReservationByCommand(_ context.Context, _ string, key strin
 	}
 	return creditreservation.Reservation{}, false, nil
 }
-func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference) (int64, error) {
+func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference, _ string) (int64, error) {
 	var held int64
 	for _, row := range t.m.rows {
 		if row.State == creditreservation.ReservationStateActive || row.State == creditreservation.ReservationStateExecuting || row.State == creditreservation.ReservationStateUnknown || row.State == creditreservation.ReservationStateManualReview {

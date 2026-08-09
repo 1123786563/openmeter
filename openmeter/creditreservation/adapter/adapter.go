@@ -46,7 +46,7 @@ type Adapter interface {
 type TxAdapter interface {
 	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
 	GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error)
-	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference) (int64, error)
+	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference, featureKey string) (int64, error)
 	HasActiveRefundFence(ctx context.Context) (bool, error)
 	CreateReservation(ctx context.Context, input CreateReservationInput) (creditreservation.Reservation, bool, error)
 	UpdateReservation(ctx context.Context, input UpdateReservationInput) (creditreservation.Reservation, error)

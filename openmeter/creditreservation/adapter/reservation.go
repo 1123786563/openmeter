@@ -54,10 +54,10 @@ func (t *txAdapter) GetReservationByCommand(ctx context.Context, namespace, idem
 	return reservation, err == nil, err
 }
 
-// ActivePrepaidHold returns every active hold for the customer and managed
-// currency. It is intentionally conservative across features: counting a
-// broader set can only reject a call, never over-authorize one.
-func (t *txAdapter) ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference) (int64, error) {
+// ActivePrepaidHold returns active holds for one customer, managed currency,
+// and feature. Reserve validates that a hold has a single feature, so the
+// persisted aggregate hold remains unambiguous at this boundary.
+func (t *txAdapter) ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference, featureKey string) (int64, error) {
 	rows, err := t.db.CreditReservation.Query().Where(
 		dbcreditreservation.NamespaceEQ(t.customerID.Namespace),
 		dbcreditreservation.CustomerIDEQ(t.customerID.ID),
@@ -74,6 +74,13 @@ func (t *txAdapter) ActivePrepaidHold(ctx context.Context, currency currencies.C
 	var held int64
 	for _, row := range rows {
 		if !row.Currency.Equal(currency) {
+			continue
+		}
+		lines, err := unmarshalRatedLines(row.RatedLines)
+		if err != nil {
+			return 0, err
+		}
+		if len(lines) == 0 || lines[0].FeatureKey != featureKey {
 			continue
 		}
 		if row.PrepaidHold > 0 && held > int64(^uint64(0)>>1)-row.PrepaidHold {
