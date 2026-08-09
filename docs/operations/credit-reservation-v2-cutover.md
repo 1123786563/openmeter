@@ -74,16 +74,63 @@ pattern ./internal/models/...: directory prefix internal/models does not contain
 切换和删除前在生产副本执行；将每条命令的时间、操作者、结果和证据链接附入变更单。
 
 ```sql
--- WeKnora: 旧 pending 状态和 v2 Reservation 状态/年龄。
-SELECT status, count(*) FROM billing_pending_usage GROUP BY status;
-SELECT status, count(*), min(created_at) FROM provider_call_receipts GROUP BY status;
+-- WeKnora: 每个收费 tenant 必须有显式 v2 engine；先归档完整清单，再确认违规清单为 0 行。
+SELECT ea.tenant_id, COALESCE(te.engine, '<missing>') AS billing_engine, te.updated_at, te.updated_by
+FROM billing_external_accounts AS ea
+LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = ea.tenant_id
+ORDER BY ea.tenant_id;
+SELECT ea.tenant_id, COALESCE(te.engine, '<missing>') AS billing_engine
+FROM billing_external_accounts AS ea
+LEFT JOIN billing_tenant_engines AS te ON te.tenant_id = ea.tenant_id
+WHERE COALESCE(te.engine, '') <> 'openmeter_reservation_v2'
+ORDER BY ea.tenant_id;
 
--- OpenMeter: 旧 outbox 和 v2 Reservation 状态/年龄。
+-- WeKnora: 旧 pending 状态，以及本地 provider-call 执行证据的状态/年龄。
+-- receipt 不是货币真相；它只用于关联 call、provider request 和 OpenMeter Reservation。
+SELECT status, count(*) FROM billing_pending_usage GROUP BY status;
+SELECT state, count(*), min(created_at) FROM billing_provider_call_receipts GROUP BY state;
+
+-- OpenMeter: 旧 outbox 和权威 v2 Reservation 货币状态/年龄。
 SELECT count(*) FROM ai_usage_outboxes WHERE published_at IS NULL OR dead_letter_reason IS NOT NULL;
 SELECT status, count(*), min(created_at) FROM credit_reservations GROUP BY status;
 
 -- CREDIT 迁移逐客户对平必须由迁移作业输出并归档。
--- OpenMeter PostgreSQL: pg_dump --format=custom --file=<verified-backup> <database>
+```
+
+## 删除前备份与恢复验证
+
+在隔离的恢复目标执行以下命令；恢复目标必须为空的专用数据库或临时 SQLite 文件，绝不能是生产数据库。连接 URL、备份目录和文件路径只通过受控环境变量提供，禁止把凭据写入变更单或 shell 历史。归档每份备份的 SHA-256、恢复时间、操作者和 `psql`/`sqlite3` 输出。
+
+```bash
+# OpenMeter PostgreSQL。
+: "${OPENMETER_DATABASE_URL:?set a secret-managed source database URL}"
+: "${OPENMETER_RESTORE_DATABASE_URL:?set a dedicated empty restore database URL}"
+: "${OPENMETER_BACKUP:?set an absolute backup file path}"
+pg_dump --dbname="$OPENMETER_DATABASE_URL" --format=custom --file="$OPENMETER_BACKUP"
+shasum -a 256 "$OPENMETER_BACKUP"
+pg_restore --list "$OPENMETER_BACKUP" >/dev/null
+pg_restore --dbname="$OPENMETER_RESTORE_DATABASE_URL" --clean --if-exists --exit-on-error "$OPENMETER_BACKUP"
+psql "$OPENMETER_RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc 'SELECT count(*) FROM credit_reservations;'
+
+# WeKnora PostgreSQL。
+: "${WEKNORA_DATABASE_URL:?set a secret-managed source database URL}"
+: "${WEKNORA_RESTORE_DATABASE_URL:?set a dedicated empty restore database URL}"
+: "${WEKNORA_POSTGRES_BACKUP:?set an absolute backup file path}"
+pg_dump --dbname="$WEKNORA_DATABASE_URL" --format=custom --file="$WEKNORA_POSTGRES_BACKUP"
+shasum -a 256 "$WEKNORA_POSTGRES_BACKUP"
+pg_restore --list "$WEKNORA_POSTGRES_BACKUP" >/dev/null
+pg_restore --dbname="$WEKNORA_RESTORE_DATABASE_URL" --clean --if-exists --exit-on-error "$WEKNORA_POSTGRES_BACKUP"
+psql "$WEKNORA_RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atqc 'SELECT count(*) FROM billing_tenant_engines;'
+
+# WeKnora SQLite。恢复文件必须是不存在的临时文件。
+: "${WEKNORA_SQLITE_DB:?set the source SQLite database path}"
+: "${WEKNORA_SQLITE_BACKUP:?set an absolute backup file path}"
+: "${WEKNORA_SQLITE_RESTORE_DB:?set an absolute nonexistent restore file path}"
+sqlite3 "$WEKNORA_SQLITE_DB" ".backup $WEKNORA_SQLITE_BACKUP"
+shasum -a 256 "$WEKNORA_SQLITE_BACKUP"
+sqlite3 "$WEKNORA_SQLITE_BACKUP" 'PRAGMA integrity_check; PRAGMA foreign_key_check;'
+sqlite3 "$WEKNORA_SQLITE_BACKUP" ".backup $WEKNORA_SQLITE_RESTORE_DB"
+sqlite3 "$WEKNORA_SQLITE_RESTORE_DB" 'PRAGMA integrity_check; PRAGMA foreign_key_check;'
 ```
 
 ## 不可逆删除门
