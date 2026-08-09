@@ -10,6 +10,8 @@ Operational runbook for the AI Usage billing subsystem shipped in Phase 1.
 Covers signing key rotation, outbox replay, migration rollback, production
 bootstrap, and metrics/alerts.
 
+> FROZEN: `ai_usage_*`、`/ai-usage-batches`、runtime authorization 和旧 rate-entry API 不再接受功能扩展。它们只在 Reservation v2 切换窗口内提供回滚路径，并在删除门通过后整体移除。
+
 ## Feature gate
 
 AI Usage is disabled by default. Enable it in `.env` / config:
