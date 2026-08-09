@@ -181,6 +181,9 @@ func (m *memoryAdapter) GetReservation(_ context.Context, id models.NamespacedID
 	}
 	return row, nil
 }
+func (m *memoryAdapter) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
+	return creditreservation.Charge{}, fmt.Errorf("not found")
+}
 func (m *memoryAdapter) ListExpiredReservations(_ context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -217,6 +220,12 @@ func (t memoryTx) GetReservationByCommand(_ context.Context, _ string, key strin
 }
 func (t memoryTx) GetChargeByCommand(context.Context, string, string) (creditreservation.Charge, bool, error) {
 	return creditreservation.Charge{}, false, nil
+}
+func (t memoryTx) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
+	return creditreservation.Charge{}, fmt.Errorf("not found")
+}
+func (t memoryTx) ReverseCharge(context.Context, models.NamespacedID, string) (creditreservation.Charge, error) {
+	return creditreservation.Charge{}, fmt.Errorf("unused")
 }
 func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference, _ string) (int64, error) {
 	var held int64

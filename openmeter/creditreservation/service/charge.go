@@ -8,6 +8,8 @@ import (
 	decimal "github.com/alpacahq/alpacadecimal"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/ledgertransaction"
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	reservationadapter "github.com/openmeterio/openmeter/openmeter/creditreservation/adapter"
@@ -15,6 +17,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger/collector"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/models"
 	"github.com/openmeterio/openmeter/pkg/timeutil"
 )
 
@@ -127,14 +130,48 @@ func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInpu
 	return result, err
 }
 
-func (s *service) ReverseCharge(_ context.Context, input creditreservation.ReverseChargeInput) (creditreservation.Charge, error) {
+func (s *service) ReverseCharge(ctx context.Context, input creditreservation.ReverseChargeInput) (creditreservation.Charge, error) {
 	if err := input.ID.Validate(); err != nil {
 		return creditreservation.Charge{}, err
 	}
 	if err := input.CommandIdentity.Validate(); err != nil {
 		return creditreservation.Charge{}, err
 	}
-	return creditreservation.Charge{}, creditreservation.ErrSettlementProvenanceAbsent
+	if s.settlement == nil {
+		return creditreservation.Charge{}, creditreservation.ErrSettlementNotConfigured
+	}
+	original, err := s.adapter.GetCharge(ctx, input.ID)
+	if err != nil {
+		return creditreservation.Charge{}, err
+	}
+	if len(original.SettlementAllocations) == 0 {
+		return creditreservation.Charge{}, creditreservation.ErrSettlementProvenanceAbsent
+	}
+	var result creditreservation.Charge
+	err = s.adapter.WithCustomerLock(ctx, customer.CustomerID{Namespace: original.Namespace, ID: original.CustomerID}, func(tx reservationadapter.TxAdapter) error {
+		current, err := tx.GetCharge(ctx, input.ID)
+		if err != nil {
+			return err
+		}
+		if current.State == string(reservationadapter.ChargeStateReversed) {
+			result = current
+			return nil
+		}
+		requests := make(creditrealization.CorrectionRequest, 0, len(current.SettlementAllocations))
+		for _, allocation := range current.SettlementAllocations {
+			requests = append(requests, creditrealization.CorrectionRequestItem{Allocation: creditrealization.Realization{NamespacedModel: models.NamespacedModel{Namespace: current.Namespace}, CreateInput: creditrealization.CreateInput{ID: allocation.ID, LedgerTransaction: ledgertransaction.GroupReference{TransactionGroupID: allocation.GroupID}, Amount: decimal.NewFromInt(allocation.Amount), Type: creditrealization.TypeAllocation}, SortHint: allocation.SortHint}, Amount: decimal.NewFromInt(-allocation.Amount)})
+		}
+		corrections, err := s.settlement.CorrectCollectedAccrued(ctx, collector.CorrectCollectedAccruedInput{Namespace: current.Namespace, ChargeID: current.ID, CustomerID: current.CustomerID, AllocateAt: input.ReversedAt, Corrections: requests})
+		if err != nil {
+			return err
+		}
+		if len(corrections) == 0 {
+			return creditreservation.ErrSettlementProvenanceAbsent
+		}
+		result, err = tx.ReverseCharge(ctx, input.ID, corrections[0].LedgerTransaction.TransactionGroupID)
+		return err
+	})
+	return result, err
 }
 
 func (s *service) collect(ctx context.Context, namespace, chargeID, customerID string, currency currencies.CurrencyReference, lines []creditreservation.RatedLine, credits, enterpriseHold int64, bookedAt time.Time) (string, []creditreservation.SettlementAllocation, error) {

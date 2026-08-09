@@ -8,6 +8,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	dbcreditcharge "github.com/openmeterio/openmeter/openmeter/ent/db/creditcharge"
+	"github.com/openmeterio/openmeter/pkg/models"
 )
 
 type ChargeState string
@@ -40,6 +41,23 @@ func (t *txAdapter) GetChargeByCommand(ctx context.Context, namespace, idempoten
 	}
 	charge, err := mapCharge(row)
 	return charge, err == nil, err
+}
+
+func (t *txAdapter) GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error) {
+	return getCharge(ctx, t.db, id)
+}
+
+func (t *txAdapter) ReverseCharge(ctx context.Context, id models.NamespacedID, ledgerGroupID string) (creditreservation.Charge, error) {
+	affected, err := t.db.CreditCharge.Update().Where(
+		dbcreditcharge.IDEQ(id.ID), dbcreditcharge.NamespaceEQ(id.Namespace), dbcreditcharge.StateEQ(dbcreditcharge.StateSETTLED),
+	).SetState(dbcreditcharge.StateREVERSED).SetReversalLedgerGroupID(ledgerGroupID).Save(ctx)
+	if err != nil {
+		return creditreservation.Charge{}, fmt.Errorf("reverse charge: %w", err)
+	}
+	if affected != 1 {
+		return getCharge(ctx, t.db, id)
+	}
+	return getCharge(ctx, t.db, id)
 }
 
 func (t *txAdapter) CreateCharge(ctx context.Context, input CreateChargeInput) (creditreservation.Charge, bool, error) {
@@ -126,6 +144,14 @@ func findCharge(ctx context.Context, db *entdb.Client, namespace, idempotencyKey
 	return row, nil
 }
 
+func getCharge(ctx context.Context, db *entdb.Client, id models.NamespacedID) (creditreservation.Charge, error) {
+	row, err := db.CreditCharge.Query().Where(dbcreditcharge.IDEQ(id.ID), dbcreditcharge.NamespaceEQ(id.Namespace)).Only(ctx)
+	if err != nil {
+		return creditreservation.Charge{}, fmt.Errorf("get charge: %w", err)
+	}
+	return mapCharge(row)
+}
+
 func matchChargeCommand(row *entdb.CreditCharge, identity creditreservation.CommandIdentity) (creditreservation.Charge, bool, error) {
 	if row.PayloadHash != identity.PayloadHash {
 		return creditreservation.Charge{}, false, creditreservation.ErrIdempotencyConflict
@@ -140,7 +166,7 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 		return creditreservation.Charge{}, err
 	}
 	charge := creditreservation.Charge{
-		ID:           row.ID,
+		ID: row.ID, Namespace: row.Namespace, CustomerID: row.CustomerID,
 		Currency:     row.Currency,
 		RateVersion:  row.RateVersion,
 		Lines:        lines,

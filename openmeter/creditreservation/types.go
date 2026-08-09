@@ -86,6 +86,8 @@ func (r Reservation) Validate() error {
 // not represent a booked ledger entry.
 type Charge struct {
 	ID                      string                       `json:"id"`
+	Namespace               string                       `json:"namespace"`
+	CustomerID              string                       `json:"customerId"`
 	ReservationID           string                       `json:"reservationId"`
 	Currency                currencies.CurrencyReference `json:"currency"`
 	RateVersion             string                       `json:"rateVersion"`

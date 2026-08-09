@@ -40,6 +40,7 @@ func (c Config) Validate() error {
 type Adapter interface {
 	WithCustomerLock(ctx context.Context, id customer.CustomerID, fn func(TxAdapter) error) error
 	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
+	GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error)
 	ListExpiredReservations(ctx context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error)
 }
 
@@ -47,6 +48,8 @@ type TxAdapter interface {
 	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
 	GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error)
 	GetChargeByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Charge, bool, error)
+	GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error)
+	ReverseCharge(ctx context.Context, id models.NamespacedID, ledgerGroupID string) (creditreservation.Charge, error)
 	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference, featureKey string) (int64, error)
 	HasActiveRefundFence(ctx context.Context) (bool, error)
 	EstablishRefundFence(ctx context.Context, refundID string) (creditreservation.FenceResult, error)
@@ -126,4 +129,8 @@ func (a *adapter) GetReservation(ctx context.Context, id models.NamespacedID) (c
 		return creditreservation.Reservation{}, fmt.Errorf("validate reservation id: %w", err)
 	}
 	return getReservation(ctx, a.db, id)
+}
+
+func (a *adapter) GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error) {
+	return getCharge(ctx, a.db, id)
 }
