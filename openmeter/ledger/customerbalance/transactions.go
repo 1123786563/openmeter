@@ -18,6 +18,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
+	"github.com/openmeterio/openmeter/pkg/filter"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -103,16 +104,19 @@ func (i ListCreditTransactionsInput) Validate() error {
 }
 
 type CreditTransaction struct {
-	ID          models.NamespacedID
-	CreatedAt   time.Time
-	BookedAt    time.Time
-	Type        CreditTransactionType
-	Currency    currencyx.Code
-	Amount      alpacadecimal.Decimal
-	Balance     CreditTransactionBalance
-	Name        string
-	Description *string
-	Annotations models.Annotations
+	ID        models.NamespacedID
+	CreatedAt time.Time
+	BookedAt  time.Time
+	Type      CreditTransactionType
+	Currency  currencyx.Code
+	// CurrencyReference preserves managed custom identity in history while the
+	// legacy Currency code remains for existing public clients.
+	CurrencyReference *currencies.CurrencyReference
+	Amount            alpacadecimal.Decimal
+	Balance           CreditTransactionBalance
+	Name              string
+	Description       *string
+	Annotations       models.Annotations
 
 	balanceCursor *ledger.TransactionCursor
 	balanceAsOf   *time.Time
@@ -147,15 +151,21 @@ func (s *service) ListCreditTransactions(ctx context.Context, input ListCreditTr
 		return ListCreditTransactionsResult{}, err
 	}
 
+	currencyReference, err := s.resolveCurrencyReference(ctx, input.CustomerID.Namespace, input.Currency)
+	if err != nil {
+		return ListCreditTransactionsResult{}, fmt.Errorf("resolve currency identity: %w", err)
+	}
+
 	loaderInput := creditTransactionLoaderInput{
-		Limit:         input.Limit,
-		After:         input.After,
-		Before:        input.Before,
-		CustomerID:    input.CustomerID,
-		AccountID:     accountID,
-		Currency:      input.Currency,
-		AsOf:          creditTransactionsAsOf(input.AsOf),
-		FeatureFilter: normalizeFeatureFilter(input.FeatureFilter),
+		Limit:             input.Limit,
+		After:             input.After,
+		Before:            input.Before,
+		CustomerID:        input.CustomerID,
+		AccountID:         accountID,
+		Currency:          input.Currency,
+		CurrencyReference: currencyReference,
+		AsOf:              creditTransactionsAsOf(input.AsOf),
+		FeatureFilter:     normalizeFeatureFilter(input.FeatureFilter),
 	}
 
 	loadedLists := make([][]CreditTransaction, 0, len(loaders))
@@ -218,6 +228,28 @@ func (s *service) ListCreditTransactions(ctx context.Context, input ListCreditTr
 		NextCursor:     nextCursor,
 		PreviousCursor: previousCursor,
 	}, nil
+}
+
+func (s *service) resolveCurrencyReference(ctx context.Context, namespace string, code *currencyx.Code) (*currencies.CurrencyReference, error) {
+	if code == nil {
+		return nil, nil
+	}
+	if code.IsFiat() {
+		ref := currencies.NewCurrencyReference(*code)
+		return &ref, nil
+	}
+	customType := currencyx.CurrencyTypeCustom
+	result, err := s.Currencies.ListCurrencies(ctx, currencies.ListCurrenciesInput{
+		Namespace: namespace, CurrencyType: &customType, Code: &filter.FilterString{Eq: lo.ToPtr(code.String())},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Items) != 1 {
+		return nil, fmt.Errorf("managed custom currency %s not found or ambiguous", *code)
+	}
+	ref := result.Items[0].Reference()
+	return &ref, nil
 }
 
 func emptyCreditTransactions() ListCreditTransactionsResult {

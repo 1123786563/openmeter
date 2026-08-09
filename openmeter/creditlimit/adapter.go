@@ -53,10 +53,39 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 	if err != nil {
 		return nil, fmt.Errorf("serialize currency: %w", err)
 	}
-	if active, err := a.GetActive(ctx, GetActiveInput{Namespace: input.Namespace, CustomerID: input.CustomerID, Currency: input.Currency, AsOf: input.EffectiveFrom}); err != nil {
-		return nil, err
-	} else if active != nil {
-		return nil, fmt.Errorf("an active credit limit already exists for customer and currency")
+	overlaps, err := a.db.CustomerCreditLimit.Query().Where(
+		customercreditlimit.NamespaceEQ(input.Namespace),
+		customercreditlimit.CustomerIDEQ(input.CustomerID),
+		customercreditlimit.CurrencyEQ(string(currency)),
+		customercreditlimit.Enabled(true),
+		customercreditlimit.DeletedAtIsNil(),
+		customercreditlimit.Or(customercreditlimit.EffectiveToIsNil(), customercreditlimit.EffectiveToGT(input.EffectiveFrom)),
+	).Exist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("check overlapping credit limit: %w", err)
+	}
+	if overlaps {
+		// Existing end > new start is necessary. When this new interval has an
+		// end, only existing starts before it overlap; the query below checks
+		// that additional half of the interval intersection.
+		if input.EffectiveTo == nil {
+			return nil, fmt.Errorf("an overlapping active credit limit already exists for customer and currency")
+		}
+		overlaps, err = a.db.CustomerCreditLimit.Query().Where(
+			customercreditlimit.NamespaceEQ(input.Namespace),
+			customercreditlimit.CustomerIDEQ(input.CustomerID),
+			customercreditlimit.CurrencyEQ(string(currency)),
+			customercreditlimit.Enabled(true),
+			customercreditlimit.DeletedAtIsNil(),
+			customercreditlimit.EffectiveFromLT(*input.EffectiveTo),
+			customercreditlimit.Or(customercreditlimit.EffectiveToIsNil(), customercreditlimit.EffectiveToGT(input.EffectiveFrom)),
+		).Exist(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("check overlapping credit limit: %w", err)
+		}
+		if overlaps {
+			return nil, fmt.Errorf("an overlapping active credit limit already exists for customer and currency")
+		}
 	}
 	row, err := a.db.CustomerCreditLimit.Create().
 		SetNamespace(input.Namespace).

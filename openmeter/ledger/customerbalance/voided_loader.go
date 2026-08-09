@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/ledger/creditvoid"
 )
 
@@ -21,18 +20,12 @@ func newVoidedCreditTransactionLoader(s *service) creditTransactionLoader {
 func (l *voidedCreditTransactionLoader) Load(ctx context.Context, input creditTransactionLoaderInput) (creditTransactionLoaderResult, error) {
 	result, err := l.service.CreditVoid.ListVoidedCreditImpacts(ctx, creditvoid.ListVoidedCreditImpactsInput{
 		CustomerID: input.CustomerID,
-		Currency: func() *currencies.CurrencyReference {
-			if input.Currency == nil {
-				return nil
-			}
-			currency := currencies.NewCurrencyReference(*input.Currency)
-			return &currency
-		}(),
-		AsOf:   input.AsOf,
-		After:  input.After,
-		Before: input.Before,
-		Limit:  input.Limit,
-		Route:  featureFilterRoute(input.FeatureFilter),
+		Currency:   input.CurrencyReference,
+		AsOf:       input.AsOf,
+		After:      input.After,
+		Before:     input.Before,
+		Limit:      input.Limit,
+		Route:      featureFilterRoute(input.FeatureFilter),
 	})
 	if err != nil {
 		return creditTransactionLoaderResult{}, fmt.Errorf("list voided credit impacts: %w", err)
@@ -42,15 +35,16 @@ func (l *voidedCreditTransactionLoader) Load(ctx context.Context, input creditTr
 	for _, impact := range result.Items {
 		balanceAsOf := impact.VoidedAt
 		items = append(items, CreditTransaction{
-			ID:          impact.ID,
-			CreatedAt:   impact.CreatedAt,
-			BookedAt:    impact.VoidedAt,
-			Type:        CreditTransactionTypeVoided,
-			Currency:    impact.Currency.Code,
-			Amount:      impact.Amount,
-			Name:        "Voided credits",
-			Annotations: impact.Annotations,
-			balanceAsOf: &balanceAsOf,
+			ID:                impact.ID,
+			CreatedAt:         impact.CreatedAt,
+			BookedAt:          impact.VoidedAt,
+			Type:              CreditTransactionTypeVoided,
+			Currency:          impact.Currency.Code,
+			CurrencyReference: &impact.Currency,
+			Amount:            impact.Amount,
+			Name:              "Voided credits",
+			Annotations:       impact.Annotations,
+			balanceAsOf:       &balanceAsOf,
 		})
 	}
 

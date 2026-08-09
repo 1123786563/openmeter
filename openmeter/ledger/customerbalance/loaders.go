@@ -7,20 +7,22 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 )
 
 type creditTransactionLoaderInput struct {
-	Limit         int
-	After         *ledger.TransactionCursor
-	Before        *ledger.TransactionCursor
-	CustomerID    customer.CustomerID
-	AccountID     string
-	Currency      *currencyx.Code
-	AsOf          time.Time
-	FeatureFilter mo.Option[creditpurchase.FeatureFilters]
+	Limit             int
+	After             *ledger.TransactionCursor
+	Before            *ledger.TransactionCursor
+	CustomerID        customer.CustomerID
+	AccountID         string
+	Currency          *currencyx.Code
+	CurrencyReference *currencies.CurrencyReference
+	AsOf              time.Time
+	FeatureFilter     mo.Option[creditpurchase.FeatureFilters]
 }
 
 type creditTransactionLoaderResult struct {

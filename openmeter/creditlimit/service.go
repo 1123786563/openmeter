@@ -58,6 +58,23 @@ type AllowanceResolver interface {
 	Remaining(ctx context.Context, input RemainingInput) (*alpacadecimal.Decimal, error)
 }
 
+// ActiveHoldReader is the reservation boundary for enterprise receivables.
+// Task 3's reservation persistence must implement it using the same customer,
+// currency, and booking-time identity. It intentionally has no feature key:
+// a customer/currency enterprise limit is shared across every feature.
+type ActiveHoldReader interface {
+	ActiveHeldAmount(ctx context.Context, input ActiveHoldInput) (alpacadecimal.Decimal, error)
+}
+
+type ActiveHoldInput struct {
+	Namespace  string
+	CustomerID string
+	Currency   currencies.CurrencyReference
+	AsOf       time.Time
+}
+
+var ErrActiveHoldReaderUnavailable = errors.New("active enterprise hold reader is required")
+
 // NoopAllowanceResolver is an explicit "no active limit" dependency for
 // callers that do not provision enterprise credit policy.
 type NoopAllowanceResolver struct{}
@@ -75,10 +92,11 @@ type RemainingInput struct {
 }
 
 type Config struct {
-	Client         *entdb.Client
-	BalanceQuerier ledger.BalanceQuerier
-	AccountService ledger.AccountResolver
-	AccountLocker  ledger.AccountLocker
+	Client           *entdb.Client
+	BalanceQuerier   ledger.BalanceQuerier
+	AccountService   ledger.AccountResolver
+	AccountLocker    ledger.AccountLocker
+	ActiveHoldReader ActiveHoldReader
 }
 
 func (c Config) Validate() error {
@@ -98,10 +116,11 @@ func (c Config) Validate() error {
 }
 
 type service struct {
-	adapter        Adapter
-	balanceQuerier ledger.BalanceQuerier
-	accountService ledger.AccountResolver
-	accountLocker  ledger.AccountLocker
+	adapter          Adapter
+	balanceQuerier   ledger.BalanceQuerier
+	accountService   ledger.AccountResolver
+	accountLocker    ledger.AccountLocker
+	activeHoldReader ActiveHoldReader
 }
 
 func NewService(config Config) (Service, error) {
@@ -110,10 +129,11 @@ func NewService(config Config) (Service, error) {
 	}
 
 	return &service{
-		adapter:        NewAdapter(config.Client),
-		balanceQuerier: config.BalanceQuerier,
-		accountService: config.AccountService,
-		accountLocker:  config.AccountLocker,
+		adapter:          NewAdapter(config.Client),
+		balanceQuerier:   config.BalanceQuerier,
+		accountService:   config.AccountService,
+		accountLocker:    config.AccountLocker,
+		activeHoldReader: config.ActiveHoldReader,
 	}, nil
 }
 
@@ -142,6 +162,9 @@ func (s *service) Remaining(ctx context.Context, input RemainingInput) (*alpacad
 	if err := input.Validate(); err != nil {
 		return nil, err
 	}
+	if s.activeHoldReader == nil {
+		return nil, ErrActiveHoldReaderUnavailable
+	}
 
 	limit, err := s.GetActive(ctx, GetActiveInput{
 		Namespace: input.Namespace, CustomerID: input.CustomerID, Currency: input.Currency, AsOf: input.AsOf,
@@ -158,21 +181,31 @@ func (s *service) Remaining(ctx context.Context, input RemainingInput) (*alpacad
 		return nil, fmt.Errorf("lock customer receivable account: %w", err)
 	}
 
+	// Enterprise limits are scoped by customer and managed currency, not by
+	// feature. FeatureKey is retained in RemainingInput only as event context.
 	route := ledger.RouteFilter{Currency: input.Currency}
-	if input.FeatureKey != "" {
-		route.MatchFeature = input.FeatureKey
-	}
 	asOf := input.AsOf
 	balance, err := s.balanceQuerier.GetAccountBalance(ctx, accounts.ReceivableAccount, route, ledger.BalanceQuery{AsOf: &asOf})
 	if err != nil {
 		return nil, fmt.Errorf("get customer receivable balance: %w", err)
 	}
 
-	remaining := limit.Amount.Add(balance)
+	held, err := s.activeHoldReader.ActiveHeldAmount(ctx, ActiveHoldInput{
+		Namespace: input.Namespace, CustomerID: input.CustomerID, Currency: input.Currency, AsOf: input.AsOf,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get active enterprise holds: %w", err)
+	}
+	remaining := remainingAllowance(limit.Amount, balance, held)
+	return &remaining, nil
+}
+
+func remainingAllowance(limit, receivableBalance, held alpacadecimal.Decimal) alpacadecimal.Decimal {
+	remaining := limit.Add(receivableBalance).Sub(held)
 	if remaining.IsNegative() {
 		remaining = alpacadecimal.Zero
 	}
-	return &remaining, nil
+	return remaining
 }
 
 func (i GetActiveInput) Validate() error {

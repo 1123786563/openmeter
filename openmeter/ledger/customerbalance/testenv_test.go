@@ -341,6 +341,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		BalanceQuerier:    base.Deps.HistoricalLedger,
 		Breakage:          breakageService,
 		CreditVoid:        creditVoidService,
+		Currencies:        currencyService,
 	})
 	require.NoError(t, err)
 
