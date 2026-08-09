@@ -157,6 +157,34 @@ func (_u *CreditChargeUpdate) SetNillableReversalLedgerGroupID(v *string) *Credi
 	return _u
 }
 
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (_u *CreditChargeUpdate) SetReversalIdempotencyKey(v string) *CreditChargeUpdate {
+	_u.mutation.SetReversalIdempotencyKey(v)
+	return _u
+}
+
+// SetNillableReversalIdempotencyKey sets the "reversal_idempotency_key" field if the given value is not nil.
+func (_u *CreditChargeUpdate) SetNillableReversalIdempotencyKey(v *string) *CreditChargeUpdate {
+	if v != nil {
+		_u.SetReversalIdempotencyKey(*v)
+	}
+	return _u
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (_u *CreditChargeUpdate) SetReversalPayloadHash(v string) *CreditChargeUpdate {
+	_u.mutation.SetReversalPayloadHash(v)
+	return _u
+}
+
+// SetNillableReversalPayloadHash sets the "reversal_payload_hash" field if the given value is not nil.
+func (_u *CreditChargeUpdate) SetNillableReversalPayloadHash(v *string) *CreditChargeUpdate {
+	if v != nil {
+		_u.SetReversalPayloadHash(*v)
+	}
+	return _u
+}
+
 // SetUsageEventID sets the "usage_event_id" field.
 func (_u *CreditChargeUpdate) SetUsageEventID(v string) *CreditChargeUpdate {
 	_u.mutation.SetUsageEventID(v)
@@ -282,6 +310,12 @@ func (_u *CreditChargeUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.ReversalLedgerGroupID(); ok {
 		_spec.SetField(creditcharge.FieldReversalLedgerGroupID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReversalIdempotencyKey(); ok {
+		_spec.SetField(creditcharge.FieldReversalIdempotencyKey, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReversalPayloadHash(); ok {
+		_spec.SetField(creditcharge.FieldReversalPayloadHash, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UsageEventID(); ok {
 		_spec.SetField(creditcharge.FieldUsageEventID, field.TypeString, value)
@@ -429,6 +463,34 @@ func (_u *CreditChargeUpdateOne) SetReversalLedgerGroupID(v string) *CreditCharg
 func (_u *CreditChargeUpdateOne) SetNillableReversalLedgerGroupID(v *string) *CreditChargeUpdateOne {
 	if v != nil {
 		_u.SetReversalLedgerGroupID(*v)
+	}
+	return _u
+}
+
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (_u *CreditChargeUpdateOne) SetReversalIdempotencyKey(v string) *CreditChargeUpdateOne {
+	_u.mutation.SetReversalIdempotencyKey(v)
+	return _u
+}
+
+// SetNillableReversalIdempotencyKey sets the "reversal_idempotency_key" field if the given value is not nil.
+func (_u *CreditChargeUpdateOne) SetNillableReversalIdempotencyKey(v *string) *CreditChargeUpdateOne {
+	if v != nil {
+		_u.SetReversalIdempotencyKey(*v)
+	}
+	return _u
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (_u *CreditChargeUpdateOne) SetReversalPayloadHash(v string) *CreditChargeUpdateOne {
+	_u.mutation.SetReversalPayloadHash(v)
+	return _u
+}
+
+// SetNillableReversalPayloadHash sets the "reversal_payload_hash" field if the given value is not nil.
+func (_u *CreditChargeUpdateOne) SetNillableReversalPayloadHash(v *string) *CreditChargeUpdateOne {
+	if v != nil {
+		_u.SetReversalPayloadHash(*v)
 	}
 	return _u
 }
@@ -588,6 +650,12 @@ func (_u *CreditChargeUpdateOne) sqlSave(ctx context.Context) (_node *CreditChar
 	}
 	if value, ok := _u.mutation.ReversalLedgerGroupID(); ok {
 		_spec.SetField(creditcharge.FieldReversalLedgerGroupID, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReversalIdempotencyKey(); ok {
+		_spec.SetField(creditcharge.FieldReversalIdempotencyKey, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.ReversalPayloadHash(); ok {
+		_spec.SetField(creditcharge.FieldReversalPayloadHash, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.UsageEventID(); ok {
 		_spec.SetField(creditcharge.FieldUsageEventID, field.TypeString, value)

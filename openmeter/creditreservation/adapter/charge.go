@@ -47,10 +47,10 @@ func (t *txAdapter) GetCharge(ctx context.Context, id models.NamespacedID) (cred
 	return getCharge(ctx, t.db, id)
 }
 
-func (t *txAdapter) ReverseCharge(ctx context.Context, id models.NamespacedID, ledgerGroupID string) (creditreservation.Charge, error) {
+func (t *txAdapter) ReverseCharge(ctx context.Context, id models.NamespacedID, identity creditreservation.CommandIdentity, ledgerGroupID string) (creditreservation.Charge, error) {
 	affected, err := t.db.CreditCharge.Update().Where(
 		dbcreditcharge.IDEQ(id.ID), dbcreditcharge.NamespaceEQ(id.Namespace), dbcreditcharge.StateEQ(dbcreditcharge.StateSETTLED),
-	).SetState(dbcreditcharge.StateREVERSED).SetReversalLedgerGroupID(ledgerGroupID).Save(ctx)
+	).SetState(dbcreditcharge.StateREVERSED).SetReversalLedgerGroupID(ledgerGroupID).SetReversalIdempotencyKey(identity.IdempotencyKey).SetReversalPayloadHash(identity.PayloadHash).Save(ctx)
 	if err != nil {
 		return creditreservation.Charge{}, fmt.Errorf("reverse charge: %w", err)
 	}
@@ -177,6 +177,7 @@ func mapCharge(row *entdb.CreditCharge) (creditreservation.Charge, error) {
 		},
 		State: string(row.State), SettlementLedgerGroupID: row.SettlementLedgerGroupID,
 		ReversalLedgerGroupID: row.ReversalLedgerGroupID,
+		ReversalIdentity:      creditreservation.CommandIdentity{IdempotencyKey: row.ReversalIdempotencyKey, PayloadHash: row.ReversalPayloadHash},
 	}
 	allocations, err := unmarshalSettlementAllocations(row.SettlementAllocations)
 	if err != nil {

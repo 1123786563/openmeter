@@ -57,6 +57,10 @@ type CreditCharge struct {
 	SettlementLedgerGroupID string `json:"settlement_ledger_group_id,omitempty"`
 	// ReversalLedgerGroupID holds the value of the "reversal_ledger_group_id" field.
 	ReversalLedgerGroupID string `json:"reversal_ledger_group_id,omitempty"`
+	// ReversalIdempotencyKey holds the value of the "reversal_idempotency_key" field.
+	ReversalIdempotencyKey string `json:"reversal_idempotency_key,omitempty"`
+	// ReversalPayloadHash holds the value of the "reversal_payload_hash" field.
+	ReversalPayloadHash string `json:"reversal_payload_hash,omitempty"`
 	// UsageEventID holds the value of the "usage_event_id" field.
 	UsageEventID string `json:"usage_event_id,omitempty"`
 	selectValues sql.SelectValues
@@ -71,7 +75,7 @@ func (*CreditCharge) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case creditcharge.FieldAmount:
 			values[i] = new(sql.NullInt64)
-		case creditcharge.FieldID, creditcharge.FieldNamespace, creditcharge.FieldReservationID, creditcharge.FieldCustomerID, creditcharge.FieldSubjectID, creditcharge.FieldOperation, creditcharge.FieldIdempotencyKey, creditcharge.FieldPayloadHash, creditcharge.FieldCustomCurrencyID, creditcharge.FieldRateVersion, creditcharge.FieldState, creditcharge.FieldSettlementLedgerGroupID, creditcharge.FieldReversalLedgerGroupID, creditcharge.FieldUsageEventID:
+		case creditcharge.FieldID, creditcharge.FieldNamespace, creditcharge.FieldReservationID, creditcharge.FieldCustomerID, creditcharge.FieldSubjectID, creditcharge.FieldOperation, creditcharge.FieldIdempotencyKey, creditcharge.FieldPayloadHash, creditcharge.FieldCustomCurrencyID, creditcharge.FieldRateVersion, creditcharge.FieldState, creditcharge.FieldSettlementLedgerGroupID, creditcharge.FieldReversalLedgerGroupID, creditcharge.FieldReversalIdempotencyKey, creditcharge.FieldReversalPayloadHash, creditcharge.FieldUsageEventID:
 			values[i] = new(sql.NullString)
 		case creditcharge.FieldCreatedAt, creditcharge.FieldUpdatedAt, creditcharge.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -219,6 +223,18 @@ func (_m *CreditCharge) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ReversalLedgerGroupID = value.String
 			}
+		case creditcharge.FieldReversalIdempotencyKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reversal_idempotency_key", values[i])
+			} else if value.Valid {
+				_m.ReversalIdempotencyKey = value.String
+			}
+		case creditcharge.FieldReversalPayloadHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reversal_payload_hash", values[i])
+			} else if value.Valid {
+				_m.ReversalPayloadHash = value.String
+			}
 		case creditcharge.FieldUsageEventID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field usage_event_id", values[i])
@@ -323,6 +339,12 @@ func (_m *CreditCharge) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("reversal_ledger_group_id=")
 	builder.WriteString(_m.ReversalLedgerGroupID)
+	builder.WriteString(", ")
+	builder.WriteString("reversal_idempotency_key=")
+	builder.WriteString(_m.ReversalIdempotencyKey)
+	builder.WriteString(", ")
+	builder.WriteString("reversal_payload_hash=")
+	builder.WriteString(_m.ReversalPayloadHash)
 	builder.WriteString(", ")
 	builder.WriteString("usage_event_id=")
 	builder.WriteString(_m.UsageEventID)

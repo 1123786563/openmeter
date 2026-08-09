@@ -52,6 +52,10 @@ const (
 	FieldSettlementLedgerGroupID = "settlement_ledger_group_id"
 	// FieldReversalLedgerGroupID holds the string denoting the reversal_ledger_group_id field in the database.
 	FieldReversalLedgerGroupID = "reversal_ledger_group_id"
+	// FieldReversalIdempotencyKey holds the string denoting the reversal_idempotency_key field in the database.
+	FieldReversalIdempotencyKey = "reversal_idempotency_key"
+	// FieldReversalPayloadHash holds the string denoting the reversal_payload_hash field in the database.
+	FieldReversalPayloadHash = "reversal_payload_hash"
 	// FieldUsageEventID holds the string denoting the usage_event_id field in the database.
 	FieldUsageEventID = "usage_event_id"
 	// Table holds the table name of the creditcharge in the database.
@@ -80,6 +84,8 @@ var Columns = []string{
 	FieldState,
 	FieldSettlementLedgerGroupID,
 	FieldReversalLedgerGroupID,
+	FieldReversalIdempotencyKey,
+	FieldReversalPayloadHash,
 	FieldUsageEventID,
 }
 
@@ -118,6 +124,10 @@ var (
 	DefaultSettlementLedgerGroupID string
 	// DefaultReversalLedgerGroupID holds the default value on creation for the "reversal_ledger_group_id" field.
 	DefaultReversalLedgerGroupID string
+	// DefaultReversalIdempotencyKey holds the default value on creation for the "reversal_idempotency_key" field.
+	DefaultReversalIdempotencyKey string
+	// DefaultReversalPayloadHash holds the default value on creation for the "reversal_payload_hash" field.
+	DefaultReversalPayloadHash string
 	// DefaultUsageEventID holds the default value on creation for the "usage_event_id" field.
 	DefaultUsageEventID string
 	// DefaultID holds the default value on creation for the "id" field.
@@ -233,6 +243,16 @@ func BySettlementLedgerGroupID(opts ...sql.OrderTermOption) OrderOption {
 // ByReversalLedgerGroupID orders the results by the reversal_ledger_group_id field.
 func ByReversalLedgerGroupID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldReversalLedgerGroupID, opts...).ToFunc()
+}
+
+// ByReversalIdempotencyKey orders the results by the reversal_idempotency_key field.
+func ByReversalIdempotencyKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReversalIdempotencyKey, opts...).ToFunc()
+}
+
+// ByReversalPayloadHash orders the results by the reversal_payload_hash field.
+func ByReversalPayloadHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReversalPayloadHash, opts...).ToFunc()
 }
 
 // ByUsageEventID orders the results by the usage_event_id field.

@@ -154,6 +154,9 @@ func (s *service) ReverseCharge(ctx context.Context, input creditreservation.Rev
 			return err
 		}
 		if current.State == string(reservationadapter.ChargeStateReversed) {
+			if err := matchesReverseIdentity(current.ReversalIdentity, input.CommandIdentity); err != nil {
+				return err
+			}
 			result = current
 			return nil
 		}
@@ -168,10 +171,17 @@ func (s *service) ReverseCharge(ctx context.Context, input creditreservation.Rev
 		if len(corrections) == 0 {
 			return creditreservation.ErrSettlementProvenanceAbsent
 		}
-		result, err = tx.ReverseCharge(ctx, input.ID, corrections[0].LedgerTransaction.TransactionGroupID)
+		result, err = tx.ReverseCharge(ctx, input.ID, input.CommandIdentity, corrections[0].LedgerTransaction.TransactionGroupID)
 		return err
 	})
 	return result, err
+}
+
+func matchesReverseIdentity(stored, requested creditreservation.CommandIdentity) error {
+	if stored != requested {
+		return creditreservation.ErrIdempotencyConflict
+	}
+	return nil
 }
 
 func (s *service) collect(ctx context.Context, namespace, chargeID, customerID string, currency currencies.CurrencyReference, lines []creditreservation.RatedLine, credits, enterpriseHold int64, bookedAt time.Time) (string, []creditreservation.SettlementAllocation, error) {

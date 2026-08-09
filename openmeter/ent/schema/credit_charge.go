@@ -47,6 +47,8 @@ func (CreditCharge) Fields() []ent.Field {
 		field.Enum("state").Values("SETTLED", "REVERSED"),
 		field.String("settlement_ledger_group_id").Default(""),
 		field.String("reversal_ledger_group_id").Default(""),
+		field.String("reversal_idempotency_key").Default(""),
+		field.String("reversal_payload_hash").Default(""),
 		field.String("usage_event_id").Default(""),
 	}
 }

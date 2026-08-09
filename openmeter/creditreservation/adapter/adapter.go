@@ -49,7 +49,7 @@ type TxAdapter interface {
 	GetReservationByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Reservation, bool, error)
 	GetChargeByCommand(ctx context.Context, namespace, idempotencyKey string) (creditreservation.Charge, bool, error)
 	GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error)
-	ReverseCharge(ctx context.Context, id models.NamespacedID, ledgerGroupID string) (creditreservation.Charge, error)
+	ReverseCharge(ctx context.Context, id models.NamespacedID, identity creditreservation.CommandIdentity, ledgerGroupID string) (creditreservation.Charge, error)
 	ActivePrepaidHold(ctx context.Context, currency currencies.CurrencyReference, featureKey string) (int64, error)
 	HasActiveRefundFence(ctx context.Context) (bool, error)
 	EstablishRefundFence(ctx context.Context, refundID string) (creditreservation.FenceResult, error)

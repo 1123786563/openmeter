@@ -139,6 +139,16 @@ func ReversalLedgerGroupID(v string) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldEQ(FieldReversalLedgerGroupID, v))
 }
 
+// ReversalIdempotencyKey applies equality check predicate on the "reversal_idempotency_key" field. It's identical to ReversalIdempotencyKeyEQ.
+func ReversalIdempotencyKey(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalPayloadHash applies equality check predicate on the "reversal_payload_hash" field. It's identical to ReversalPayloadHashEQ.
+func ReversalPayloadHash(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldReversalPayloadHash, v))
+}
+
 // UsageEventID applies equality check predicate on the "usage_event_id" field. It's identical to UsageEventIDEQ.
 func UsageEventID(v string) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldEQ(FieldUsageEventID, v))
@@ -1067,6 +1077,136 @@ func ReversalLedgerGroupIDEqualFold(v string) predicate.CreditCharge {
 // ReversalLedgerGroupIDContainsFold applies the ContainsFold predicate on the "reversal_ledger_group_id" field.
 func ReversalLedgerGroupIDContainsFold(v string) predicate.CreditCharge {
 	return predicate.CreditCharge(sql.FieldContainsFold(FieldReversalLedgerGroupID, v))
+}
+
+// ReversalIdempotencyKeyEQ applies the EQ predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyNEQ applies the NEQ predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyNEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNEQ(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyIn applies the In predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldIn(FieldReversalIdempotencyKey, vs...))
+}
+
+// ReversalIdempotencyKeyNotIn applies the NotIn predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyNotIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNotIn(FieldReversalIdempotencyKey, vs...))
+}
+
+// ReversalIdempotencyKeyGT applies the GT predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyGT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGT(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyGTE applies the GTE predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyGTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGTE(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyLT applies the LT predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyLT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLT(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyLTE applies the LTE predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyLTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLTE(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyContains applies the Contains predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyContains(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContains(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyHasPrefix applies the HasPrefix predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyHasPrefix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasPrefix(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyHasSuffix applies the HasSuffix predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyHasSuffix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasSuffix(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyEqualFold applies the EqualFold predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyEqualFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEqualFold(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalIdempotencyKeyContainsFold applies the ContainsFold predicate on the "reversal_idempotency_key" field.
+func ReversalIdempotencyKeyContainsFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContainsFold(FieldReversalIdempotencyKey, v))
+}
+
+// ReversalPayloadHashEQ applies the EQ predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEQ(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashNEQ applies the NEQ predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashNEQ(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNEQ(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashIn applies the In predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldIn(FieldReversalPayloadHash, vs...))
+}
+
+// ReversalPayloadHashNotIn applies the NotIn predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashNotIn(vs ...string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldNotIn(FieldReversalPayloadHash, vs...))
+}
+
+// ReversalPayloadHashGT applies the GT predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashGT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGT(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashGTE applies the GTE predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashGTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldGTE(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashLT applies the LT predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashLT(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLT(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashLTE applies the LTE predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashLTE(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldLTE(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashContains applies the Contains predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashContains(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContains(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashHasPrefix applies the HasPrefix predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashHasPrefix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasPrefix(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashHasSuffix applies the HasSuffix predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashHasSuffix(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldHasSuffix(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashEqualFold applies the EqualFold predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashEqualFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldEqualFold(FieldReversalPayloadHash, v))
+}
+
+// ReversalPayloadHashContainsFold applies the ContainsFold predicate on the "reversal_payload_hash" field.
+func ReversalPayloadHashContainsFold(v string) predicate.CreditCharge {
+	return predicate.CreditCharge(sql.FieldContainsFold(FieldReversalPayloadHash, v))
 }
 
 // UsageEventIDEQ applies the EQ predicate on the "usage_event_id" field.

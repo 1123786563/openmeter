@@ -3999,6 +3999,8 @@ var (
 		{Name: "state", Type: field.TypeEnum, Enums: []string{"SETTLED", "REVERSED"}},
 		{Name: "settlement_ledger_group_id", Type: field.TypeString, Default: ""},
 		{Name: "reversal_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "reversal_idempotency_key", Type: field.TypeString, Default: ""},
+		{Name: "reversal_payload_hash", Type: field.TypeString, Default: ""},
 		{Name: "usage_event_id", Type: field.TypeString, Default: ""},
 	}
 	// CreditChargesTable holds the schema information for the "credit_charges" table.

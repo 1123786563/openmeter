@@ -97,6 +97,7 @@ type Charge struct {
 	State                   string                       `json:"state"`
 	SettlementLedgerGroupID string                       `json:"settlementLedgerGroupId,omitempty"`
 	ReversalLedgerGroupID   string                       `json:"reversalLedgerGroupId,omitempty"`
+	ReversalIdentity        CommandIdentity              `json:"reversalIdentity,omitempty"`
 	SettlementAllocations   []SettlementAllocation       `json:"settlementAllocations,omitempty"`
 }
 

@@ -2332,8 +2332,16 @@ func init() {
 	creditchargeDescReversalLedgerGroupID := creditchargeFields[14].Descriptor()
 	// creditcharge.DefaultReversalLedgerGroupID holds the default value on creation for the reversal_ledger_group_id field.
 	creditcharge.DefaultReversalLedgerGroupID = creditchargeDescReversalLedgerGroupID.Default.(string)
+	// creditchargeDescReversalIdempotencyKey is the schema descriptor for reversal_idempotency_key field.
+	creditchargeDescReversalIdempotencyKey := creditchargeFields[15].Descriptor()
+	// creditcharge.DefaultReversalIdempotencyKey holds the default value on creation for the reversal_idempotency_key field.
+	creditcharge.DefaultReversalIdempotencyKey = creditchargeDescReversalIdempotencyKey.Default.(string)
+	// creditchargeDescReversalPayloadHash is the schema descriptor for reversal_payload_hash field.
+	creditchargeDescReversalPayloadHash := creditchargeFields[16].Descriptor()
+	// creditcharge.DefaultReversalPayloadHash holds the default value on creation for the reversal_payload_hash field.
+	creditcharge.DefaultReversalPayloadHash = creditchargeDescReversalPayloadHash.Default.(string)
 	// creditchargeDescUsageEventID is the schema descriptor for usage_event_id field.
-	creditchargeDescUsageEventID := creditchargeFields[15].Descriptor()
+	creditchargeDescUsageEventID := creditchargeFields[17].Descriptor()
 	// creditcharge.DefaultUsageEventID holds the default value on creation for the usage_event_id field.
 	creditcharge.DefaultUsageEventID = creditchargeDescUsageEventID.Default.(string)
 	// creditchargeDescID is the schema descriptor for id field.

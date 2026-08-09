@@ -88050,6 +88050,8 @@ type CreditChargeMutation struct {
 	state                        *creditcharge.State
 	settlement_ledger_group_id   *string
 	reversal_ledger_group_id     *string
+	reversal_idempotency_key     *string
+	reversal_payload_hash        *string
 	usage_event_id               *string
 	clearedFields                map[string]struct{}
 	done                         bool
@@ -88934,6 +88936,78 @@ func (m *CreditChargeMutation) ResetReversalLedgerGroupID() {
 	m.reversal_ledger_group_id = nil
 }
 
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (m *CreditChargeMutation) SetReversalIdempotencyKey(s string) {
+	m.reversal_idempotency_key = &s
+}
+
+// ReversalIdempotencyKey returns the value of the "reversal_idempotency_key" field in the mutation.
+func (m *CreditChargeMutation) ReversalIdempotencyKey() (r string, exists bool) {
+	v := m.reversal_idempotency_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReversalIdempotencyKey returns the old "reversal_idempotency_key" field's value of the CreditCharge entity.
+// If the CreditCharge object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditChargeMutation) OldReversalIdempotencyKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReversalIdempotencyKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReversalIdempotencyKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReversalIdempotencyKey: %w", err)
+	}
+	return oldValue.ReversalIdempotencyKey, nil
+}
+
+// ResetReversalIdempotencyKey resets all changes to the "reversal_idempotency_key" field.
+func (m *CreditChargeMutation) ResetReversalIdempotencyKey() {
+	m.reversal_idempotency_key = nil
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (m *CreditChargeMutation) SetReversalPayloadHash(s string) {
+	m.reversal_payload_hash = &s
+}
+
+// ReversalPayloadHash returns the value of the "reversal_payload_hash" field in the mutation.
+func (m *CreditChargeMutation) ReversalPayloadHash() (r string, exists bool) {
+	v := m.reversal_payload_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReversalPayloadHash returns the old "reversal_payload_hash" field's value of the CreditCharge entity.
+// If the CreditCharge object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditChargeMutation) OldReversalPayloadHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReversalPayloadHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReversalPayloadHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReversalPayloadHash: %w", err)
+	}
+	return oldValue.ReversalPayloadHash, nil
+}
+
+// ResetReversalPayloadHash resets all changes to the "reversal_payload_hash" field.
+func (m *CreditChargeMutation) ResetReversalPayloadHash() {
+	m.reversal_payload_hash = nil
+}
+
 // SetUsageEventID sets the "usage_event_id" field.
 func (m *CreditChargeMutation) SetUsageEventID(s string) {
 	m.usage_event_id = &s
@@ -89004,7 +89078,7 @@ func (m *CreditChargeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CreditChargeMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 22)
 	if m.namespace != nil {
 		fields = append(fields, creditcharge.FieldNamespace)
 	}
@@ -89062,6 +89136,12 @@ func (m *CreditChargeMutation) Fields() []string {
 	if m.reversal_ledger_group_id != nil {
 		fields = append(fields, creditcharge.FieldReversalLedgerGroupID)
 	}
+	if m.reversal_idempotency_key != nil {
+		fields = append(fields, creditcharge.FieldReversalIdempotencyKey)
+	}
+	if m.reversal_payload_hash != nil {
+		fields = append(fields, creditcharge.FieldReversalPayloadHash)
+	}
 	if m.usage_event_id != nil {
 		fields = append(fields, creditcharge.FieldUsageEventID)
 	}
@@ -89111,6 +89191,10 @@ func (m *CreditChargeMutation) Field(name string) (ent.Value, bool) {
 		return m.SettlementLedgerGroupID()
 	case creditcharge.FieldReversalLedgerGroupID:
 		return m.ReversalLedgerGroupID()
+	case creditcharge.FieldReversalIdempotencyKey:
+		return m.ReversalIdempotencyKey()
+	case creditcharge.FieldReversalPayloadHash:
+		return m.ReversalPayloadHash()
 	case creditcharge.FieldUsageEventID:
 		return m.UsageEventID()
 	}
@@ -89160,6 +89244,10 @@ func (m *CreditChargeMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldSettlementLedgerGroupID(ctx)
 	case creditcharge.FieldReversalLedgerGroupID:
 		return m.OldReversalLedgerGroupID(ctx)
+	case creditcharge.FieldReversalIdempotencyKey:
+		return m.OldReversalIdempotencyKey(ctx)
+	case creditcharge.FieldReversalPayloadHash:
+		return m.OldReversalPayloadHash(ctx)
 	case creditcharge.FieldUsageEventID:
 		return m.OldUsageEventID(ctx)
 	}
@@ -89303,6 +89391,20 @@ func (m *CreditChargeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetReversalLedgerGroupID(v)
+		return nil
+	case creditcharge.FieldReversalIdempotencyKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReversalIdempotencyKey(v)
+		return nil
+	case creditcharge.FieldReversalPayloadHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReversalPayloadHash(v)
 		return nil
 	case creditcharge.FieldUsageEventID:
 		v, ok := value.(string)
@@ -89452,6 +89554,12 @@ func (m *CreditChargeMutation) ResetField(name string) error {
 		return nil
 	case creditcharge.FieldReversalLedgerGroupID:
 		m.ResetReversalLedgerGroupID()
+		return nil
+	case creditcharge.FieldReversalIdempotencyKey:
+		m.ResetReversalIdempotencyKey()
+		return nil
+	case creditcharge.FieldReversalPayloadHash:
+		m.ResetReversalPayloadHash()
 		return nil
 	case creditcharge.FieldUsageEventID:
 		m.ResetUsageEventID()

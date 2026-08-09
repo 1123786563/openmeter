@@ -224,7 +224,7 @@ func (t memoryTx) GetChargeByCommand(context.Context, string, string) (creditres
 func (t memoryTx) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("not found")
 }
-func (t memoryTx) ReverseCharge(context.Context, models.NamespacedID, string) (creditreservation.Charge, error) {
+func (t memoryTx) ReverseCharge(context.Context, models.NamespacedID, creditreservation.CommandIdentity, string) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("unused")
 }
 func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference, _ string) (int64, error) {

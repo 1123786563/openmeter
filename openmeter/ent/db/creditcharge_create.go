@@ -203,6 +203,34 @@ func (_c *CreditChargeCreate) SetNillableReversalLedgerGroupID(v *string) *Credi
 	return _c
 }
 
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (_c *CreditChargeCreate) SetReversalIdempotencyKey(v string) *CreditChargeCreate {
+	_c.mutation.SetReversalIdempotencyKey(v)
+	return _c
+}
+
+// SetNillableReversalIdempotencyKey sets the "reversal_idempotency_key" field if the given value is not nil.
+func (_c *CreditChargeCreate) SetNillableReversalIdempotencyKey(v *string) *CreditChargeCreate {
+	if v != nil {
+		_c.SetReversalIdempotencyKey(*v)
+	}
+	return _c
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (_c *CreditChargeCreate) SetReversalPayloadHash(v string) *CreditChargeCreate {
+	_c.mutation.SetReversalPayloadHash(v)
+	return _c
+}
+
+// SetNillableReversalPayloadHash sets the "reversal_payload_hash" field if the given value is not nil.
+func (_c *CreditChargeCreate) SetNillableReversalPayloadHash(v *string) *CreditChargeCreate {
+	if v != nil {
+		_c.SetReversalPayloadHash(*v)
+	}
+	return _c
+}
+
 // SetUsageEventID sets the "usage_event_id" field.
 func (_c *CreditChargeCreate) SetUsageEventID(v string) *CreditChargeCreate {
 	_c.mutation.SetUsageEventID(v)
@@ -285,6 +313,14 @@ func (_c *CreditChargeCreate) defaults() {
 	if _, ok := _c.mutation.ReversalLedgerGroupID(); !ok {
 		v := creditcharge.DefaultReversalLedgerGroupID
 		_c.mutation.SetReversalLedgerGroupID(v)
+	}
+	if _, ok := _c.mutation.ReversalIdempotencyKey(); !ok {
+		v := creditcharge.DefaultReversalIdempotencyKey
+		_c.mutation.SetReversalIdempotencyKey(v)
+	}
+	if _, ok := _c.mutation.ReversalPayloadHash(); !ok {
+		v := creditcharge.DefaultReversalPayloadHash
+		_c.mutation.SetReversalPayloadHash(v)
 	}
 	if _, ok := _c.mutation.UsageEventID(); !ok {
 		v := creditcharge.DefaultUsageEventID
@@ -385,6 +421,12 @@ func (_c *CreditChargeCreate) check() error {
 	}
 	if _, ok := _c.mutation.ReversalLedgerGroupID(); !ok {
 		return &ValidationError{Name: "reversal_ledger_group_id", err: errors.New(`db: missing required field "CreditCharge.reversal_ledger_group_id"`)}
+	}
+	if _, ok := _c.mutation.ReversalIdempotencyKey(); !ok {
+		return &ValidationError{Name: "reversal_idempotency_key", err: errors.New(`db: missing required field "CreditCharge.reversal_idempotency_key"`)}
+	}
+	if _, ok := _c.mutation.ReversalPayloadHash(); !ok {
+		return &ValidationError{Name: "reversal_payload_hash", err: errors.New(`db: missing required field "CreditCharge.reversal_payload_hash"`)}
 	}
 	if _, ok := _c.mutation.UsageEventID(); !ok {
 		return &ValidationError{Name: "usage_event_id", err: errors.New(`db: missing required field "CreditCharge.usage_event_id"`)}
@@ -500,6 +542,14 @@ func (_c *CreditChargeCreate) createSpec() (*CreditCharge, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.ReversalLedgerGroupID(); ok {
 		_spec.SetField(creditcharge.FieldReversalLedgerGroupID, field.TypeString, value)
 		_node.ReversalLedgerGroupID = value
+	}
+	if value, ok := _c.mutation.ReversalIdempotencyKey(); ok {
+		_spec.SetField(creditcharge.FieldReversalIdempotencyKey, field.TypeString, value)
+		_node.ReversalIdempotencyKey = value
+	}
+	if value, ok := _c.mutation.ReversalPayloadHash(); ok {
+		_spec.SetField(creditcharge.FieldReversalPayloadHash, field.TypeString, value)
+		_node.ReversalPayloadHash = value
 	}
 	if value, ok := _c.mutation.UsageEventID(); ok {
 		_spec.SetField(creditcharge.FieldUsageEventID, field.TypeString, value)
@@ -674,6 +724,30 @@ func (u *CreditChargeUpsert) SetReversalLedgerGroupID(v string) *CreditChargeUps
 // UpdateReversalLedgerGroupID sets the "reversal_ledger_group_id" field to the value that was provided on create.
 func (u *CreditChargeUpsert) UpdateReversalLedgerGroupID() *CreditChargeUpsert {
 	u.SetExcluded(creditcharge.FieldReversalLedgerGroupID)
+	return u
+}
+
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (u *CreditChargeUpsert) SetReversalIdempotencyKey(v string) *CreditChargeUpsert {
+	u.Set(creditcharge.FieldReversalIdempotencyKey, v)
+	return u
+}
+
+// UpdateReversalIdempotencyKey sets the "reversal_idempotency_key" field to the value that was provided on create.
+func (u *CreditChargeUpsert) UpdateReversalIdempotencyKey() *CreditChargeUpsert {
+	u.SetExcluded(creditcharge.FieldReversalIdempotencyKey)
+	return u
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (u *CreditChargeUpsert) SetReversalPayloadHash(v string) *CreditChargeUpsert {
+	u.Set(creditcharge.FieldReversalPayloadHash, v)
+	return u
+}
+
+// UpdateReversalPayloadHash sets the "reversal_payload_hash" field to the value that was provided on create.
+func (u *CreditChargeUpsert) UpdateReversalPayloadHash() *CreditChargeUpsert {
+	u.SetExcluded(creditcharge.FieldReversalPayloadHash)
 	return u
 }
 
@@ -904,6 +978,34 @@ func (u *CreditChargeUpsertOne) SetReversalLedgerGroupID(v string) *CreditCharge
 func (u *CreditChargeUpsertOne) UpdateReversalLedgerGroupID() *CreditChargeUpsertOne {
 	return u.Update(func(s *CreditChargeUpsert) {
 		s.UpdateReversalLedgerGroupID()
+	})
+}
+
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (u *CreditChargeUpsertOne) SetReversalIdempotencyKey(v string) *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetReversalIdempotencyKey(v)
+	})
+}
+
+// UpdateReversalIdempotencyKey sets the "reversal_idempotency_key" field to the value that was provided on create.
+func (u *CreditChargeUpsertOne) UpdateReversalIdempotencyKey() *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateReversalIdempotencyKey()
+	})
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (u *CreditChargeUpsertOne) SetReversalPayloadHash(v string) *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetReversalPayloadHash(v)
+	})
+}
+
+// UpdateReversalPayloadHash sets the "reversal_payload_hash" field to the value that was provided on create.
+func (u *CreditChargeUpsertOne) UpdateReversalPayloadHash() *CreditChargeUpsertOne {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateReversalPayloadHash()
 	})
 }
 
@@ -1303,6 +1405,34 @@ func (u *CreditChargeUpsertBulk) SetReversalLedgerGroupID(v string) *CreditCharg
 func (u *CreditChargeUpsertBulk) UpdateReversalLedgerGroupID() *CreditChargeUpsertBulk {
 	return u.Update(func(s *CreditChargeUpsert) {
 		s.UpdateReversalLedgerGroupID()
+	})
+}
+
+// SetReversalIdempotencyKey sets the "reversal_idempotency_key" field.
+func (u *CreditChargeUpsertBulk) SetReversalIdempotencyKey(v string) *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetReversalIdempotencyKey(v)
+	})
+}
+
+// UpdateReversalIdempotencyKey sets the "reversal_idempotency_key" field to the value that was provided on create.
+func (u *CreditChargeUpsertBulk) UpdateReversalIdempotencyKey() *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateReversalIdempotencyKey()
+	})
+}
+
+// SetReversalPayloadHash sets the "reversal_payload_hash" field.
+func (u *CreditChargeUpsertBulk) SetReversalPayloadHash(v string) *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.SetReversalPayloadHash(v)
+	})
+}
+
+// UpdateReversalPayloadHash sets the "reversal_payload_hash" field to the value that was provided on create.
+func (u *CreditChargeUpsertBulk) UpdateReversalPayloadHash() *CreditChargeUpsertBulk {
+	return u.Update(func(s *CreditChargeUpsert) {
+		s.UpdateReversalPayloadHash()
 	})
 }
 
