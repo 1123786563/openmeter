@@ -75,6 +75,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -2530,6 +2531,49 @@ func init() {
 	customerairatepackageDescID := customerairatepackageMixinFields0[0].Descriptor()
 	// customerairatepackage.DefaultID holds the default value on creation for the id field.
 	customerairatepackage.DefaultID = customerairatepackageDescID.Default.(func() string)
+	customercreditlimitMixin := schema.CustomerCreditLimit{}.Mixin()
+	customercreditlimitMixinFields0 := customercreditlimitMixin[0].Fields()
+	_ = customercreditlimitMixinFields0
+	customercreditlimitMixinFields1 := customercreditlimitMixin[1].Fields()
+	_ = customercreditlimitMixinFields1
+	customercreditlimitMixinFields2 := customercreditlimitMixin[2].Fields()
+	_ = customercreditlimitMixinFields2
+	customercreditlimitFields := schema.CustomerCreditLimit{}.Fields()
+	_ = customercreditlimitFields
+	// customercreditlimitDescNamespace is the schema descriptor for namespace field.
+	customercreditlimitDescNamespace := customercreditlimitMixinFields1[0].Descriptor()
+	// customercreditlimit.NamespaceValidator is a validator for the "namespace" field. It is called by the builders before save.
+	customercreditlimit.NamespaceValidator = customercreditlimitDescNamespace.Validators[0].(func(string) error)
+	// customercreditlimitDescCreatedAt is the schema descriptor for created_at field.
+	customercreditlimitDescCreatedAt := customercreditlimitMixinFields2[0].Descriptor()
+	// customercreditlimit.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customercreditlimit.DefaultCreatedAt = customercreditlimitDescCreatedAt.Default.(func() time.Time)
+	// customercreditlimitDescUpdatedAt is the schema descriptor for updated_at field.
+	customercreditlimitDescUpdatedAt := customercreditlimitMixinFields2[1].Descriptor()
+	// customercreditlimit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customercreditlimit.DefaultUpdatedAt = customercreditlimitDescUpdatedAt.Default.(func() time.Time)
+	// customercreditlimit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customercreditlimit.UpdateDefaultUpdatedAt = customercreditlimitDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// customercreditlimitDescCustomerID is the schema descriptor for customer_id field.
+	customercreditlimitDescCustomerID := customercreditlimitFields[0].Descriptor()
+	// customercreditlimit.CustomerIDValidator is a validator for the "customer_id" field. It is called by the builders before save.
+	customercreditlimit.CustomerIDValidator = customercreditlimitDescCustomerID.Validators[0].(func(string) error)
+	// customercreditlimitDescCurrency is the schema descriptor for currency field.
+	customercreditlimitDescCurrency := customercreditlimitFields[1].Descriptor()
+	// customercreditlimit.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	customercreditlimit.CurrencyValidator = customercreditlimitDescCurrency.Validators[0].(func(string) error)
+	// customercreditlimitDescCustomCurrencyID is the schema descriptor for custom_currency_id field.
+	customercreditlimitDescCustomCurrencyID := customercreditlimitFields[2].Descriptor()
+	// customercreditlimit.CustomCurrencyIDValidator is a validator for the "custom_currency_id" field. It is called by the builders before save.
+	customercreditlimit.CustomCurrencyIDValidator = customercreditlimitDescCustomCurrencyID.Validators[0].(func(string) error)
+	// customercreditlimitDescEnabled is the schema descriptor for enabled field.
+	customercreditlimitDescEnabled := customercreditlimitFields[6].Descriptor()
+	// customercreditlimit.DefaultEnabled holds the default value on creation for the enabled field.
+	customercreditlimit.DefaultEnabled = customercreditlimitDescEnabled.Default.(bool)
+	// customercreditlimitDescID is the schema descriptor for id field.
+	customercreditlimitDescID := customercreditlimitMixinFields0[0].Descriptor()
+	// customercreditlimit.DefaultID holds the default value on creation for the id field.
+	customercreditlimit.DefaultID = customercreditlimitDescID.Default.(func() string)
 	customersubjectsMixin := schema.CustomerSubjects{}.Mixin()
 	customersubjectsMixinFields0 := customersubjectsMixin[0].Fields()
 	_ = customersubjectsMixinFields0

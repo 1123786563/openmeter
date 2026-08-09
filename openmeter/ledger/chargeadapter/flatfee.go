@@ -11,6 +11,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/meta"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/ledgertransaction"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/openmeter/ledger/collector"
@@ -23,6 +24,7 @@ type flatFeeHandler struct {
 	ledger    ledger.Ledger
 	deps      transactions.ResolverDependencies
 	collector collector.Service
+	allowance creditlimit.AllowanceResolver
 }
 
 var _ flatfee.Handler = (*flatFeeHandler)(nil)
@@ -31,11 +33,16 @@ func NewFlatFeeHandler(
 	ledger ledger.Ledger,
 	deps transactions.ResolverDependencies,
 	collectorService collector.Service,
+	allowanceResolver creditlimit.AllowanceResolver,
 ) flatfee.Handler {
+	if allowanceResolver == nil {
+		allowanceResolver = creditlimit.NoopAllowanceResolver{}
+	}
 	return &flatFeeHandler{
 		ledger:    ledger,
 		deps:      deps,
 		collector: collectorService,
+		allowance: allowanceResolver,
 	}
 }
 
@@ -61,6 +68,17 @@ func (h *flatFeeHandler) OnAllocateCredits(ctx context.Context, input flatfee.On
 		return nil, fmt.Errorf("allocate credits: %w", err)
 	}
 
+	var receivableLimit *alpacadecimal.Decimal
+	var err error
+	if intent.GetSettlementMode() == productcatalog.CreditOnlySettlementMode {
+		receivableLimit, err = h.allowance.Remaining(ctx, creditlimit.RemainingInput{
+			Namespace: input.Charge.Namespace, CustomerID: intent.GetCustomerID(), Currency: intent.GetCurrency().Reference(), FeatureKey: intent.GetFeatureKey(), AsOf: input.BookedAt,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("resolve remaining credit allowance: %w", err)
+		}
+	}
+
 	realizations, err := h.collector.CollectToAccrued(ctx, collector.CollectToAccruedInput{
 		Namespace:         input.Charge.Namespace,
 		ChargeID:          input.Charge.ID,
@@ -75,6 +93,7 @@ func (h *flatFeeHandler) OnAllocateCredits(ctx context.Context, input flatfee.On
 		ServicePeriod:     input.ServicePeriod,
 		FeatureKey:        intent.GetFeatureKey(),
 		Amount:            input.PreTaxAmountToAllocate,
+		ReceivableLimit:   receivableLimit,
 	})
 	if err != nil {
 		return nil, err

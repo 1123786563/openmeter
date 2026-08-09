@@ -14,7 +14,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/alpacahq/alpacadecimal"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgercreditvoidrecord"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -93,7 +92,7 @@ func (_c *LedgerCreditVoidRecordCreate) SetCustomerID(v string) *LedgerCreditVoi
 }
 
 // SetCurrency sets the "currency" field.
-func (_c *LedgerCreditVoidRecordCreate) SetCurrency(v currencyx.Code) *LedgerCreditVoidRecordCreate {
+func (_c *LedgerCreditVoidRecordCreate) SetCurrency(v string) *LedgerCreditVoidRecordCreate {
 	_c.mutation.SetCurrency(v)
 	return _c
 }
@@ -228,7 +227,7 @@ func (_c *LedgerCreditVoidRecordCreate) check() error {
 		return &ValidationError{Name: "currency", err: errors.New(`db: missing required field "LedgerCreditVoidRecord.currency"`)}
 	}
 	if v, ok := _c.mutation.Currency(); ok {
-		if err := ledgercreditvoidrecord.CurrencyValidator(string(v)); err != nil {
+		if err := ledgercreditvoidrecord.CurrencyValidator(v); err != nil {
 			return &ValidationError{Name: "currency", err: fmt.Errorf(`db: validator failed for field "LedgerCreditVoidRecord.currency": %w`, err)}
 		}
 	}

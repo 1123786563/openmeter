@@ -7,7 +7,6 @@ import (
 	"entgo.io/ent/schema/index"
 	"github.com/alpacahq/alpacadecimal"
 
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"
 )
 
@@ -39,7 +38,6 @@ func (LedgerCreditVoidRecord) Fields() []ent.Field {
 			NotEmpty().
 			Immutable(),
 		field.String("currency").
-			GoType(currencyx.Code("")).
 			NotEmpty().
 			Immutable(),
 		field.Time("voided_at").

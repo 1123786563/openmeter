@@ -79,6 +79,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -252,6 +253,7 @@ func checkColumn(t, c string) error {
 			customcurrency.Table:                                   customcurrency.ValidColumn,
 			customer.Table:                                         customer.ValidColumn,
 			customerairatepackage.Table:                            customerairatepackage.ValidColumn,
+			customercreditlimit.Table:                              customercreditlimit.ValidColumn,
 			customersubjects.Table:                                 customersubjects.ValidColumn,
 			entitlement.Table:                                      entitlement.ValidColumn,
 			externalinvoiceref.Table:                               externalinvoiceref.ValidColumn,

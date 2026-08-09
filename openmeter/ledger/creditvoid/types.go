@@ -8,9 +8,9 @@ import (
 
 	"github.com/alpacahq/alpacadecimal"
 
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -22,7 +22,7 @@ type Record struct {
 	DeletedAt *time.Time
 
 	CustomerID customer.CustomerID
-	Currency   currencyx.Code
+	Currency   currencies.CurrencyReference
 	VoidedAt   time.Time
 
 	SourceChargeID string
@@ -42,7 +42,7 @@ type pendingVoidRecord struct {
 	ID         models.NamespacedID
 	Amount     alpacadecimal.Decimal
 	CustomerID customer.CustomerID
-	Currency   currencyx.Code
+	Currency   currencies.CurrencyReference
 	VoidedAt   time.Time
 
 	SourceChargeID string
@@ -120,7 +120,7 @@ func (r Record) Validate() error {
 
 type ListRecordsInput struct {
 	CustomerID customer.CustomerID
-	Currency   *currencyx.Code
+	Currency   *currencies.CurrencyReference
 	AsOf       time.Time
 	Route      ledger.RouteFilter
 }

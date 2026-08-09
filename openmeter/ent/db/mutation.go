@@ -91,6 +91,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -223,6 +224,7 @@ const (
 	TypeCustomCurrency                                   = "CustomCurrency"
 	TypeCustomer                                         = "Customer"
 	TypeCustomerAIRatePackage                            = "CustomerAIRatePackage"
+	TypeCustomerCreditLimit                              = "CustomerCreditLimit"
 	TypeCustomerSubjects                                 = "CustomerSubjects"
 	TypeEntitlement                                      = "Entitlement"
 	TypeExternalInvoiceRef                               = "ExternalInvoiceRef"
@@ -95411,6 +95413,919 @@ func (m *CustomerAIRatePackageMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown CustomerAIRatePackage edge %s", name)
 }
 
+// CustomerCreditLimitMutation represents an operation that mutates the CustomerCreditLimit nodes in the graph.
+type CustomerCreditLimitMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *string
+	namespace          *string
+	created_at         *time.Time
+	updated_at         *time.Time
+	deleted_at         *time.Time
+	customer_id        *string
+	currency           *string
+	custom_currency_id *string
+	amount             *alpacadecimal.Decimal
+	effective_from     *time.Time
+	effective_to       *time.Time
+	enabled            *bool
+	clearedFields      map[string]struct{}
+	done               bool
+	oldValue           func(context.Context) (*CustomerCreditLimit, error)
+	predicates         []predicate.CustomerCreditLimit
+}
+
+var _ ent.Mutation = (*CustomerCreditLimitMutation)(nil)
+
+// customercreditlimitOption allows management of the mutation configuration using functional options.
+type customercreditlimitOption func(*CustomerCreditLimitMutation)
+
+// newCustomerCreditLimitMutation creates new mutation for the CustomerCreditLimit entity.
+func newCustomerCreditLimitMutation(c config, op Op, opts ...customercreditlimitOption) *CustomerCreditLimitMutation {
+	m := &CustomerCreditLimitMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCustomerCreditLimit,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCustomerCreditLimitID sets the ID field of the mutation.
+func withCustomerCreditLimitID(id string) customercreditlimitOption {
+	return func(m *CustomerCreditLimitMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *CustomerCreditLimit
+		)
+		m.oldValue = func(ctx context.Context) (*CustomerCreditLimit, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().CustomerCreditLimit.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCustomerCreditLimit sets the old CustomerCreditLimit of the mutation.
+func withCustomerCreditLimit(node *CustomerCreditLimit) customercreditlimitOption {
+	return func(m *CustomerCreditLimitMutation) {
+		m.oldValue = func(context.Context) (*CustomerCreditLimit, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CustomerCreditLimitMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CustomerCreditLimitMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("db: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of CustomerCreditLimit entities.
+func (m *CustomerCreditLimitMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CustomerCreditLimitMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CustomerCreditLimitMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().CustomerCreditLimit.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetNamespace sets the "namespace" field.
+func (m *CustomerCreditLimitMutation) SetNamespace(s string) {
+	m.namespace = &s
+}
+
+// Namespace returns the value of the "namespace" field in the mutation.
+func (m *CustomerCreditLimitMutation) Namespace() (r string, exists bool) {
+	v := m.namespace
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNamespace returns the old "namespace" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldNamespace(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNamespace is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNamespace requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNamespace: %w", err)
+	}
+	return oldValue.Namespace, nil
+}
+
+// ResetNamespace resets all changes to the "namespace" field.
+func (m *CustomerCreditLimitMutation) ResetNamespace() {
+	m.namespace = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *CustomerCreditLimitMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *CustomerCreditLimitMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *CustomerCreditLimitMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *CustomerCreditLimitMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *CustomerCreditLimitMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *CustomerCreditLimitMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *CustomerCreditLimitMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *CustomerCreditLimitMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *CustomerCreditLimitMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[customercreditlimit.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *CustomerCreditLimitMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[customercreditlimit.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *CustomerCreditLimitMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, customercreditlimit.FieldDeletedAt)
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *CustomerCreditLimitMutation) SetCustomerID(s string) {
+	m.customer_id = &s
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *CustomerCreditLimitMutation) CustomerID() (r string, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldCustomerID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *CustomerCreditLimitMutation) ResetCustomerID() {
+	m.customer_id = nil
+}
+
+// SetCurrency sets the "currency" field.
+func (m *CustomerCreditLimitMutation) SetCurrency(s string) {
+	m.currency = &s
+}
+
+// Currency returns the value of the "currency" field in the mutation.
+func (m *CustomerCreditLimitMutation) Currency() (r string, exists bool) {
+	v := m.currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCurrency returns the old "currency" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldCurrency(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCurrency: %w", err)
+	}
+	return oldValue.Currency, nil
+}
+
+// ResetCurrency resets all changes to the "currency" field.
+func (m *CustomerCreditLimitMutation) ResetCurrency() {
+	m.currency = nil
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (m *CustomerCreditLimitMutation) SetCustomCurrencyID(s string) {
+	m.custom_currency_id = &s
+}
+
+// CustomCurrencyID returns the value of the "custom_currency_id" field in the mutation.
+func (m *CustomerCreditLimitMutation) CustomCurrencyID() (r string, exists bool) {
+	v := m.custom_currency_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomCurrencyID returns the old "custom_currency_id" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldCustomCurrencyID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomCurrencyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomCurrencyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomCurrencyID: %w", err)
+	}
+	return oldValue.CustomCurrencyID, nil
+}
+
+// ResetCustomCurrencyID resets all changes to the "custom_currency_id" field.
+func (m *CustomerCreditLimitMutation) ResetCustomCurrencyID() {
+	m.custom_currency_id = nil
+}
+
+// SetAmount sets the "amount" field.
+func (m *CustomerCreditLimitMutation) SetAmount(a alpacadecimal.Decimal) {
+	m.amount = &a
+}
+
+// Amount returns the value of the "amount" field in the mutation.
+func (m *CustomerCreditLimitMutation) Amount() (r alpacadecimal.Decimal, exists bool) {
+	v := m.amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAmount returns the old "amount" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldAmount(ctx context.Context) (v alpacadecimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAmount: %w", err)
+	}
+	return oldValue.Amount, nil
+}
+
+// ResetAmount resets all changes to the "amount" field.
+func (m *CustomerCreditLimitMutation) ResetAmount() {
+	m.amount = nil
+}
+
+// SetEffectiveFrom sets the "effective_from" field.
+func (m *CustomerCreditLimitMutation) SetEffectiveFrom(t time.Time) {
+	m.effective_from = &t
+}
+
+// EffectiveFrom returns the value of the "effective_from" field in the mutation.
+func (m *CustomerCreditLimitMutation) EffectiveFrom() (r time.Time, exists bool) {
+	v := m.effective_from
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveFrom returns the old "effective_from" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldEffectiveFrom(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveFrom is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveFrom requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveFrom: %w", err)
+	}
+	return oldValue.EffectiveFrom, nil
+}
+
+// ResetEffectiveFrom resets all changes to the "effective_from" field.
+func (m *CustomerCreditLimitMutation) ResetEffectiveFrom() {
+	m.effective_from = nil
+}
+
+// SetEffectiveTo sets the "effective_to" field.
+func (m *CustomerCreditLimitMutation) SetEffectiveTo(t time.Time) {
+	m.effective_to = &t
+}
+
+// EffectiveTo returns the value of the "effective_to" field in the mutation.
+func (m *CustomerCreditLimitMutation) EffectiveTo() (r time.Time, exists bool) {
+	v := m.effective_to
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEffectiveTo returns the old "effective_to" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldEffectiveTo(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEffectiveTo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEffectiveTo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEffectiveTo: %w", err)
+	}
+	return oldValue.EffectiveTo, nil
+}
+
+// ClearEffectiveTo clears the value of the "effective_to" field.
+func (m *CustomerCreditLimitMutation) ClearEffectiveTo() {
+	m.effective_to = nil
+	m.clearedFields[customercreditlimit.FieldEffectiveTo] = struct{}{}
+}
+
+// EffectiveToCleared returns if the "effective_to" field was cleared in this mutation.
+func (m *CustomerCreditLimitMutation) EffectiveToCleared() bool {
+	_, ok := m.clearedFields[customercreditlimit.FieldEffectiveTo]
+	return ok
+}
+
+// ResetEffectiveTo resets all changes to the "effective_to" field.
+func (m *CustomerCreditLimitMutation) ResetEffectiveTo() {
+	m.effective_to = nil
+	delete(m.clearedFields, customercreditlimit.FieldEffectiveTo)
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *CustomerCreditLimitMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *CustomerCreditLimitMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the CustomerCreditLimit entity.
+// If the CustomerCreditLimit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CustomerCreditLimitMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *CustomerCreditLimitMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// Where appends a list predicates to the CustomerCreditLimitMutation builder.
+func (m *CustomerCreditLimitMutation) Where(ps ...predicate.CustomerCreditLimit) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CustomerCreditLimitMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CustomerCreditLimitMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CustomerCreditLimit, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CustomerCreditLimitMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CustomerCreditLimitMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (CustomerCreditLimit).
+func (m *CustomerCreditLimitMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CustomerCreditLimitMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.namespace != nil {
+		fields = append(fields, customercreditlimit.FieldNamespace)
+	}
+	if m.created_at != nil {
+		fields = append(fields, customercreditlimit.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, customercreditlimit.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, customercreditlimit.FieldDeletedAt)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, customercreditlimit.FieldCustomerID)
+	}
+	if m.currency != nil {
+		fields = append(fields, customercreditlimit.FieldCurrency)
+	}
+	if m.custom_currency_id != nil {
+		fields = append(fields, customercreditlimit.FieldCustomCurrencyID)
+	}
+	if m.amount != nil {
+		fields = append(fields, customercreditlimit.FieldAmount)
+	}
+	if m.effective_from != nil {
+		fields = append(fields, customercreditlimit.FieldEffectiveFrom)
+	}
+	if m.effective_to != nil {
+		fields = append(fields, customercreditlimit.FieldEffectiveTo)
+	}
+	if m.enabled != nil {
+		fields = append(fields, customercreditlimit.FieldEnabled)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CustomerCreditLimitMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case customercreditlimit.FieldNamespace:
+		return m.Namespace()
+	case customercreditlimit.FieldCreatedAt:
+		return m.CreatedAt()
+	case customercreditlimit.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case customercreditlimit.FieldDeletedAt:
+		return m.DeletedAt()
+	case customercreditlimit.FieldCustomerID:
+		return m.CustomerID()
+	case customercreditlimit.FieldCurrency:
+		return m.Currency()
+	case customercreditlimit.FieldCustomCurrencyID:
+		return m.CustomCurrencyID()
+	case customercreditlimit.FieldAmount:
+		return m.Amount()
+	case customercreditlimit.FieldEffectiveFrom:
+		return m.EffectiveFrom()
+	case customercreditlimit.FieldEffectiveTo:
+		return m.EffectiveTo()
+	case customercreditlimit.FieldEnabled:
+		return m.Enabled()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CustomerCreditLimitMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case customercreditlimit.FieldNamespace:
+		return m.OldNamespace(ctx)
+	case customercreditlimit.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case customercreditlimit.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case customercreditlimit.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case customercreditlimit.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case customercreditlimit.FieldCurrency:
+		return m.OldCurrency(ctx)
+	case customercreditlimit.FieldCustomCurrencyID:
+		return m.OldCustomCurrencyID(ctx)
+	case customercreditlimit.FieldAmount:
+		return m.OldAmount(ctx)
+	case customercreditlimit.FieldEffectiveFrom:
+		return m.OldEffectiveFrom(ctx)
+	case customercreditlimit.FieldEffectiveTo:
+		return m.OldEffectiveTo(ctx)
+	case customercreditlimit.FieldEnabled:
+		return m.OldEnabled(ctx)
+	}
+	return nil, fmt.Errorf("unknown CustomerCreditLimit field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CustomerCreditLimitMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case customercreditlimit.FieldNamespace:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNamespace(v)
+		return nil
+	case customercreditlimit.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case customercreditlimit.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case customercreditlimit.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case customercreditlimit.FieldCustomerID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case customercreditlimit.FieldCurrency:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCurrency(v)
+		return nil
+	case customercreditlimit.FieldCustomCurrencyID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomCurrencyID(v)
+		return nil
+	case customercreditlimit.FieldAmount:
+		v, ok := value.(alpacadecimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAmount(v)
+		return nil
+	case customercreditlimit.FieldEffectiveFrom:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveFrom(v)
+		return nil
+	case customercreditlimit.FieldEffectiveTo:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEffectiveTo(v)
+		return nil
+	case customercreditlimit.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CustomerCreditLimit field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CustomerCreditLimitMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CustomerCreditLimitMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CustomerCreditLimitMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown CustomerCreditLimit numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CustomerCreditLimitMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(customercreditlimit.FieldDeletedAt) {
+		fields = append(fields, customercreditlimit.FieldDeletedAt)
+	}
+	if m.FieldCleared(customercreditlimit.FieldEffectiveTo) {
+		fields = append(fields, customercreditlimit.FieldEffectiveTo)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CustomerCreditLimitMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CustomerCreditLimitMutation) ClearField(name string) error {
+	switch name {
+	case customercreditlimit.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	case customercreditlimit.FieldEffectiveTo:
+		m.ClearEffectiveTo()
+		return nil
+	}
+	return fmt.Errorf("unknown CustomerCreditLimit nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CustomerCreditLimitMutation) ResetField(name string) error {
+	switch name {
+	case customercreditlimit.FieldNamespace:
+		m.ResetNamespace()
+		return nil
+	case customercreditlimit.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case customercreditlimit.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case customercreditlimit.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case customercreditlimit.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case customercreditlimit.FieldCurrency:
+		m.ResetCurrency()
+		return nil
+	case customercreditlimit.FieldCustomCurrencyID:
+		m.ResetCustomCurrencyID()
+		return nil
+	case customercreditlimit.FieldAmount:
+		m.ResetAmount()
+		return nil
+	case customercreditlimit.FieldEffectiveFrom:
+		m.ResetEffectiveFrom()
+		return nil
+	case customercreditlimit.FieldEffectiveTo:
+		m.ResetEffectiveTo()
+		return nil
+	case customercreditlimit.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	}
+	return fmt.Errorf("unknown CustomerCreditLimit field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CustomerCreditLimitMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CustomerCreditLimitMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CustomerCreditLimitMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CustomerCreditLimitMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CustomerCreditLimitMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CustomerCreditLimitMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CustomerCreditLimitMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown CustomerCreditLimit unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CustomerCreditLimitMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown CustomerCreditLimit edge %s", name)
+}
+
 // CustomerSubjectsMutation represents an operation that mutates the CustomerSubjects nodes in the graph.
 type CustomerSubjectsMutation struct {
 	config
@@ -108715,7 +109630,7 @@ type LedgerCreditVoidRecordMutation struct {
 	deleted_at                *time.Time
 	amount                    *alpacadecimal.Decimal
 	customer_id               *string
-	currency                  *currencyx.Code
+	currency                  *string
 	voided_at                 *time.Time
 	source_charge_id          *string
 	void_transaction_group_id *string
@@ -109111,12 +110026,12 @@ func (m *LedgerCreditVoidRecordMutation) ResetCustomerID() {
 }
 
 // SetCurrency sets the "currency" field.
-func (m *LedgerCreditVoidRecordMutation) SetCurrency(c currencyx.Code) {
-	m.currency = &c
+func (m *LedgerCreditVoidRecordMutation) SetCurrency(s string) {
+	m.currency = &s
 }
 
 // Currency returns the value of the "currency" field in the mutation.
-func (m *LedgerCreditVoidRecordMutation) Currency() (r currencyx.Code, exists bool) {
+func (m *LedgerCreditVoidRecordMutation) Currency() (r string, exists bool) {
 	v := m.currency
 	if v == nil {
 		return
@@ -109127,7 +110042,7 @@ func (m *LedgerCreditVoidRecordMutation) Currency() (r currencyx.Code, exists bo
 // OldCurrency returns the old "currency" field's value of the LedgerCreditVoidRecord entity.
 // If the LedgerCreditVoidRecord object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *LedgerCreditVoidRecordMutation) OldCurrency(ctx context.Context) (v currencyx.Code, err error) {
+func (m *LedgerCreditVoidRecordMutation) OldCurrency(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCurrency is only allowed on UpdateOne operations")
 	}
@@ -109571,7 +110486,7 @@ func (m *LedgerCreditVoidRecordMutation) SetField(name string, value ent.Value) 
 		m.SetCustomerID(v)
 		return nil
 	case ledgercreditvoidrecord.FieldCurrency:
-		v, ok := value.(currencyx.Code)
+		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

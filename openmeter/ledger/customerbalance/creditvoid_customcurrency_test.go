@@ -59,7 +59,7 @@ func TestCreditVoidCustomCurrency(t *testing.T) {
 	result, err := env.CreditVoidService.VoidCreditPurchase(t.Context(), creditvoid.VoidCreditPurchaseInput{
 		CustomerID: env.CustomerID,
 		ChargeID:   chargeID,
-		Currency:   env.Currency,
+		Currency:   env.CurrencyReference(),
 	})
 	require.NoError(t, err)
 	require.True(t, result.Amount.Equal(amount), "voided amount: %s", result.Amount)

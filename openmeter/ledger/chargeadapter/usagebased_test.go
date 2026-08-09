@@ -598,7 +598,7 @@ func newUsageBasedHandlerTestEnv(t *testing.T) *usageBasedHandlerTestEnv {
 			AccountService: base.Deps.ResolversService,
 			AccountCatalog: base.Deps.AccountService,
 			BalanceQuerier: base.Deps.HistoricalLedger,
-		}, collectorService),
+		}, collectorService, generousAllowanceForTest()),
 		lineage:    lineageService,
 		recognizer: recognizerService,
 		currency:   currenciestestutils.NewFiatCurrency(t, "USD"),

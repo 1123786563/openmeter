@@ -723,6 +723,7 @@ func newFlatFeeHandlerTestEnv(t *testing.T) *flatFeeHandlerTestEnv {
 			base.Deps.HistoricalLedger,
 			deps,
 			collectorService,
+			generousAllowanceForTest(),
 		),
 		lineage:    lineageService,
 		recognizer: recognizerService,

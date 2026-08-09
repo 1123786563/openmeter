@@ -322,6 +322,7 @@ func TestCorrectCollectedAccruedPartiallyReversesAdvanceBackedCollection(t *test
 		SourceBalanceAsOf: env.Now(),
 		Currency:          env.CurrencyReference(),
 		SettlementMode:    productcatalog.CreditOnlySettlementMode,
+		ReceivableLimit:   lo.ToPtr(alpacadecimal.NewFromInt(1_000_000)),
 		ServicePeriod:     servicePeriod,
 		Amount:            alpacadecimal.NewFromInt(advanceAmount),
 	})
@@ -564,6 +565,7 @@ func TestCorrectFiatFundedCustomCurrencyCreditOnlyShortfall(t *testing.T) {
 		SourceBalanceAsOf: env.Now(),
 		Currency:          customCurrencyReference,
 		SettlementMode:    productcatalog.CreditOnlySettlementMode,
+		ReceivableLimit:   lo.ToPtr(alpacadecimal.NewFromInt(1_000_000)),
 		ServicePeriod:     servicePeriod,
 		Amount:            alpacadecimal.NewFromInt(120),
 		TaxCode:           &taxCode,
@@ -791,6 +793,7 @@ func TestCorrectCustomCurrencyCreditOnlyShortfall_MultipleFundingSourcesDoNotCro
 		SourceBalanceAsOf: env.Now(),
 		Currency:          customCurrencyReference,
 		SettlementMode:    productcatalog.CreditOnlySettlementMode,
+		ReceivableLimit:   lo.ToPtr(alpacadecimal.NewFromInt(1_000_000)),
 		ServicePeriod:     servicePeriod,
 		Amount:            alpacadecimal.NewFromInt(100),
 	})
@@ -805,6 +808,7 @@ func TestCorrectCustomCurrencyCreditOnlyShortfall_MultipleFundingSourcesDoNotCro
 		SourceBalanceAsOf: env.Now(),
 		Currency:          customCurrencyReference,
 		SettlementMode:    productcatalog.CreditOnlySettlementMode,
+		ReceivableLimit:   lo.ToPtr(alpacadecimal.NewFromInt(1_000_000)),
 		ServicePeriod:     servicePeriod,
 		Amount:            alpacadecimal.NewFromInt(20),
 	})

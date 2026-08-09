@@ -11,6 +11,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/lineage"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
+	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/openmeter/ledger/breakage"
 	"github.com/openmeterio/openmeter/openmeter/ledger/transactions"
@@ -22,8 +23,14 @@ import (
 
 type Service interface {
 	CollectToAccrued(ctx context.Context, input CollectToAccruedInput) (creditrealization.CreateAllocationInputs, error)
+	GetCollectableAmount(ctx context.Context, input GetCollectableAmountInput) (alpacadecimal.Decimal, error)
 	CorrectCollectedAccrued(ctx context.Context, input CorrectCollectedAccruedInput) (creditrealization.CreateCorrectionInputs, error)
 }
+
+var (
+	ErrInsufficientCredit  = errors.New("insufficient prepaid credit")
+	ErrCreditLimitExceeded = errors.New("explicit credit limit exceeded")
+)
 
 // Funding-Source Priority Routing
 //
@@ -90,8 +97,18 @@ type CollectToAccruedInput struct {
 	SettlementMode    productcatalog.SettlementMode
 	ServicePeriod     timeutil.ClosedPeriod
 	Amount            alpacadecimal.Decimal
-	TaxCode           *string
-	TaxBehavior       *ledger.TaxBehavior
+	// ReceivableLimit is the caller-resolved remaining enterprise allowance.
+	// A nil value forbids CreditOnly shortfalls from creating receivables.
+	ReceivableLimit *alpacadecimal.Decimal
+	TaxCode         *string
+	TaxBehavior     *ledger.TaxBehavior
+}
+
+type GetCollectableAmountInput struct {
+	CustomerID customer.CustomerID
+	Currency   currencies.CurrencyReference
+	FeatureKey string
+	AsOf       time.Time
 }
 
 type CorrectCollectedAccruedInput struct {
@@ -140,6 +157,20 @@ func (s *service) CollectToAccrued(ctx context.Context, input CollectToAccruedIn
 	}
 
 	return s.collector.collect(ctx, input)
+}
+
+func (s *service) GetCollectableAmount(ctx context.Context, input GetCollectableAmountInput) (alpacadecimal.Decimal, error) {
+	if err := input.CustomerID.Validate(); err != nil {
+		return alpacadecimal.Zero, fmt.Errorf("customer id: %w", err)
+	}
+	if err := input.Currency.Validate(); err != nil {
+		return alpacadecimal.Zero, fmt.Errorf("currency: %w", err)
+	}
+	if input.AsOf.IsZero() {
+		return alpacadecimal.Zero, fmt.Errorf("as of is required")
+	}
+
+	return s.collector.getCollectableAmount(ctx, input)
 }
 
 func (s *service) CorrectCollectedAccrued(ctx context.Context, input CorrectCollectedAccruedInput) (creditrealization.CreateCorrectionInputs, error) {

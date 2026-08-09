@@ -430,6 +430,69 @@ func TestCollectToAccruedAdvanceShortfallStampsSpendCharge(t *testing.T) {
 	})
 }
 
+// This catches accidental restoration of implicit/unbounded receivables for
+// CreditOnly charges. A missing limit must fail before a ledger group is
+// committed, leaving the receivable account untouched.
+func TestCreditOnlyCollectionWithoutExplicitLimitRejectsShortfall(t *testing.T) {
+	env := ledgertestutils.NewIntegrationEnv(t, "collector-credit-only-no-limit")
+	collector := newTestAccrualCollector(env)
+
+	fundSourceCharge(t, env, testChargeID(1), 1, 10)
+
+	input := collectToAccruedInputForTest(
+		env,
+		testChargeID(2),
+		alpacadecimal.NewFromInt(15),
+		productcatalog.CreditOnlySettlementMode,
+	)
+	input.ReceivableLimit = nil
+	_, err := collector.collect(t.Context(), input)
+	require.ErrorIs(t, err, ErrInsufficientCredit)
+	require.Equal(t, float64(0), env.SumBalance(t, env.ReceivableSubAccount(t)).InexactFloat64())
+}
+
+// This catches a collector that ignores the caller-resolved remaining
+// enterprise allowance when it issues a CreditOnly receivable.
+func TestCreditOnlyCollectionHonorsExplicitRemainingLimit(t *testing.T) {
+	env := ledgertestutils.NewIntegrationEnv(t, "collector-credit-only-limit")
+	collector := newTestAccrualCollector(env)
+
+	fundSourceCharge(t, env, testChargeID(1), 1, 10)
+	limit := alpacadecimal.NewFromInt(5)
+	input := collectToAccruedInputForTest(
+		env,
+		testChargeID(2),
+		alpacadecimal.NewFromInt(15),
+		productcatalog.CreditOnlySettlementMode,
+	)
+	input.ReceivableLimit = &limit
+
+	_, err := collector.collect(t.Context(), input)
+	require.NoError(t, err)
+	require.Equal(t, float64(-5), env.SumBalance(t, env.ReceivableSubAccount(t)).InexactFloat64())
+}
+
+// This catches a collector that issues a receivable beyond the allowance that
+// the charge adapter resolved for the current booking.
+func TestCreditOnlyCollectionRejectsShortfallBeyondExplicitRemainingLimit(t *testing.T) {
+	env := ledgertestutils.NewIntegrationEnv(t, "collector-credit-only-limit-exceeded")
+	collector := newTestAccrualCollector(env)
+
+	fundSourceCharge(t, env, testChargeID(1), 1, 10)
+	limit := alpacadecimal.NewFromInt(4)
+	input := collectToAccruedInputForTest(
+		env,
+		testChargeID(2),
+		alpacadecimal.NewFromInt(15),
+		productcatalog.CreditOnlySettlementMode,
+	)
+	input.ReceivableLimit = &limit
+
+	_, err := collector.collect(t.Context(), input)
+	require.ErrorIs(t, err, ErrCreditLimitExceeded)
+	require.Equal(t, float64(0), env.SumBalance(t, env.ReceivableSubAccount(t)).InexactFloat64())
+}
+
 func TestCollectToAccruedCreditThenInvoiceOnlyCollectsAvailableCredit(t *testing.T) {
 	env := ledgertestutils.NewIntegrationEnv(t, "collector")
 	collector := newTestAccrualCollector(env)
@@ -704,7 +767,7 @@ func collectToAccruedInputForTest(
 	amount alpacadecimal.Decimal,
 	settlementMode productcatalog.SettlementMode,
 ) CollectToAccruedInput {
-	return CollectToAccruedInput{
+	input := CollectToAccruedInput{
 		Namespace:         env.Namespace,
 		ChargeID:          chargeID,
 		CustomerID:        env.CustomerID.ID,
@@ -718,6 +781,10 @@ func collectToAccruedInputForTest(
 		},
 		Amount: amount,
 	}
+	if settlementMode == productcatalog.CreditOnlySettlementMode {
+		input.ReceivableLimit = lo.ToPtr(alpacadecimal.NewFromInt(1_000_000))
+	}
+	return input
 }
 
 func requireAccruedBalanceBuckets(t *testing.T, env *ledgertestutils.IntegrationEnv, expected map[string]float64) {

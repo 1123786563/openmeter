@@ -369,6 +369,9 @@ type Customer func(*sql.Selector)
 // CustomerAIRatePackage is the predicate function for customerairatepackage builders.
 type CustomerAIRatePackage func(*sql.Selector)
 
+// CustomerCreditLimit is the predicate function for customercreditlimit builders.
+type CustomerCreditLimit func(*sql.Selector)
+
 // CustomerSubjects is the predicate function for customersubjects builders.
 type CustomerSubjects func(*sql.Selector)
 

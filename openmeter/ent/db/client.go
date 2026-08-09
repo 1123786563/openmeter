@@ -80,6 +80,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -264,6 +265,8 @@ type Client struct {
 	Customer *CustomerClient
 	// CustomerAIRatePackage is the client for interacting with the CustomerAIRatePackage builders.
 	CustomerAIRatePackage *CustomerAIRatePackageClient
+	// CustomerCreditLimit is the client for interacting with the CustomerCreditLimit builders.
+	CustomerCreditLimit *CustomerCreditLimitClient
 	// CustomerSubjects is the client for interacting with the CustomerSubjects builders.
 	CustomerSubjects *CustomerSubjectsClient
 	// Entitlement is the client for interacting with the Entitlement builders.
@@ -427,6 +430,7 @@ func (c *Client) init() {
 	c.CustomCurrency = NewCustomCurrencyClient(c.config)
 	c.Customer = NewCustomerClient(c.config)
 	c.CustomerAIRatePackage = NewCustomerAIRatePackageClient(c.config)
+	c.CustomerCreditLimit = NewCustomerCreditLimitClient(c.config)
 	c.CustomerSubjects = NewCustomerSubjectsClient(c.config)
 	c.Entitlement = NewEntitlementClient(c.config)
 	c.ExternalInvoiceRef = NewExternalInvoiceRefClient(c.config)
@@ -628,6 +632,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
 		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
+		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
 		ExternalInvoiceRef:                               NewExternalInvoiceRefClient(cfg),
@@ -756,6 +761,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
 		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
+		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
 		ExternalInvoiceRef:                               NewExternalInvoiceRefClient(cfg),
@@ -853,17 +859,17 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ChargeUsageBasedRuns, c.CommerceOrder, c.CommerceOrderLine, c.CommerceOutbox,
 		c.CommerceProduct, c.CreditRealizationLineage,
 		c.CreditRealizationLineageSegment, c.CurrencyCostBasis, c.CustomCurrency,
-		c.Customer, c.CustomerAIRatePackage, c.CustomerSubjects, c.Entitlement,
-		c.ExternalInvoiceRef, c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice,
-		c.LedgerAccount, c.LedgerBreakageRecord, c.LedgerCreditVoidRecord,
-		c.LedgerCustomerAccount, c.LedgerEntry, c.LedgerSubAccount,
-		c.LedgerSubAccountRoute, c.LedgerTransaction, c.LedgerTransactionGroup,
-		c.ManualResourceCost, c.Meter, c.NotificationChannel, c.NotificationEvent,
-		c.NotificationEventDeliveryStatus, c.NotificationRule, c.OfflinePayment,
-		c.OrganizationDefaultTaxCodes, c.PaymentAttempt, c.PaymentFact, c.Plan,
-		c.PlanAddon, c.PlanPhase, c.PlanRateCard, c.ReceivableAccount,
-		c.ReceivablePeriod, c.RefundFact, c.RefundRequest, c.Subject, c.Subscription,
-		c.SubscriptionAddon, c.SubscriptionAddonQuantity,
+		c.Customer, c.CustomerAIRatePackage, c.CustomerCreditLimit, c.CustomerSubjects,
+		c.Entitlement, c.ExternalInvoiceRef, c.Feature, c.Fulfillment, c.Grant,
+		c.LLMCostPrice, c.LedgerAccount, c.LedgerBreakageRecord,
+		c.LedgerCreditVoidRecord, c.LedgerCustomerAccount, c.LedgerEntry,
+		c.LedgerSubAccount, c.LedgerSubAccountRoute, c.LedgerTransaction,
+		c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter, c.NotificationChannel,
+		c.NotificationEvent, c.NotificationEventDeliveryStatus, c.NotificationRule,
+		c.OfflinePayment, c.OrganizationDefaultTaxCodes, c.PaymentAttempt,
+		c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase, c.PlanRateCard,
+		c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact, c.RefundRequest,
+		c.Subject, c.Subscription, c.SubscriptionAddon, c.SubscriptionAddonQuantity,
 		c.SubscriptionBillingSyncState, c.SubscriptionItem, c.SubscriptionPhase,
 		c.TaxCode, c.UsageReset,
 	} {
@@ -901,8 +907,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.CommerceOrderLine, c.CommerceOutbox, c.CommerceProduct,
 		c.CreditRealizationLineage, c.CreditRealizationLineageSegment,
 		c.CurrencyCostBasis, c.CustomCurrency, c.Customer, c.CustomerAIRatePackage,
-		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
-		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
+		c.CustomerCreditLimit, c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef,
+		c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
 		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
 		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
 		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
@@ -1051,6 +1057,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Customer.mutate(ctx, m)
 	case *CustomerAIRatePackageMutation:
 		return c.CustomerAIRatePackage.mutate(ctx, m)
+	case *CustomerCreditLimitMutation:
+		return c.CustomerCreditLimit.mutate(ctx, m)
 	case *CustomerSubjectsMutation:
 		return c.CustomerSubjects.mutate(ctx, m)
 	case *EntitlementMutation:
@@ -13257,6 +13265,139 @@ func (c *CustomerAIRatePackageClient) mutate(ctx context.Context, m *CustomerAIR
 	}
 }
 
+// CustomerCreditLimitClient is a client for the CustomerCreditLimit schema.
+type CustomerCreditLimitClient struct {
+	config
+}
+
+// NewCustomerCreditLimitClient returns a client for the CustomerCreditLimit from the given config.
+func NewCustomerCreditLimitClient(c config) *CustomerCreditLimitClient {
+	return &CustomerCreditLimitClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `customercreditlimit.Hooks(f(g(h())))`.
+func (c *CustomerCreditLimitClient) Use(hooks ...Hook) {
+	c.hooks.CustomerCreditLimit = append(c.hooks.CustomerCreditLimit, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `customercreditlimit.Intercept(f(g(h())))`.
+func (c *CustomerCreditLimitClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CustomerCreditLimit = append(c.inters.CustomerCreditLimit, interceptors...)
+}
+
+// Create returns a builder for creating a CustomerCreditLimit entity.
+func (c *CustomerCreditLimitClient) Create() *CustomerCreditLimitCreate {
+	mutation := newCustomerCreditLimitMutation(c.config, OpCreate)
+	return &CustomerCreditLimitCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CustomerCreditLimit entities.
+func (c *CustomerCreditLimitClient) CreateBulk(builders ...*CustomerCreditLimitCreate) *CustomerCreditLimitCreateBulk {
+	return &CustomerCreditLimitCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CustomerCreditLimitClient) MapCreateBulk(slice any, setFunc func(*CustomerCreditLimitCreate, int)) *CustomerCreditLimitCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CustomerCreditLimitCreateBulk{err: fmt.Errorf("calling to CustomerCreditLimitClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CustomerCreditLimitCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CustomerCreditLimitCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Update() *CustomerCreditLimitUpdate {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdate)
+	return &CustomerCreditLimitUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CustomerCreditLimitClient) UpdateOne(_m *CustomerCreditLimit) *CustomerCreditLimitUpdateOne {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdateOne, withCustomerCreditLimit(_m))
+	return &CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CustomerCreditLimitClient) UpdateOneID(id string) *CustomerCreditLimitUpdateOne {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdateOne, withCustomerCreditLimitID(id))
+	return &CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Delete() *CustomerCreditLimitDelete {
+	mutation := newCustomerCreditLimitMutation(c.config, OpDelete)
+	return &CustomerCreditLimitDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CustomerCreditLimitClient) DeleteOne(_m *CustomerCreditLimit) *CustomerCreditLimitDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CustomerCreditLimitClient) DeleteOneID(id string) *CustomerCreditLimitDeleteOne {
+	builder := c.Delete().Where(customercreditlimit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CustomerCreditLimitDeleteOne{builder}
+}
+
+// Query returns a query builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Query() *CustomerCreditLimitQuery {
+	return &CustomerCreditLimitQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCustomerCreditLimit},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CustomerCreditLimit entity by its id.
+func (c *CustomerCreditLimitClient) Get(ctx context.Context, id string) (*CustomerCreditLimit, error) {
+	return c.Query().Where(customercreditlimit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CustomerCreditLimitClient) GetX(ctx context.Context, id string) *CustomerCreditLimit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CustomerCreditLimitClient) Hooks() []Hook {
+	return c.hooks.CustomerCreditLimit
+}
+
+// Interceptors returns the client interceptors.
+func (c *CustomerCreditLimitClient) Interceptors() []Interceptor {
+	return c.inters.CustomerCreditLimit
+}
+
+func (c *CustomerCreditLimitClient) mutate(ctx context.Context, m *CustomerCreditLimitMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CustomerCreditLimitCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CustomerCreditLimitUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CustomerCreditLimitDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CustomerCreditLimit mutation op: %q", m.Op())
+	}
+}
+
 // CustomerSubjectsClient is a client for the CustomerSubjects schema.
 type CustomerSubjectsClient struct {
 	config
@@ -21065,15 +21206,15 @@ type (
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, CommerceOrder,
 		CommerceOrderLine, CommerceOutbox, CommerceProduct, CreditRealizationLineage,
 		CreditRealizationLineageSegment, CurrencyCostBasis, CustomCurrency, Customer,
-		CustomerAIRatePackage, CustomerSubjects, Entitlement, ExternalInvoiceRef,
-		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
-		LedgerCreditVoidRecord, LedgerCustomerAccount, LedgerEntry, LedgerSubAccount,
-		LedgerSubAccountRoute, LedgerTransaction, LedgerTransactionGroup,
-		ManualResourceCost, Meter, NotificationChannel, NotificationEvent,
-		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
-		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
-		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
-		RefundRequest, Subject, Subscription, SubscriptionAddon,
+		CustomerAIRatePackage, CustomerCreditLimit, CustomerSubjects, Entitlement,
+		ExternalInvoiceRef, Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount,
+		LedgerBreakageRecord, LedgerCreditVoidRecord, LedgerCustomerAccount,
+		LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute, LedgerTransaction,
+		LedgerTransactionGroup, ManualResourceCost, Meter, NotificationChannel,
+		NotificationEvent, NotificationEventDeliveryStatus, NotificationRule,
+		OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan,
+		PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod,
+		RefundFact, RefundRequest, Subject, Subscription, SubscriptionAddon,
 		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
 		SubscriptionPhase, TaxCode, UsageReset []ent.Hook
 	}
@@ -21100,17 +21241,17 @@ type (
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, ChargesSearchV1,
 		CommerceOrder, CommerceOrderLine, CommerceOutbox, CommerceProduct,
 		CreditRealizationLineage, CreditRealizationLineageSegment, CurrencyCostBasis,
-		CustomCurrency, Customer, CustomerAIRatePackage, CustomerSubjects, Entitlement,
-		ExternalInvoiceRef, Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount,
-		LedgerBreakageRecord, LedgerCreditVoidRecord, LedgerCustomerAccount,
-		LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute, LedgerTransaction,
-		LedgerTransactionGroup, ManualResourceCost, Meter, NotificationChannel,
-		NotificationEvent, NotificationEventDeliveryStatus, NotificationRule,
-		OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan,
-		PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod,
-		RefundFact, RefundRequest, Subject, Subscription, SubscriptionAddon,
-		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
-		SubscriptionPhase, TaxCode, UsageReset []ent.Interceptor
+		CustomCurrency, Customer, CustomerAIRatePackage, CustomerCreditLimit,
+		CustomerSubjects, Entitlement, ExternalInvoiceRef, Feature, Fulfillment, Grant,
+		LLMCostPrice, LedgerAccount, LedgerBreakageRecord, LedgerCreditVoidRecord,
+		LedgerCustomerAccount, LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute,
+		LedgerTransaction, LedgerTransactionGroup, ManualResourceCost, Meter,
+		NotificationChannel, NotificationEvent, NotificationEventDeliveryStatus,
+		NotificationRule, OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt,
+		PaymentFact, Plan, PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount,
+		ReceivablePeriod, RefundFact, RefundRequest, Subject, Subscription,
+		SubscriptionAddon, SubscriptionAddonQuantity, SubscriptionBillingSyncState,
+		SubscriptionItem, SubscriptionPhase, TaxCode, UsageReset []ent.Interceptor
 	}
 )
 

@@ -6,6 +6,7 @@ import (
 
 	sql "entgo.io/ent/dialect/sql"
 
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	dbledgercreditvoidrecord "github.com/openmeterio/openmeter/openmeter/ent/db/ledgercreditvoidrecord"
@@ -23,12 +24,16 @@ func (a *adapter) CreateRecords(ctx context.Context, input creditvoid.CreateReco
 	return entutils.TransactingRepoWithNoValue(ctx, a, func(ctx context.Context, tx *adapter) error {
 		creates := make([]*entdb.LedgerCreditVoidRecordCreate, 0, len(input.Records))
 		for _, record := range input.Records {
+			serializedCurrency, err := record.Currency.MarshalText()
+			if err != nil {
+				return fmt.Errorf("serialize record currency: %w", err)
+			}
 			create := tx.db.LedgerCreditVoidRecord.Create().
 				SetID(record.ID.ID).
 				SetNamespace(record.ID.Namespace).
 				SetAmount(record.Amount).
 				SetCustomerID(record.CustomerID.ID).
-				SetCurrency(record.Currency).
+				SetCurrency(string(serializedCurrency)).
 				SetVoidedAt(record.VoidedAt).
 				SetSourceChargeID(record.SourceChargeID).
 				SetVoidTransactionGroupID(record.VoidTransactionGroupID).
@@ -74,7 +79,11 @@ func (a *adapter) ListRecords(ctx context.Context, input creditvoid.ListRecordsI
 		}
 
 		if input.Currency != nil {
-			predicates = append(predicates, dbledgercreditvoidrecord.CurrencyEQ(*input.Currency))
+			serializedCurrency, err := input.Currency.MarshalText()
+			if err != nil {
+				return nil, fmt.Errorf("serialize currency filter: %w", err)
+			}
+			predicates = append(predicates, dbledgercreditvoidrecord.CurrencyEQ(string(serializedCurrency)))
 		}
 		routePredicate, err := voidRecordRoutePredicate(input.Route)
 		if err != nil {
@@ -101,6 +110,10 @@ func (a *adapter) ListRecords(ctx context.Context, input creditvoid.ListRecordsI
 }
 
 func mapRecordFromDB(row *entdb.LedgerCreditVoidRecord) creditvoid.Record {
+	currency, err := currencies.ParseCurrencyReference([]byte(row.Currency))
+	if err != nil {
+		panic(fmt.Sprintf("parse persisted credit void currency: %v", err))
+	}
 	return creditvoid.Record{
 		ID: models.NamespacedID{
 			Namespace: row.Namespace,
@@ -111,7 +124,7 @@ func mapRecordFromDB(row *entdb.LedgerCreditVoidRecord) creditvoid.Record {
 		UpdatedAt:              row.UpdatedAt,
 		DeletedAt:              row.DeletedAt,
 		CustomerID:             customer.CustomerID{Namespace: row.Namespace, ID: row.CustomerID},
-		Currency:               row.Currency,
+		Currency:               currency,
 		VoidedAt:               row.VoidedAt,
 		SourceChargeID:         row.SourceChargeID,
 		VoidTransactionGroupID: row.VoidTransactionGroupID,

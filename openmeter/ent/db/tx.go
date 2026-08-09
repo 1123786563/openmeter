@@ -146,6 +146,8 @@ type Tx struct {
 	Customer *CustomerClient
 	// CustomerAIRatePackage is the client for interacting with the CustomerAIRatePackage builders.
 	CustomerAIRatePackage *CustomerAIRatePackageClient
+	// CustomerCreditLimit is the client for interacting with the CustomerCreditLimit builders.
+	CustomerCreditLimit *CustomerCreditLimitClient
 	// CustomerSubjects is the client for interacting with the CustomerSubjects builders.
 	CustomerSubjects *CustomerSubjectsClient
 	// Entitlement is the client for interacting with the Entitlement builders.
@@ -429,6 +431,7 @@ func (tx *Tx) init() {
 	tx.CustomCurrency = NewCustomCurrencyClient(tx.config)
 	tx.Customer = NewCustomerClient(tx.config)
 	tx.CustomerAIRatePackage = NewCustomerAIRatePackageClient(tx.config)
+	tx.CustomerCreditLimit = NewCustomerCreditLimitClient(tx.config)
 	tx.CustomerSubjects = NewCustomerSubjectsClient(tx.config)
 	tx.Entitlement = NewEntitlementClient(tx.config)
 	tx.ExternalInvoiceRef = NewExternalInvoiceRefClient(tx.config)
