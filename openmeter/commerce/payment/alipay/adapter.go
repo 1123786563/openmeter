@@ -1,358 +1,425 @@
-// Package alipay implements the Alipay provider adapter. It verifies callbacks
-// using Alipay's RSA2 (RSA-SHA256) signature scheme over the sorted, raw
-// key=value pairs (excluding "sign" and "sign_type", using raw URL-encoded
-// values) and queries payment status through the Alipay OpenAPI.
-//
-// All secrets (private key, Alipay public key, app ID) are sourced from a
-// SecretProvider — never embedded in configuration or logs.
+// Package alipay implements Alipay face-to-face payments using the RSA2
+// OpenAPI protocol. Secrets are resolved for each operation through the
+// configured SecretProvider and never retained in adapter state.
 package alipay
 
 import (
 	"context"
-	"crypto"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
-	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 )
 
-// SecretKey constants define the secret keys this adapter requests from the
-// SecretProvider.
 const (
-	SecretKeyAlipayPublicKey = "alipay_public_key"
 	SecretKeyAppPrivateKey   = "alipay_app_private_key"
-	SecretKeyAppID           = "alipay_app_id"
+	SecretKeyAlipayPublicKey = "alipay_public_key"
 )
 
-// Adapter implements payment.Provider for Alipay.
-type Adapter struct {
-	secrets payment.SecretProvider
-}
-
-// Config wires the Alipay adapter.
+// Config wires production dependencies and non-secret Alipay identities.
 type Config struct {
-	Secrets payment.SecretProvider
+	Secrets          payment.SecretProvider
+	Client           *http.Client
+	GatewayURL       string
+	AppID            string
+	SellerID         string
+	NotifyURL        string
+	Now              func() time.Time
+	MaxResponseBytes int64
+	Logger           *slog.Logger
 }
 
-// New creates an Alipay provider adapter.
+// Adapter implements the Alipay face-to-face payment workflow.
+type Adapter struct {
+	secrets          payment.SecretProvider
+	httpClient       *http.Client
+	gatewayURL       string
+	appID            string
+	sellerID         string
+	notifyURL        string
+	now              func() time.Time
+	maxResponseBytes int64
+	logger           *slog.Logger
+}
+
+// New creates a production Alipay adapter. The injected HTTP client must have
+// a positive total timeout; the caller owns its transport configuration.
 func New(cfg Config) (*Adapter, error) {
 	if cfg.Secrets == nil {
 		return nil, errors.New("alipay adapter: secrets provider is required")
 	}
-	return &Adapter{secrets: cfg.Secrets}, nil
+	if cfg.Client == nil {
+		return nil, errors.New("alipay adapter: HTTP client is required")
+	}
+	if cfg.Client.Timeout <= 0 {
+		return nil, errors.New("alipay adapter: HTTP client total timeout must be positive")
+	}
+	parsedGateway, err := url.Parse(strings.TrimSpace(cfg.GatewayURL))
+	if err != nil || parsedGateway.Scheme == "" || parsedGateway.Host == "" {
+		return nil, errors.New("alipay adapter: gateway URL must be absolute")
+	}
+	if strings.TrimSpace(cfg.AppID) == "" {
+		return nil, errors.New("alipay adapter: application ID is required")
+	}
+	if strings.TrimSpace(cfg.SellerID) == "" {
+		return nil, errors.New("alipay adapter: seller ID is required")
+	}
+	notifyURL, err := url.Parse(strings.TrimSpace(cfg.NotifyURL))
+	if err != nil || notifyURL.Scheme == "" || notifyURL.Host == "" {
+		return nil, errors.New("alipay adapter: notify URL must be absolute")
+	}
+	if cfg.Now == nil {
+		return nil, errors.New("alipay adapter: clock is required")
+	}
+	if cfg.MaxResponseBytes <= 0 {
+		return nil, errors.New("alipay adapter: max response bytes must be positive")
+	}
+	if cfg.Logger == nil {
+		return nil, errors.New("alipay adapter: logger is required")
+	}
+	return &Adapter{
+		secrets:          cfg.Secrets,
+		httpClient:       cfg.Client,
+		gatewayURL:       parsedGateway.String(),
+		appID:            strings.TrimSpace(cfg.AppID),
+		sellerID:         strings.TrimSpace(cfg.SellerID),
+		notifyURL:        notifyURL.String(),
+		now:              cfg.Now,
+		maxResponseBytes: cfg.MaxResponseBytes,
+		logger:           cfg.Logger,
+	}, nil
 }
 
 // Name returns the provider identifier.
 func (a *Adapter) Name() payment.Provider { return payment.ProviderAlipay }
 
-// VerifyCallback verifies an Alipay callback signature and extracts the verified
-// fields into a PaymentFact.
-//
-// Alipay async notifications (notify_url) send form-encoded POST data. The
-// signature is over the concatenation of all parameters (excluding "sign" and
-// "sign_type") sorted by key, in the format key=value joined by "&", where
-// values are the raw URL-encoded representations (NOT decoded).
-func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body []byte) (payment.PaymentFact, error) {
-	// Parse form-encoded body.
+// Identity returns the non-secret identities used to bind signed facts to the
+// payment attempt.
+func (a *Adapter) Identity() (merchantID, applicationID string) {
+	return a.sellerID, a.appID
+}
+
+// CreateQRCode calls alipay.trade.precreate and returns its signed qr_code.
+func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput) (payment.CheckoutFact, error) {
+	orderID := strings.TrimSpace(input.OrderPublicID)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	subject := strings.TrimSpace(input.Description)
+	if orderID == "" || input.AmountMinor <= 0 || currency != "CNY" || subject == "" {
+		return payment.CheckoutFact{}, fmt.Errorf("%w: invalid Alipay precreate input", payment.ErrPermanentProviderProtocol)
+	}
+	request := precreateRequest{OutTradeNo: orderID, Amount: formatAmountMinor(input.AmountMinor), Subject: subject}
+	var response precreateResponse
+	if _, err := a.call(ctx, "alipay.trade.precreate", "alipay_trade_precreate_response", request, &response); err != nil {
+		return payment.CheckoutFact{}, err
+	}
+	if err := validateProviderSuccess(response.providerResponse); err != nil {
+		return payment.CheckoutFact{}, err
+	}
+	if response.OutTradeNo != orderID || strings.TrimSpace(response.QRCode) == "" {
+		return payment.CheckoutFact{}, fmt.Errorf("%w: precreate response does not match the order", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.CheckoutFact{
+		Provider:        payment.ProviderAlipay,
+		ProviderOrderID: response.OutTradeNo,
+		QRCodeURL:       response.QRCode,
+	}, nil
+}
+
+// VerifyCallback validates the RSA2 signature before interpreting any signed
+// business field.
+func (a *Adapter) VerifyCallback(ctx context.Context, _ http.Header, body []byte) (payment.PaymentFact, error) {
 	values, err := url.ParseQuery(string(body))
 	if err != nil {
-		return payment.PaymentFact{}, fmt.Errorf("alipay: parse callback body: %w", err)
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid callback form", payment.ErrPermanentProviderProtocol)
 	}
-
-	signB64 := values.Get("sign")
-	if signB64 == "" {
-		return payment.PaymentFact{}, fmt.Errorf("%w: missing sign field", payment.ErrInvalidSignature)
+	signature := values.Get("sign")
+	if signature == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback is missing sign", payment.ErrInvalidSignature)
 	}
-
-	// Build the canonical signature message from sorted key=value pairs.
-	message := buildSignContent(values)
-
-	// Verify using Alipay public key.
-	if err := a.verifySignature(ctx, []byte(message), signB64); err != nil {
+	if err := a.verifySignature(ctx, []byte(buildSignContent(values)), signature); err != nil {
 		return payment.PaymentFact{}, err
 	}
-
-	// Extract verified fields.
+	if values.Get("sign_type") != "RSA2" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback sign_type must be RSA2", payment.ErrPermanentProviderProtocol)
+	}
+	if values.Get("app_id") != a.appID {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback application ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if values.Get("seller_id") != a.sellerID {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback seller ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	orderID := strings.TrimSpace(values.Get("out_trade_no"))
+	if orderID == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback order ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	amount, err := parseAmountMinor(values.Get("total_amount"))
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	status := values.Get("trade_status")
+	if !validTradeStatus(status) {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback trade status is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if successfulTradeStatus(status) && strings.TrimSpace(values.Get("trade_no")) == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: successful callback trade number is required", payment.ErrPermanentProviderProtocol)
+	}
+	timestamp, err := time.ParseInLocation("2006-01-02 15:04:05", values.Get("notify_time"), a.now().Location())
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback notify_time is invalid", payment.ErrPermanentProviderProtocol)
+	}
 	rawHash := hashBody(body)
-	fact := payment.PaymentFact{
-		Provider:          payment.ProviderAlipay,
-		ProviderOrderID:   values.Get("out_trade_no"),
-		ProviderPaymentID: values.Get("trade_no"),
-		ApplicationID:     values.Get("app_id"),
-		MerchantID:        values.Get("seller_id"),
-		AmountMinor:       parseAmount(values.Get("total_amount")),
-		Currency:          "CNY", // Alipay domestic is always CNY
-		Success:           values.Get("trade_status") == "TRADE_SUCCESS" || values.Get("trade_status") == "TRADE_FINISHED",
-		RawHash:           rawHash,
-		Timestamp:         parseAlipayTime(values.Get("notify_time")),
-		SignedPayload:     valuesToMap(values),
-	}
-
-	return fact, nil
-}
-
-// verifySignature verifies the RSA2 signature against the Alipay public key.
-func (a *Adapter) verifySignature(ctx context.Context, message []byte, signB64 string) error {
-	keyPEM, err := a.secrets.Get(ctx, SecretKeyAlipayPublicKey)
-	if err != nil {
-		return fmt.Errorf("alipay: get public key: %w", err)
-	}
-
-	pub, err := parseRSAPublicKey([]byte(keyPEM))
-	if err != nil {
-		return fmt.Errorf("alipay: parse public key: %w", err)
-	}
-
-	signature, err := base64.StdEncoding.DecodeString(signB64)
-	if err != nil {
-		return fmt.Errorf("%w: decode base64 signature: %v", payment.ErrInvalidSignature, err)
-	}
-
-	hashed := sha256.Sum256(message)
-	if err := rsa.VerifyPKCS1v15(pub, crypto.SHA256, hashed[:], signature); err != nil {
-		return fmt.Errorf("%w: RSA2 signature verification failed", payment.ErrInvalidSignature)
-	}
-
-	return nil
-}
-
-// QueryPayment queries the Alipay API for a payment's status.
-func (a *Adapter) QueryPayment(_ context.Context, providerOrderID string) (payment.PaymentFact, error) {
-	if providerOrderID == "" {
-		return payment.PaymentFact{}, errors.New("alipay: provider order id is required for query")
+	eventID := strings.TrimSpace(values.Get("notify_id"))
+	if eventID == "" {
+		a.logger.WarnContext(ctx, "Alipay callback has no notify_id", "provider", payment.ProviderAlipay, "raw_hash", rawHash)
 	}
 	return payment.PaymentFact{
-		Provider:        payment.ProviderAlipay,
-		ProviderOrderID: providerOrderID,
-	}, nil
-}
-
-// CreateQRCode initiates an Alipay session. The full implementation calls
-// alipay.trade.precreate and returns the qr_code URL.
-func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput) (payment.CheckoutFact, error) {
-	if _, err := a.secrets.Get(ctx, SecretKeyAppID); err != nil {
-		return payment.CheckoutFact{}, fmt.Errorf("alipay: get app id: %w", err)
-	}
-	// In local/test mode generate a synthetic provider payment ID.
-	providerPaymentID := "alipay-pay-" + input.IdempotencyKey
-	return payment.CheckoutFact{
 		Provider:          payment.ProviderAlipay,
-		ProviderOrderID:   input.OrderPublicID,
-		ProviderPaymentID: providerPaymentID,
+		ProviderOrderID:   orderID,
+		ProviderPaymentID: values.Get("trade_no"),
+		ProviderEventID:   eventID,
+		MerchantID:        values.Get("seller_id"),
+		ApplicationID:     values.Get("app_id"),
+		AmountMinor:       amount,
+		Currency:          "CNY",
+		Success:           successfulTradeStatus(status),
+		RawHash:           rawHash,
+		Timestamp:         timestamp,
+		SignedPayload:     valuesToMap(values),
 	}, nil
 }
 
-// Refund submits a refund to Alipay.
-func (a *Adapter) Refund(_ context.Context, input payment.RefundInput) (payment.RefundSubmission, error) {
-	return payment.RefundSubmission{
-		Provider:         payment.ProviderAlipay,
-		ProviderRefundID: input.IdempotencyKey,
-		Status:           "processing",
-	}, nil
-}
-
-// QueryRefund queries the Alipay API for a refund's status.
-func (a *Adapter) QueryRefund(_ context.Context, providerRefundID string) (payment.RefundFact, error) {
-	if providerRefundID == "" {
-		return payment.RefundFact{}, errors.New("alipay: provider refund id is required for query")
+// QueryPayment calls alipay.trade.query. Pending and closed transactions are
+// returned as verified non-success facts.
+func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (payment.PaymentFact, error) {
+	providerOrderID = strings.TrimSpace(providerOrderID)
+	if providerOrderID == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: provider order ID is required", payment.ErrPermanentProviderProtocol)
 	}
-	return payment.RefundFact{
-		Provider:         payment.ProviderAlipay,
-		ProviderRefundID: providerRefundID,
-	}, nil
-}
-
-// VerifyRefundCallback verifies an Alipay refund callback signature and extracts
-// the verified fields into a RefundFact. Uses the same RSA2 verification scheme
-// as payment callbacks: signature over sorted key=value pairs (excluding sign
-// and sign_type).
-func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header, body []byte) (payment.RefundFact, error) {
-	values, err := url.ParseQuery(string(body))
+	var response tradeQueryResponse
+	rawResponse, err := a.call(ctx, "alipay.trade.query", "alipay_trade_query_response", tradeQueryRequest{OutTradeNo: providerOrderID}, &response)
 	if err != nil {
-		return payment.RefundFact{}, fmt.Errorf("alipay: parse refund callback: %w", err)
+		return payment.PaymentFact{}, err
 	}
-
-	signB64 := values.Get("sign")
-	if signB64 == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: missing sign field", payment.ErrInvalidSignature)
+	if err := validateProviderSuccess(response.providerResponse); err != nil {
+		return payment.PaymentFact{}, err
 	}
+	if response.OutTradeNo != providerOrderID || !validTradeStatus(response.TradeState) {
+		return payment.PaymentFact{}, fmt.Errorf("%w: trade query response does not match the request", payment.ErrPermanentProviderProtocol)
+	}
+	amount, err := parseAmountMinor(response.Amount)
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: trade query amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	payload, err := payment.ExtractSignedPayload(rawResponse)
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid signed trade query response", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.PaymentFact{
+		Provider:          payment.ProviderAlipay,
+		ProviderOrderID:   response.OutTradeNo,
+		ProviderPaymentID: response.TradeNo,
+		ProviderEventID:   response.TradeNo,
+		MerchantID:        a.sellerID,
+		ApplicationID:     a.appID,
+		AmountMinor:       amount,
+		Currency:          "CNY",
+		Success:           successfulTradeStatus(response.TradeState),
+		RawHash:           hashBody(rawResponse),
+		Timestamp:         a.now(),
+		SignedPayload:     payload,
+	}, nil
+}
 
-	message := buildSignContent(values)
-	if err := a.verifySignature(ctx, []byte(message), signB64); err != nil {
+// Refund submits an idempotent refund using out_request_no.
+func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (payment.RefundSubmission, error) {
+	orderID := strings.TrimSpace(input.ProviderOrderID)
+	requestID := strings.TrimSpace(input.IdempotencyKey)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if orderID == "" || requestID == "" || input.AmountMinor <= 0 || currency != "CNY" {
+		return payment.RefundSubmission{}, fmt.Errorf("%w: invalid Alipay refund input", payment.ErrPermanentProviderProtocol)
+	}
+	request := refundRequest{
+		OutTradeNo: orderID, Amount: formatAmountMinor(input.AmountMinor), OutRequestNo: requestID,
+		Reason: strings.TrimSpace(input.Reason),
+	}
+	var response refundResponse
+	if _, err := a.call(ctx, "alipay.trade.refund", "alipay_trade_refund_response", request, &response); err != nil {
+		return payment.RefundSubmission{}, err
+	}
+	if err := validateProviderSuccess(response.providerResponse); err != nil {
+		return payment.RefundSubmission{}, err
+	}
+	amount, err := parseAmountMinor(response.RefundFee)
+	if err != nil || amount != input.AmountMinor || response.OutTradeNo != orderID {
+		return payment.RefundSubmission{}, fmt.Errorf("%w: refund response does not match the request", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: requestID, Status: "success"}, nil
+}
+
+// QueryRefund queries an idempotent refund by out_request_no.
+func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (payment.RefundFact, error) {
+	providerRefundID = strings.TrimSpace(providerRefundID)
+	if providerRefundID == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: provider refund ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	var response refundQueryResponse
+	rawResponse, err := a.call(ctx, "alipay.trade.fastpay.refund.query", "alipay_trade_fastpay_refund_query_response", refundQueryRequest{OutRequestNo: providerRefundID}, &response)
+	if err != nil {
 		return payment.RefundFact{}, err
 	}
-
+	if err := validateProviderSuccess(response.providerResponse); err != nil {
+		return payment.RefundFact{}, err
+	}
+	if response.OutRequestNo != providerRefundID || strings.TrimSpace(response.OutTradeNo) == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund query response does not match the request", payment.ErrPermanentProviderProtocol)
+	}
+	amount, err := parseAmountMinor(response.RefundAmount)
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund query amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if response.RefundStatus != "" && response.RefundStatus != "REFUND_SUCCESS" && response.RefundStatus != "REFUND_PROCESSING" && response.RefundStatus != "REFUND_FAIL" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund query status is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	payload, err := payment.ExtractSignedPayload(rawResponse)
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid signed refund query response", payment.ErrPermanentProviderProtocol)
+	}
 	return payment.RefundFact{
 		Provider:         payment.ProviderAlipay,
-		ProviderRefundID: values.Get("trade_no"),
-		ProviderOrderID:  values.Get("out_trade_no"),
-		AmountMinor:      parseAmount(values.Get("refund_fee")),
+		ProviderRefundID: response.OutRequestNo,
+		ProviderOrderID:  response.OutTradeNo,
+		AmountMinor:      amount,
 		Currency:         "CNY",
-		Success:          true,
-		RawHash:          hashBody(body),
-		Timestamp:        parseAlipayTime(values.Get("gmt_refund")),
-		SignedPayload:    valuesToMap(values),
+		Success:          response.RefundStatus == "REFUND_SUCCESS",
+		RawHash:          hashBody(rawResponse),
+		Timestamp:        a.now(),
+		SignedPayload:    payload,
 	}, nil
 }
 
-// --- Helpers ---
-
-// buildSignContent constructs the canonical signature message from sorted
-// form values. It excludes "sign" and "sign_type", and uses the raw
-// (URL-encoded) value representations as Alipay specifies.
-func buildSignContent(values url.Values) string {
-	keys := make([]string, 0, len(values))
-	for k := range values {
-		if k == "sign" || k == "sign_type" {
-			continue
-		}
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	parts := make([]string, 0, len(keys))
-	for _, k := range keys {
-		vals := values[k]
-		for _, v := range vals {
-			if v == "" {
-				continue
-			}
-			parts = append(parts, k+"="+v)
-		}
-	}
-	return strings.Join(parts, "&")
-}
-
-// parseRSAPublicKey parses a PEM-encoded RSA public key.
-func parseRSAPublicKey(pemBytes []byte) (*rsa.PublicKey, error) {
-	// Alipay keys are often provided as raw base64 without PEM headers.
-	stripped := strings.TrimSpace(string(pemBytes))
-	if !strings.Contains(stripped, "BEGIN") {
-		stripped = "-----BEGIN PUBLIC KEY-----\n" + wrappedBase64(stripped) + "\n-----END PUBLIC KEY-----"
-	}
-
-	block, _ := pem.Decode([]byte(stripped))
-	if block == nil {
-		return nil, errors.New("failed to decode PEM block")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err == nil {
-		rsaPub, ok := pub.(*rsa.PublicKey)
-		if !ok {
-			return nil, errors.New("not an RSA public key")
-		}
-		return rsaPub, nil
-	}
-
-	pub1, err := x509.ParsePKCS1PublicKey(block.Bytes)
+// VerifyRefundCallback verifies an Alipay refund notification using the same
+// RSA2 canonicalization as payment notifications.
+func (a *Adapter) VerifyRefundCallback(ctx context.Context, _ http.Header, body []byte) (payment.RefundFact, error) {
+	values, err := url.ParseQuery(string(body))
 	if err != nil {
-		return nil, fmt.Errorf("parse public key: %w", err)
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund callback form", payment.ErrPermanentProviderProtocol)
 	}
-	return pub1, nil
+	if err := a.verifySignature(ctx, []byte(buildSignContent(values)), values.Get("sign")); err != nil {
+		return payment.RefundFact{}, err
+	}
+	amount, err := parseAmountMinor(values.Get("refund_fee"))
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	timestamp, err := time.ParseInLocation("2006-01-02 15:04:05", values.Get("gmt_refund"), a.now().Location())
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund callback time is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.RefundFact{
+		Provider: payment.ProviderAlipay, ProviderRefundID: values.Get("out_request_no"),
+		ProviderOrderID: values.Get("out_trade_no"), AmountMinor: amount, Currency: "CNY", Success: true,
+		RawHash: hashBody(body), Timestamp: timestamp, SignedPayload: valuesToMap(values),
+	}, nil
 }
 
-// wrappedBase64 inserts line breaks every 64 characters to match PEM format.
-func wrappedBase64(s string) string {
-	var sb strings.Builder
-	for i := 0; i < len(s); i += 64 {
-		end := i + 64
-		if end > len(s) {
-			end = len(s)
-		}
-		sb.WriteString(s[i:end])
-		sb.WriteByte('\n')
+func validateProviderSuccess(response providerResponse) error {
+	if response.Code == "10000" {
+		return nil
 	}
-	return strings.TrimSuffix(sb.String(), "\n")
+	return fmt.Errorf("alipay: provider code=%q sub_code=%q msg=%q sub_msg=%q", response.Code, response.SubCode, response.Message, response.SubMsg)
+}
+
+func validTradeStatus(status string) bool {
+	switch status {
+	case "TRADE_SUCCESS", "TRADE_FINISHED", "WAIT_BUYER_PAY", "TRADE_CLOSED":
+		return true
+	default:
+		return false
+	}
+}
+
+func successfulTradeStatus(status string) bool {
+	return status == "TRADE_SUCCESS" || status == "TRADE_FINISHED"
+}
+
+func formatAmountMinor(amount int64) string {
+	return strconv.FormatInt(amount/100, 10) + fmt.Sprintf(".%02d", amount%100)
+}
+
+func parseAmountMinor(value string) (int64, error) {
+	if value == "" || strings.TrimSpace(value) != value || strings.HasPrefix(value, "-") || strings.HasPrefix(value, "+") {
+		return 0, errors.New("invalid amount")
+	}
+	parts := strings.Split(value, ".")
+	if len(parts) > 2 || parts[0] == "" {
+		return 0, errors.New("invalid amount")
+	}
+	if !decimalDigits(parts[0]) {
+		return 0, errors.New("invalid amount")
+	}
+	fraction := ""
+	if len(parts) == 2 {
+		fraction = parts[1]
+		if fraction == "" || len(fraction) > 2 || !decimalDigits(fraction) {
+			return 0, errors.New("invalid amount")
+		}
+	}
+	whole, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return 0, errors.New("invalid amount")
+	}
+	if len(fraction) == 1 {
+		fraction += "0"
+	} else if fraction == "" {
+		fraction = "00"
+	}
+	fractionMinor, err := strconv.ParseInt(fraction, 10, 64)
+	if err != nil || whole > (math.MaxInt64-fractionMinor)/100 {
+		return 0, errors.New("invalid amount")
+	}
+	minor := whole*100 + fractionMinor
+	if minor <= 0 {
+		return 0, errors.New("invalid amount")
+	}
+	return minor, nil
+}
+
+func decimalDigits(value string) bool {
+	for _, character := range value {
+		if character < '0' || character > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func hashBody(body []byte) string {
-	h := sha256.Sum256(body)
-	return fmt.Sprintf("%x", h[:])
+	digest := sha256.Sum256(body)
+	return hex.EncodeToString(digest[:])
 }
 
-// parseAmount converts a decimal amount string (e.g. "0.01") to minor units
-// (fen / cents). It handles amounts like "0.01", "1.00", "99.99", "100".
-func parseAmount(s string) int64 {
-	if s == "" {
-		return 0
-	}
-	negative := false
-	if s[0] == '-' {
-		negative = true
-		s = s[1:]
-	}
-
-	intPart := s
-	fracPart := ""
-	if dot := strings.Index(s, "."); dot >= 0 {
-		intPart = s[:dot]
-		fracPart = s[dot+1:]
-	}
-
-	var total int64
-	for _, c := range intPart {
-		if c >= '0' && c <= '9' {
-			total = total*10 + int64(c-'0')
-		}
-	}
-	total *= 100
-
-	// Fractional part: at most 2 digits map to fen.
-	for i := 0; i < 2 && i < len(fracPart); i++ {
-		c := fracPart[i]
-		if c >= '0' && c <= '9' {
-			if i == 0 {
-				total += int64(c-'0') * 10
-			} else {
-				total += int64(c - '0')
-			}
-		}
-	}
-
-	if negative {
-		total = -total
-	}
-	return total
-}
-
-// parseAlipayTime parses an Alipay timestamp string ("2006-01-02 15:04:05").
-func parseAlipayTime(s string) time.Time {
-	if s == "" {
-		return time.Now()
-	}
-	t, err := time.ParseInLocation("2006-01-02 15:04:05", s, time.Local)
-	if err != nil {
-		return time.Now()
-	}
-	return t
-}
-
-// valuesToMap converts url.Values to a map[string]any for SignedPayload.
 func valuesToMap(values url.Values) map[string]any {
-	m := make(map[string]any, len(values))
-	for k, v := range values {
-		if k == "sign" || k == "sign_type" {
+	result := make(map[string]any, len(values))
+	for key, entries := range values {
+		if key == "sign" {
 			continue
 		}
-		if len(v) == 1 {
-			m[k] = v[0]
+		if len(entries) == 1 {
+			result[key] = entries[0]
 		} else {
-			m[k] = v
+			result[key] = append([]string(nil), entries...)
 		}
 	}
-	return m
+	return result
 }
 
-// Compile-time check.
 var _ payment.ProviderAdapter = (*Adapter)(nil)

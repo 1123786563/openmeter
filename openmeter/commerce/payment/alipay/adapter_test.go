@@ -1,297 +1,447 @@
 package alipay
 
 import (
-	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 )
 
-// --- Test key fixtures ---
+var testNow = time.Date(2027, time.January, 15, 8, 0, 0, 0, time.FixedZone("CST", 8*60*60))
 
-func generateTestKey(t *testing.T) (*rsa.PrivateKey, string) {
+type testKeys struct {
+	appPrivate      *rsa.PrivateKey
+	appPrivatePEM   string
+	alipayPrivate   *rsa.PrivateKey
+	alipayPublicPEM string
+}
+
+func newTestKeys(t *testing.T) testKeys {
 	t.Helper()
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("generate RSA key: %v", err)
+	appPrivate, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	alipayPrivate, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	alipayPublicDER, err := x509.MarshalPKIXPublicKey(&alipayPrivate.PublicKey)
+	require.NoError(t, err)
+	return testKeys{
+		appPrivate:    appPrivate,
+		appPrivatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(appPrivate)})),
+		alipayPrivate: alipayPrivate,
+		alipayPublicPEM: string(pem.EncodeToMemory(&pem.Block{
+			Type: "PUBLIC KEY", Bytes: alipayPublicDER,
+		})),
 	}
-	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
-	if err != nil {
-		t.Fatalf("marshal public key: %v", err)
-	}
-	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
-	return key, string(pemBytes)
 }
 
-func signMessage(t *testing.T, key *rsa.PrivateKey, message []byte) string {
+func signTestRSA2(t *testing.T, key *rsa.PrivateKey, content string) string {
 	t.Helper()
-	hashed := sha256.Sum256(message)
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hashed[:])
-	if err != nil {
-		t.Fatalf("sign message: %v", err)
-	}
-	return base64.StdEncoding.EncodeToString(sig)
+	digest := sha256.Sum256([]byte(content))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
+	require.NoError(t, err)
+	return base64.StdEncoding.EncodeToString(signature)
 }
 
-// buildAlipayCallback creates a valid Alipay callback body with signature.
-func buildAlipayCallback(t *testing.T, key *rsa.PrivateKey, overrides map[string]string) (url.Values, string, string) {
+func requireValidRequestRSA2(t *testing.T, publicKey *rsa.PublicKey, values url.Values) {
 	t.Helper()
-	values := url.Values{}
-	values.Set("app_id", "2021000122634567")
-	values.Set("charset", "utf-8")
-	values.Set("out_trade_no", "ORDER-456")
-	values.Set("trade_no", "2025010122001400001234567890")
-	values.Set("trade_status", "TRADE_SUCCESS")
-	values.Set("total_amount", "0.01")
-	values.Set("notify_id", "NOTIFY-001")
-	values.Set("notify_time", "2025-01-01 12:00:00")
-	values.Set("seller_id", "2088000209967890")
-	values.Set("buyer_id", "2088102119123456")
-	values.Set("receipt_amount", "0.01")
-	values.Set("point_amount", "0.00")
-	values.Set("sign_type", "RSA2")
-
-	for k, v := range overrides {
-		values.Set(k, v)
-	}
-
-	// Build the canonical sign content.
-	message := buildSignContent(values)
-	sig := signMessage(t, key, []byte(message))
-	values.Set("sign", sig)
-
-	return values, values.Encode(), sig
+	signature, err := base64.StdEncoding.DecodeString(values.Get("sign"))
+	require.NoError(t, err)
+	digest := sha256.Sum256([]byte(buildSignContent(values)))
+	require.NoError(t, rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, digest[:], signature))
 }
 
-// --- Tests ---
-
-func TestVerifyCallbackValidSignature(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	values, body, _ := buildAlipayCallback(t, key, nil)
-
-	fact, err := adapter.VerifyCallback(context.Background(), nil, []byte(body))
-	if err != nil {
-		t.Fatalf("valid callback should succeed: %v", err)
-	}
-
-	if !fact.Success {
-		t.Error("fact should be success")
-	}
-	if fact.ProviderOrderID != "ORDER-456" {
-		t.Errorf("provider_order_id = %s, want ORDER-456", fact.ProviderOrderID)
-	}
-	if fact.ProviderPaymentID != "2025010122001400001234567890" {
-		t.Errorf("trade_no = %s", fact.ProviderPaymentID)
-	}
-	if fact.AmountMinor != 1 {
-		t.Errorf("amount_minor = %d, want 1", fact.AmountMinor)
-	}
-	if fact.Currency != "CNY" {
-		t.Errorf("currency = %s", fact.Currency)
-	}
-	if fact.ApplicationID != "2021000122634567" {
-		t.Errorf("app_id = %s", fact.ApplicationID)
-	}
-	if fact.RawHash == "" {
-		t.Error("raw_hash should be set")
-	}
-
-	_ = values
+func writeSignedAlipayResponse(t *testing.T, key *rsa.PrivateKey, w http.ResponseWriter, responseKey string, response map[string]any) {
+	t.Helper()
+	responseJSON, err := json.Marshal(response)
+	require.NoError(t, err)
+	envelope, err := json.Marshal(map[string]any{
+		responseKey: json.RawMessage(responseJSON),
+		"sign":      signTestRSA2(t, key, string(responseJSON)),
+	})
+	require.NoError(t, err)
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(envelope)
+	require.NoError(t, err)
 }
 
-func TestVerifyCallbackInvalidSignature(t *testing.T) {
-	_, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	// Use a different key to sign.
-	otherKey, _ := generateTestKey(t)
-	_, body, _ := buildAlipayCallback(t, otherKey, nil)
-
-	_, err := adapter.VerifyCallback(context.Background(), nil, []byte(body))
-	if err == nil {
-		t.Fatal("invalid signature should fail")
-	}
+func newTestAdapter(t *testing.T, gatewayURL string, keys testKeys) *Adapter {
+	t.Helper()
+	adapter, err := New(Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			SecretKeyAppPrivateKey:   keys.appPrivatePEM,
+			SecretKeyAlipayPublicKey: keys.alipayPublicPEM,
+		}},
+		Client:           &http.Client{Timeout: 2 * time.Second},
+		GatewayURL:       gatewayURL,
+		AppID:            "ali-app",
+		SellerID:         "ali-seller",
+		NotifyURL:        "https://merchant.example/alipay/notify",
+		Now:              func() time.Time { return testNow },
+		MaxResponseBytes: 1 << 20,
+		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	require.NoError(t, err)
+	return adapter
 }
 
-func TestVerifyCallbackTamperedAmount(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
+func buildAlipayCallback(t *testing.T, key *rsa.PrivateKey, overrides map[string]string) []byte {
+	t.Helper()
+	values := url.Values{
+		"app_id":       {"ali-app"},
+		"seller_id":    {"ali-seller"},
+		"out_trade_no": {"01ORDER"},
+		"trade_no":     {"2027011522001400000001"},
+		"trade_status": {"TRADE_SUCCESS"},
+		"total_amount": {"100.00"},
+		"subject":      {"知识库充值"},
+		"notify_id":    {"notify-1"},
+		"notify_time":  {"2027-01-15 08:00:00"},
+		"sign_type":    {"RSA2"},
 	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	values, _, _ := buildAlipayCallback(t, key, nil)
-
-	// Tamper with amount after signing — regenerate body with wrong amount
-	// but keep the original signature.
-	values.Set("total_amount", "99.99")
-	tamperedBody := values.Encode()
-
-	_, err := adapter.VerifyCallback(context.Background(), nil, []byte(tamperedBody))
-	if err == nil {
-		t.Fatal("tampered amount should fail signature verification")
+	for key, value := range overrides {
+		values.Set(key, value)
 	}
+	values.Set("sign", signTestRSA2(t, key, buildSignContent(values)))
+	return []byte(values.Encode())
 }
 
-func TestVerifyCallbackMissingSign(t *testing.T) {
-	_, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
+func TestCreateQRCodeCallsAlipayPrecreate(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
+		require.NoError(t, r.ParseForm())
+		require.Equal(t, "alipay.trade.precreate", r.Form.Get("method"))
+		require.Equal(t, "RSA2", r.Form.Get("sign_type"))
+		require.Equal(t, "ali-app", r.Form.Get("app_id"))
+		require.Equal(t, "2027-01-15 08:00:00", r.Form.Get("timestamp"))
+		require.Equal(t, "https://merchant.example/alipay/notify", r.Form.Get("notify_url"))
+		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
 
-	body := "app_id=2021000122634567&out_trade_no=ORDER-456&trade_status=TRADE_SUCCESS"
-	_, err := adapter.VerifyCallback(context.Background(), nil, []byte(body))
-	if err == nil {
-		t.Fatal("missing sign should fail")
-	}
+		var biz map[string]any
+		require.NoError(t, json.Unmarshal([]byte(r.Form.Get("biz_content")), &biz))
+		require.Equal(t, "01ORDER", biz["out_trade_no"])
+		require.Equal(t, "100.00", biz["total_amount"])
+		require.Equal(t, "WeKnora recharge", biz["subject"])
+
+		writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_precreate_response", map[string]any{
+			"code": "10000", "msg": "Success", "out_trade_no": "01ORDER",
+			"qr_code": "https://qr.alipay.test/01ORDER",
+		})
+	}))
+	defer server.Close()
+
+	fact, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: " cny ", Description: "WeKnora recharge",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "https://qr.alipay.test/01ORDER", fact.QRCodeURL)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Empty(t, fact.ProviderPaymentID)
 }
 
-func TestVerifyCallbackWrongTradeStatus(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
+func TestVerifyCallbackRSA2AndExactAmount(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter := newTestAdapter(t, "https://openapi.alipay.com/gateway.do", keys)
 
-	_, body, _ := buildAlipayCallback(t, key, map[string]string{
-		"trade_status": "WAIT_BUYER_PAY",
+	fact, err := adapter.VerifyCallback(t.Context(), nil, buildAlipayCallback(t, keys.alipayPrivate, nil))
+	require.NoError(t, err)
+	require.Equal(t, "notify-1", fact.ProviderEventID)
+	require.Equal(t, "2027011522001400000001", fact.ProviderPaymentID)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Equal(t, "ali-app", fact.ApplicationID)
+	require.Equal(t, "ali-seller", fact.MerchantID)
+	require.Equal(t, int64(10000), fact.AmountMinor)
+	require.Equal(t, "CNY", fact.Currency)
+	require.True(t, fact.Success)
+	require.NotEmpty(t, fact.RawHash)
+	require.Equal(t, testNow, fact.Timestamp)
+	require.Equal(t, "知识库充值", fact.SignedPayload["subject"])
+	require.NotContains(t, fact.SignedPayload, "sign")
+}
+
+func TestVerifyCallbackRejectsTamperingAndInvalidMoney(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter := newTestAdapter(t, "https://openapi.alipay.com/gateway.do", keys)
+
+	t.Run("tampered signed value", func(t *testing.T) {
+		body := buildAlipayCallback(t, keys.alipayPrivate, nil)
+		values, err := url.ParseQuery(string(body))
+		require.NoError(t, err)
+		values.Set("subject", "篡改后的主题")
+		_, err = adapter.VerifyCallback(t.Context(), nil, []byte(values.Encode()))
+		require.ErrorIs(t, err, payment.ErrInvalidSignature)
 	})
 
-	fact, err := adapter.VerifyCallback(context.Background(), nil, []byte(body))
-	if err != nil {
-		t.Fatalf("callback should verify: %v", err)
-	}
-	if fact.Success {
-		t.Error("WAIT_BUYER_PAY should not be success")
-	}
-}
-
-func TestVerifyCallbackDuplicateEventId(t *testing.T) {
-	// This test verifies that the same notify_id produces the same raw_hash
-	// for deduplication. The actual dedup is handled by the payment service.
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	_, body1, _ := buildAlipayCallback(t, key, nil)
-
-	// The exact same body should produce the same raw_hash.
-	fact1, err := adapter.VerifyCallback(context.Background(), nil, []byte(body1))
-	if err != nil {
-		t.Fatal(err)
+	for _, testCase := range []struct {
+		name   string
+		amount string
+		want   int64
+	}{
+		{name: "one fen", amount: "0.01", want: 1},
+		{name: "one hundred yuan ten fen", amount: "100.10", want: 10010},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			fact, err := adapter.VerifyCallback(t.Context(), nil, buildAlipayCallback(t, keys.alipayPrivate, map[string]string{"total_amount": testCase.amount}))
+			require.NoError(t, err)
+			require.Equal(t, testCase.want, fact.AmountMinor)
+		})
 	}
 
-	fact2, err := adapter.VerifyCallback(context.Background(), nil, []byte(body1))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if fact1.RawHash != fact2.RawHash {
-		t.Fatalf("same body should produce same raw_hash: %s vs %s", fact1.RawHash, fact2.RawHash)
+	for _, amount := range []string{"1.001", "1e2", "one", "-1.00", "0.00", "92233720368547758.08"} {
+		t.Run("reject "+amount, func(t *testing.T) {
+			_, err := adapter.VerifyCallback(t.Context(), nil, buildAlipayCallback(t, keys.alipayPrivate, map[string]string{"total_amount": amount}))
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
 	}
 }
 
-func TestQueryPayment(t *testing.T) {
-	secrets := &payment.StaticSecretProvider{Secrets: map[string]string{}}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	fact, err := adapter.QueryPayment(context.Background(), "ORDER-456")
-	if err != nil {
-		t.Fatal(err)
+func TestVerifyCallbackValidatesIdentityOrderAndStatus(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter := newTestAdapter(t, "https://openapi.alipay.com/gateway.do", keys)
+	for _, testCase := range []struct {
+		name      string
+		overrides map[string]string
+	}{
+		{name: "wrong application", overrides: map[string]string{"app_id": "other-app"}},
+		{name: "wrong seller", overrides: map[string]string{"seller_id": "other-seller"}},
+		{name: "missing order", overrides: map[string]string{"out_trade_no": ""}},
+		{name: "successful payment missing trade number", overrides: map[string]string{"trade_no": ""}},
+		{name: "unknown status", overrides: map[string]string{"trade_status": "UNKNOWN"}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := adapter.VerifyCallback(t.Context(), nil, buildAlipayCallback(t, keys.alipayPrivate, testCase.overrides))
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
 	}
-	if fact.Provider != payment.ProviderAlipay {
-		t.Errorf("provider = %s, want alipay", fact.Provider)
+
+	fact, err := adapter.VerifyCallback(t.Context(), nil, buildAlipayCallback(t, keys.alipayPrivate, map[string]string{
+		"notify_id": "", "trade_status": "WAIT_BUYER_PAY",
+	}))
+	require.NoError(t, err)
+	require.Empty(t, fact.ProviderEventID)
+	require.NotEmpty(t, fact.RawHash)
+	require.False(t, fact.Success)
+}
+
+func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
+	for _, testCase := range []struct {
+		status  string
+		success bool
+	}{
+		{status: "TRADE_SUCCESS", success: true},
+		{status: "TRADE_FINISHED", success: true},
+		{status: "WAIT_BUYER_PAY", success: false},
+		{status: "TRADE_CLOSED", success: false},
+	} {
+		t.Run(testCase.status, func(t *testing.T) {
+			keys := newTestKeys(t)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.NoError(t, r.ParseForm())
+				require.Equal(t, "alipay.trade.query", r.Form.Get("method"))
+				requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
+				writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_query_response", map[string]any{
+					"code": "10000", "msg": "Success", "out_trade_no": "01ORDER",
+					"trade_no": "2027011522001400000001", "trade_status": testCase.status,
+					"total_amount": "100.00",
+				})
+			}))
+			defer server.Close()
+
+			fact, err := newTestAdapter(t, server.URL, keys).QueryPayment(t.Context(), "01ORDER")
+			require.NoError(t, err)
+			require.Equal(t, testCase.success, fact.Success)
+			require.Equal(t, int64(10000), fact.AmountMinor)
+			require.Equal(t, "CNY", fact.Currency)
+			require.Equal(t, "ali-app", fact.ApplicationID)
+			require.Equal(t, "ali-seller", fact.MerchantID)
+			require.NotEmpty(t, fact.RawHash)
+		})
 	}
 }
 
-func TestName(t *testing.T) {
-	secrets := &payment.StaticSecretProvider{Secrets: map[string]string{}}
-	adapter, _ := New(Config{Secrets: secrets})
-	if adapter.Name() != payment.ProviderAlipay {
-		t.Errorf("name = %s, want alipay", adapter.Name())
+func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
+	keys := newTestKeys(t)
+	var requestNumber int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestNumber++
+		require.NoError(t, r.ParseForm())
+		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
+		var biz map[string]any
+		require.NoError(t, json.Unmarshal([]byte(r.Form.Get("biz_content")), &biz))
+
+		switch requestNumber {
+		case 1:
+			require.Equal(t, "alipay.trade.refund", r.Form.Get("method"))
+			require.Equal(t, "01ORDER", biz["out_trade_no"])
+			require.Equal(t, "10.01", biz["refund_amount"])
+			require.Equal(t, "refund-idem-1", biz["out_request_no"])
+			require.Equal(t, "customer request", biz["refund_reason"])
+			writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_refund_response", map[string]any{
+				"code": "10000", "msg": "Success", "trade_no": "2027011522001400000001",
+				"out_trade_no": "01ORDER", "refund_fee": "10.01", "fund_change": "Y",
+			})
+		case 2:
+			require.Equal(t, "alipay.trade.fastpay.refund.query", r.Form.Get("method"))
+			require.Equal(t, "refund-idem-1", biz["out_request_no"])
+			writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{
+				"code": "10000", "msg": "Success", "trade_no": "2027011522001400000001",
+				"out_trade_no": "01ORDER", "out_request_no": "refund-idem-1",
+				"refund_amount": "10.01", "refund_status": "REFUND_SUCCESS",
+			})
+		default:
+			t.Fatalf("unexpected request %d", requestNumber)
+		}
+	}))
+	defer server.Close()
+	adapter := newTestAdapter(t, server.URL, keys)
+
+	submission, err := adapter.Refund(t.Context(), payment.RefundInput{
+		ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY",
+		Reason: "customer request", IdempotencyKey: "refund-idem-1",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "refund-idem-1", submission.ProviderRefundID)
+	require.Equal(t, "success", submission.Status)
+
+	fact, err := adapter.QueryRefund(t.Context(), "refund-idem-1")
+	require.NoError(t, err)
+	require.Equal(t, "refund-idem-1", fact.ProviderRefundID)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Equal(t, int64(1001), fact.AmountMinor)
+	require.Equal(t, "CNY", fact.Currency)
+	require.True(t, fact.Success)
+	require.NotEmpty(t, fact.RawHash)
+}
+
+func TestRefundRejectsMismatchedSignedAmount(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_refund_response", map[string]any{
+			"code": "10000", "msg": "Success", "trade_no": "trade-1",
+			"out_trade_no": "01ORDER", "refund_fee": "10.00", "fund_change": "Y",
+		})
+	}))
+	defer server.Close()
+	_, err := newTestAdapter(t, server.URL, keys).Refund(t.Context(), payment.RefundInput{
+		ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY", IdempotencyKey: "refund-idem-1",
+	})
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestGatewayRejectsTamperedAndOversizedResponses(t *testing.T) {
+	keys := newTestKeys(t)
+	t.Run("tampered signed response", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			responseJSON := `{"code":"10000","msg":"Success","out_trade_no":"01ORDER","qr_code":"https://qr.example/real"}`
+			envelope := fmt.Sprintf(`{"alipay_trade_precreate_response":%s,"sign":%q}`, responseJSON, signTestRSA2(t, keys.alipayPrivate, responseJSON))
+			envelope = strings.Replace(envelope, "https://qr.example/real", "https://qr.example/evil", 1)
+			_, err := io.WriteString(w, envelope)
+			require.NoError(t, err)
+		}))
+		defer server.Close()
+		_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+			OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+		})
+		require.ErrorIs(t, err, payment.ErrInvalidSignature)
+	})
+
+	t.Run("response body limit", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, err := io.WriteString(w, strings.Repeat("x", 2048))
+			require.NoError(t, err)
+		}))
+		defer server.Close()
+		adapter, err := New(Config{
+			Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+				SecretKeyAppPrivateKey: keys.appPrivatePEM, SecretKeyAlipayPublicKey: keys.alipayPublicPEM,
+			}},
+			Client: &http.Client{Timeout: time.Second}, GatewayURL: server.URL, AppID: "ali-app",
+			SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify", Now: time.Now,
+			MaxResponseBytes: 256, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		})
+		require.NoError(t, err)
+		_, err = adapter.QueryPayment(t.Context(), "01ORDER")
+		require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+	})
+}
+
+func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {
+	keys := newTestKeys(t)
+	valid := Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			SecretKeyAppPrivateKey: keys.appPrivatePEM, SecretKeyAlipayPublicKey: keys.alipayPublicPEM,
+		}},
+		Client: &http.Client{Timeout: time.Second}, GatewayURL: "https://openapi.alipay.com/gateway.do",
+		AppID: "ali-app", SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify",
+		Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	adapter, err := New(valid)
+	require.NoError(t, err)
+	merchantID, applicationID := adapter.Identity()
+	require.Equal(t, "ali-seller", merchantID)
+	require.Equal(t, "ali-app", applicationID)
+	require.Equal(t, payment.ProviderAlipay, adapter.Name())
+
+	testCases := []struct {
+		name   string
+		mutate func(*Config)
+	}{
+		{name: "secrets", mutate: func(config *Config) { config.Secrets = nil }},
+		{name: "client", mutate: func(config *Config) { config.Client = nil }},
+		{name: "client timeout", mutate: func(config *Config) { config.Client = &http.Client{} }},
+		{name: "gateway", mutate: func(config *Config) { config.GatewayURL = "" }},
+		{name: "application", mutate: func(config *Config) { config.AppID = "" }},
+		{name: "seller", mutate: func(config *Config) { config.SellerID = "" }},
+		{name: "notify URL", mutate: func(config *Config) { config.NotifyURL = "" }},
+		{name: "clock", mutate: func(config *Config) { config.Now = nil }},
+		{name: "response size", mutate: func(config *Config) { config.MaxResponseBytes = 0 }},
+		{name: "logger", mutate: func(config *Config) { config.Logger = nil }},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			config := valid
+			testCase.mutate(&config)
+			_, err := New(config)
+			require.Error(t, err)
+		})
 	}
 }
 
-func TestBuildSignContentExcludesSignFields(t *testing.T) {
-	values := url.Values{}
-	values.Set("app_id", "2021")
-	values.Set("out_trade_no", "ORDER-1")
-	values.Set("sign", "should-be-excluded")
-	values.Set("sign_type", "RSA2")
-	values.Set("trade_status", "SUCCESS")
-
-	content := buildSignContent(values)
-
-	if strings.Contains(content, "sign=") {
-		t.Errorf("sign content should not contain sign field: %s", content)
-	}
-	if strings.Contains(content, "sign_type=") {
-		t.Errorf("sign content should not contain sign_type field: %s", content)
-	}
-	if !strings.Contains(content, "app_id=2021") {
-		t.Errorf("sign content should contain app_id: %s", content)
-	}
+func TestBuildSignContentUsesSortedDecodedValues(t *testing.T) {
+	values, err := url.ParseQuery("subject=%E7%9F%A5%E8%AF%86%E5%BA%93+%26+RAG&app_id=ali-app&sign=ignored&sign_type=RSA2")
+	require.NoError(t, err)
+	require.Equal(t, "app_id=ali-app&sign_type=RSA2&subject=知识库 & RAG", buildSignContent(values))
 }
 
-func TestParseAmount(t *testing.T) {
-	tests := []struct {
-		input string
+func TestParseAmountMinor(t *testing.T) {
+	for _, testCase := range []struct {
+		value string
 		want  int64
 	}{
-		{"0.01", 1},
-		{"1.00", 100},
-		{"99.99", 9999},
-		{"100", 10000},
-		{"", 0},
-		{"0.1", 10},
-	}
-	for _, tt := range tests {
-		got := parseAmount(tt.input)
-		if got != tt.want {
-			t.Errorf("parseAmount(%q) = %d, want %d", tt.input, got, tt.want)
-		}
-	}
-}
-
-func TestVerifyCallbackDifferentAppId(t *testing.T) {
-	key, pubPEM := generateTestKey(t)
-	secrets := &payment.StaticSecretProvider{
-		Secrets: map[string]string{SecretKeyAlipayPublicKey: pubPEM},
-	}
-	adapter, _ := New(Config{Secrets: secrets})
-
-	// A callback for a different app_id — the signature is valid, but the
-	// application identity differs from what the merchant expects. The domain
-	// service checks this; here we just confirm it's extracted.
-	_, body, _ := buildAlipayCallback(t, key, map[string]string{
-		"app_id": "DIFFERENT_APP_999",
-	})
-
-	fact, err := adapter.VerifyCallback(context.Background(), nil, []byte(body))
-	if err != nil {
-		t.Fatalf("signature should be valid: %v", err)
-	}
-	if fact.ApplicationID != "DIFFERENT_APP_999" {
-		t.Errorf("app_id = %s, want DIFFERENT_APP_999", fact.ApplicationID)
+		{value: "0.01", want: 1},
+		{value: "100.10", want: 10010},
+		{value: "100", want: 10000},
+	} {
+		got, err := parseAmountMinor(testCase.value)
+		require.NoError(t, err)
+		require.Equal(t, testCase.want, got)
 	}
 }
