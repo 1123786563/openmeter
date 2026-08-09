@@ -134,10 +134,16 @@ type Tx struct {
 	CommerceOutbox *CommerceOutboxClient
 	// CommerceProduct is the client for interacting with the CommerceProduct builders.
 	CommerceProduct *CommerceProductClient
+	// CreditCharge is the client for interacting with the CreditCharge builders.
+	CreditCharge *CreditChargeClient
 	// CreditRealizationLineage is the client for interacting with the CreditRealizationLineage builders.
 	CreditRealizationLineage *CreditRealizationLineageClient
 	// CreditRealizationLineageSegment is the client for interacting with the CreditRealizationLineageSegment builders.
 	CreditRealizationLineageSegment *CreditRealizationLineageSegmentClient
+	// CreditReservation is the client for interacting with the CreditReservation builders.
+	CreditReservation *CreditReservationClient
+	// CreditReservationOutbox is the client for interacting with the CreditReservationOutbox builders.
+	CreditReservationOutbox *CreditReservationOutboxClient
 	// CurrencyCostBasis is the client for interacting with the CurrencyCostBasis builders.
 	CurrencyCostBasis *CurrencyCostBasisClient
 	// CustomCurrency is the client for interacting with the CustomCurrency builders.
@@ -425,8 +431,11 @@ func (tx *Tx) init() {
 	tx.CommerceOrderLine = NewCommerceOrderLineClient(tx.config)
 	tx.CommerceOutbox = NewCommerceOutboxClient(tx.config)
 	tx.CommerceProduct = NewCommerceProductClient(tx.config)
+	tx.CreditCharge = NewCreditChargeClient(tx.config)
 	tx.CreditRealizationLineage = NewCreditRealizationLineageClient(tx.config)
 	tx.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(tx.config)
+	tx.CreditReservation = NewCreditReservationClient(tx.config)
+	tx.CreditReservationOutbox = NewCreditReservationOutboxClient(tx.config)
 	tx.CurrencyCostBasis = NewCurrencyCostBasisClient(tx.config)
 	tx.CustomCurrency = NewCustomCurrencyClient(tx.config)
 	tx.Customer = NewCustomerClient(tx.config)

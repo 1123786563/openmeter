@@ -14,5 +14,6 @@ var (
 	ErrCreditOverflow             = errors.New("credit calculation overflow")
 	ErrResourceLinesRequired      = errors.New("at least one resource line is required")
 	ErrInvalidCommandIdentity     = errors.New("valid idempotency key and payload hash are required")
+	ErrIdempotencyConflict        = errors.New("credit reservation idempotency conflict")
 	ErrTransitionEvidenceRequired = errors.New("transition evidence is required")
 )

@@ -87,6 +87,16 @@ type Charge struct {
 	CommandIdentity CommandIdentity              `json:"commandIdentity"`
 }
 
+// UsageEvent is the standard event payload persisted by the reservation
+// transactional outbox. It contains no balance or ledger projection data.
+type UsageEvent struct {
+	EventID       string         `json:"eventId"`
+	AggregateType string         `json:"aggregateType"`
+	AggregateID   string         `json:"aggregateId"`
+	EventType     string         `json:"eventType"`
+	Payload       map[string]any `json:"payload"`
+}
+
 func (c Charge) Validate() error {
 	return c.CommandIdentity.Validate()
 }

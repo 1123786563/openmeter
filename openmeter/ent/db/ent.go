@@ -73,8 +73,11 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditcharge"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
@@ -247,8 +250,11 @@ func checkColumn(t, c string) error {
 			commerceorderline.Table:                                commerceorderline.ValidColumn,
 			commerceoutbox.Table:                                   commerceoutbox.ValidColumn,
 			commerceproduct.Table:                                  commerceproduct.ValidColumn,
+			creditcharge.Table:                                     creditcharge.ValidColumn,
 			creditrealizationlineage.Table:                         creditrealizationlineage.ValidColumn,
 			creditrealizationlineagesegment.Table:                  creditrealizationlineagesegment.ValidColumn,
+			creditreservation.Table:                                creditreservation.ValidColumn,
+			creditreservationoutbox.Table:                          creditreservationoutbox.ValidColumn,
 			currencycostbasis.Table:                                currencycostbasis.ValidColumn,
 			customcurrency.Table:                                   customcurrency.ValidColumn,
 			customer.Table:                                         customer.ValidColumn,

@@ -351,11 +351,20 @@ type CommerceOutbox func(*sql.Selector)
 // CommerceProduct is the predicate function for commerceproduct builders.
 type CommerceProduct func(*sql.Selector)
 
+// CreditCharge is the predicate function for creditcharge builders.
+type CreditCharge func(*sql.Selector)
+
 // CreditRealizationLineage is the predicate function for creditrealizationlineage builders.
 type CreditRealizationLineage func(*sql.Selector)
 
 // CreditRealizationLineageSegment is the predicate function for creditrealizationlineagesegment builders.
 type CreditRealizationLineageSegment func(*sql.Selector)
+
+// CreditReservation is the predicate function for creditreservation builders.
+type CreditReservation func(*sql.Selector)
+
+// CreditReservationOutbox is the predicate function for creditreservationoutbox builders.
+type CreditReservationOutbox func(*sql.Selector)
 
 // CurrencyCostBasis is the predicate function for currencycostbasis builders.
 type CurrencyCostBasis func(*sql.Selector)
