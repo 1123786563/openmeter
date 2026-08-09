@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"os"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
@@ -15,8 +15,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/alipay"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/wechat"
-	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/commerce/reconciliation"
+	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/commerce/wallet"
 	"github.com/openmeterio/openmeter/openmeter/commerce/worker"
 	"github.com/openmeterio/openmeter/openmeter/credit"
@@ -94,10 +94,10 @@ func wireCommerce(entClient *entdb.Client, defaultNamespace string, grantConnect
 
 	// Payment service: uses EntAdapter-backed repositories + PaidTxRunner.
 	testSecrets := map[string]string{
-		"wechat_app_id":             "test-wechat-app-id",
-		"wechat_mch_id":             "test-wechat-mch-id",
-		"wechat_api_key":            "test-wechat-api-key",
-		"alipay_app_id":             "test-alipay-app-id",
+		"wechat_app_id":  "test-wechat-app-id",
+		"wechat_mch_id":  "test-wechat-mch-id",
+		"wechat_api_key": "test-wechat-api-key",
+		"alipay_app_id":  "test-alipay-app-id",
 	}
 	// Load test RSA public key for WeChat callback signature verification.
 	// In production, this comes from the platform secret manager.
@@ -298,6 +298,7 @@ func (r *entPaidTxRunner) RunPaidTransition(ctx context.Context, in payment.Paid
 		Fact: &in.Fact,
 	}, nil
 }
+
 // Code generated for commerce adapters. Appended to commerce.go.
 
 // ---------------------------------------------------------------------------
@@ -463,19 +464,19 @@ type refundRepoAdapter struct {
 
 func (a refundRepoAdapter) CreateRefund(ctx context.Context, req refund.RefundRequest) (*refund.RefundRequest, bool, error) {
 	w, fresh, err := a.EntAdapter.CreateRefundRequest(ctx, commerce.RefundRequestWire{
-		ID:              req.ID,
-		Namespace:       req.Namespace,
-		OrderID:         req.CommerceOrderID,
-		CustomerID:      req.CustomerID,
-		AmountMinor:     req.AmountCents,
-		Currency:        req.Currency,
-		Status:          string(req.Status),
-		Reason:          req.Reason,
-		IdempotencyKey:  req.IdempotencyKey,
-		CreditQuantum:   req.CreditQuantum,
+		ID:               req.ID,
+		Namespace:        req.Namespace,
+		OrderID:          req.CommerceOrderID,
+		CustomerID:       req.CustomerID,
+		AmountMinor:      req.AmountCents,
+		Currency:         req.Currency,
+		Status:           string(req.Status),
+		Reason:           req.Reason,
+		IdempotencyKey:   req.IdempotencyKey,
+		CreditQuantum:    req.CreditQuantum,
 		RefundQuantumFen: req.RefundQuantumFen,
-		CreatedAt:       req.CreatedAt,
-		UpdatedAt:       req.UpdatedAt,
+		CreatedAt:        req.CreatedAt,
+		UpdatedAt:        req.UpdatedAt,
 	})
 	if err != nil {
 		return nil, false, err
@@ -647,14 +648,14 @@ func mapWireToRefundRequest(w *commerce.RefundRequestWire) *refund.RefundRequest
 
 func mapWireToRefundFact(w *commerce.RefundFactWire) *refund.RefundFactRecord {
 	return &refund.RefundFactRecord{
-		ID:               w.ID,
-		Namespace:        w.Namespace,
-		RefundRequestID:  w.RefundRequestID,
-		Provider:         payment.Provider(w.Provider),
-		RawHash:          w.RawHash,
-		SignedPayload:    w.SignedPayload,
-		Timestamp:        w.Timestamp,
-		CreatedAt:        w.CreatedAt,
+		ID:              w.ID,
+		Namespace:       w.Namespace,
+		RefundRequestID: w.RefundRequestID,
+		Provider:        payment.Provider(w.Provider),
+		RawHash:         w.RawHash,
+		SignedPayload:   w.SignedPayload,
+		Timestamp:       w.Timestamp,
+		CreatedAt:       w.CreatedAt,
 	}
 }
 
@@ -673,9 +674,9 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 		Priority:    1,
 		EffectiveAt: now,
 		Metadata: map[string]string{
-			"source":           string(in.Source),
-			"order_id":         in.OrderID,
-			"idempotency_key":  in.IdempotencyKey,
+			"source":          string(in.Source),
+			"order_id":        in.OrderID,
+			"idempotency_key": in.IdempotencyKey,
 		},
 	}
 	if in.ValidityDays > 0 {
@@ -707,10 +708,10 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 // establishing a fence. Replace with a real WeKnora fence API client.
 type noopFenceClient struct{}
 
-func (noopFenceClient) EstablishFence(_ context.Context, _, _ string) (refund.FenceResult, error) {
+func (noopFenceClient) EstablishFence(_ context.Context, _, _, _ string) (refund.FenceResult, error) {
 	return refund.FenceResult{Sequence: "noop", Established: true}, nil
 }
-func (noopFenceClient) ReleaseFence(_ context.Context, _, _, _ string) error { return nil }
+func (noopFenceClient) ReleaseFence(_ context.Context, _, _, _, _ string) error { return nil }
 func (noopFenceClient) ConfirmSnapshotApplied(_ context.Context, _, _, _ string) (bool, error) {
 	return true, nil
 }
