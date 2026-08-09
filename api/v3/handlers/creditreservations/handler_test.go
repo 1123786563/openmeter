@@ -2,6 +2,7 @@ package creditreservations
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -86,6 +87,25 @@ func TestReserveMalformedRequestMapsToUnprocessableEntity(t *testing.T) {
 	h.Reserve().ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+}
+
+func TestReserveUnknownRequestFieldMapsToUnprocessableEntity(t *testing.T) {
+	h := New(func(context.Context) (string, error) { return "acme", nil }, stubService{})
+	req := httptest.NewRequest(http.MethodPost, "/credit-reservations", strings.NewReader(`{"unexpected":true}`))
+	rec := httptest.NewRecorder()
+
+	h.Reserve().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+}
+
+func TestChargeResponseOmitsReservationIDForDirectCharge(t *testing.T) {
+	response := toChargeResponse(creditreservation.Charge{ID: "charge-1"})
+
+	require.Nil(t, response.ReservationID)
+	encoded, err := json.Marshal(response)
+	require.NoError(t, err)
+	require.NotContains(t, string(encoded), "reservation_id")
 }
 
 type stubService struct {

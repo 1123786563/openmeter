@@ -118,7 +118,7 @@ type reservationResponse struct {
 type chargeResponse struct {
 	ID            string              `json:"id"`
 	CustomerID    string              `json:"customer_id"`
-	ReservationID string              `json:"reservation_id"`
+	ReservationID *string             `json:"reservation_id,omitempty"`
 	Currency      currencyResponse    `json:"currency"`
 	RateVersion   string              `json:"rate_version"`
 	Lines         []ratedLineResponse `json:"lines"`
@@ -254,7 +254,7 @@ func toReservationResponse(reservation creditreservation.Reservation) reservatio
 }
 
 func toChargeResponse(charge creditreservation.Charge) chargeResponse {
-	return chargeResponse{ID: charge.ID, CustomerID: charge.CustomerID, ReservationID: charge.ReservationID, Currency: toCurrencyResponse(charge.Currency.Code.String(), charge.Currency.CustomCurrencyID), RateVersion: charge.RateVersion, Lines: toRatedLineResponses(charge.Lines), TotalCredits: charge.TotalCredits, State: strings.ToLower(charge.State)}
+	return chargeResponse{ID: charge.ID, CustomerID: charge.CustomerID, ReservationID: optionalString(charge.ReservationID), Currency: toCurrencyResponse(charge.Currency.Code.String(), charge.Currency.CustomCurrencyID), RateVersion: charge.RateVersion, Lines: toRatedLineResponses(charge.Lines), TotalCredits: charge.TotalCredits, State: strings.ToLower(charge.State)}
 }
 
 func toCurrencyResponse(code string, customCurrencyID *string) currencyResponse {

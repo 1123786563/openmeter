@@ -22,6 +22,7 @@ import (
 	billinginvoiceshandler "github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"
 	billingprofileshandler "github.com/openmeterio/openmeter/api/v3/handlers/billingprofiles"
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
+	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
 	currencieshandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
 	customershandler "github.com/openmeterio/openmeter/api/v3/handlers/customers"
 	customersbillinghandler "github.com/openmeterio/openmeter/api/v3/handlers/customers/billing"
@@ -49,9 +50,8 @@ import (
 	appstripe "github.com/openmeterio/openmeter/openmeter/app/stripe"
 	"github.com/openmeterio/openmeter/openmeter/billing"
 	billingcharges "github.com/openmeterio/openmeter/openmeter/billing/charges"
-	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
-	"github.com/samber/mo"
+	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	"github.com/openmeterio/openmeter/openmeter/cost"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
@@ -79,6 +79,7 @@ import (
 	"github.com/openmeterio/openmeter/pkg/featuregate"
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
 	"github.com/openmeterio/openmeter/pkg/server"
+	"github.com/samber/mo"
 )
 
 type Config struct {
@@ -130,6 +131,10 @@ type Config struct {
 
 	// Commerce
 	CommerceHandler commercehandler.Handler
+
+	// Credit reservations are an opt-in unstable API surface. The application
+	// supplies the handler when the synchronous reservation service is wired.
+	CreditReservationsHandler creditreservationshandler.Handler
 }
 
 func (c *Config) Validate() error {
@@ -295,9 +300,11 @@ type Server struct {
 	featureCostHandler          featurecosthandler.Handler
 	aiusageHandler              aiusagehandler.Handler
 
-	rateCardHandler             aiusagehandler.Handler
+	rateCardHandler aiusagehandler.Handler
 
 	commerceHandler commercehandler.Handler
+
+	creditReservationsHandler creditreservationshandler.Handler
 }
 
 // Make sure we conform to ServerInterface
@@ -420,6 +427,7 @@ func NewServer(config *Config) (*Server, error) {
 		aiusageHandler:              aiusageH,
 		rateCardHandler:             rateCardH,
 		commerceHandler:             config.CommerceHandler,
+		creditReservationsHandler:   config.CreditReservationsHandler,
 	}, nil
 }
 
@@ -520,6 +528,8 @@ func (s *Server) RegisterRoutes(r chi.Router) error {
 				r.Delete("/{id}", s.DeleteRateCardEntry)
 			})
 		}
+
+		s.registerCreditReservationRoutes(r)
 	})
 
 	return nil
