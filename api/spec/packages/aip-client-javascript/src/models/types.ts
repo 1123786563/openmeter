@@ -938,6 +938,19 @@ export interface UpdateResourceReference {
 }
 
 /**
+ * A plan reference supplied when creating an order. The catalog product ID is
+ * optional so callers can resolve a plan by its key and version alone.
+ */
+export interface CommerceOrderCreatePlanRef {
+  /** Optional catalog product ID used to verify the key and version. */
+  planId?: string
+  /** Stable plan key, such as `pro`. */
+  planKey: string
+  /** Billing period or catalog version, such as `monthly`. */
+  planVersion: string
+}
+
+/**
  * A lightweight reference to a plan in the product catalog, embedded in order and
  * catalog responses without duplicating the full plan definition.
  */
@@ -3273,7 +3286,7 @@ export interface CommerceOrderCreate {
    * For `plan_purchase` or `subscription_renewal`: the plan and billing period being
    * purchased.
    */
-  plan?: CommercePlanRef
+  plan?: CommerceOrderCreatePlanRef
   /** For `wallet_top_up`: the recharge product being purchased. */
   rechargeProductId?: string
   /** The currency for this order (three-letter ISO 4217). */

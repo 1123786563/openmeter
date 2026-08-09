@@ -172,6 +172,28 @@ model PlanRef {
 }
 
 /**
+ * A plan reference supplied when creating an order. The catalog product ID is
+ * optional so callers can resolve a plan by its key and version alone.
+ */
+@friendlyName("CommerceOrderCreatePlanRef")
+model OrderCreatePlanRef {
+  /**
+   * Optional catalog product ID used to verify the key and version.
+   */
+  plan_id?: Shared.ULID;
+
+  /**
+   * Stable plan key, such as `pro`.
+   */
+  plan_key: string;
+
+  /**
+   * Billing period or catalog version, such as `monthly`.
+   */
+  plan_version: string;
+}
+
+/**
  * A lightweight reference to a subscription, embedded in order responses.
  */
 @friendlyName("CommerceSubscriptionRef")

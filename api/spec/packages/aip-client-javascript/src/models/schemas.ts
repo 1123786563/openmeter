@@ -1746,6 +1746,17 @@ export const updateResourceReference = z
   })
   .describe("TaxCode reference.");
 
+export const commerceOrderCreatePlanRef = z
+  .object({
+    planId: ulid.optional(),
+    planKey: z.string().describe("Stable plan key, such as `pro`."),
+    planVersion: z
+      .string()
+      .describe("Billing period or catalog version, such as `monthly`."),
+  })
+
+    .describe("A plan reference supplied when creating an order. The catalog product ID is optional so callers can resolve a plan by its key and version alone.");
+
 export const commercePlanRef = z
   .object({
     planId: ulid,
@@ -3760,7 +3771,7 @@ export const commerceOrderCreate = z
         .describe("Client-generated idempotency key. Replaying the same key returns the stored order; a different payload for the same key returns HTTP 409."),
     billingCustomerId: ulid,
     kind: commerceOrderKind,
-    plan: commercePlanRef.optional(),
+    plan: commerceOrderCreatePlanRef.optional(),
     rechargeProductId: ulid.optional(),
     currency: currencyCode,
   })
@@ -8843,6 +8854,17 @@ export const updateResourceReferenceWire = z
   })
   .describe("TaxCode reference.");
 
+export const commerceOrderCreatePlanRefWire = z
+  .strictObject({
+    plan_id: ulidWire.optional(),
+    plan_key: z.string().describe("Stable plan key, such as `pro`."),
+    plan_version: z
+      .string()
+      .describe("Billing period or catalog version, such as `monthly`."),
+  })
+
+    .describe("A plan reference supplied when creating an order. The catalog product ID is optional so callers can resolve a plan by its key and version alone.");
+
 export const commercePlanRefWire = z
   .strictObject({
     plan_id: ulidWire,
@@ -10845,7 +10867,7 @@ export const commerceOrderCreateWire = z
         .describe("Client-generated idempotency key. Replaying the same key returns the stored order; a different payload for the same key returns HTTP 409."),
     billing_customer_id: ulidWire,
     kind: commerceOrderKindWire,
-    plan: commercePlanRefWire.optional(),
+    plan: commerceOrderCreatePlanRefWire.optional(),
     recharge_product_id: ulidWire.optional(),
     currency: currencyCodeWire,
   })

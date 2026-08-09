@@ -139,6 +139,7 @@ export type {
   AppReference,
   ChargeReference,
   UpdateResourceReference,
+  CommerceOrderCreatePlanRef,
   CommercePlanRef,
   AiUsageLedgerEntryRef,
   CommerceSubscriptionRef,

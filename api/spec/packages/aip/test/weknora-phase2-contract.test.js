@@ -116,6 +116,18 @@ describe('WeKnora Phase 2 commerce contract', () => {
     })
   })
 
+  describe('order plan references', () => {
+    it('allows create-order plan_id omission while response plan_id remains required', () => {
+      const spec = compileAIP()
+      const requestRef = spec.components.schemas.CommerceOrderCreatePlanRef
+      const responseRef = spec.components.schemas.CommercePlanRef
+
+      assert.ok(requestRef.properties.plan_id, 'request plan_id property')
+      assert.ok(!requestRef.required.includes('plan_id'), 'request plan_id is optional')
+      assert.ok(responseRef.required.includes('plan_id'), 'response plan_id is required')
+    })
+  })
+
   describe('enums', () => {
     it('WalletBucketSource has the four required sources', () => {
       const spec = compileAIP()

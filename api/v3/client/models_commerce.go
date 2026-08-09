@@ -147,11 +147,22 @@ type CommerceOrderCreate struct {
 	Kind CommerceOrderKind `json:"kind"`
 	// For `plan_purchase` or `subscription_renewal`: the plan and billing period being
 	// purchased.
-	Plan *CommercePlanRef `json:"plan,omitempty"`
+	Plan *CommerceOrderCreatePlanRef `json:"plan,omitempty"`
 	// For `wallet_top_up`: the recharge product being purchased.
 	RechargeProductID *string `json:"recharge_product_id,omitempty"`
 	// The currency for this order (three-letter ISO 4217).
 	Currency string `json:"currency"`
+}
+
+// A plan reference supplied when creating an order. The catalog product ID is
+// optional so callers can resolve a plan by its key and version alone.
+type CommerceOrderCreatePlanRef struct {
+	// Optional catalog product ID used to verify the key and version.
+	PlanID *string `json:"plan_id,omitempty"`
+	// Stable plan key, such as `pro`.
+	PlanKey string `json:"plan_key"`
+	// Billing period or catalog version, such as `monthly`.
+	PlanVersion string `json:"plan_version"`
 }
 
 // The business type of an order.

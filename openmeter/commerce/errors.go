@@ -68,3 +68,28 @@ var ErrInsufficientCredits = models.NewValidationIssue(
 	models.WithCriticalSeverity(),
 	commonhttp.WithHTTPStatusCodeAttribute(http.StatusPaymentRequired),
 )
+
+const ErrCodeInvalidPlanReference models.ErrorCode = "commerce_invalid_plan_reference"
+
+// ErrInvalidPlanReference is returned for deterministic plan reference input
+// failures. Its stable message is safe to return to API clients; dependency
+// failures must not be wrapped with this issue.
+var ErrInvalidPlanReference = models.NewValidationIssue(
+	ErrCodeInvalidPlanReference,
+	"invalid plan reference",
+	models.WithFieldString("plan"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusBadRequest),
+)
+
+const ErrCodeProductNotPurchasable models.ErrorCode = "commerce_product_not_purchasable"
+
+// ErrProductNotPurchasable covers deterministic product/order incompatibility,
+// including kind, sale state, and currency mismatches.
+var ErrProductNotPurchasable = models.NewValidationIssue(
+	ErrCodeProductNotPurchasable,
+	"product cannot be purchased for this order",
+	models.WithFieldString("product_id"),
+	models.WithCriticalSeverity(),
+	commonhttp.WithHTTPStatusCodeAttribute(http.StatusBadRequest),
+)

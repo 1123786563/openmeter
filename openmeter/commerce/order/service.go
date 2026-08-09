@@ -11,6 +11,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce"
+	"github.com/openmeterio/openmeter/openmeter/commerce/catalog"
 	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -79,14 +80,15 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 	lines := make([]commerce.OrderLineSnapshot, 0, len(in.ProductIDs))
 	totalMinor := int64(0)
 	totalCredits := int64(0)
+	now := clock.Now()
 
 	for _, pid := range in.ProductIDs {
 		product, err := s.products.GetProduct(ctx, in.Namespace, pid)
 		if err != nil {
 			return nil, false, fmt.Errorf("order: resolve product %s: %w", pid, err)
 		}
-		if expected := productKindForOrderKind(in.Kind); expected != "" && product.Kind != expected {
-			return nil, false, fmt.Errorf("order: product %s kind %s does not match order kind %s", pid, product.Kind, in.Kind)
+		if err := validateProductForOrder(*product, in, now); err != nil {
+			return nil, false, err
 		}
 
 		line := snapshotProduct(*product)
@@ -95,7 +97,6 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 		totalCredits += line.Credits
 	}
 
-	now := clock.Now()
 	orderID := ulid.Make().String()
 	order := commerce.Order{
 		NamespacedID: models.NamespacedID{
@@ -128,6 +129,19 @@ func (s *service) CreateOrder(ctx context.Context, in commerce.CreateOrderInput)
 	}
 
 	return s.repo.CreateOrder(ctx, order)
+}
+
+func validateProductForOrder(product commerce.Product, in commerce.CreateOrderInput, at time.Time) error {
+	if expected := productKindForOrderKind(in.Kind); expected != "" && product.Kind != expected {
+		return fmt.Errorf("%w: product kind does not match order kind", commerce.ErrProductNotPurchasable)
+	}
+	if !catalog.IsOnSale(product, at) {
+		return fmt.Errorf("%w: product is not currently on sale", commerce.ErrProductNotPurchasable)
+	}
+	if !strings.EqualFold(strings.TrimSpace(product.Currency), strings.TrimSpace(in.Currency)) {
+		return fmt.Errorf("%w: product currency does not match order currency", commerce.ErrProductNotPurchasable)
+	}
+	return nil
 }
 
 func productKindForOrderKind(kind commerce.OrderKind) commerce.ProductKind {

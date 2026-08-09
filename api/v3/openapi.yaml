@@ -10560,7 +10560,7 @@ components:
           description: The business type of the order.
         plan:
           allOf:
-            - $ref: '#/components/schemas/CommercePlanRef'
+            - $ref: '#/components/schemas/CommerceOrderCreatePlanRef'
           description: |-
             For `plan_purchase` or `subscription_renewal`: the plan and billing period being
             purchased.
@@ -10574,6 +10574,26 @@ components:
           description: The currency for this order (three-letter ISO 4217).
       additionalProperties: false
       description: Request body for creating a new order.
+    CommerceOrderCreatePlanRef:
+      type: object
+      required:
+        - plan_key
+        - plan_version
+      properties:
+        plan_id:
+          allOf:
+            - $ref: '#/components/schemas/ULID'
+          description: Optional catalog product ID used to verify the key and version.
+        plan_key:
+          type: string
+          description: Stable plan key, such as `pro`.
+        plan_version:
+          type: string
+          description: Billing period or catalog version, such as `monthly`.
+      additionalProperties: false
+      description: |-
+        A plan reference supplied when creating an order. The catalog product ID is
+        optional so callers can resolve a plan by its key and version alone.
     CommerceOrderKind:
       type: string
       enum:

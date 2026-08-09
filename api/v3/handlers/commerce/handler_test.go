@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -322,19 +323,23 @@ func TestCreateOrder_IdempotentReplay(t *testing.T) {
 	}
 }
 
-func TestCreateOrderResolvesPlanReferenceToCatalogSKU(t *testing.T) {
-	orderService := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1"}, created: true}
+func TestCreateOrderRouteAcceptsPlanWithoutIDAndResolvesCatalogSKU(t *testing.T) {
+	orderService := &mockOrders{order: &commerce.Order{PublicID: "ord-1", CustomerID: "customer-1", AmountMinor: 9900, Currency: "CNY"}, created: true}
 	plan := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindPlanPurchase, AmountMinor: 9900, Currency: "CNY", Active: true}
 	catalog := &mockCatalog{productBySKU: plan}
 	h := testHandler(Services{Catalog: catalog, Orders: orderService})
-	body := api.CommerceOrderCreate{
-		BillingCustomerId: "customer-1",
-		IdempotencyKey:    "plan-idem-1",
-		Kind:              api.CommerceOrderKindPlanPurchase,
-		Currency:          "CNY",
-		Plan:              &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"},
-	}
-	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	router := http.NewServeMux()
+	router.Handle("POST /orders", h.CreateOrder())
+	req := httptest.NewRequest(http.MethodPost, "/orders", strings.NewReader(`{
+		"billing_customer_id":"customer-1",
+		"idempotency_key":"plan-idem-1",
+		"kind":"plan_purchase",
+		"currency":"CNY",
+		"plan":{"plan_key":"pro","plan_version":"monthly"}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
@@ -343,6 +348,13 @@ func TestCreateOrderResolvesPlanReferenceToCatalogSKU(t *testing.T) {
 	}
 	if got := orderService.lastInput.ProductIDs; len(got) != 1 || got[0] != "product-plan-pro-monthly" {
 		t.Fatalf("resolved product IDs = %v, want [product-plan-pro-monthly]", got)
+	}
+	var response api.CommerceOrder
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.AmountFen != 9900 {
+		t.Fatalf("response amount_fen = %d, want 9900", response.AmountFen)
 	}
 }
 
@@ -357,7 +369,7 @@ func TestCreateOrderAcceptsMatchingPlanIDAndSKU(t *testing.T) {
 		IdempotencyKey:    "plan-idem-matching-id",
 		Kind:              api.CommerceOrderKindPlanPurchase,
 		Currency:          "CNY",
-		Plan:              &api.CommercePlanRef{PlanId: api.ULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanId: ptrULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
 	}
 
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
@@ -383,13 +395,14 @@ func TestCreateOrderRejectsMismatchingPlanIDAndSKU(t *testing.T) {
 		IdempotencyKey:    "plan-idem-mismatching-id",
 		Kind:              api.CommerceOrderKindPlanPurchase,
 		Currency:          "CNY",
-		Plan:              &api.CommercePlanRef{PlanId: api.ULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanId: ptrULID(planID), PlanKey: "pro", PlanVersion: "monthly"},
 	}
 
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for mismatching plan_id/SKU, got %d: %s", rr.Code, rr.Body.String())
 	}
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_invalid_plan_reference", "invalid plan reference")
 	if catalog.lastRequestedProductID != planID {
 		t.Fatalf("catalog product ID = %q, want %q", catalog.lastRequestedProductID, planID)
 	}
@@ -400,16 +413,25 @@ func TestCreateOrderRejectsMismatchingPlanIDAndSKU(t *testing.T) {
 
 func TestCreateOrderRejectsUnknownPlan(t *testing.T) {
 	h := testHandler(Services{Catalog: &mockCatalog{err: commerce.ErrProductNotFound}, Orders: &mockOrders{}})
-	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-unknown", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "missing", PlanVersion: "monthly"}}
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-unknown", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "missing", PlanVersion: "monthly"}}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for unknown plan, got %d: %s", rr.Code, rr.Body.String())
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_invalid_plan_reference", "invalid plan reference")
+}
+
+func TestCreateOrderCatalogInfrastructureFailureIsSanitized500(t *testing.T) {
+	const internalDetail = "catalog database timeout at postgres://billing-secret"
+	h := testHandler(Services{Catalog: &mockCatalog{err: errors.New(internalDetail)}, Orders: &mockOrders{}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-infra", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "pro", PlanVersion: "monthly"}}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
+	if strings.Contains(rr.Body.String(), internalDetail) {
+		t.Fatalf("500 response exposed catalog failure: %s", rr.Body.String())
 	}
 }
 
 func TestCreateOrderRejectsMixedProductReference(t *testing.T) {
 	h := testHandler(Services{Catalog: &mockCatalog{}, Orders: &mockOrders{}})
-	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "mixed-idem", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"}, RechargeProductId: ptrULID("recharge-1")}
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "mixed-idem", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "pro", PlanVersion: "monthly"}, RechargeProductId: ptrULID("recharge-1")}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for mixed product references, got %d: %s", rr.Code, rr.Body.String())
@@ -428,10 +450,18 @@ func TestCreateOrderRejectsWalletTopUpWithoutProduct(t *testing.T) {
 func TestCreateOrderRejectsMismatchedPlanProductKind(t *testing.T) {
 	product := &commerce.Product{NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-wallet"}, SKU: "PLAN-PRO-MONTHLY", Kind: commerce.ProductKindWalletTopUp, AmountMinor: 1000, Currency: "CNY", Active: true}
 	h := testHandler(Services{Catalog: &mockCatalog{productBySKU: product}, Orders: &mockOrders{}})
-	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-kind-mismatch", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommercePlanRef{PlanKey: "pro", PlanVersion: "monthly"}}
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-kind-mismatch", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "pro", PlanVersion: "monthly"}}
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for mismatched plan product kind, got %d: %s", rr.Code, rr.Body.String())
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_product_not_purchasable", "product cannot be purchased for this order")
+}
+
+func TestCreateOrderMapsOrderServiceProductMismatchToSanitized400(t *testing.T) {
+	h := testHandler(Services{Orders: &mockOrders{err: fmt.Errorf("%w: hidden wallet/plan mismatch", commerce.ErrProductNotPurchasable)}})
+	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "wallet-kind-mismatch", Kind: api.CommerceOrderKindWalletTopUp, Currency: "CNY", RechargeProductId: ptrULID("product-plan")}
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_product_not_purchasable", "product cannot be purchased for this order")
+	if strings.Contains(rr.Body.String(), "hidden wallet/plan mismatch") {
+		t.Fatalf("validation response exposed wrapped detail: %s", rr.Body.String())
 	}
 }
 
@@ -480,6 +510,20 @@ func requireProblemResponse(t *testing.T, rr *httptest.ResponseRecorder, wantSta
 	}
 	if want := http.StatusText(wantStatus); problem.Title != want {
 		t.Errorf("expected problem title %q, got %q", want, problem.Title)
+	}
+}
+
+func requireValidationIssue(t *testing.T, rr *httptest.ResponseRecorder, wantStatus int, wantCode, wantMessage string) {
+	t.Helper()
+	if rr.Code != wantStatus {
+		t.Fatalf("expected %d, got %d: %s", wantStatus, rr.Code, rr.Body.String())
+	}
+	var issue map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&issue); err != nil {
+		t.Fatalf("decode validation issue: %v", err)
+	}
+	if issue["code"] != wantCode || issue["message"] != wantMessage {
+		t.Fatalf("validation issue = %#v, want code=%q message=%q", issue, wantCode, wantMessage)
 	}
 }
 

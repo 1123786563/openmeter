@@ -363,24 +363,32 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 			}
 			sku, err := planSKU(*body.Plan)
 			if err != nil {
-				writeStatus(ctx, w, http.StatusBadRequest, err)
+				writeCommerceError(ctx, w, err)
 				return
 			}
 			var product *commerce.Product
-			if body.Plan.PlanId != "" {
-				product, err = h.svc.Catalog.GetProduct(ctx, ns, body.Plan.PlanId)
+			if body.Plan.PlanId != nil && *body.Plan.PlanId != "" {
+				product, err = h.svc.Catalog.GetProduct(ctx, ns, *body.Plan.PlanId)
 				if err != nil {
-					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid plan_id: %w", err))
+					if errors.Is(err, commerce.ErrProductNotFound) {
+						writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
+					} else {
+						writeCommerceError(ctx, w, err)
+					}
 					return
 				}
 				if !strings.EqualFold(strings.TrimSpace(product.SKU), sku) {
-					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("plan_id does not match plan SKU %s", sku))
+					writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
 					return
 				}
 			} else {
 				product, err = h.svc.Catalog.GetProductBySKU(ctx, ns, sku)
 				if err != nil {
-					writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("unknown plan %s: %w", sku, err))
+					if errors.Is(err, commerce.ErrProductNotFound) {
+						writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
+					} else {
+						writeCommerceError(ctx, w, err)
+					}
 					return
 				}
 			}
@@ -389,7 +397,7 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 				expectedKind = commerce.ProductKindSubscriptionRenewal
 			}
 			if product.Kind != expectedKind {
-				writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("plan product kind %s does not match order kind %s", product.Kind, input.Kind))
+				writeCommerceError(ctx, w, commerce.ErrProductNotPurchasable)
 				return
 			}
 			input.ProductIDs = []string{product.ID}
@@ -416,11 +424,11 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 	}
 }
 
-func planSKU(ref api.CommercePlanRef) (string, error) {
+func planSKU(ref api.CommerceOrderCreatePlanRef) (string, error) {
 	key := strings.ToUpper(strings.TrimSpace(ref.PlanKey))
 	version := strings.ToUpper(strings.TrimSpace(ref.PlanVersion))
 	if key == "" || version == "" {
-		return "", errors.New("plan_key and plan_version are required")
+		return "", commerce.ErrInvalidPlanReference
 	}
 	return "PLAN-" + key + "-" + version, nil
 }
@@ -1003,6 +1011,8 @@ func httpStatusForIssue(vi models.ValidationIssue) int {
 		return http.StatusConflict
 	case commerce.ErrCodeInsufficientCredits:
 		return http.StatusPaymentRequired
+	case commerce.ErrCodeInvalidPlanReference, commerce.ErrCodeProductNotPurchasable:
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

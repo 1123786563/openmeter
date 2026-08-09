@@ -2,12 +2,14 @@ package order
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/openmeterio/openmeter/openmeter/commerce"
+	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -172,21 +174,73 @@ func TestCreateOrderIdempotent(t *testing.T) {
 }
 
 func TestCreateOrderRejectsProductKindMismatch(t *testing.T) {
-	repo := newMockRepo()
-	lookup := &mockProductLookup{products: map[string]*commerce.Product{
-		"p-wallet": makeProduct("p-wallet", "RECHARGE-100", "100 Credits", commerce.ProductKindWalletTopUp, 100, 1000),
-	}}
-	svc := New(Config{Repo: repo, Products: lookup})
-	_, _, err := svc.CreateOrder(context.Background(), commerce.CreateOrderInput{
-		Namespace:      "ns",
-		CustomerID:     "cust",
-		Kind:           commerce.OrderKindPlanPurchase,
-		IdempotencyKey: "kind-mismatch",
-		Currency:       "CNY",
-		ProductIDs:     []string{"p-wallet"},
-	})
-	if err == nil {
-		t.Fatal("expected product kind mismatch error")
+	tests := []struct {
+		name        string
+		orderKind   commerce.OrderKind
+		productKind commerce.ProductKind
+	}{
+		{name: "plan order with wallet product", orderKind: commerce.OrderKindPlanPurchase, productKind: commerce.ProductKindWalletTopUp},
+		{name: "wallet order with plan product", orderKind: commerce.OrderKindWalletTopUp, productKind: commerce.ProductKindPlanPurchase},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			product := makeProduct("p1", "SKU-1", "Product", tt.productKind, 100, 1000)
+			svc := New(Config{Repo: newMockRepo(), Products: &mockProductLookup{products: map[string]*commerce.Product{"p1": product}}})
+			_, _, err := svc.CreateOrder(context.Background(), commerce.CreateOrderInput{
+				Namespace: "ns", CustomerID: "cust", Kind: tt.orderKind,
+				IdempotencyKey: "kind-mismatch", Currency: "CNY", ProductIDs: []string{"p1"},
+			})
+			if !errors.Is(err, commerce.ErrProductNotPurchasable) {
+				t.Fatalf("error = %v, want ErrProductNotPurchasable", err)
+			}
+		})
+	}
+}
+
+func TestCreateOrderValidatesProductPurchasabilityBeforeSnapshot(t *testing.T) {
+	now := time.Date(2026, time.August, 10, 12, 0, 0, 0, time.UTC)
+	clock.FreezeTime(now)
+	t.Cleanup(clock.UnFreeze)
+
+	future := now.Add(time.Hour)
+	past := now.Add(-time.Hour)
+	tests := []struct {
+		name    string
+		mutate  func(*commerce.Product)
+		wantErr bool
+	}{
+		{name: "inactive", mutate: func(p *commerce.Product) { p.Active = false }, wantErr: true},
+		{name: "future sale window", mutate: func(p *commerce.Product) { p.OnSaleAt = &future }, wantErr: true},
+		{name: "expired sale window", mutate: func(p *commerce.Product) { p.OffSaleAt = &past }, wantErr: true},
+		{name: "currency mismatch", mutate: func(p *commerce.Product) { p.Currency = "USD" }, wantErr: true},
+		{name: "valid product", mutate: func(p *commerce.Product) { p.OnSaleAt = &past; p.OffSaleAt = &future }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			product := makeProduct("p1", "RECHARGE-100", "100 Credits", commerce.ProductKindWalletTopUp, 100, 9900)
+			tt.mutate(product)
+			svc := New(Config{Repo: newMockRepo(), Products: &mockProductLookup{products: map[string]*commerce.Product{"p1": product}}})
+			order, _, err := svc.CreateOrder(context.Background(), commerce.CreateOrderInput{
+				Namespace: "ns", CustomerID: "cust", Kind: commerce.OrderKindWalletTopUp,
+				IdempotencyKey: "sale-check-" + tt.name, Currency: "CNY", ProductIDs: []string{"p1"},
+			})
+			if tt.wantErr {
+				if !errors.Is(err, commerce.ErrProductNotPurchasable) {
+					t.Fatalf("error = %v, want ErrProductNotPurchasable", err)
+				}
+				if len(svc.(*service).repo.(*mockRepo).orders) != 0 {
+					t.Fatal("invalid product was snapshotted into an order")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("valid product rejected: %v", err)
+			}
+			if order.AmountMinor != 9900 {
+				t.Fatalf("order amount_minor = %d, want 9900", order.AmountMinor)
+			}
+		})
 	}
 }
 

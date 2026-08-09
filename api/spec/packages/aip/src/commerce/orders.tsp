@@ -28,7 +28,7 @@ model OrderCreate {
    * For `plan_purchase` or `subscription_renewal`: the plan and billing period being
    * purchased.
    */
-  plan?: PlanRef;
+  plan?: OrderCreatePlanRef;
 
   /**
    * For `wallet_top_up`: the recharge product being purchased.
