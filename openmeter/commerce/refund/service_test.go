@@ -1299,6 +1299,40 @@ func TestProcessOneInvalidResolverResultDoesNotFallBackToAnotherProvider(t *test
 	}
 }
 
+func TestProcessOnePersistedUnavailableProviderDoesNotFallBackWithoutResolver(t *testing.T) {
+	h := newTestHarness(t)
+	h.orders.addFulfilledOrder("ns", "order-persisted-provider", "cust", 10000)
+	alipayProvider := newMockProvider(payment.ProviderAlipay)
+	wechatProvider := newMockProvider(payment.ProviderWeChat)
+
+	service, err := New(Config{
+		Repo: h.repo, Orders: h.orders, Wallet: h.wallet, Reverser: h.reverser,
+		Providers: map[payment.Provider]ProviderRefunder{
+			payment.ProviderAlipay: alipayProvider,
+			payment.ProviderWeChat: wechatProvider,
+		},
+	})
+	require.NoError(t, err)
+
+	rec, _, err := h.repo.CreateRefund(t.Context(), RefundRequest{
+		ID: "refund-persisted-provider", Namespace: "ns", CommerceOrderID: "order-persisted-provider",
+		CustomerID: "cust", Currency: "CNY", Status: RefundStatusProviderProcessing,
+		ProviderName: string(payment.ProviderOffline), ProviderRefundID: "provider-refund-1",
+		RefundFen: 10000, ReservedCredits: 100000, FenceSequence: "fence-1",
+	})
+	require.NoError(t, err)
+
+	rec, err = service.ProcessOne(t.Context(), "ns", rec.ID)
+	require.Error(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+	require.Zero(t, alipayProvider.queryCallN.Load())
+	require.Zero(t, wechatProvider.queryCallN.Load())
+	require.Zero(t, alipayProvider.refundCallN.Load())
+	require.Zero(t, wechatProvider.refundCallN.Load())
+	require.Zero(t, h.reverser.totalReversed())
+	require.Zero(t, h.fence.released.Load())
+}
+
 func TestProcessOneProviderSuccessStopsWhenFactPersistenceFails(t *testing.T) {
 	h := newTestHarness(t)
 	h.wallet.setGrants("cust", []commerce.AllocationGrant{

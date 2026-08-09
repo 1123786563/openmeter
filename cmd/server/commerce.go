@@ -336,6 +336,21 @@ func wirePaymentProviders(cfg config.CommerceConfiguration, logger *slog.Logger)
 	return paymentProviders, refundProviders, nil
 }
 
+// validateCommerceProviderConfiguration performs the provider-only portion of
+// production assembly for --validate. It reads and validates configured local
+// key material, but does not construct domain services, workers, or listeners.
+// Automatic refund dependency validation remains in wireCommerce so normal
+// startup continues to fail closed when those real dependencies are absent.
+func validateCommerceProviderConfiguration(cfg config.CommerceConfiguration, logger *slog.Logger) error {
+	if !cfg.Enabled {
+		return nil
+	}
+	if _, _, err := wirePaymentProviders(cfg, logger); err != nil {
+		return fmt.Errorf("commerce provider configuration: %w", err)
+	}
+	return nil
+}
+
 func validateAutomaticRefundDependencies(deps *commerceRuntimeDependencies) error {
 	var fence refund.FenceClient
 	var reverser refund.CreditReverser

@@ -72,6 +72,11 @@ func main() {
 	}
 
 	if v, _ := flags.GetBool("validate"); v {
+		if err := validateCommerceProviderConfiguration(conf.Commerce, slog.Default()); err != nil {
+			println("configuration error:")
+			println(err.Error())
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 

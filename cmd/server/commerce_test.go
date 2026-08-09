@@ -7,9 +7,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -230,6 +232,101 @@ func TestWirePaymentProvidersRejectsMalformedSecretFilesAtStartup(t *testing.T) 
 			require.NotContains(t, err.Error(), secretMarker)
 		})
 	}
+}
+
+func TestValidateFlagRunsProductionProviderAssembly(t *testing.T) {
+	if configPath := os.Getenv("OPENMETER_VALIDATE_TEST_CONFIG"); configPath != "" {
+		os.Args = []string{"openmeter", "--validate", "--config", configPath}
+		main()
+		return
+	}
+
+	for _, tt := range []struct {
+		name   string
+		mutate func(*config.CommerceConfiguration)
+	}{
+		{name: "valid configuration"},
+		{name: "missing key file", mutate: func(cfg *config.CommerceConfiguration) {
+			cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
+		}},
+		{name: "malformed key file", mutate: func(cfg *config.CommerceConfiguration) {
+			const secretMarker = "validate-malformed-secret-content-marker"
+			require.NoError(t, os.WriteFile(cfg.Payment.Alipay.AlipayPublicKeyFile, []byte(secretMarker), 0o600))
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validCommerceConfiguration(t)
+			if tt.mutate != nil {
+				tt.mutate(&cfg)
+			}
+			configPath := writeCommerceValidationConfig(t, cfg)
+			output, err := runValidateSubprocess(t, configPath)
+			if tt.mutate == nil {
+				require.NoError(t, err, output)
+				return
+			}
+			require.Error(t, err, output)
+			require.NotContains(t, output, "validate-malformed-secret-content-marker")
+		})
+	}
+}
+
+func TestValidateFlagAllowsDisabledCommerceWithoutProviderFiles(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "openmeter.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("commerce:\n  enabled: false\n"), 0o600))
+	output, err := runValidateSubprocess(t, configPath)
+	require.NoError(t, err, output)
+}
+
+func runValidateSubprocess(t *testing.T, configPath string) (string, error) {
+	t.Helper()
+	command := exec.Command(os.Args[0], "-test.run=^TestValidateFlagRunsProductionProviderAssembly$")
+	command.Env = append(os.Environ(), "OPENMETER_VALIDATE_TEST_CONFIG="+configPath)
+	output, err := command.CombinedOutput()
+	return string(output), err
+}
+
+func writeCommerceValidationConfig(t *testing.T, cfg config.CommerceConfiguration) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "openmeter.yaml")
+	contents := fmt.Sprintf(`commerce:
+  enabled: true
+  payment:
+    httpTimeout: %q
+    maxResponseBytes: %d
+    pendingStaleAfter: %q
+    wechat:
+      enabled: true
+      baseURL: %q
+      appID: %q
+      merchantID: %q
+      merchantSerial: %q
+      merchantPrivateKeyFile: %q
+      apiV3KeyFile: %q
+      platformPublicKeyFiles:
+        platform-serial: %q
+      notifyURL: %q
+      refundNotifyURL: %q
+      callbackMaxAge: %q
+    alipay:
+      enabled: true
+      gatewayURL: %q
+      appID: %q
+      sellerID: %q
+      appPrivateKeyFile: %q
+      alipayPublicKeyFile: %q
+      notifyURL: %q
+`,
+		cfg.Payment.HTTPTimeout.String(), cfg.Payment.MaxResponseBytes, cfg.Payment.PendingStaleAfter.String(),
+		cfg.Payment.WeChat.BaseURL, cfg.Payment.WeChat.AppID, cfg.Payment.WeChat.MerchantID,
+		cfg.Payment.WeChat.MerchantSerial, cfg.Payment.WeChat.MerchantPrivateKeyFile,
+		cfg.Payment.WeChat.APIv3KeyFile, cfg.Payment.WeChat.PlatformPublicKeyFiles["platform-serial"],
+		cfg.Payment.WeChat.NotifyURL, cfg.Payment.WeChat.RefundNotifyURL, cfg.Payment.WeChat.CallbackMaxAge.String(),
+		cfg.Payment.Alipay.GatewayURL, cfg.Payment.Alipay.AppID, cfg.Payment.Alipay.SellerID,
+		cfg.Payment.Alipay.AppPrivateKeyFile, cfg.Payment.Alipay.AlipayPublicKeyFile, cfg.Payment.Alipay.NotifyURL,
+	)
+	require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+	return path
 }
 
 func TestRefundWorkerAdapterPassesThroughProcessError(t *testing.T) {

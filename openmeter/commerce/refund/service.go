@@ -861,9 +861,7 @@ func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) (Provi
 		if p, ok := s.providers[payment.Provider(rec.ProviderName)]; ok {
 			return p, nil
 		}
-		if s.pResolver != nil {
-			return nil, fmt.Errorf("refund: persisted provider %q is not configured", rec.ProviderName)
-		}
+		return nil, fmt.Errorf("refund: persisted provider %q is not configured", rec.ProviderName)
 	}
 	// I5: resolve from the order's payment attempt if a resolver is wired.
 	if s.pResolver != nil {
