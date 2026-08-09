@@ -55,6 +55,7 @@ type Configuration struct {
 	FeatureGate        FeatureGateConfiguration
 	UnitConfig         UnitConfigConfiguration
 	AIUsage            AIUsageConfiguration
+	Commerce           CommerceConfiguration
 }
 
 // Validate validates the configuration.
@@ -194,6 +195,10 @@ func (c Configuration) Validate() error {
 		errs = append(errs, errorsx.WithPrefix(err, "unitConfig"))
 	}
 
+	if err := c.Commerce.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "commerce"))
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -244,4 +249,5 @@ func SetViperDefaults(v *viper.Viper, flags *pflag.FlagSet) {
 	ConfigureFeatureGate(v, "featureGate")
 	ConfigureUnitConfig(v, "unitConfig")
 	ConfigureAIUsage(v)
+	ConfigureCommerce(v)
 }
