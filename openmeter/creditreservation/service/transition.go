@@ -25,7 +25,8 @@ func validateReleaseEvidence(state creditreservation.ReservationState, evidence 
 	return fmt.Errorf("%w: release from %s", creditreservation.ErrTransitionEvidenceRequired, state)
 }
 
-func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteInput) (creditreservation.Reservation, error) {
+func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteInput) (reservation creditreservation.Reservation, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "execute", err) }()
 	if input.ExecutionDeadline.IsZero() {
 		input.ExecutionDeadline = s.now().Add(s.executionDeadline)
 	}
@@ -40,7 +41,8 @@ func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteIn
 	})
 }
 
-func (s *service) Release(ctx context.Context, input creditreservation.ReleaseInput) (creditreservation.Reservation, error) {
+func (s *service) Release(ctx context.Context, input creditreservation.ReleaseInput) (reservation creditreservation.Reservation, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "release", err) }()
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
 		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
 			return creditreservation.Reservation{}, err
@@ -55,7 +57,8 @@ func (s *service) Release(ctx context.Context, input creditreservation.ReleaseIn
 	})
 }
 
-func (s *service) MarkUnknown(ctx context.Context, input creditreservation.UnknownInput) (creditreservation.Reservation, error) {
+func (s *service) MarkUnknown(ctx context.Context, input creditreservation.UnknownInput) (reservation creditreservation.Reservation, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "unknown", err) }()
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
 		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
 			return creditreservation.Reservation{}, err
@@ -63,7 +66,12 @@ func (s *service) MarkUnknown(ctx context.Context, input creditreservation.Unkno
 		if current.State == creditreservation.ReservationStateUnknown {
 			return current, nil
 		}
-		return tx.UpdateReservation(ctx, reservationadapter.UpdateReservationInput{ID: input.ID, ExpectedStates: []creditreservation.ReservationState{creditreservation.ReservationStateActive, creditreservation.ReservationStateExecuting}, State: creditreservation.ReservationStateUnknown})
+		update := reservationadapter.UpdateReservationInput{ID: input.ID, ExpectedStates: []creditreservation.ReservationState{creditreservation.ReservationStateActive, creditreservation.ReservationStateExecuting}, State: creditreservation.ReservationStateUnknown}
+		if current.State == creditreservation.ReservationStateActive {
+			deadline := s.now().Add(s.executionDeadline)
+			update.ExecutionDeadline = &deadline
+		}
+		return tx.UpdateReservation(ctx, update)
 	})
 }
 

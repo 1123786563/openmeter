@@ -27,7 +27,8 @@ import (
 // CorrectCollectedAccrued. Returning a typed error is safer than inventing a
 // reversal from a current balance or committing a ledger group that cannot be
 // deterministically corrected.
-func (s *service) Settle(ctx context.Context, input creditreservation.SettleInput) (creditreservation.Reservation, error) {
+func (s *service) Settle(ctx context.Context, input creditreservation.SettleInput) (reservation creditreservation.Reservation, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "settle", err) }()
 	if err := validateSettleInput(input); err != nil {
 		return creditreservation.Reservation{}, err
 	}
@@ -65,7 +66,8 @@ func (s *service) Settle(ctx context.Context, input creditreservation.SettleInpu
 	})
 }
 
-func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInput) (creditreservation.Charge, error) {
+func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInput) (charge creditreservation.Charge, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "charge", err) }()
 	if err := validateChargeInput(input); err != nil {
 		return creditreservation.Charge{}, err
 	}
@@ -73,7 +75,7 @@ func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInpu
 		return creditreservation.Charge{}, creditreservation.ErrSettlementNotConfigured
 	}
 	var result creditreservation.Charge
-	err := s.adapter.WithCustomerLock(ctx, customer.CustomerID{Namespace: input.ID.Namespace, ID: input.CustomerID}, func(tx reservationadapter.TxAdapter) error {
+	err = s.adapter.WithCustomerLock(ctx, customer.CustomerID{Namespace: input.ID.Namespace, ID: input.CustomerID}, func(tx reservationadapter.TxAdapter) error {
 		existing, found, err := tx.GetChargeByCommand(ctx, input.ID.Namespace, input.CommandIdentity.IdempotencyKey)
 		if err != nil {
 			return err
@@ -130,7 +132,8 @@ func (s *service) Charge(ctx context.Context, input creditreservation.ChargeInpu
 	return result, err
 }
 
-func (s *service) ReverseCharge(ctx context.Context, input creditreservation.ReverseChargeInput) (creditreservation.Charge, error) {
+func (s *service) ReverseCharge(ctx context.Context, input creditreservation.ReverseChargeInput) (charge creditreservation.Charge, err error) {
+	defer func() { s.metrics.commandOutcome(ctx, "reverse", err) }()
 	if err := input.ID.Validate(); err != nil {
 		return creditreservation.Charge{}, err
 	}

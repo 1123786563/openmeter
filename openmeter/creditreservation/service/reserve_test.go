@@ -124,6 +124,14 @@ func TestLifecycleExecuteUnknownReleaseAndSweep(t *testing.T) {
 	require.Equal(t, 1, swept.Expired)
 	require.Equal(t, creditreservation.ReservationStateExpired, store.rows[active.ID.ID].State)
 
+	activeUnknown := reserveInput("call-active-unknown")
+	reservedActiveUnknown, err := svc.Reserve(t.Context(), activeUnknown)
+	require.NoError(t, err)
+	markedUnknown, err := svc.MarkUnknown(t.Context(), creditreservation.UnknownInput{ID: models.NamespacedID{Namespace: reservedActiveUnknown.Namespace, ID: reservedActiveUnknown.ID}, IdempotencyKey: reservedActiveUnknown.CommandIdentity.IdempotencyKey, PayloadHash: reservedActiveUnknown.CommandIdentity.PayloadHash})
+	require.NoError(t, err)
+	require.Equal(t, creditreservation.ReservationStateUnknown, markedUnknown.State)
+	require.NotNil(t, markedUnknown.ExecutionDeadline)
+
 	manual := reserveInput("call-manual-review")
 	reservedManual, err := svc.Reserve(t.Context(), manual)
 	require.NoError(t, err)

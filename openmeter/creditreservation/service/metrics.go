@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -43,4 +45,17 @@ func (m lifecycleMetrics) command(ctx context.Context, operation, outcome string
 }
 func (m lifecycleMetrics) transition(ctx context.Context, state string) {
 	m.transitions.Add(ctx, 1, metric.WithAttributes(attribute.String("state", state)))
+}
+
+func (m lifecycleMetrics) commandOutcome(ctx context.Context, operation string, err error) {
+	outcome := "success"
+	switch {
+	case errors.Is(err, creditreservation.ErrInsufficientFunds):
+		outcome = "insufficient_funds"
+	case errors.Is(err, creditreservation.ErrIdempotencyConflict), errors.Is(err, creditreservation.ErrStateConflict):
+		outcome = "conflict"
+	case err != nil:
+		outcome = "error"
+	}
+	m.command(ctx, operation, outcome)
 }
