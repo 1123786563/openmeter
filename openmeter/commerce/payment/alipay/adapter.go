@@ -86,6 +86,9 @@ func New(cfg Config) (*Adapter, error) {
 	if cfg.Logger == nil {
 		return nil, errors.New("alipay adapter: logger is required")
 	}
+	if err := validateConfiguredKeyMaterial(cfg.Secrets); err != nil {
+		return nil, err
+	}
 	return &Adapter{
 		secrets:          cfg.Secrets,
 		httpClient:       cfg.Client,
@@ -97,6 +100,27 @@ func New(cfg Config) (*Adapter, error) {
 		maxResponseBytes: cfg.MaxResponseBytes,
 		logger:           cfg.Logger,
 	}, nil
+}
+
+func validateConfiguredKeyMaterial(secrets payment.SecretProvider) error {
+	ctx := context.Background()
+	privateKeyPEM, err := secrets.Get(ctx, SecretKeyAppPrivateKey)
+	if err != nil {
+		return errors.New("alipay adapter: application private key is unavailable")
+	}
+	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
+	if err != nil || privateKey.Validate() != nil {
+		return errors.New("alipay adapter: application private key is invalid")
+	}
+
+	publicKeyPEM, err := secrets.Get(ctx, SecretKeyAlipayPublicKey)
+	if err != nil {
+		return errors.New("alipay adapter: Alipay public key is unavailable")
+	}
+	if _, err := parseRSAPublicKey([]byte(publicKeyPEM)); err != nil {
+		return errors.New("alipay adapter: Alipay public key is invalid")
+	}
+	return nil
 }
 
 // Name returns the provider identifier.

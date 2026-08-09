@@ -707,6 +707,43 @@ func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {
 	}
 }
 
+func TestNewRejectsMalformedConfiguredKeyMaterial(t *testing.T) {
+	keys := newTestKeys(t)
+	validSecrets := map[string]string{
+		SecretKeyAppPrivateKey:   keys.appPrivatePEM,
+		SecretKeyAlipayPublicKey: keys.alipayPublicPEM,
+	}
+	newConfig := func(secrets map[string]string) Config {
+		return Config{
+			Secrets: &payment.StaticSecretProvider{Secrets: secrets},
+			Client:  &http.Client{Timeout: time.Second}, GatewayURL: "https://openapi.alipay.com/gateway.do",
+			AppID: "ali-app", SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify",
+			Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		}
+	}
+
+	for _, tt := range []struct {
+		name string
+		key  string
+	}{
+		{name: "application private key", key: SecretKeyAppPrivateKey},
+		{name: "Alipay public key", key: SecretKeyAlipayPublicKey},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			secrets := make(map[string]string, len(validSecrets))
+			for key, value := range validSecrets {
+				secrets[key] = value
+			}
+			const secretMarker = "malformed-secret-content-marker"
+			secrets[tt.key] = secretMarker
+
+			_, err := New(newConfig(secrets))
+			require.Error(t, err)
+			require.NotContains(t, err.Error(), secretMarker)
+		})
+	}
+}
+
 func TestRequestSignContentUsesSortedDecodedValues(t *testing.T) {
 	values, err := url.ParseQuery("subject=%E7%9F%A5%E8%AF%86%E5%BA%93+%26+RAG&app_id=ali-app&sign=ignored&sign_type=RSA2")
 	require.NoError(t, err)

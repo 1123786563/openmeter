@@ -455,6 +455,15 @@ func (p *mockProvider) QueryRefund(_ context.Context, input payment.RefundQueryI
 
 func (p *mockProvider) Name() payment.Provider { return p.name }
 
+type mockProviderResolver struct {
+	provider payment.Provider
+	err      error
+}
+
+func (r mockProviderResolver) ResolveProviderForOrder(context.Context, string, string) (payment.Provider, error) {
+	return r.provider, r.err
+}
+
 // ---------------------------------------------------------------------------
 // Mock: SnapshotPublisher
 // ---------------------------------------------------------------------------
@@ -1237,6 +1246,56 @@ func TestProcessOneProviderProcessingThenSuccess(t *testing.T) {
 	}
 	if h.reverser.totalReversed() != 100000 {
 		t.Errorf("total reversed = %d, want 100000", h.reverser.totalReversed())
+	}
+}
+
+func TestProcessOneInvalidResolverResultDoesNotFallBackToAnotherProvider(t *testing.T) {
+	wantResolverErr := errors.New("payment attempt lookup failed")
+	for _, tt := range []struct {
+		name     string
+		resolver mockProviderResolver
+		wantErr  error
+	}{
+		{name: "resolver error", resolver: mockProviderResolver{err: wantResolverErr}, wantErr: wantResolverErr},
+		{name: "empty provider", resolver: mockProviderResolver{}},
+		{name: "unconfigured provider", resolver: mockProviderResolver{provider: payment.ProviderOffline}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			h.wallet.setGrants("cust", []commerce.AllocationGrant{
+				rechargeGrant("grant-1", 100000, 0, 100000),
+			})
+			h.orders.addFulfilledOrder("ns", "order-resolver-error", "cust", 10000)
+			otherProvider := newMockProvider(payment.ProviderAlipay)
+
+			service, err := New(Config{
+				Repo: h.repo, Orders: h.orders, Wallet: h.wallet, Fence: h.fence, Reverser: h.reverser,
+				Providers: map[payment.Provider]ProviderRefunder{
+					payment.ProviderAlipay: otherProvider,
+					payment.ProviderWeChat: h.provider,
+				},
+				ProviderResolver: tt.resolver,
+				Snapshots:        h.snapshots,
+			})
+			require.NoError(t, err)
+
+			rec, _, err := service.CreateRefund(t.Context(), CreateRefundInput{
+				Namespace: "ns", OrderID: "order-resolver-error", CustomerID: "cust",
+				Currency: "CNY", IdempotencyKey: "idem-resolver-error",
+			})
+			require.NoError(t, err)
+
+			rec, err = service.ProcessOne(t.Context(), "ns", rec.ID)
+			require.Error(t, err)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			}
+			require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+			require.Zero(t, otherProvider.refundCallN.Load())
+			require.Zero(t, h.provider.refundCallN.Load())
+			require.Zero(t, h.reverser.totalReversed())
+			require.Zero(t, h.fence.released.Load())
+		})
 	}
 }
 

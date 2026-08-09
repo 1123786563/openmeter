@@ -526,7 +526,10 @@ func (s *service) reserveAndSubmit(ctx context.Context, rec *RefundRequest) (*Re
 
 // submitToProvider submits the refund to the payment provider.
 func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
-	provider := s.lookupProvider(ctx, rec)
+	provider, err := s.lookupProvider(ctx, rec)
+	if err != nil {
+		return rec, err
+	}
 	if provider == nil {
 		reason := "no provider configured for refund"
 		rec = s.failRefund(ctx, rec, reason)
@@ -584,7 +587,10 @@ func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*Re
 
 // processProviderProcessing queries the provider for the current status.
 func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
-	provider := s.lookupProvider(ctx, rec)
+	provider, err := s.lookupProvider(ctx, rec)
+	if err != nil {
+		return rec, err
+	}
 	if provider == nil {
 		return rec, errors.New("refund: no provider configured")
 	}
@@ -847,23 +853,32 @@ func (s *service) failRefund(ctx context.Context, rec *RefundRequest, reason str
 //     use it.
 //  2. If a ProviderResolver is configured, look up the provider from the
 //     order's payment attempt data.
-//  3. Deterministic fallback: select the lexicographically smallest provider
-//     key (no map iteration). This path should not be reached in production
-//     (resolver is wired), but avoids non-deterministic behavior.
-func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) ProviderRefunder {
+//  3. Only when no resolver is configured, deterministically fall back to the
+//     lexicographically smallest provider key. A configured resolver is
+//     authoritative: its errors and invalid results must not switch channels.
+func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) (ProviderRefunder, error) {
 	if rec.ProviderName != "" {
 		if p, ok := s.providers[payment.Provider(rec.ProviderName)]; ok {
-			return p
+			return p, nil
+		}
+		if s.pResolver != nil {
+			return nil, fmt.Errorf("refund: persisted provider %q is not configured", rec.ProviderName)
 		}
 	}
 	// I5: resolve from the order's payment attempt if a resolver is wired.
 	if s.pResolver != nil {
 		prov, err := s.pResolver.ResolveProviderForOrder(ctx, rec.Namespace, rec.CommerceOrderID)
-		if err == nil && prov != "" {
-			if p, ok := s.providers[prov]; ok {
-				return p
-			}
+		if err != nil {
+			return nil, fmt.Errorf("refund: resolve payment provider: %w", err)
 		}
+		if prov == "" {
+			return nil, errors.New("refund: resolver returned an empty payment provider")
+		}
+		provider, ok := s.providers[prov]
+		if !ok {
+			return nil, fmt.Errorf("refund: resolved provider %q is not configured", prov)
+		}
+		return provider, nil
 	}
 	// Deterministic fallback: sorted first key — never iterate the map.
 	if len(s.providers) > 0 {
@@ -872,9 +887,9 @@ func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) Provid
 			keys = append(keys, string(k))
 		}
 		sort.Strings(keys)
-		return s.providers[payment.Provider(keys[0])]
+		return s.providers[payment.Provider(keys[0])], nil
 	}
-	return nil
+	return nil, nil
 }
 
 func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {

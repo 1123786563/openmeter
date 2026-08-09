@@ -2,6 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -201,6 +205,33 @@ func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	require.True(t, errors.As(err, &pathErr))
 }
 
+func TestWirePaymentProvidersRejectsMalformedSecretFilesAtStartup(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		secretPath func(config.CommerceConfiguration) string
+	}{
+		{name: "WeChat merchant private key", secretPath: func(cfg config.CommerceConfiguration) string { return cfg.Payment.WeChat.MerchantPrivateKeyFile }},
+		{name: "WeChat API v3 key", secretPath: func(cfg config.CommerceConfiguration) string { return cfg.Payment.WeChat.APIv3KeyFile }},
+		{name: "WeChat platform public key", secretPath: func(cfg config.CommerceConfiguration) string {
+			return cfg.Payment.WeChat.PlatformPublicKeyFiles["platform-serial"]
+		}},
+		{name: "Alipay application private key", secretPath: func(cfg config.CommerceConfiguration) string { return cfg.Payment.Alipay.AppPrivateKeyFile }},
+		{name: "Alipay public key", secretPath: func(cfg config.CommerceConfiguration) string { return cfg.Payment.Alipay.AlipayPublicKeyFile }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validCommerceConfiguration(t)
+			const secretMarker = "malformed-secret-file-content-marker"
+			require.NoError(t, os.WriteFile(tt.secretPath(cfg), []byte(secretMarker), 0o600))
+
+			paymentProviders, refundProviders, err := wirePaymentProviders(cfg, testutils.NewLogger(t))
+			require.Error(t, err)
+			require.Nil(t, paymentProviders)
+			require.Nil(t, refundProviders)
+			require.NotContains(t, err.Error(), secretMarker)
+		})
+	}
+}
+
 func TestRefundWorkerAdapterPassesThroughProcessError(t *testing.T) {
 	wantErr := errors.New("provider timeout")
 	adapter := refundWorkerAdapter{svc: testRefundProcessorService{err: wantErr}}
@@ -215,6 +246,12 @@ func validCommerceConfiguration(t *testing.T) config.CommerceConfiguration {
 		require.NoError(t, os.WriteFile(path, []byte(value), 0o600))
 		return path
 	}
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
+	publicKeyDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err)
+	publicKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyDER})
 
 	return config.CommerceConfiguration{
 		Enabled: true,
@@ -222,17 +259,17 @@ func validCommerceConfiguration(t *testing.T) config.CommerceConfiguration {
 			HTTPTimeout: 2 * time.Second, MaxResponseBytes: 1 << 20, PendingStaleAfter: 30 * time.Second,
 			WeChat: config.WeChatPaymentConfiguration{
 				Enabled: true, BaseURL: "https://api.mch.weixin.qq.com", AppID: "wx-app", MerchantID: "wx-mch",
-				MerchantSerial: "merchant-serial", MerchantPrivateKeyFile: writeSecret("merchant.pem", "merchant-private-key"),
+				MerchantSerial: "merchant-serial", MerchantPrivateKeyFile: writeSecret("merchant.pem", string(privateKeyPEM)),
 				APIv3KeyFile:           writeSecret("api-v3-key", "0123456789abcdef0123456789abcdef"),
-				PlatformPublicKeyFiles: map[string]string{"platform-serial": writeSecret("platform.pem", "platform-public-key")},
+				PlatformPublicKeyFiles: map[string]string{"platform-serial": writeSecret("platform.pem", string(publicKeyPEM))},
 				NotifyURL:              "https://merchant.example/wechat/notify", RefundNotifyURL: "https://merchant.example/wechat/refund-notify",
 				CallbackMaxAge: 5 * time.Minute,
 			},
 			Alipay: config.AlipayPaymentConfiguration{
 				Enabled: true, GatewayURL: "https://openapi.alipay.com/gateway.do",
 				AppID: "ali-app", SellerID: "ali-seller",
-				AppPrivateKeyFile:   writeSecret("alipay-app-private.pem", "alipay-app-private-key"),
-				AlipayPublicKeyFile: writeSecret("alipay-public.pem", "alipay-public-key"),
+				AppPrivateKeyFile:   writeSecret("alipay-app-private.pem", string(privateKeyPEM)),
+				AlipayPublicKeyFile: writeSecret("alipay-public.pem", string(publicKeyPEM)),
 				NotifyURL:           "https://merchant.example/alipay/notify",
 			},
 		},

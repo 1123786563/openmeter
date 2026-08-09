@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"sort"
 	"time"
 
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
@@ -298,11 +299,17 @@ func wirePaymentProviders(cfg config.CommerceConfiguration, logger *slog.Logger)
 		return nil, nil, fmt.Errorf("commerce payment secrets: %w", err)
 	}
 	if cfg.Payment.WeChat.Enabled {
+		platformSerials := make([]string, 0, len(cfg.Payment.WeChat.PlatformPublicKeyFiles))
+		for serial := range cfg.Payment.WeChat.PlatformPublicKeyFiles {
+			platformSerials = append(platformSerials, serial)
+		}
+		sort.Strings(platformSerials)
 		adapter, err := wechat.New(wechat.Config{
 			Secrets: secretProvider, Client: &http.Client{Timeout: cfg.Payment.HTTPTimeout},
 			BaseURL: cfg.Payment.WeChat.BaseURL, AppID: cfg.Payment.WeChat.AppID,
 			MerchantID: cfg.Payment.WeChat.MerchantID, MerchantSerial: cfg.Payment.WeChat.MerchantSerial,
-			NotifyURL: cfg.Payment.WeChat.NotifyURL, RefundNotifyURL: cfg.Payment.WeChat.RefundNotifyURL,
+			PlatformPublicKeySerials: platformSerials,
+			NotifyURL:                cfg.Payment.WeChat.NotifyURL, RefundNotifyURL: cfg.Payment.WeChat.RefundNotifyURL,
 			Now: time.Now, CallbackMaxAge: cfg.Payment.WeChat.CallbackMaxAge,
 			MaxResponseBytes: cfg.Payment.MaxResponseBytes, Logger: logger,
 		})

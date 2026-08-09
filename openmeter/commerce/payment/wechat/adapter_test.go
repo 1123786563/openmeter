@@ -79,17 +79,18 @@ func newTestAdapter(t *testing.T, baseURL string, keys testKeys) *Adapter {
 			SecretKeyAPIv3:                             testAPIv3Key,
 			PlatformPublicKeySecret("platform-serial"): keys.platformPublicPEM,
 		}},
-		Client:           &http.Client{Timeout: 2 * time.Second},
-		BaseURL:          baseURL,
-		AppID:            "wx-app",
-		MerchantID:       "wx-mch",
-		MerchantSerial:   "merchant-serial",
-		NotifyURL:        "https://merchant.example/wechat/notify",
-		RefundNotifyURL:  "https://merchant.example/wechat/refund-notify",
-		Now:              func() time.Time { return time.Unix(testNowUnix, 0) },
-		CallbackMaxAge:   5 * time.Minute,
-		MaxResponseBytes: 1 << 20,
-		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Client:                   &http.Client{Timeout: 2 * time.Second},
+		BaseURL:                  baseURL,
+		AppID:                    "wx-app",
+		MerchantID:               "wx-mch",
+		MerchantSerial:           "merchant-serial",
+		PlatformPublicKeySerials: []string{"platform-serial"},
+		NotifyURL:                "https://merchant.example/wechat/notify",
+		RefundNotifyURL:          "https://merchant.example/wechat/refund-notify",
+		Now:                      func() time.Time { return time.Unix(testNowUnix, 0) },
+		CallbackMaxAge:           5 * time.Minute,
+		MaxResponseBytes:         1 << 20,
+		Logger:                   slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})
 	require.NoError(t, err)
 	return adapter
@@ -612,9 +613,14 @@ func TestPlatformPublicKeySecretTrimsSerial(t *testing.T) {
 }
 
 func TestNewRequiresProductionDependencies(t *testing.T) {
+	keys := newTestKeys(t)
 	valid := Config{
-		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{}},
-		Client:  &http.Client{Timeout: 2 * time.Second}, BaseURL: "https://api.mch.weixin.qq.com",
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			SecretKeyMerchantPrivateKey:       keys.merchantPrivatePEM,
+			SecretKeyAPIv3:                    testAPIv3Key,
+			PlatformPublicKeySecret("serial"): keys.platformPublicPEM,
+		}},
+		Client: &http.Client{Timeout: 2 * time.Second}, BaseURL: "https://api.mch.weixin.qq.com",
 		AppID: "wx-app", MerchantID: "wx-mch", MerchantSerial: "serial",
 		NotifyURL: "https://merchant.example/notify", RefundNotifyURL: "https://merchant.example/refund",
 		Now: time.Now, CallbackMaxAge: 5 * time.Minute, MaxResponseBytes: 1024,
@@ -645,6 +651,47 @@ func TestNewRequiresProductionDependencies(t *testing.T) {
 			tt.mutate(&cfg)
 			_, err := New(cfg)
 			require.Error(t, err)
+		})
+	}
+}
+
+func TestNewRejectsMalformedConfiguredKeyMaterial(t *testing.T) {
+	keys := newTestKeys(t)
+	validSecrets := map[string]string{
+		SecretKeyMerchantPrivateKey:                keys.merchantPrivatePEM,
+		SecretKeyAPIv3:                             testAPIv3Key,
+		PlatformPublicKeySecret("merchant-serial"): keys.platformPublicPEM,
+	}
+	newConfig := func(secrets map[string]string) Config {
+		return Config{
+			Secrets: &payment.StaticSecretProvider{Secrets: secrets},
+			Client:  &http.Client{Timeout: time.Second}, BaseURL: "https://api.mch.weixin.qq.com",
+			AppID: "wx-app", MerchantID: "wx-mch", MerchantSerial: "merchant-serial",
+			NotifyURL: "https://merchant.example/notify", RefundNotifyURL: "https://merchant.example/refund",
+			Now: time.Now, CallbackMaxAge: 5 * time.Minute, MaxResponseBytes: 1024,
+			Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		}
+	}
+
+	for _, tt := range []struct {
+		name string
+		key  string
+	}{
+		{name: "merchant private key", key: SecretKeyMerchantPrivateKey},
+		{name: "API v3 key", key: SecretKeyAPIv3},
+		{name: "platform public key", key: PlatformPublicKeySecret("merchant-serial")},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			secrets := make(map[string]string, len(validSecrets))
+			for key, value := range validSecrets {
+				secrets[key] = value
+			}
+			const secretMarker = "malformed-secret-content-marker"
+			secrets[tt.key] = secretMarker
+
+			_, err := New(newConfig(secrets))
+			require.Error(t, err)
+			require.NotContains(t, err.Error(), secretMarker)
 		})
 	}
 }

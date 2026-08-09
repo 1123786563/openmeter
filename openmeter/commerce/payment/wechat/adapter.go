@@ -32,18 +32,19 @@ func PlatformPublicKeySecret(serial string) string {
 
 // Config wires the production dependencies and non-secret WeChat identities.
 type Config struct {
-	Secrets          payment.SecretProvider
-	Client           *http.Client
-	BaseURL          string
-	AppID            string
-	MerchantID       string
-	MerchantSerial   string
-	NotifyURL        string
-	RefundNotifyURL  string
-	Now              func() time.Time
-	CallbackMaxAge   time.Duration
-	MaxResponseBytes int64
-	Logger           *slog.Logger
+	Secrets                  payment.SecretProvider
+	Client                   *http.Client
+	BaseURL                  string
+	AppID                    string
+	MerchantID               string
+	MerchantSerial           string
+	PlatformPublicKeySerials []string
+	NotifyURL                string
+	RefundNotifyURL          string
+	Now                      func() time.Time
+	CallbackMaxAge           time.Duration
+	MaxResponseBytes         int64
+	Logger                   *slog.Logger
 }
 
 // Adapter implements the WeChat Pay API v3 Native workflow.
@@ -104,6 +105,9 @@ func New(cfg Config) (*Adapter, error) {
 	if cfg.Logger == nil {
 		return nil, errors.New("wechat adapter: logger is required")
 	}
+	if err := validateConfiguredKeyMaterial(cfg.Secrets, cfg.MerchantSerial, cfg.PlatformPublicKeySerials); err != nil {
+		return nil, err
+	}
 
 	return &Adapter{
 		secrets:          cfg.Secrets,
@@ -118,6 +122,49 @@ func New(cfg Config) (*Adapter, error) {
 		callbackMaxAge:   cfg.CallbackMaxAge,
 		maxResponseBytes: cfg.MaxResponseBytes,
 	}, nil
+}
+
+func validateConfiguredKeyMaterial(secrets payment.SecretProvider, merchantSerial string, platformSerials []string) error {
+	ctx := context.Background()
+	privateKeyPEM, err := secrets.Get(ctx, SecretKeyMerchantPrivateKey)
+	if err != nil {
+		return errors.New("wechat adapter: merchant private key is unavailable")
+	}
+	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
+	if err != nil || privateKey.Validate() != nil {
+		return errors.New("wechat adapter: merchant private key is invalid")
+	}
+
+	apiV3Key, err := secrets.Get(ctx, SecretKeyAPIv3)
+	if err != nil {
+		return errors.New("wechat adapter: API v3 key is unavailable")
+	}
+	if len([]byte(strings.TrimSpace(apiV3Key))) != 32 {
+		return errors.New("wechat adapter: API v3 key must contain exactly 32 bytes")
+	}
+
+	if len(platformSerials) == 0 {
+		platformSerials = []string{merchantSerial}
+	}
+	seen := make(map[string]struct{}, len(platformSerials))
+	for _, configuredSerial := range platformSerials {
+		serial := strings.TrimSpace(configuredSerial)
+		if serial == "" {
+			return errors.New("wechat adapter: platform public key serial is required")
+		}
+		if _, ok := seen[serial]; ok {
+			continue
+		}
+		seen[serial] = struct{}{}
+		publicKeyPEM, err := secrets.Get(ctx, PlatformPublicKeySecret(serial))
+		if err != nil {
+			return fmt.Errorf("wechat adapter: platform public key for serial %q is unavailable", serial)
+		}
+		if _, err := parseRSAPublicKey([]byte(publicKeyPEM)); err != nil {
+			return fmt.Errorf("wechat adapter: platform public key for serial %q is invalid", serial)
+		}
+	}
+	return nil
 }
 
 // Name returns the provider identifier.
@@ -458,7 +505,7 @@ func (a *Adapter) decryptNotificationResource(ctx context.Context, resource encr
 	if err != nil {
 		return nil, fmt.Errorf("wechat: get API v3 key: %w", err)
 	}
-	plaintext, err := decryptResource(apiKey, resource)
+	plaintext, err := decryptResource(strings.TrimSpace(apiKey), resource)
 	if err != nil {
 		return nil, fmt.Errorf("%w: cannot decrypt notification resource", payment.ErrPermanentProviderProtocol)
 	}
