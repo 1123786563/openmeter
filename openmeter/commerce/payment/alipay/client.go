@@ -25,7 +25,7 @@ import (
 func (a *Adapter) call(ctx context.Context, method, responseKey string, requestValue, responseValue any) ([]byte, error) {
 	bizContent, err := json.Marshal(requestValue)
 	if err != nil {
-		return nil, fmt.Errorf("alipay: marshal %s request: %w", method, err)
+		return nil, permanentProviderError(method, "marshal request", err)
 	}
 	values := url.Values{
 		"app_id":      {a.appID},
@@ -40,69 +40,98 @@ func (a *Adapter) call(ctx context.Context, method, responseKey string, requestV
 	}
 	privateKeyPEM, err := a.secrets.Get(ctx, SecretKeyAppPrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("alipay: get application private key: %w", err)
+		return nil, permanentProviderError(method, "get application private key", err)
 	}
 	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
 	if err != nil {
-		return nil, fmt.Errorf("alipay: parse application private key: %w", err)
+		return nil, permanentProviderError(method, "parse application private key", err)
 	}
 	signature, err := signRSA2(privateKey, []byte(requestSignContent(values)))
 	if err != nil {
-		return nil, fmt.Errorf("alipay: sign %s request: %w", method, err)
+		return nil, permanentProviderError(method, "sign request", err)
 	}
 	values.Set("sign", signature)
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, a.gatewayURL, strings.NewReader(values.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("alipay: create %s request: %w", method, err)
+		return nil, permanentProviderError(method, "create request", err)
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Accept", "application/json")
 	response, err := a.httpClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("alipay: execute %s request: %w", method, err)
+		kind := payment.ProviderErrorRetryable
+		if errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			kind = payment.ProviderErrorPermanent
+		}
+		return nil, &payment.ProviderError{
+			Provider: payment.ProviderAlipay, Operation: method, Kind: kind, Cause: err,
+		}
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, a.maxResponseBytes+1))
 	if err != nil {
-		return nil, fmt.Errorf("alipay: read %s response: %w", method, err)
+		return nil, &payment.ProviderError{
+			Provider: payment.ProviderAlipay, Operation: method, Kind: payment.ProviderErrorRetryable,
+			HTTPStatus: response.StatusCode, Cause: err,
+		}
+	}
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		kind := payment.ProviderErrorPermanent
+		if response.StatusCode >= http.StatusInternalServerError {
+			kind = payment.ProviderErrorRetryable
+		}
+		return nil, &payment.ProviderError{
+			Provider: payment.ProviderAlipay, Operation: method, Kind: kind, HTTPStatus: response.StatusCode,
+		}
 	}
 	if int64(len(body)) > a.maxResponseBytes {
-		return nil, fmt.Errorf("%w: Alipay response exceeds %d bytes", payment.ErrPermanentProviderProtocol, a.maxResponseBytes)
+		return nil, permanentProviderError(method, fmt.Sprintf("response exceeds %d bytes", a.maxResponseBytes), payment.ErrPermanentProviderProtocol)
 	}
 
-	responseBody, err := a.verifyResponse(ctx, body, responseKey)
+	responseBody, err := a.verifyResponse(ctx, body, responseKey, method, response.StatusCode)
 	if err != nil {
 		return nil, err
 	}
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("alipay: %s returned HTTP %d", method, response.StatusCode)
-	}
 	if err := json.Unmarshal(responseBody, responseValue); err != nil {
-		return nil, fmt.Errorf("%w: invalid %s response", payment.ErrPermanentProviderProtocol, method)
+		return nil, permanentProviderError(method, "invalid response JSON", payment.ErrPermanentProviderProtocol)
 	}
 	return responseBody, nil
 }
 
-func (a *Adapter) verifyResponse(ctx context.Context, body []byte, responseKey string) ([]byte, error) {
+func (a *Adapter) verifyResponse(ctx context.Context, body []byte, responseKey, operation string, httpStatus int) ([]byte, error) {
 	var envelope map[string]json.RawMessage
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	if err := decoder.Decode(&envelope); err != nil {
-		return nil, fmt.Errorf("%w: invalid Alipay response envelope", payment.ErrPermanentProviderProtocol)
+		return nil, permanentProviderHTTPError(operation, httpStatus, "invalid response envelope", payment.ErrPermanentProviderProtocol)
 	}
 	responseBody := envelope[responseKey]
 	if len(responseBody) == 0 || bytes.Equal(responseBody, []byte("null")) {
-		return nil, fmt.Errorf("%w: response is missing %s", payment.ErrPermanentProviderProtocol, responseKey)
+		return nil, permanentProviderHTTPError(operation, httpStatus, "response object is missing", payment.ErrPermanentProviderProtocol)
 	}
 	var signature string
 	if err := json.Unmarshal(envelope["sign"], &signature); err != nil || strings.TrimSpace(signature) == "" {
-		return nil, fmt.Errorf("%w: response is missing a valid sign", payment.ErrInvalidSignature)
+		return nil, permanentProviderHTTPError(operation, httpStatus, "response signature is missing", payment.ErrInvalidSignature)
 	}
 	if err := a.verifySignature(ctx, responseBody, signature); err != nil {
-		return nil, err
+		return nil, permanentProviderHTTPError(operation, httpStatus, "response signature is invalid", err)
 	}
 	return responseBody, nil
+}
+
+func permanentProviderError(operation, detail string, cause error) error {
+	return permanentProviderHTTPError(operation, 0, detail, cause)
+}
+
+func permanentProviderHTTPError(operation string, httpStatus int, detail string, cause error) error {
+	if detail != "" {
+		cause = fmt.Errorf("%s: %w", detail, cause)
+	}
+	return &payment.ProviderError{
+		Provider: payment.ProviderAlipay, Operation: operation, Kind: payment.ProviderErrorPermanent,
+		HTTPStatus: httpStatus, Cause: cause,
+	}
 }
 
 func (a *Adapter) verifySignature(ctx context.Context, content []byte, encodedSignature string) error {

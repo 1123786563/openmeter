@@ -121,11 +121,11 @@ func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput)
 	if _, err := a.call(ctx, "alipay.trade.precreate", "alipay_trade_precreate_response", request, &response); err != nil {
 		return payment.CheckoutFact{}, err
 	}
-	if err := validateProviderSuccess(response.providerResponse); err != nil {
+	if err := validateProviderSuccess("alipay.trade.precreate", response.providerResponse); err != nil {
 		return payment.CheckoutFact{}, err
 	}
 	if response.OutTradeNo != orderID || strings.TrimSpace(response.QRCode) == "" {
-		return payment.CheckoutFact{}, fmt.Errorf("%w: precreate response does not match the order", payment.ErrPermanentProviderProtocol)
+		return payment.CheckoutFact{}, permanentProviderError("alipay.trade.precreate", "response does not match the order", payment.ErrPermanentProviderProtocol)
 	}
 	return payment.CheckoutFact{
 		Provider:        payment.ProviderAlipay,
@@ -209,19 +209,19 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	if err != nil {
 		return payment.PaymentFact{}, err
 	}
-	if err := validateProviderSuccess(response.providerResponse); err != nil {
+	if err := validateProviderSuccess("alipay.trade.query", response.providerResponse); err != nil {
 		return payment.PaymentFact{}, err
 	}
 	if response.OutTradeNo != providerOrderID || !validTradeStatus(response.TradeState) {
-		return payment.PaymentFact{}, fmt.Errorf("%w: trade query response does not match the request", payment.ErrPermanentProviderProtocol)
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
 	amount, err := parseAmountMinor(response.Amount)
 	if err != nil {
-		return payment.PaymentFact{}, fmt.Errorf("%w: trade query amount is invalid", payment.ErrPermanentProviderProtocol)
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response amount is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(rawResponse)
 	if err != nil {
-		return payment.PaymentFact{}, fmt.Errorf("%w: invalid signed trade query response", payment.ErrPermanentProviderProtocol)
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "signed response payload is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	return payment.PaymentFact{
 		Provider:          payment.ProviderAlipay,
@@ -254,12 +254,12 @@ func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (paymen
 	if _, err := a.call(ctx, "alipay.trade.refund", "alipay_trade_refund_response", request, &response); err != nil {
 		return payment.RefundSubmission{}, err
 	}
-	if err := validateProviderSuccess(response.providerResponse); err != nil {
+	if err := validateProviderSuccess("alipay.trade.refund", response.providerResponse); err != nil {
 		return payment.RefundSubmission{}, err
 	}
 	amount, err := parseAmountMinor(response.RefundFee)
 	if err != nil || amount != input.AmountMinor || response.OutTradeNo != orderID {
-		return payment.RefundSubmission{}, fmt.Errorf("%w: refund response does not match the request", payment.ErrPermanentProviderProtocol)
+		return payment.RefundSubmission{}, permanentProviderError("alipay.trade.refund", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
 	return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: requestID, Status: "success"}, nil
 }
@@ -280,25 +280,26 @@ func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInpu
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
-	if err := validateProviderSuccess(response.providerResponse); err != nil {
+	if err := validateProviderSuccess("alipay.trade.fastpay.refund.query", response.providerResponse); err != nil {
 		return payment.RefundFact{}, err
 	}
 	if response.OutRequestNo != providerRefundID || response.OutTradeNo != providerOrderID {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund query response does not match the request", payment.ErrPermanentProviderProtocol)
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
 	amount, err := parseAmountMinor(response.RefundAmount)
 	if err != nil || amount != input.AmountMinor {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund query amount is invalid", payment.ErrPermanentProviderProtocol)
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response amount is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	if response.RefundStatus != "" && response.RefundStatus != "REFUND_SUCCESS" && response.RefundStatus != "REFUND_PROCESSING" && response.RefundStatus != "REFUND_FAIL" {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund query status is invalid", payment.ErrPermanentProviderProtocol)
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response status is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(rawResponse)
 	if err != nil {
-		return payment.RefundFact{}, fmt.Errorf("%w: invalid signed refund query response", payment.ErrPermanentProviderProtocol)
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "signed response payload is invalid", payment.ErrPermanentProviderProtocol)
 	}
+	success := response.RefundStatus == "" || response.RefundStatus == "REFUND_SUCCESS"
 	rawHash := ""
-	if response.RefundStatus == "REFUND_SUCCESS" || response.RefundStatus == "REFUND_FAIL" {
+	if success || response.RefundStatus == "REFUND_FAIL" {
 		rawHash = hashBody(rawResponse)
 	}
 	return payment.RefundFact{
@@ -307,7 +308,7 @@ func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInpu
 		ProviderOrderID:  response.OutTradeNo,
 		AmountMinor:      amount,
 		Currency:         currency,
-		Success:          response.RefundStatus == "REFUND_SUCCESS",
+		Success:          success,
 		RawHash:          rawHash,
 		Timestamp:        a.now(),
 		SignedPayload:    payload,
@@ -364,11 +365,30 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, _ http.Header, body 
 	}, nil
 }
 
-func validateProviderSuccess(response providerResponse) error {
+func validateProviderSuccess(operation string, response providerResponse) error {
 	if response.Code == "10000" {
 		return nil
 	}
-	return fmt.Errorf("alipay: provider code=%q sub_code=%q msg=%q sub_msg=%q", response.Code, response.SubCode, response.Message, response.SubMsg)
+	kind := payment.ProviderErrorPermanent
+	if retryableProviderResponse(response.Code, response.SubCode) {
+		kind = payment.ProviderErrorRetryable
+	}
+	return &payment.ProviderError{
+		Provider: payment.ProviderAlipay, Operation: operation, Kind: kind, HTTPStatus: http.StatusOK,
+		Code: response.Code, SubCode: response.SubCode,
+	}
+}
+
+func retryableProviderResponse(code, subCode string) bool {
+	if code == "20000" {
+		return true
+	}
+	switch strings.ToUpper(strings.TrimSpace(subCode)) {
+	case "ACQ.SYSTEM_ERROR", "SYSTEM_ERROR", "ISP.UNKNOW-ERROR", "ISP.UNKNOWN-ERROR", "ISP.NETWORK-ERROR", "AOP.UNKNOWN-ERROR":
+		return true
+	default:
+		return false
+	}
 }
 
 func validTradeStatus(status string) bool {

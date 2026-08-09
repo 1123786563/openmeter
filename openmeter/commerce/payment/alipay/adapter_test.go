@@ -1,6 +1,7 @@
 package alipay
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -32,6 +33,12 @@ type testKeys struct {
 	appPrivatePEM   string
 	alipayPrivate   *rsa.PrivateKey
 	alipayPublicPEM string
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
 }
 
 func newTestKeys(t *testing.T) testKeys {
@@ -484,6 +491,25 @@ func TestQueryRefundRejectsMismatchedSignedContext(t *testing.T) {
 	}
 }
 
+func TestQueryRefundInfersSuccessWhenOptionalStatusIsAbsent(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{
+			"code": "10000", "msg": "Success", "trade_no": "trade-1",
+			"out_trade_no": "01ORDER", "out_request_no": "refund-idem-1",
+			"refund_amount": "10.01",
+		})
+	}))
+	defer server.Close()
+
+	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), payment.RefundQueryInput{
+		ProviderRefundID: "refund-idem-1", ProviderOrderID: "01ORDER", AmountMinor: 1001, Currency: "CNY",
+	})
+	require.NoError(t, err)
+	require.True(t, fact.Success)
+	require.NotEmpty(t, fact.RawHash)
+}
+
 func TestQueryRefundProcessingHasNoDefinitiveFailureHash(t *testing.T) {
 	keys := newTestKeys(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -537,6 +563,103 @@ func TestGatewayRejectsTamperedAndOversizedResponses(t *testing.T) {
 		_, err = adapter.QueryPayment(t.Context(), "01ORDER")
 		require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
 	})
+}
+
+func TestGatewayErrorsExposeRetryClassification(t *testing.T) {
+	keys := newTestKeys(t)
+	for _, testCase := range []struct {
+		name       string
+		statusCode int
+		code       string
+		subCode    string
+		kind       payment.ProviderErrorKind
+		marker     error
+	}{
+		{name: "HTTP 503", statusCode: http.StatusServiceUnavailable, kind: payment.ProviderErrorRetryable, marker: payment.ErrRetryableProvider},
+		{name: "HTTP 400", statusCode: http.StatusBadRequest, kind: payment.ProviderErrorPermanent, marker: payment.ErrPermanentProviderProtocol},
+		{name: "provider unavailable", statusCode: http.StatusOK, code: "20000", kind: payment.ProviderErrorRetryable, marker: payment.ErrRetryableProvider},
+		{name: "provider system error", statusCode: http.StatusOK, code: "40004", subCode: "ACQ.SYSTEM_ERROR", kind: payment.ProviderErrorRetryable, marker: payment.ErrRetryableProvider},
+		{name: "provider business rejection", statusCode: http.StatusOK, code: "40004", subCode: "ACQ.INVALID_PARAMETER", kind: payment.ProviderErrorPermanent, marker: payment.ErrPermanentProviderProtocol},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(testCase.statusCode)
+				if testCase.statusCode != http.StatusOK {
+					_, err := io.WriteString(w, "sensitive-response-body-marker")
+					require.NoError(t, err)
+					return
+				}
+				writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_precreate_response", map[string]any{
+					"code": testCase.code, "sub_code": testCase.subCode,
+					"msg": "sensitive-response-body-marker", "sub_msg": "do not expose this message",
+				})
+			}))
+			defer server.Close()
+
+			_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+				OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+			})
+			require.ErrorIs(t, err, testCase.marker)
+			require.NotContains(t, err.Error(), "sensitive-response-body-marker")
+			require.NotContains(t, err.Error(), "do not expose this message")
+
+			var providerErr *payment.ProviderError
+			require.ErrorAs(t, err, &providerErr)
+			require.Equal(t, payment.ProviderAlipay, providerErr.Provider)
+			require.Equal(t, "alipay.trade.precreate", providerErr.Operation)
+			require.Equal(t, testCase.kind, providerErr.Kind)
+			require.Equal(t, testCase.statusCode, providerErr.HTTPStatus)
+			require.Equal(t, testCase.code, providerErr.Code)
+			require.Equal(t, testCase.subCode, providerErr.SubCode)
+		})
+	}
+}
+
+func TestGatewayTransportTimeoutIsRetryableAndPreservesCause(t *testing.T) {
+	keys := newTestKeys(t)
+	adapter, err := New(Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			SecretKeyAppPrivateKey: keys.appPrivatePEM, SecretKeyAlipayPublicKey: keys.alipayPublicPEM,
+		}},
+		Client: &http.Client{
+			Timeout: time.Second,
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return nil, fmt.Errorf("transport timeout: %w", context.DeadlineExceeded)
+			}),
+		},
+		GatewayURL: "https://openapi.alipay.test/gateway.do", AppID: "ali-app", SellerID: "ali-seller",
+		NotifyURL: "https://merchant.example/notify", Now: time.Now, MaxResponseBytes: 1024,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+	require.NoError(t, err)
+
+	_, err = adapter.CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrRetryableProvider)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	var providerErr *payment.ProviderError
+	require.ErrorAs(t, err, &providerErr)
+	require.Equal(t, payment.ProviderErrorRetryable, providerErr.Kind)
+	require.Zero(t, providerErr.HTTPStatus)
+}
+
+func TestGatewayMalformedSuccessResponseIsPermanentProviderError(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := io.WriteString(w, "not-json-sensitive-response-body-marker")
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+	require.NotContains(t, err.Error(), "sensitive-response-body-marker")
+	var providerErr *payment.ProviderError
+	require.ErrorAs(t, err, &providerErr)
+	require.Equal(t, payment.ProviderErrorPermanent, providerErr.Kind)
 }
 
 func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {

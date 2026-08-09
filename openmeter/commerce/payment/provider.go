@@ -16,6 +16,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -95,6 +96,74 @@ type RefundInput struct {
 // ErrPermanentProviderProtocol marks a provider response that cannot succeed
 // on retry without correcting provider configuration or protocol handling.
 var ErrPermanentProviderProtocol = errors.New("permanent provider protocol error")
+
+// ErrRetryableProvider marks a provider or transport failure that callers may
+// retry without changing the request or provider configuration.
+var ErrRetryableProvider = errors.New("retryable provider error")
+
+// ProviderErrorKind classifies failures at a payment provider boundary.
+type ProviderErrorKind string
+
+const (
+	ProviderErrorRetryable ProviderErrorKind = "retryable"
+	ProviderErrorPermanent ProviderErrorKind = "permanent"
+)
+
+// ProviderError carries safe, structured provider failure metadata. Cause is
+// intentionally limited to an underlying transport error or a stable sentinel;
+// adapters must not attach response bodies, signatures, or secrets.
+type ProviderError struct {
+	Provider   Provider
+	Operation  string
+	Kind       ProviderErrorKind
+	HTTPStatus int
+	Code       string
+	SubCode    string
+	Cause      error
+}
+
+func (e *ProviderError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	message := fmt.Sprintf("%s provider error [provider=%s operation=%s", e.Kind, e.Provider, e.Operation)
+	if e.HTTPStatus != 0 {
+		message += fmt.Sprintf(" http_status=%d", e.HTTPStatus)
+	}
+	if e.Code != "" {
+		message += fmt.Sprintf(" code=%q", e.Code)
+	}
+	if e.SubCode != "" {
+		message += fmt.Sprintf(" sub_code=%q", e.SubCode)
+	}
+	message += "]"
+	if e.Cause != nil {
+		message += ": " + e.Cause.Error()
+	}
+	return message
+}
+
+func (e *ProviderError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
+
+// Is supports sentinel checks while errors.As exposes the structured fields.
+func (e *ProviderError) Is(target error) bool {
+	if e == nil {
+		return false
+	}
+	switch target {
+	case ErrRetryableProvider:
+		return e.Kind == ProviderErrorRetryable
+	case ErrPermanentProviderProtocol:
+		return e.Kind == ProviderErrorPermanent
+	default:
+		return false
+	}
+}
 
 // RefundSubmission is the result of submitting a refund to a provider. The
 // provider refund ID is used to query the refund status later.
