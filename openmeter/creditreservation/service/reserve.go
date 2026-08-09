@@ -18,15 +18,21 @@ type fundingSplit struct {
 	enterprise int64
 }
 
-func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveInput) (creditreservation.Reservation, error) {
+func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveInput) (result creditreservation.Reservation, err error) {
+	defer func() {
+		s.metrics.commandOutcome(ctx, "reserve", err)
+		if err == nil {
+			s.metrics.ceiling.Record(ctx, result.TotalCredits)
+			s.metrics.receivable.Record(ctx, result.EnterpriseHold)
+		}
+	}()
 	if input.AuthorizationExpiresAt.IsZero() {
 		input.AuthorizationExpiresAt = s.now().Add(s.authorizationTTL)
 	}
 	if err := validateReserve(input); err != nil {
 		return creditreservation.Reservation{}, err
 	}
-	var result creditreservation.Reservation
-	err := s.adapter.WithCustomerLock(ctx, customer.CustomerID{Namespace: input.ID.Namespace, ID: input.CustomerID}, func(tx reservationadapter.TxAdapter) error {
+	err = s.adapter.WithCustomerLock(ctx, customer.CustomerID{Namespace: input.ID.Namespace, ID: input.CustomerID}, func(tx reservationadapter.TxAdapter) error {
 		existing, found, err := tx.GetReservationByCommand(ctx, input.ID.Namespace, input.CommandIdentity.IdempotencyKey)
 		if err != nil {
 			return err
@@ -86,13 +92,6 @@ func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveIn
 		}
 		return tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: result.ID, AggregateType: "credit_reservation", AggregateID: result.ID, EventType: "credit.reservation.created", Payload: map[string]any{"reservation_id": result.ID}})
 	})
-	if err != nil {
-		s.metrics.command(ctx, "reserve", "error")
-	} else {
-		s.metrics.command(ctx, "reserve", "success")
-		s.metrics.ceiling.Record(ctx, result.TotalCredits)
-		s.metrics.receivable.Record(ctx, result.EnterpriseHold)
-	}
 	return result, err
 }
 
