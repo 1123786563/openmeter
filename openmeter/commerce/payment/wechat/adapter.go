@@ -59,7 +59,6 @@ type Adapter struct {
 	now              func() time.Time
 	callbackMaxAge   time.Duration
 	maxResponseBytes int64
-	logger           *slog.Logger
 }
 
 // New creates a production WeChat Pay adapter. Callers own HTTP timeout and
@@ -118,7 +117,6 @@ func New(cfg Config) (*Adapter, error) {
 		now:              cfg.Now,
 		callbackMaxAge:   cfg.CallbackMaxAge,
 		maxResponseBytes: cfg.MaxResponseBytes,
-		logger:           cfg.Logger,
 	}, nil
 }
 
@@ -133,7 +131,8 @@ func (a *Adapter) Identity() (merchantID, applicationID string) {
 
 // CreateQRCode creates a Native payment and returns WeChat's code_url.
 func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput) (payment.CheckoutFact, error) {
-	if strings.TrimSpace(input.OrderPublicID) == "" || input.AmountMinor <= 0 || !strings.EqualFold(strings.TrimSpace(input.Currency), "CNY") || strings.TrimSpace(input.Description) == "" {
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if strings.TrimSpace(input.OrderPublicID) == "" || input.AmountMinor <= 0 || currency != "CNY" || strings.TrimSpace(input.Description) == "" {
 		return payment.CheckoutFact{}, fmt.Errorf("%w: invalid Native payment input", payment.ErrPermanentProviderProtocol)
 	}
 	request := nativeCreateRequest{
@@ -144,7 +143,7 @@ func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput)
 		NotifyURL:   a.notifyURL,
 		Amount: amount{
 			Total:    input.AmountMinor,
-			Currency: strings.ToUpper(input.Currency),
+			Currency: currency,
 		},
 	}
 	var response nativeCreateResponse
@@ -257,26 +256,33 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 // Refund submits an original-route refund. out_refund_no is the caller's
 // idempotency key and remains the stable identifier used by QueryRefund.
 func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (payment.RefundSubmission, error) {
-	if strings.TrimSpace(input.ProviderOrderID) == "" || strings.TrimSpace(input.IdempotencyKey) == "" || input.AmountMinor <= 0 || input.TotalAmountMinor <= 0 || input.AmountMinor > input.TotalAmountMinor || strings.TrimSpace(input.Currency) == "" {
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	orderID := strings.TrimSpace(input.OrderID)
+	outTradeNo := strings.TrimSpace(input.ProviderOrderID)
+	outRefundNo := strings.TrimSpace(input.IdempotencyKey)
+	if orderID == "" || outTradeNo == "" || outRefundNo == "" || input.AmountMinor <= 0 || input.TotalAmountMinor <= 0 || input.AmountMinor > input.TotalAmountMinor || currency != "CNY" {
 		return payment.RefundSubmission{}, fmt.Errorf("%w: invalid refund input", payment.ErrPermanentProviderProtocol)
 	}
 	request := refundRequest{
-		OutTradeNo:  input.ProviderOrderID,
-		OutRefundNo: input.IdempotencyKey,
+		OutTradeNo:  outTradeNo,
+		OutRefundNo: outRefundNo,
 		Reason:      input.Reason,
 		NotifyURL:   a.refundNotifyURL,
 		Amount: refundAmount{
 			Refund:   input.AmountMinor,
 			Total:    input.TotalAmountMinor,
-			Currency: strings.ToUpper(input.Currency),
+			Currency: currency,
 		},
 	}
 	var response refund
 	if _, err := a.doJSON(ctx, http.MethodPost, "/v3/refund/domestic/refunds", nil, request, &response); err != nil {
 		return payment.RefundSubmission{}, err
 	}
-	if response.OutRefundNo != input.IdempotencyKey {
-		return payment.RefundSubmission{}, fmt.Errorf("%w: refund response out_refund_no mismatch", payment.ErrPermanentProviderProtocol)
+	if err := validateRefund(response, outRefundNo, outTradeNo); err != nil {
+		return payment.RefundSubmission{}, err
+	}
+	if response.Amount.Refund != input.AmountMinor || response.Amount.Total != input.TotalAmountMinor || response.Amount.Currency != currency {
+		return payment.RefundSubmission{}, fmt.Errorf("%w: refund response does not match request", payment.ErrPermanentProviderProtocol)
 	}
 	return payment.RefundSubmission{
 		Provider:         payment.ProviderWeChat,
@@ -298,8 +304,8 @@ func (a *Adapter) QueryRefund(ctx context.Context, providerRefundID string) (pay
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
-	if response.OutRefundNo != providerRefundID || response.OutTradeNo == "" || response.Amount.Refund <= 0 || response.Amount.Currency == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: incomplete refund response", payment.ErrPermanentProviderProtocol)
+	if err := validateRefund(response, providerRefundID, ""); err != nil {
+		return payment.RefundFact{}, err
 	}
 	payload, err := payment.ExtractSignedPayload(rawBody)
 	if err != nil {
@@ -344,8 +350,8 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	if err := json.Unmarshal(plaintext, &resource); err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: invalid decrypted refund", payment.ErrPermanentProviderProtocol)
 	}
-	if resource.OutRefundNo == "" || resource.OutTradeNo == "" || resource.Amount.Refund <= 0 || resource.Amount.Currency == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: incomplete decrypted refund", payment.ErrPermanentProviderProtocol)
+	if err := validateRefund(resource, "", ""); err != nil {
+		return payment.RefundFact{}, err
 	}
 	payload, err := payment.ExtractSignedPayload(plaintext)
 	if err != nil {
@@ -382,6 +388,25 @@ func (a *Adapter) validateTransaction(value transaction) error {
 	}
 	if value.Amount.Currency != "CNY" {
 		return fmt.Errorf("%w: transaction currency must be CNY", payment.ErrPermanentProviderProtocol)
+	}
+	return nil
+}
+
+func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string) error {
+	if value.RefundID == "" || value.OutRefundNo == "" || value.OutTradeNo == "" || value.Status == "" {
+		return fmt.Errorf("%w: incomplete refund provider identity", payment.ErrPermanentProviderProtocol)
+	}
+	if expectedOutRefundNo != "" && value.OutRefundNo != expectedOutRefundNo {
+		return fmt.Errorf("%w: refund out_refund_no mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if expectedOutTradeNo != "" && value.OutTradeNo != expectedOutTradeNo {
+		return fmt.Errorf("%w: refund out_trade_no mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if value.Amount.Total <= 0 || value.Amount.Refund <= 0 || value.Amount.Refund > value.Amount.Total {
+		return fmt.Errorf("%w: invalid refund amount", payment.ErrPermanentProviderProtocol)
+	}
+	if value.Amount.Currency != "CNY" {
+		return fmt.Errorf("%w: refund currency must be CNY", payment.ErrPermanentProviderProtocol)
 	}
 	return nil
 }

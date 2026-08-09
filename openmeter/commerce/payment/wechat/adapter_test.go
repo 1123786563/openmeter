@@ -174,6 +174,26 @@ func encryptedCallback(t *testing.T, key *rsa.PrivateKey, apiKey string, timesta
 	return headers, body
 }
 
+func encryptedRefundCallback(t *testing.T, key *rsa.PrivateKey, plaintext string) (http.Header, []byte) {
+	t.Helper()
+	resource := encryptNotificationResource(t, testAPIv3Key, plaintext)
+	resource.OriginalType = "refund"
+	body, err := json.Marshal(notification{
+		ID: "refund-notification-id", CreateTime: "2027-01-15T08:00:00+08:00",
+		EventType: "REFUND.SUCCESS", Resource: resource,
+	})
+	require.NoError(t, err)
+	timestamp := strconv.FormatInt(testNowUnix, 10)
+	nonce := "refund-callback-nonce"
+	headers := http.Header{
+		"Wechatpay-Timestamp": []string{timestamp},
+		"Wechatpay-Nonce":     []string{nonce},
+		"Wechatpay-Serial":    []string{"platform-serial"},
+	}
+	headers.Set("Wechatpay-Signature", signWechatMessage(t, key, timestamp+"\n"+nonce+"\n"+string(body)+"\n"))
+	return headers, body
+}
+
 func TestCreateQRCodeCallsWechatNativeAPI(t *testing.T) {
 	keys := newTestKeys(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +214,7 @@ func TestCreateQRCodeCallsWechatNativeAPI(t *testing.T) {
 	defer server.Close()
 
 	fact, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
-		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY",
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: " cny ",
 		Description: "WeKnora recharge", IdempotencyKey: "idem-1",
 	})
 	require.NoError(t, err)
@@ -358,7 +378,8 @@ func TestRefundAndQueryRefund(t *testing.T) {
 	adapter := newTestAdapter(t, baseURL, keys)
 
 	submission, err := adapter.Refund(t.Context(), payment.RefundInput{
-		ProviderOrderID: "01ORDER", AmountMinor: 3000, TotalAmountMinor: 10000, Currency: "CNY",
+		OrderID: "internal-order", ProviderOrderID: "01ORDER",
+		AmountMinor: 3000, TotalAmountMinor: 10000, Currency: " cny ",
 		Reason: "customer request", IdempotencyKey: "refund-idem",
 	})
 	require.NoError(t, err)
@@ -374,12 +395,58 @@ func TestRefundAndQueryRefund(t *testing.T) {
 	require.Equal(t, "CNY", fact.Currency)
 }
 
+func TestRefundRejectsNonCNYBeforeCallingProvider(t *testing.T) {
+	keys := newTestKeys(t)
+	_, err := newTestAdapter(t, "http://127.0.0.1:1", keys).Refund(t.Context(), payment.RefundInput{
+		OrderID: "internal-order", ProviderOrderID: "01ORDER", AmountMinor: 3000, TotalAmountMinor: 10000,
+		Currency: "USD", IdempotencyKey: "refund-idem",
+	})
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestRefundRequiresDomainOrderBinding(t *testing.T) {
+	keys := newTestKeys(t)
+	_, err := newTestAdapter(t, "http://127.0.0.1:1", keys).Refund(t.Context(), payment.RefundInput{
+		ProviderOrderID: "01ORDER", AmountMinor: 3000, TotalAmountMinor: 10000,
+		Currency: "CNY", IdempotencyKey: "refund-idem",
+	})
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+}
+
+func TestRefundRejectsResponseMismatches(t *testing.T) {
+	keys := newTestKeys(t)
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "out refund number", body: `{"refund_id":"5030000001","out_refund_no":"other-refund","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "out trade number", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"OTHER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "refund amount", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3001,"total":10000,"currency":"CNY"}}`},
+		{name: "total amount", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":9999,"currency":"CNY"}}`},
+		{name: "currency", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"USD"}}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, tt.body)
+			}))
+			defer server.Close()
+			_, err := newTestAdapter(t, server.URL, keys).Refund(t.Context(), payment.RefundInput{
+				OrderID: "internal-order", ProviderOrderID: "01ORDER",
+				AmountMinor: 3000, TotalAmountMinor: 10000, Currency: "CNY",
+				IdempotencyKey: "refund-idem",
+			})
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
+}
+
 func TestQueryRefundMapsTerminalFailuresWithRawHash(t *testing.T) {
 	keys := newTestKeys(t)
 	for _, status := range []string{"CLOSED", "ABNORMAL"} {
 		t.Run(status, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				body := fmt.Sprintf(`{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":%q,"amount":{"refund":3000,"total":10000,"currency":"CNY"}}`, status)
+				body := fmt.Sprintf(`{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":%q,"amount":{"refund":3000,"total":10000,"currency":"CNY"}}`, status)
 				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, body)
 			}))
 			defer server.Close()
@@ -391,10 +458,65 @@ func TestQueryRefundMapsTerminalFailuresWithRawHash(t *testing.T) {
 	}
 }
 
+func TestQueryRefundRejectsInvalidMoneyAndProviderFields(t *testing.T) {
+	keys := newTestKeys(t)
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "zero total", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":0,"currency":"CNY"}}`},
+		{name: "refund exceeds total", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":10001,"total":10000,"currency":"CNY"}}`},
+		{name: "non CNY", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"USD"}}`},
+		{name: "missing provider refund ID", body: `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "mismatched out refund number", body: `{"refund_id":"5030000001","out_refund_no":"other","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, tt.body)
+			}))
+			defer server.Close()
+			_, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
+}
+
+func TestVerifyRefundCallbackValidatesMoneyAndProviderFields(t *testing.T) {
+	keys := newTestKeys(t)
+	valid := `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"SUCCESS","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`
+	headers, body := encryptedRefundCallback(t, keys.platformPrivate, valid)
+	fact, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyRefundCallback(t.Context(), headers, body)
+	require.NoError(t, err)
+	require.True(t, fact.Success)
+	require.Equal(t, "refund-idem", fact.ProviderRefundID)
+	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Equal(t, int64(3000), fact.AmountMinor)
+	require.Equal(t, "CNY", fact.Currency)
+
+	tests := []struct {
+		name      string
+		plaintext string
+	}{
+		{name: "zero total", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":0,"currency":"CNY"}}`},
+		{name: "refund exceeds total", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":10001,"total":10000,"currency":"CNY"}}`},
+		{name: "non CNY", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"USD"}}`},
+		{name: "missing provider refund ID", plaintext: `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "missing order", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers, body := encryptedRefundCallback(t, keys.platformPrivate, tt.plaintext)
+			_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyRefundCallback(t.Context(), headers, body)
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+		})
+	}
+}
+
 func TestQueryRefundProcessingHasNoDefinitiveFailureHash(t *testing.T) {
 	keys := newTestKeys(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
+		writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
 	}))
 	defer server.Close()
 	fact, err := newTestAdapter(t, server.URL, keys).QueryRefund(t.Context(), "refund-idem")
