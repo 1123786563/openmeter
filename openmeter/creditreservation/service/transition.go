@@ -27,7 +27,7 @@ func validateReleaseEvidence(state creditreservation.ReservationState, evidence 
 
 func (s *service) Execute(ctx context.Context, input creditreservation.ExecuteInput) (creditreservation.Reservation, error) {
 	if input.ExecutionDeadline.IsZero() {
-		return creditreservation.Reservation{}, fmt.Errorf("execution deadline is required")
+		input.ExecutionDeadline = s.now().Add(s.executionDeadline)
 	}
 	return s.withReservation(ctx, input.ID, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
 		if err := matchesIdentity(current, input.IdempotencyKey, input.PayloadHash); err != nil {
@@ -75,26 +75,26 @@ func matchesIdentity(reservation creditreservation.Reservation, idempotencyKey, 
 }
 
 func (s *service) SweepExpired(ctx context.Context, now time.Time, limit int) (creditreservation.SweepResult, error) {
-	rows, err := s.adapter.ListExpiredReservations(ctx, now, limit)
+	rows, err := s.adapter.ListExpiredReservations(ctx, now, now.Add(-s.unknownManualReviewAfter), limit)
 	if err != nil {
 		return creditreservation.SweepResult{}, err
 	}
 	result := creditreservation.SweepResult{}
 	for _, row := range rows {
 		deadline := row.ExpiresAt
-		if row.State == creditreservation.ReservationStateExecuting {
+		if row.State == creditreservation.ReservationStateExecuting || row.State == creditreservation.ReservationStateUnknown {
 			deadline = row.ExecutionDeadline
 		}
-		target := sweepTransition(row.State, valueOrZero(deadline), now)
+		target := sweepTransition(row.State, valueOrZero(deadline), s.unknownManualReviewAfter, now)
 		if target == "" {
 			continue
 		}
 		_, err := s.withReservation(ctx, models.NamespacedID{Namespace: row.Namespace, ID: row.ID}, func(tx reservationadapter.TxAdapter, current creditreservation.Reservation) (creditreservation.Reservation, error) {
 			currentDeadline := current.ExpiresAt
-			if current.State == creditreservation.ReservationStateExecuting {
+			if current.State == creditreservation.ReservationStateExecuting || current.State == creditreservation.ReservationStateUnknown {
 				currentDeadline = current.ExecutionDeadline
 			}
-			if sweepTransition(current.State, valueOrZero(currentDeadline), now) != target {
+			if sweepTransition(current.State, valueOrZero(currentDeadline), s.unknownManualReviewAfter, now) != target {
 				return current, nil
 			}
 			return tx.UpdateReservation(ctx, reservationadapter.UpdateReservationInput{ID: models.NamespacedID{Namespace: current.Namespace, ID: current.ID}, ExpectedStates: []creditreservation.ReservationState{current.State}, State: target})
@@ -104,9 +104,12 @@ func (s *service) SweepExpired(ctx context.Context, now time.Time, limit int) (c
 		}
 		if target == creditreservation.ReservationStateExpired {
 			result.Expired++
-		} else {
+		} else if target == creditreservation.ReservationStateUnknown {
 			result.Unknown++
+		} else {
+			result.ManualReview++
 		}
+		s.metrics.transition(ctx, string(target))
 	}
 	return result, nil
 }

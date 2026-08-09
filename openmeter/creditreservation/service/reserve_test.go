@@ -123,6 +123,19 @@ func TestLifecycleExecuteUnknownReleaseAndSweep(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, swept.Expired)
 	require.Equal(t, creditreservation.ReservationStateExpired, store.rows[active.ID.ID].State)
+
+	manual := reserveInput("call-manual-review")
+	reservedManual, err := svc.Reserve(t.Context(), manual)
+	require.NoError(t, err)
+	deadline := time.Date(2026, 8, 10, 11, 0, 0, 0, time.UTC)
+	row := store.rows[reservedManual.ID]
+	row.State = creditreservation.ReservationStateUnknown
+	row.ExecutionDeadline = &deadline
+	store.rows[reservedManual.ID] = row
+	swept, err = svc.SweepExpired(t.Context(), time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC), 10)
+	require.NoError(t, err)
+	require.Equal(t, 1, swept.ManualReview)
+	require.Equal(t, creditreservation.ReservationStateManualReview, store.rows[reservedManual.ID].State)
 }
 
 func newReserveService(t *testing.T, prepaid int64, limit *int64, cost int64) (creditreservation.Service, *memoryAdapter) {
@@ -184,7 +197,7 @@ func (m *memoryAdapter) GetReservation(_ context.Context, id models.NamespacedID
 func (m *memoryAdapter) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("not found")
 }
-func (m *memoryAdapter) ListExpiredReservations(_ context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error) {
+func (m *memoryAdapter) ListExpiredReservations(_ context.Context, now, unknownBefore time.Time, limit int) ([]creditreservation.Reservation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	rows := make([]creditreservation.Reservation, 0)
@@ -192,7 +205,7 @@ func (m *memoryAdapter) ListExpiredReservations(_ context.Context, now time.Time
 		if len(rows) == limit {
 			break
 		}
-		if (row.State == creditreservation.ReservationStateActive && row.ExpiresAt != nil && !row.ExpiresAt.After(now)) || (row.State == creditreservation.ReservationStateExecuting && row.ExecutionDeadline != nil && !row.ExecutionDeadline.After(now)) {
+		if (row.State == creditreservation.ReservationStateActive && row.ExpiresAt != nil && !row.ExpiresAt.After(now)) || (row.State == creditreservation.ReservationStateExecuting && row.ExecutionDeadline != nil && !row.ExecutionDeadline.After(now)) || (row.State == creditreservation.ReservationStateUnknown && row.ExecutionDeadline != nil && !row.ExecutionDeadline.After(unknownBefore)) {
 			rows = append(rows, row)
 		}
 	}

@@ -59,6 +59,42 @@ The lifecycle deadline values are deployment policy. Callers still provide the
 reservation expiry and execution deadlines to the service; do not change the
 configured values to silently rewrite existing reservations.
 
+## Required prechecks and evidence
+
+Before enabling the gate, record the migration version, a production database
+backup location, the deployed OpenMeter revision, and the approving operator.
+Confirm that the runtime bundle has a non-empty worker owner ID and that the
+startup check would reject an enabled configuration without the injected HTTP
+handler. Keep provider request IDs, idempotency keys, payload hashes, and the
+provider's execution or non-execution evidence with the incident record;
+UNKNOWN is not permission to release a hold.
+
+```sql
+-- No aged ACTIVE/EXECUTING/UNKNOWN rows may be ignored during cutover.
+SELECT state, count(*), min(created_at)
+  FROM credit_reservations
+ GROUP BY state;
+
+-- Projection delivery must be understood before route enablement.
+SELECT count(*) AS unpublished, count(*) FILTER (WHERE dead_lettered) AS dead_lettered
+  FROM credit_reservation_outboxes
+ WHERE published = false;
+```
+
+Dead-letter rows are not deleted as a recovery action. Preserve the row and
+its lease/claim history, correct the collector dependency, then reset it only
+under an incident ticket so the original outbox ID remains the downstream
+deduplication key.
+
+## Deletion gate
+
+Do not delete the legacy path, reservation tables, or outbox tables until a
+signed reconciliation demonstrates zero unresolved ACTIVE, EXECUTING, UNKNOWN,
+and MANUAL_REVIEW reservations; zero unexplained unpublished/dead-lettered
+outbox rows; and a retained export of the command/evidence records. The
+cutover runbook remains the authoritative detailed migration and rollback
+procedure.
+
 ## Metrics and alerts
 
 The outbox worker emits
@@ -67,6 +103,12 @@ OpenTelemetry meter. Its only attribute is the fixed-cardinality `outcome`
 enum: `published`, `retry`, `release_failed`, `ack_failed`, `dead_lettered`,
 or `dead_letter_failed`. It deliberately never labels by reservation,
 customer, namespace, event, or provider.
+
+The lifecycle service emits bounded command (`operation`, `outcome`) and
+transition (`state`) counters plus ceiling and enterprise-hold credit
+histograms. Backlog is intentionally not emitted by the service because the
+repository does not expose an aggregate-count contract; use the precheck query
+above until that read model is added.
 
 Alert on a non-zero rate of `dead_lettered`, `dead_letter_failed`, or
 `release_failed` outcomes, and investigate a sustained `retry` rate. Pair

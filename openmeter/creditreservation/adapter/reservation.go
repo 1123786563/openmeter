@@ -381,7 +381,7 @@ func getReservation(ctx context.Context, db *entdb.Client, id models.NamespacedI
 	return mapReservation(row)
 }
 
-func (a *adapter) ListExpiredReservations(ctx context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error) {
+func (a *adapter) ListExpiredReservations(ctx context.Context, now, unknownBefore time.Time, limit int) ([]creditreservation.Reservation, error) {
 	if limit <= 0 {
 		return nil, nil
 	}
@@ -394,6 +394,10 @@ func (a *adapter) ListExpiredReservations(ctx context.Context, now time.Time, li
 			dbcreditreservation.And(
 				dbcreditreservation.StateEQ(string(creditreservation.ReservationStateExecuting)),
 				dbcreditreservation.ExecutionDeadlineLTE(now),
+			),
+			dbcreditreservation.And(
+				dbcreditreservation.StateEQ(string(creditreservation.ReservationStateUnknown)),
+				dbcreditreservation.ExecutionDeadlineLTE(unknownBefore),
 			),
 		),
 	).Limit(limit).All(ctx)

@@ -41,7 +41,7 @@ type Adapter interface {
 	WithCustomerLock(ctx context.Context, id customer.CustomerID, fn func(TxAdapter) error) error
 	GetReservation(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error)
 	GetCharge(ctx context.Context, id models.NamespacedID) (creditreservation.Charge, error)
-	ListExpiredReservations(ctx context.Context, now time.Time, limit int) ([]creditreservation.Reservation, error)
+	ListExpiredReservations(ctx context.Context, now, unknownBefore time.Time, limit int) ([]creditreservation.Reservation, error)
 }
 
 type TxAdapter interface {

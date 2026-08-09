@@ -31,8 +31,9 @@ func TestReleaseEvidenceForExecutingRequiresProviderConfirmation(t *testing.T) {
 
 func TestSweepTransitionNeverReleasesUnknown(t *testing.T) {
 	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-	require.Equal(t, creditreservation.ReservationStateExpired, sweepTransition(creditreservation.ReservationStateActive, now.Add(-time.Second), now))
-	require.Equal(t, creditreservation.ReservationStateUnknown, sweepTransition(creditreservation.ReservationStateExecuting, now.Add(-time.Second), now))
-	require.Empty(t, sweepTransition(creditreservation.ReservationStateUnknown, now.Add(-time.Second), now))
-	require.Empty(t, sweepTransition(creditreservation.ReservationStateActive, now.Add(time.Second), now))
+	require.Equal(t, creditreservation.ReservationStateExpired, sweepTransition(creditreservation.ReservationStateActive, now.Add(-time.Second), time.Hour, now))
+	require.Equal(t, creditreservation.ReservationStateUnknown, sweepTransition(creditreservation.ReservationStateExecuting, now.Add(-time.Second), time.Hour, now))
+	require.Equal(t, creditreservation.ReservationStateManualReview, sweepTransition(creditreservation.ReservationStateUnknown, now.Add(-time.Hour), time.Hour, now))
+	require.Empty(t, sweepTransition(creditreservation.ReservationStateUnknown, now.Add(-time.Second), time.Hour, now))
+	require.Empty(t, sweepTransition(creditreservation.ReservationStateActive, now.Add(time.Second), time.Hour, now))
 }

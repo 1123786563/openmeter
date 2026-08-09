@@ -107,7 +107,7 @@ credits:
   enableCreditThenInvoice: false
 
 # Credit reservations are disabled by default. Enable only after the
-# Reservation v2 cutover checks in docs/operations/credit-reservation.md pass.
+# Reservation v2 cutover checks in docs/operations/credit-reservation-v2.md pass.
 creditReservation:
   enabled: false
   authorizationTTL: 5m

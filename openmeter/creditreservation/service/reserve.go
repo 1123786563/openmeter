@@ -19,6 +19,9 @@ type fundingSplit struct {
 }
 
 func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveInput) (creditreservation.Reservation, error) {
+	if input.AuthorizationExpiresAt.IsZero() {
+		input.AuthorizationExpiresAt = s.now().Add(s.authorizationTTL)
+	}
 	if err := validateReserve(input); err != nil {
 		return creditreservation.Reservation{}, err
 	}
@@ -83,6 +86,13 @@ func (s *service) Reserve(ctx context.Context, input creditreservation.ReserveIn
 		}
 		return tx.AppendUsageEvent(ctx, creditreservation.UsageEvent{EventID: result.ID, AggregateType: "credit_reservation", AggregateID: result.ID, EventType: "credit.reservation.created", Payload: map[string]any{"reservation_id": result.ID}})
 	})
+	if err != nil {
+		s.metrics.command(ctx, "reserve", "error")
+	} else {
+		s.metrics.command(ctx, "reserve", "success")
+		s.metrics.ceiling.Record(ctx, result.TotalCredits)
+		s.metrics.receivable.Record(ctx, result.EnterpriseHold)
+	}
 	return result, err
 }
 

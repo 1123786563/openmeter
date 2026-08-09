@@ -141,6 +141,10 @@ type Config struct {
 func (c *Config) Validate() error {
 	var errs []error
 
+	if c.CreditReservation.Enabled && c.CreditReservationsHandler == nil {
+		errs = append(errs, errors.New("credit reservation handler is required when credit reservations are enabled"))
+	}
+
 	if err := c.ResponseValidation.Mode.Validate(); err != nil {
 		errs = append(errs, err)
 	}

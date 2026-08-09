@@ -92,8 +92,9 @@ type ReverseChargeInput struct {
 }
 
 type SweepResult struct {
-	Expired int
-	Unknown int
+	Expired      int
+	Unknown      int
+	ManualReview int
 }
 
 type FenceResult struct {

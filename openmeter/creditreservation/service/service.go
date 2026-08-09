@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel/metric"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"time"
 
 	decimal "github.com/alpacahq/alpacadecimal"
@@ -20,12 +22,16 @@ type collectableReader interface {
 }
 
 type Config struct {
-	Adapter             reservationadapter.Adapter
-	Prices              creditreservation.PriceResolver
-	Collector           collectableReader
-	SettlementCollector settlementCollector
-	CreditLimit         creditlimit.AllowanceResolver
-	Now                 func() time.Time
+	Adapter                  reservationadapter.Adapter
+	Prices                   creditreservation.PriceResolver
+	Collector                collectableReader
+	SettlementCollector      settlementCollector
+	CreditLimit              creditlimit.AllowanceResolver
+	Now                      func() time.Time
+	AuthorizationTTL         time.Duration
+	ExecutionDeadline        time.Duration
+	UnknownManualReviewAfter time.Duration
+	Meter                    metric.Meter
 }
 
 func (c Config) Validate() error {
@@ -36,12 +42,16 @@ func (c Config) Validate() error {
 }
 
 type service struct {
-	adapter     reservationadapter.Adapter
-	prices      creditreservation.PriceResolver
-	collector   collectableReader
-	settlement  settlementCollector
-	creditLimit creditlimit.AllowanceResolver
-	now         func() time.Time
+	adapter                  reservationadapter.Adapter
+	prices                   creditreservation.PriceResolver
+	collector                collectableReader
+	settlement               settlementCollector
+	creditLimit              creditlimit.AllowanceResolver
+	now                      func() time.Time
+	authorizationTTL         time.Duration
+	executionDeadline        time.Duration
+	unknownManualReviewAfter time.Duration
+	metrics                  lifecycleMetrics
 }
 
 var _ creditreservation.Service = (*service)(nil)
@@ -58,7 +68,27 @@ func New(config Config) (creditreservation.Service, error) {
 	if limit == nil {
 		limit = creditlimit.NoopAllowanceResolver{}
 	}
-	return &service{adapter: config.Adapter, prices: config.Prices, collector: config.Collector, settlement: config.SettlementCollector, creditLimit: limit, now: now}, nil
+	unknownManualReviewAfter := config.UnknownManualReviewAfter
+	if unknownManualReviewAfter <= 0 {
+		unknownManualReviewAfter = time.Hour
+	}
+	authorizationTTL := config.AuthorizationTTL
+	if authorizationTTL <= 0 {
+		authorizationTTL = 5 * time.Minute
+	}
+	executionDeadline := config.ExecutionDeadline
+	if executionDeadline <= 0 {
+		executionDeadline = 10 * time.Minute
+	}
+	meter := config.Meter
+	if meter == nil {
+		meter = metricnoop.NewMeterProvider().Meter("openmeter.credit_reservation")
+	}
+	metrics, err := newLifecycleMetrics(meter)
+	if err != nil {
+		return nil, err
+	}
+	return &service{adapter: config.Adapter, prices: config.Prices, collector: config.Collector, settlement: config.SettlementCollector, creditLimit: limit, now: now, authorizationTTL: authorizationTTL, executionDeadline: executionDeadline, unknownManualReviewAfter: unknownManualReviewAfter, metrics: metrics}, nil
 }
 
 func (s *service) Get(ctx context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {

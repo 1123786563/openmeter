@@ -100,6 +100,11 @@ func TestCreditReservationRoutesAreAbsentWhenReservationConfigurationDisabled(t 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+func TestCreditReservationEnabledRequiresRuntimeHandler(t *testing.T) {
+	err := (&Config{CreditReservation: config.CreditReservationConfiguration{Enabled: true}}).Validate()
+	require.ErrorContains(t, err, "credit reservation handler is required when credit reservations are enabled")
+}
+
 type creditReservationRouteService struct {
 	reserve func(context.Context, creditreservation.ReserveInput) (creditreservation.Reservation, error)
 	charge  func(context.Context, creditreservation.ChargeInput) (creditreservation.Charge, error)
