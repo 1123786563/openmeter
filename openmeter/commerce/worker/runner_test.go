@@ -6,6 +6,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/openmeterio/openmeter/openmeter/commerce"
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
+	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 )
 
 func TestRunner_StartStop(t *testing.T) {
@@ -365,6 +369,102 @@ func TestRegisterCommerceWorkers_RefundQueryProcesses(t *testing.T) {
 	}
 	if len(refundMock.processed) != 2 {
 		t.Errorf("expected 2 processed in mock, got %d", len(refundMock.processed))
+	}
+}
+
+type queryErrorRefundRepo struct {
+	refund.Repository
+	record *refund.RefundRequest
+}
+
+func (r queryErrorRefundRepo) GetRefund(_ context.Context, namespace, id string) (*refund.RefundRequest, error) {
+	if r.record.Namespace != namespace || r.record.ID != id {
+		return nil, refund.ErrRefundNotFound
+	}
+	copy := *r.record
+	return &copy, nil
+}
+
+type queryErrorOrderReader struct{}
+
+func (queryErrorOrderReader) GetOrder(context.Context, string, string) (*commerce.Order, error) {
+	return &commerce.Order{PublicID: "provider-order-1"}, nil
+}
+
+type queryErrorWallet struct{}
+
+func (queryErrorWallet) GetGrants(context.Context, string, string) ([]commerce.AllocationGrant, error) {
+	return nil, nil
+}
+
+type queryErrorProvider struct {
+	err   error
+	calls atomic.Int64
+}
+
+func (p *queryErrorProvider) Refund(context.Context, payment.RefundInput) (payment.RefundSubmission, error) {
+	return payment.RefundSubmission{}, errors.New("unexpected refund submission")
+}
+
+func (p *queryErrorProvider) QueryRefund(context.Context, payment.RefundQueryInput) (payment.RefundFact, error) {
+	p.calls.Add(1)
+	return payment.RefundFact{}, p.err
+}
+
+func (*queryErrorProvider) Name() payment.Provider { return payment.ProviderWeChat }
+
+type realRefundServiceProcessor struct {
+	service refund.Service
+	id      string
+}
+
+func (p realRefundServiceProcessor) ListProviderProcessing(context.Context, string) ([]string, error) {
+	return []string{p.id}, nil
+}
+
+func (p realRefundServiceProcessor) ProcessOne(ctx context.Context, namespace, id string) error {
+	_, err := p.service.ProcessOne(ctx, namespace, id)
+	return err
+}
+
+func TestRegisterCommerceWorkers_RealRefundServiceRetriesProviderQueryError(t *testing.T) {
+	wantErr := errors.New("provider query timeout")
+	record := &refund.RefundRequest{
+		ID: "refund-query-error", Namespace: "test-ns", CommerceOrderID: "order-1",
+		Status: refund.RefundStatusProviderProcessing, ProviderName: string(payment.ProviderWeChat),
+		ProviderRefundID: "provider-refund-1", RefundFen: 100, Currency: "CNY", FenceSequence: "fence-1",
+	}
+	provider := &queryErrorProvider{err: wantErr}
+	service, err := refund.New(refund.Config{
+		Repo: queryErrorRefundRepo{record: record}, Orders: queryErrorOrderReader{}, Wallet: queryErrorWallet{},
+		Providers: map[payment.Provider]refund.ProviderRefunder{payment.ProviderWeChat: provider},
+	})
+	if err != nil {
+		t.Fatalf("create refund service: %v", err)
+	}
+
+	mgr, err := RegisterCommerceWorkers(CommerceWorkerDeps{
+		Namespace: "test-ns", Refund: realRefundServiceProcessor{service: service, id: record.ID},
+	})
+	if err != nil {
+		t.Fatalf("create worker manager: %v", err)
+	}
+	runner := mgr.runners[0]
+
+	for attempt := int64(1); attempt <= 2; attempt++ {
+		n, runErr := runner.ProcessOnce(t.Context())
+		if !errors.Is(runErr, wantErr) {
+			t.Fatalf("attempt %d: expected provider query error, got %v", attempt, runErr)
+		}
+		if n != 0 {
+			t.Fatalf("attempt %d: processed = %d, want 0", attempt, n)
+		}
+		if provider.calls.Load() != attempt {
+			t.Fatalf("attempt %d: provider calls = %d", attempt, provider.calls.Load())
+		}
+		if record.Status != refund.RefundStatusProviderProcessing || record.FenceSequence != "fence-1" {
+			t.Fatalf("attempt %d: refund or fence changed: %+v", attempt, record)
+		}
 	}
 }
 

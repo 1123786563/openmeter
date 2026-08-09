@@ -186,6 +186,7 @@ func wireCommerce(
 		paymentProviders: paymentProviders, refundProviders: refundProviders,
 	}
 	if !cfg.Enabled {
+		wiring.Handler = readOnlyCommerceHandler{delegate: handler}
 		return wiring, nil
 	}
 
@@ -210,6 +211,67 @@ func wireCommerce(
 
 	wiring.WorkerManager = workerMgr
 	return wiring, nil
+}
+
+// readOnlyCommerceHandler keeps commerce query routes available while making
+// the disabled configuration a hard mutation boundary. The short-circuit
+// handlers intentionally do not parse request bodies or call domain services.
+type readOnlyCommerceHandler struct {
+	delegate commercehandler.Handler
+}
+
+func (h readOnlyCommerceHandler) GetCustomerWallet() http.HandlerFunc {
+	return h.delegate.GetCustomerWallet()
+}
+
+func (h readOnlyCommerceHandler) ListRechargeProducts() http.HandlerFunc {
+	return h.delegate.ListRechargeProducts()
+}
+
+func (readOnlyCommerceHandler) CreateProduct() http.HandlerFunc { return commerceDisabledMutation() }
+
+func (readOnlyCommerceHandler) UpdateProduct() http.HandlerFunc { return commerceDisabledMutation() }
+
+func (readOnlyCommerceHandler) CreateOrder() http.HandlerFunc { return commerceDisabledMutation() }
+
+func (h readOnlyCommerceHandler) GetOrder() http.HandlerFunc { return h.delegate.GetOrder() }
+
+func (readOnlyCommerceHandler) CreateCheckoutSession() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func (h readOnlyCommerceHandler) GetCheckoutSession() http.HandlerFunc {
+	return h.delegate.GetCheckoutSession()
+}
+
+func (readOnlyCommerceHandler) AlipayPaymentCallback() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func (readOnlyCommerceHandler) WechatPaymentCallback() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func (readOnlyCommerceHandler) CreateRefund() http.HandlerFunc { return commerceDisabledMutation() }
+
+func (h readOnlyCommerceHandler) GetRefund() http.HandlerFunc { return h.delegate.GetRefund() }
+
+func (readOnlyCommerceHandler) CreateOfflinePayment() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func (h readOnlyCommerceHandler) ListReceivablePeriods() http.HandlerFunc {
+	return h.delegate.ListReceivablePeriods()
+}
+
+func (readOnlyCommerceHandler) UpdateExternalInvoice() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func commerceDisabledMutation() http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotImplemented)
+	}
 }
 
 func wirePaymentProviders(cfg config.CommerceConfiguration, logger *slog.Logger) (map[payment.Provider]payment.ProviderAdapter, map[payment.Provider]refund.ProviderRefunder, error) {

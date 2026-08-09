@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/pkg/models"
@@ -23,6 +25,7 @@ type mockRepo struct {
 	mu         sync.Mutex
 	refunds    map[string]*RefundRequest
 	facts      map[string]*RefundFactRecord // keyed by RawHash
+	appendErr  error
 	idCounter  atomic.Int64
 	grantStore *mockWallet // shared grant store for atomic reserve
 }
@@ -231,6 +234,9 @@ func (m *mockRepo) ReserveCredits(_ context.Context, refundID string, in Reserva
 func (m *mockRepo) AppendFact(_ context.Context, fact RefundFactRecord) (*RefundFactRecord, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.appendErr != nil {
+		return nil, false, m.appendErr
+	}
 	if fact.RawHash != "" {
 		if existing, ok := m.facts[fact.RawHash]; ok {
 			cp := *existing
@@ -1232,6 +1238,44 @@ func TestProcessOneProviderProcessingThenSuccess(t *testing.T) {
 	if h.reverser.totalReversed() != 100000 {
 		t.Errorf("total reversed = %d, want 100000", h.reverser.totalReversed())
 	}
+}
+
+func TestProcessOneProviderSuccessStopsWhenFactPersistenceFails(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-fact-error", "cust", 10000)
+	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{
+			Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing",
+		}, nil
+	}
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
+		return payment.RefundFact{
+			Provider: payment.ProviderWeChat, ProviderRefundID: input.ProviderRefundID,
+			Success: true, RawHash: "fact-error-hash", AmountMinor: 10000, Currency: "CNY",
+		}, nil
+	}
+
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-fact-error", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-fact-error",
+	})
+	require.NoError(t, err)
+
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+
+	wantErr := errors.New("append refund fact")
+	h.repo.appendErr = wantErr
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.ErrorIs(t, err, wantErr)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+	require.Zero(t, h.reverser.totalReversed())
+	require.Zero(t, h.snapshots.count.Load())
+	require.Zero(t, h.fence.released.Load())
 }
 
 func TestProcessOneProviderProcessingResultRetainsFence(t *testing.T) {

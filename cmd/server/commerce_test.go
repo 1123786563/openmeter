@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -83,6 +85,40 @@ func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
 	require.Nil(t, wiring.WorkerManager)
 	require.Empty(t, wiring.paymentProviders)
 	require.Empty(t, wiring.refundProviders)
+}
+
+func TestWireCommerceDisabledRejectsAllMutationHandlers(t *testing.T) {
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{},
+		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+	)
+	require.NoError(t, err)
+
+	mutations := []struct {
+		name    string
+		method  string
+		handler http.HandlerFunc
+	}{
+		{name: "create product", method: http.MethodPost, handler: wiring.Handler.CreateProduct()},
+		{name: "update product", method: http.MethodPut, handler: wiring.Handler.UpdateProduct()},
+		{name: "create order", method: http.MethodPost, handler: wiring.Handler.CreateOrder()},
+		{name: "create checkout", method: http.MethodPost, handler: wiring.Handler.CreateCheckoutSession()},
+		{name: "alipay callback", method: http.MethodPost, handler: wiring.Handler.AlipayPaymentCallback()},
+		{name: "wechat callback", method: http.MethodPost, handler: wiring.Handler.WechatPaymentCallback()},
+		{name: "create refund", method: http.MethodPost, handler: wiring.Handler.CreateRefund()},
+		{name: "create offline payment", method: http.MethodPost, handler: wiring.Handler.CreateOfflinePayment()},
+		{name: "update external invoice", method: http.MethodPut, handler: wiring.Handler.UpdateExternalInvoice()},
+	}
+
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			request := httptest.NewRequest(mutation.method, "/commerce-disabled", nil)
+			mutation.handler.ServeHTTP(response, request)
+			require.Equal(t, http.StatusNotImplemented, response.Code)
+			require.Empty(t, response.Body.String())
+		})
+	}
 }
 
 func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.T) {

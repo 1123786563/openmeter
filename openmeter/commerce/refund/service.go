@@ -604,11 +604,12 @@ func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequ
 		Currency:         rec.Currency,
 	})
 	if err != nil {
-		s.logger.WarnContext(ctx, "refund: provider query failed", "id", rec.ID, "error", err)
-		return rec, nil
+		return rec, fmt.Errorf("refund: provider query: %w", err)
 	}
 
-	s.persistRefundFact(ctx, rec, fact)
+	if err := s.persistRefundFact(ctx, rec, fact); err != nil {
+		return rec, err
+	}
 
 	if fact.Success {
 		return s.handleProviderSuccess(ctx, rec, fact)
@@ -876,9 +877,9 @@ func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) Provid
 	return nil
 }
 
-func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) {
+func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {
 	if fact.RawHash == "" {
-		return
+		return nil
 	}
 	_, _, err := s.repo.AppendFact(ctx, RefundFactRecord{
 		ID:               rec.ID + "-fact-" + fact.ProviderRefundID,
@@ -896,8 +897,9 @@ func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fac
 		CreatedAt:        clock.Now(),
 	})
 	if err != nil {
-		s.logger.WarnContext(ctx, "refund: persist fact failed", "id", rec.ID, "error", err)
+		return fmt.Errorf("refund: persist provider fact: %w", err)
 	}
+	return nil
 }
 
 func (s *service) releaseFenceQuietly(ctx context.Context, namespace, customerID, fenceSeq string) {
