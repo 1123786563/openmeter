@@ -6,6 +6,9 @@
 The acceptance command is `make credit-reservation-v2-acceptance`. Its E2E
 test uses the `credit_reservation_acceptance` build tag and fails, rather than
 skips, when `OPENMETER_ADDRESS` or the live reservation handler is absent.
+It also requires `OPENMETER_CR_CUSTOMER_ID`, `OPENMETER_CR_SUBJECT_ID`,
+`OPENMETER_CR_FEATURE_KEY`, `OPENMETER_CR_RESOURCE_CODE`, and crash/outbox
+evidence URLs; fixture setup is an explicit release prerequisite.
 
 ## Evidence collected
 
