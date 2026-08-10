@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/oklog/run"
 	"github.com/samber/lo"
@@ -18,10 +19,14 @@ import (
 
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
+	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
 	"github.com/openmeterio/openmeter/openmeter/debug"
 	"github.com/openmeterio/openmeter/openmeter/ingest/kafkaingest"
 	"github.com/openmeterio/openmeter/openmeter/namespace"
 	"github.com/openmeterio/openmeter/openmeter/namespace/namespacedriver"
+	reservationadapter "github.com/openmeterio/openmeter/openmeter/creditreservation/adapter"
+	"github.com/openmeterio/openmeter/openmeter/creditreservation"
+	reservationservice "github.com/openmeterio/openmeter/openmeter/creditreservation/service"
 	"github.com/openmeterio/openmeter/openmeter/server"
 	"github.com/openmeterio/openmeter/openmeter/server/router"
 	"github.com/openmeterio/openmeter/pkg/errorsx"
@@ -174,6 +179,49 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Wire credit reservation service when enabled.
+	var creditReservationsHandler creditreservationshandler.Handler
+	if conf.CreditReservation.Enabled {
+		resAdapter, err := reservationadapter.New(reservationadapter.Config{
+			Client: app.EntClient,
+			Logger: logger,
+		})
+		if err != nil {
+			logger.Error("failed to create credit reservation adapter", "error", err)
+			os.Exit(1)
+		}
+
+		authTTL, _ := time.ParseDuration(conf.CreditReservation.AuthorizationTTL)
+		execDeadline, _ := time.ParseDuration(conf.CreditReservation.ExecutionDeadline)
+		reviewAfter, _ := time.ParseDuration(conf.CreditReservation.UnknownManualReviewAfter)
+
+		priceResolver := creditreservation.NewCatalogPriceResolver(
+			app.Subscription.Service,
+			app.CurrencyService,
+		)
+
+		reservationSvc, err := reservationservice.New(reservationservice.Config{
+			Adapter:                  resAdapter,
+			Prices:                   priceResolver,
+			Collector:                app.BillingRegistry.Charges.Collector,
+			SettlementCollector:      app.BillingRegistry.Charges.Collector,
+			Now:                      func() time.Time { return time.Now().UTC() },
+			AuthorizationTTL:         authTTL,
+			ExecutionDeadline:        execDeadline,
+			UnknownManualReviewAfter: reviewAfter,
+		})
+		if err != nil {
+			logger.Error("failed to create credit reservation service", "error", err)
+			os.Exit(1)
+		}
+
+		resolveNamespace := func(_ context.Context) (string, error) {
+			return app.NamespaceManager.GetDefaultNamespace(), nil
+		}
+		creditReservationsHandler = creditreservationshandler.New(resolveNamespace, reservationSvc)
+		logger.Info("credit reservation service enabled")
+	}
+
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{
 			NamespaceDecoder:            namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace()),
@@ -226,7 +274,8 @@ func main() {
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
 		ResponseValidation:  conf.Server.ResponseValidation,
 		ClientIPMiddleware:  pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
-		CommerceHandler:     commerceWiring.Handler,
+		CommerceHandler:            commerceWiring.Handler,
+		CreditReservationsHandler:   creditReservationsHandler,
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
