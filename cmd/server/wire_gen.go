@@ -549,7 +549,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	creditgrantService, err := common.NewCreditGrantService(client, billingRegistry, customerService, creditvoidService)
+	creditgrantService, err := common.NewCreditGrantService(client, billingRegistry, customerService, creditvoidService, currenciesService)
 	if err != nil {
 		cleanup7()
 		cleanup6()
@@ -560,7 +560,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		cleanup()
 		return Application{}, nil, err
 	}
-	customerbalanceService, err := common.NewCustomerBalanceService(creditsConfiguration, ledger, balanceQuerier, accountResolver, accountService, billingRegistry, breakageService, creditvoidService)
+	customerbalanceService, err := common.NewCustomerBalanceService(creditsConfiguration, ledger, balanceQuerier, accountResolver, accountService, billingRegistry, breakageService, creditvoidService, currenciesService)
 	if err != nil {
 		cleanup7()
 		cleanup6()
