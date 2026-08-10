@@ -11,16 +11,13 @@ func (s *Server) registerCreditReservationRoutes(r chi.Router) {
 		return
 	}
 
-	r.Route("/credit-reservations", func(r chi.Router) {
-		r.Post("/", s.creditReservationsHandler.Reserve())
-		r.Get("/{reservationId}", s.creditReservationsHandler.Get())
-		r.Post("/{reservationId}/execute", s.creditReservationsHandler.Execute())
-		r.Post("/{reservationId}/settle", s.creditReservationsHandler.Settle())
-		r.Post("/{reservationId}/release", s.creditReservationsHandler.Release())
-		r.Post("/{reservationId}/unknown", s.creditReservationsHandler.Unknown())
-	})
-	r.Route("/credit-charges", func(r chi.Router) {
-		r.Post("/", s.creditReservationsHandler.Charge())
-		r.Post("/{chargeId}/reverse", s.creditReservationsHandler.ReverseCharge())
-	})
+	// Register routes without trailing slashes to match SDK client paths.
+	r.Post("/credit-reservations", s.creditReservationsHandler.Reserve())
+	r.Get("/credit-reservations/{reservationId}", s.creditReservationsHandler.Get())
+	r.Post("/credit-reservations/{reservationId}/execute", s.creditReservationsHandler.Execute())
+	r.Post("/credit-reservations/{reservationId}/settle", s.creditReservationsHandler.Settle())
+	r.Post("/credit-reservations/{reservationId}/release", s.creditReservationsHandler.Release())
+	r.Post("/credit-reservations/{reservationId}/unknown", s.creditReservationsHandler.Unknown())
+	r.Post("/credit-charges", s.creditReservationsHandler.Charge())
+	r.Post("/credit-charges/{chargeId}/reverse", s.creditReservationsHandler.ReverseCharge())
 }

@@ -36,6 +36,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	ledgeraccount "github.com/openmeterio/openmeter/openmeter/ledger/account"
 	ledgerbreakage "github.com/openmeterio/openmeter/openmeter/ledger/breakage"
+	ledgercollector "github.com/openmeterio/openmeter/openmeter/ledger/collector"
 	"github.com/openmeterio/openmeter/openmeter/ledger/recognizer"
 	"github.com/openmeterio/openmeter/openmeter/meter"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog/feature"
@@ -69,6 +70,7 @@ type ChargesRegistry struct {
 	UsageBasedService     usagebased.Service
 	CreditPurchaseService creditpurchase.Service
 	RecognizerService     recognizer.Service
+	Collector             ledgercollector.Service
 }
 
 // Billing is the Wire provider set for the billing and charges stack.

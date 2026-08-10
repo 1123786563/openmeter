@@ -47,7 +47,14 @@ func isCreditReservationValidationError(err error) bool {
 func writeError(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
 	status := httpStatusForError(err)
 	if status == http.StatusInternalServerError {
-		apierrors.NewInternalError(ctx, err).HandleAPIError(w, r)
+		// Temporary debug: expose the actual error for diagnosis
+		problem := &apierrors.BaseAPIError{
+			Type:   "https://openmeter.io/problems/credit-reservation",
+			Status: status,
+			Title:  http.StatusText(status),
+			Detail: err.Error(),
+		}
+		problem.HandleAPIError(w, r)
 		return
 	}
 

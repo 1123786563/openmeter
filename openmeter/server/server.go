@@ -17,6 +17,7 @@ import (
 
 	"github.com/openmeterio/openmeter/api"
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
+	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
 	v3server "github.com/openmeterio/openmeter/api/v3/server"
 	appconfig "github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/portal/authenticator"
@@ -76,6 +77,7 @@ type Config struct {
 	// CommerceHandler is the optional Phase 2 commerce handler. When nil,
 	// commerce routes return 501 Not Implemented.
 	CommerceHandler commercehandler.Handler
+	CreditReservationsHandler creditreservationshandler.Handler
 }
 
 func (c Config) Validate() error {
@@ -178,6 +180,7 @@ func NewServer(config *Config) (*Server, error) {
 		ResponseValidation:          config.ResponseValidation,
 		FeatureGate:                 config.RouterConfig.FeatureGate,
 		CommerceHandler:             config.CommerceHandler,
+		CreditReservationsHandler:   config.CreditReservationsHandler,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create v3 API: %w", err)

@@ -29,6 +29,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/rating"
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
+	reservationadapter "github.com/openmeterio/openmeter/openmeter/creditreservation/adapter"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	enttx "github.com/openmeterio/openmeter/openmeter/ent/tx"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
@@ -462,7 +463,7 @@ func newChargesRegistry(
 		return nil, err
 	}
 
-	activeHoldReader, err := activeHoldReaderForCredits(creditsConfig)
+	activeHoldReader, err := activeHoldReaderForCredits(db, creditsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -594,12 +595,13 @@ func newChargesRegistry(
 		UsageBasedService:     usageBasedSvc,
 		CreditPurchaseService: creditPurchaseSvc,
 		RecognizerService:     recognizerService,
+		Collector:             collectorService,
 	}, nil
 }
 
-func activeHoldReaderForCredits(creditsConfig config.CreditsConfiguration) (creditlimit.ActiveHoldReader, error) {
+func activeHoldReaderForCredits(db *entdb.Client, creditsConfig config.CreditsConfiguration) (creditlimit.ActiveHoldReader, error) {
 	if creditsConfig.ReservationsEnabled {
-		return nil, fmt.Errorf("reservation persistence is enabled but no durable active hold reader is wired")
+		return reservationadapter.NewReservationHoldReader(db), nil
 	}
 	return creditlimit.NoActiveHoldReader{}, nil
 }

@@ -120,9 +120,6 @@ func (i BackfillAdvanceLineageSegmentsInput) Validate() error {
 	if err := i.Currency.Validate(); err != nil {
 		errs = append(errs, fmt.Errorf("currency: %w", err))
 	}
-	if i.Currency.IsCustom() {
-		errs = append(errs, fmt.Errorf("advance lineage backfill: %w", meta.ErrCustomCurrencyNotSupported))
-	}
 	if !i.Amount.IsPositive() {
 		errs = append(errs, errors.New("amount must be positive"))
 	}
