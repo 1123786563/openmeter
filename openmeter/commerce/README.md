@@ -134,6 +134,10 @@ effect — the ledger effect was committed in the original transaction.
 ## Operations
 
 ### Workers
+See [README-payment-production.md](README-payment-production.md) for the
+production payment operations manual covering callback endpoints, credential
+ownership, payment recovery, certificate rotation, emergency shutdown,
+core alerting rules, and rollout/rollback procedures.
 
 Registered runners (lifecycle-managed via `worker.Manager`):
 
