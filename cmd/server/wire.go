@@ -14,10 +14,6 @@ import (
 
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
-	"github.com/openmeterio/openmeter/openmeter/aiusage"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/worker"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	"github.com/openmeterio/openmeter/openmeter/cost"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
@@ -82,11 +78,6 @@ type Application struct {
 	KafkaIngestNamespaceHandler      *kafkaingest.NamespaceHandler
 	LedgerNamespaceHandler           namespace.Handler
 	LLMCostService                   llmcost.Service
-	AIUsageService                   aiusage.Service
-	AIUsageRepository                aiusage.Repository
-	RuntimeAuthorizationService      runtimeauthorization.Service
-	AIUsageWorker                    *worker.Worker
-	RateCardService                  ratecard.Service
 	Logger                           *slog.Logger
 	MetricMeter                      metric.Meter
 	MeterConfigInitializer           common.MeterConfigInitializer
@@ -138,7 +129,6 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		common.Kafka,
 		common.KafkaIngest,
 		common.LLMCost,
-		common.AIUsage,
 		common.LedgerStack,
 		common.KafkaNamespaceResolver,
 		common.MeterManageWithConfigMeters,

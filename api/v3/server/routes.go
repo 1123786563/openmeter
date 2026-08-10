@@ -4,8 +4,6 @@ import (
 	"net/http"
 
 	api "github.com/openmeterio/openmeter/api/v3"
-	"github.com/openmeterio/openmeter/api/v3/apierrors"
-	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
 	"github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"
 	currencieshandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
 	chargeshandler "github.com/openmeterio/openmeter/api/v3/handlers/customers/charges"
@@ -582,95 +580,3 @@ func (s *Server) QueryGovernanceAccess(w http.ResponseWriter, r *http.Request, p
 	s.governanceHandler.QueryGovernanceAccess().With(params).ServeHTTP(w, r)
 }
 
-// AI Usage
-
-func (s *Server) CreateAiUsageBatch(w http.ResponseWriter, r *http.Request) {
-	if s.aiusageHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-		return
-	}
-	s.aiusageHandler.CreateAiUsageBatch().ServeHTTP(w, r)
-}
-
-func (s *Server) GetAiUsageBatch(w http.ResponseWriter, r *http.Request, batchId api.ULID) {
-	if s.aiusageHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-		return
-	}
-	s.aiusageHandler.GetAiUsageBatch().With(aiusagehandler.GetAiUsageBatchParams{BatchID: batchId}).ServeHTTP(w, r)
-}
-
-func (s *Server) GetAiUsageCreditBalance(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetAiUsageCreditBalanceParams) {
-	if s.aiusageHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-		return
-	}
-	s.aiusageHandler.GetAiUsageCreditBalance().With(aiusagehandler.GetAiUsageCreditBalanceParams{
-		CustomerID: customerId,
-		Timestamp:  params.Timestamp,
-	}).ServeHTTP(w, r)
-}
-
-func (s *Server) ListAiUsageCreditTransactions(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.ListAiUsageCreditTransactionsParams) {
-	if s.aiusageHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-		return
-	}
-	s.aiusageHandler.ListAiUsageCreditTransactions().With(aiusagehandler.ListAiUsageCreditTransactionsParams{
-		CustomerID: customerId,
-		Page:       params.Page,
-	}).ServeHTTP(w, r)
-}
-
-func (s *Server) GetCustomerRuntimeAuthorization(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetCustomerRuntimeAuthorizationParams) {
-	if s.aiusageHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-		return
-	}
-	s.aiusageHandler.GetCustomerRuntimeAuthorization().With(aiusagehandler.GetCustomerRuntimeAuthorizationParams{
-		CustomerID: customerId,
-		Filter:     params.Filter,
-	}).ServeHTTP(w, r)
-}
-
-// --- Rate Card Management ---
-
-func (s *Server) CreateRateCardEntry(w http.ResponseWriter, r *http.Request) {
-	if s.rateCardHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
-		return
-	}
-	s.rateCardHandler.CreateRateCardEntry().ServeHTTP(w, r)
-}
-
-func (s *Server) GetRateCardEntry(w http.ResponseWriter, r *http.Request) {
-	if s.rateCardHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
-		return
-	}
-	s.rateCardHandler.GetRateCardEntry().ServeHTTP(w, r)
-}
-
-func (s *Server) ListRateCardEntries(w http.ResponseWriter, r *http.Request) {
-	if s.rateCardHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
-		return
-	}
-	s.rateCardHandler.ListRateCardEntries().ServeHTTP(w, r)
-}
-
-func (s *Server) UpdateRateCardEntry(w http.ResponseWriter, r *http.Request) {
-	if s.rateCardHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
-		return
-	}
-	s.rateCardHandler.UpdateRateCardEntry().ServeHTTP(w, r)
-}
-
-func (s *Server) DeleteRateCardEntry(w http.ResponseWriter, r *http.Request) {
-	if s.rateCardHandler == nil {
-		apierrors.NewNotFoundError(r.Context(), nil, "rate card").HandleAPIError(w, r)
-		return
-	}
-	s.rateCardHandler.DeleteRateCardEntry().ServeHTTP(w, r)
-}

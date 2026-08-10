@@ -16,9 +16,6 @@ import (
 	v3apierrors "github.com/openmeterio/openmeter/api/v3/apierrors"
 	currencyhandler "github.com/openmeterio/openmeter/api/v3/handlers/currencies"
 	"github.com/openmeterio/openmeter/app/config"
-	"github.com/openmeterio/openmeter/openmeter/aiusage"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appcustominvoicing "github.com/openmeterio/openmeter/openmeter/app/custominvoicing"
 	appcustominvoicinghttpdriver "github.com/openmeterio/openmeter/openmeter/app/custominvoicing/httpdriver"
@@ -147,11 +144,6 @@ type Config struct {
 	SubjectService              subject.Service
 	TaxCodeService              taxcode.Service
 	FeatureGate                 *featuregate.FeatureGateChecker
-
-	AIUsageService              aiusage.Service
-	RuntimeAuthorizationService runtimeauthorization.Service
-	AIUsageEnabled              bool
-	RateCardService             ratecard.Service
 }
 
 func (c Config) Validate() error {

@@ -177,10 +177,6 @@ func NewServer(config *Config) (*Server, error) {
 		PostAuthMiddlewares:         config.PostAuthMiddlewares,
 		ResponseValidation:          config.ResponseValidation,
 		FeatureGate:                 config.RouterConfig.FeatureGate,
-		AIUsageEnabled:              config.RouterConfig.AIUsageEnabled,
-		AIUsageService:              config.RouterConfig.AIUsageService,
-		RuntimeAuthorizationService: config.RouterConfig.RuntimeAuthorizationService,
-		RateCardService:             config.RouterConfig.RateCardService,
 		CommerceHandler:             config.CommerceHandler,
 	})
 	if err != nil {

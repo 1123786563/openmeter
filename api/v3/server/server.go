@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -17,7 +16,6 @@ import (
 	api "github.com/openmeterio/openmeter/api/v3"
 	"github.com/openmeterio/openmeter/api/v3/apierrors"
 	addonshandler "github.com/openmeterio/openmeter/api/v3/handlers/addons"
-	aiusagehandler "github.com/openmeterio/openmeter/api/v3/handlers/aiusage"
 	appshandler "github.com/openmeterio/openmeter/api/v3/handlers/apps"
 	billinginvoiceshandler "github.com/openmeterio/openmeter/api/v3/handlers/billinginvoices"
 	billingprofileshandler "github.com/openmeterio/openmeter/api/v3/handlers/billingprofiles"
@@ -43,14 +41,10 @@ import (
 	"github.com/openmeterio/openmeter/api/v3/oasmiddleware"
 	"github.com/openmeterio/openmeter/api/v3/render"
 	"github.com/openmeterio/openmeter/app/config"
-	"github.com/openmeterio/openmeter/openmeter/aiusage"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/ratecard"
-	"github.com/openmeterio/openmeter/openmeter/aiusage/runtimeauthorization"
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appstripe "github.com/openmeterio/openmeter/openmeter/app/stripe"
 	"github.com/openmeterio/openmeter/openmeter/billing"
 	billingcharges "github.com/openmeterio/openmeter/openmeter/billing/charges"
-	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
 	"github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	"github.com/openmeterio/openmeter/openmeter/cost"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
@@ -79,7 +73,6 @@ import (
 	"github.com/openmeterio/openmeter/pkg/featuregate"
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
 	"github.com/openmeterio/openmeter/pkg/server"
-	"github.com/samber/mo"
 )
 
 type Config struct {
@@ -123,12 +116,6 @@ type Config struct {
 	FeatureConnector            feature.FeatureConnector
 
 	FeatureGate *featuregate.FeatureGateChecker
-
-	// AI Usage
-	AIUsageEnabled              bool
-	AIUsageService              aiusage.Service
-	RuntimeAuthorizationService runtimeauthorization.Service
-	RateCardService             ratecard.Service
 
 	// Commerce
 	CommerceHandler commercehandler.Handler
@@ -251,11 +238,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if c.AIUsageEnabled {
-		if c.AIUsageService == nil {
-			errs = append(errs, errors.New("ai usage service is required when ai usage is enabled"))
-		}
-	}
 
 	if c.AddonService == nil {
 		errs = append(errs, errors.New("addon service is required"))
@@ -303,9 +285,6 @@ type Server struct {
 	currenciesHandler           currencieshandler.Handler
 	featuresHandler             featureshandler.Handler
 	featureCostHandler          featurecosthandler.Handler
-	aiusageHandler              aiusagehandler.Handler
-
-	rateCardHandler aiusagehandler.Handler
 
 	commerceHandler commercehandler.Handler
 
@@ -382,18 +361,6 @@ func NewServer(config *Config) (*Server, error) {
 	featuresH := featureshandler.New(resolveNamespace, config.FeatureConnector, config.MeterService, config.LLMCostService, httptransport.WithErrorHandler(config.ErrorHandler))
 	governanceHandler := governancehandler.New(resolveNamespace, config.GovernanceService, httptransport.WithErrorHandler(config.ErrorHandler))
 
-	var aiusageH aiusagehandler.Handler
-	if config.AIUsageService != nil {
-		var creditReader aiusagehandler.CreditBalanceReader
-		if config.CustomerBalanceFacade != nil {
-			creditReader = &customerBalanceReaderAdapter{facade: config.CustomerBalanceFacade}
-		}
-		aiusageH = aiusagehandler.New(resolveNamespace, config.AIUsageService, config.RuntimeAuthorizationService, creditReader, nil, httptransport.WithErrorHandler(config.ErrorHandler))
-	}
-	var rateCardH aiusagehandler.Handler
-	if config.RateCardService != nil {
-		rateCardH = aiusagehandler.New(resolveNamespace, nil, nil, nil, config.RateCardService, httptransport.WithErrorHandler(config.ErrorHandler))
-	}
 
 	var llmcostH llmcosthandler.Handler
 	if config.LLMCostService != nil {
@@ -429,8 +396,6 @@ func NewServer(config *Config) (*Server, error) {
 		featuresHandler:             featuresH,
 		featureCostHandler:          featureCostH,
 		governanceHandler:           governanceHandler,
-		aiusageHandler:              aiusageH,
-		rateCardHandler:             rateCardH,
 		commerceHandler:             config.CommerceHandler,
 		creditReservationsHandler:   config.CreditReservationsHandler,
 	}, nil
@@ -523,17 +488,6 @@ func (s *Server) RegisterRoutes(r chi.Router) error {
 			ErrorHandlerFunc: apierrors.NewV3ErrorHandlerFunc(s.ErrorHandler),
 		})
 
-		// Rate card management — custom routes not in the OpenAPI spec.
-		if s.rateCardHandler != nil {
-			r.Route("/ai-usage/rate-entries", func(r chi.Router) {
-				r.Post("/", s.CreateRateCardEntry)
-				r.Get("/", s.ListRateCardEntries)
-				r.Get("/{id}", s.GetRateCardEntry)
-				r.Patch("/{id}", s.UpdateRateCardEntry)
-				r.Delete("/{id}", s.DeleteRateCardEntry)
-			})
-		}
-
 		s.registerCreditReservationRoutes(r)
 	})
 
@@ -558,61 +512,24 @@ func buildResponseValidationRouteFilter(cfg config.ResponseValidationConfig) fun
 	}
 }
 
-// customerBalanceReaderAdapter wraps the ledger-backed CustomerBalanceFacade
-// to implement the aiusage CreditBalanceReader interface for the v3 credit
-// balance and credit transactions endpoints.
-type customerBalanceReaderAdapter struct {
-	facade *customerbalance.Facade
+// --- AI Usage (removed subsystem — returns Not Found) ---
+
+func (s *Server) CreateAiUsageBatch(w http.ResponseWriter, r *http.Request) {
+	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
 }
 
-func (a *customerBalanceReaderAdapter) ReadBalance(ctx context.Context, namespace, customerID string, at time.Time) (aiusagehandler.CreditBalanceView, error) {
-	custID := customer.CustomerID{
-		Namespace: namespace,
-		ID:        customerID,
-	}
-
-	if err := custID.Validate(); err != nil {
-		return aiusagehandler.CreditBalanceView{}, fmt.Errorf("validate customer ID: %w", err)
-	}
-
-	queryAt := at
-	if queryAt.IsZero() {
-		queryAt = time.Now().UTC()
-	}
-
-	balances, err := a.facade.GetBalances(ctx, customerbalance.GetBalancesInput{
-		CustomerID:    custID,
-		FeatureFilter: mo.Option[creditpurchase.FeatureFilters]{},
-		AsOf:          &queryAt,
-	})
-	if err != nil {
-		return aiusagehandler.CreditBalanceView{}, fmt.Errorf("get balances: %w", err)
-	}
-
-	var settled, pending int64
-	for _, b := range balances {
-		if s, ok := b.Balance.Settled().Float64(); ok {
-			settled += int64(s)
-		}
-		if p, ok := b.Balance.Pending().Float64(); ok {
-			pending += int64(p)
-		}
-	}
-
-	if settled < 0 {
-		settled = 0
-	}
-
-	return aiusagehandler.CreditBalanceView{
-		RetrievedAt:      time.Now().UTC(),
-		AvailableCredits: settled,
-		SettledCredits:   settled,
-		PendingCredits:   pending,
-	}, nil
+func (s *Server) GetAiUsageBatch(w http.ResponseWriter, r *http.Request, batchId api.ULID) {
+	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
 }
 
-func (a *customerBalanceReaderAdapter) ListTransactions(ctx context.Context, namespace, customerID string, page aiusagehandler.Pagination) ([]aiusagehandler.CreditTransactionView, error) {
-	return []aiusagehandler.CreditTransactionView{}, nil
+func (s *Server) GetAiUsageCreditBalance(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetAiUsageCreditBalanceParams) {
+	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
 }
 
-var _ aiusagehandler.CreditBalanceReader = (*customerBalanceReaderAdapter)(nil)
+func (s *Server) ListAiUsageCreditTransactions(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.ListAiUsageCreditTransactionsParams) {
+	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+}
+
+func (s *Server) GetCustomerRuntimeAuthorization(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetCustomerRuntimeAuthorizationParams) {
+	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
+}

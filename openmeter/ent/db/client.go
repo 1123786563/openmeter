@@ -17,13 +17,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addon"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/addonratecard"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageallocation"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagebatch"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagelineitem"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageoutbox"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratecardentry"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusageratingsnapshot"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/aiusagewatermark"
 	dbapp "github.com/openmeterio/openmeter/openmeter/ent/db/app"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustomer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/appcustominvoicing"
@@ -83,7 +76,6 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
@@ -101,7 +93,6 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgertransaction"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgertransactiongroup"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/llmcostprice"
-	"github.com/openmeterio/openmeter/openmeter/ent/db/manualresourcecost"
 	dbmeter "github.com/openmeterio/openmeter/openmeter/ent/db/meter"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationchannel"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/notificationevent"
@@ -137,20 +128,6 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
-	// AIUsageAllocation is the client for interacting with the AIUsageAllocation builders.
-	AIUsageAllocation *AIUsageAllocationClient
-	// AIUsageBatch is the client for interacting with the AIUsageBatch builders.
-	AIUsageBatch *AIUsageBatchClient
-	// AIUsageLineItem is the client for interacting with the AIUsageLineItem builders.
-	AIUsageLineItem *AIUsageLineItemClient
-	// AIUsageOutbox is the client for interacting with the AIUsageOutbox builders.
-	AIUsageOutbox *AIUsageOutboxClient
-	// AIUsageRatecardEntry is the client for interacting with the AIUsageRatecardEntry builders.
-	AIUsageRatecardEntry *AIUsageRatecardEntryClient
-	// AIUsageRatingSnapshot is the client for interacting with the AIUsageRatingSnapshot builders.
-	AIUsageRatingSnapshot *AIUsageRatingSnapshotClient
-	// AIUsageWatermark is the client for interacting with the AIUsageWatermark builders.
-	AIUsageWatermark *AIUsageWatermarkClient
 	// Addon is the client for interacting with the Addon builders.
 	Addon *AddonClient
 	// AddonRateCard is the client for interacting with the AddonRateCard builders.
@@ -275,8 +252,6 @@ type Client struct {
 	CustomCurrency *CustomCurrencyClient
 	// Customer is the client for interacting with the Customer builders.
 	Customer *CustomerClient
-	// CustomerAIRatePackage is the client for interacting with the CustomerAIRatePackage builders.
-	CustomerAIRatePackage *CustomerAIRatePackageClient
 	// CustomerCreditLimit is the client for interacting with the CustomerCreditLimit builders.
 	CustomerCreditLimit *CustomerCreditLimitClient
 	// CustomerSubjects is the client for interacting with the CustomerSubjects builders.
@@ -311,8 +286,6 @@ type Client struct {
 	LedgerTransaction *LedgerTransactionClient
 	// LedgerTransactionGroup is the client for interacting with the LedgerTransactionGroup builders.
 	LedgerTransactionGroup *LedgerTransactionGroupClient
-	// ManualResourceCost is the client for interacting with the ManualResourceCost builders.
-	ManualResourceCost *ManualResourceCostClient
 	// Meter is the client for interacting with the Meter builders.
 	Meter *MeterClient
 	// NotificationChannel is the client for interacting with the NotificationChannel builders.
@@ -376,13 +349,6 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
-	c.AIUsageAllocation = NewAIUsageAllocationClient(c.config)
-	c.AIUsageBatch = NewAIUsageBatchClient(c.config)
-	c.AIUsageLineItem = NewAIUsageLineItemClient(c.config)
-	c.AIUsageOutbox = NewAIUsageOutboxClient(c.config)
-	c.AIUsageRatecardEntry = NewAIUsageRatecardEntryClient(c.config)
-	c.AIUsageRatingSnapshot = NewAIUsageRatingSnapshotClient(c.config)
-	c.AIUsageWatermark = NewAIUsageWatermarkClient(c.config)
 	c.Addon = NewAddonClient(c.config)
 	c.AddonRateCard = NewAddonRateCardClient(c.config)
 	c.App = NewAppClient(c.config)
@@ -445,7 +411,6 @@ func (c *Client) init() {
 	c.CurrencyCostBasis = NewCurrencyCostBasisClient(c.config)
 	c.CustomCurrency = NewCustomCurrencyClient(c.config)
 	c.Customer = NewCustomerClient(c.config)
-	c.CustomerAIRatePackage = NewCustomerAIRatePackageClient(c.config)
 	c.CustomerCreditLimit = NewCustomerCreditLimitClient(c.config)
 	c.CustomerSubjects = NewCustomerSubjectsClient(c.config)
 	c.Entitlement = NewEntitlementClient(c.config)
@@ -463,7 +428,6 @@ func (c *Client) init() {
 	c.LedgerSubAccountRoute = NewLedgerSubAccountRouteClient(c.config)
 	c.LedgerTransaction = NewLedgerTransactionClient(c.config)
 	c.LedgerTransactionGroup = NewLedgerTransactionGroupClient(c.config)
-	c.ManualResourceCost = NewManualResourceCostClient(c.config)
 	c.Meter = NewMeterClient(c.config)
 	c.NotificationChannel = NewNotificationChannelClient(c.config)
 	c.NotificationEvent = NewNotificationEventClient(c.config)
@@ -582,13 +546,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                                ctx,
 		config:                             cfg,
-		AIUsageAllocation:                  NewAIUsageAllocationClient(cfg),
-		AIUsageBatch:                       NewAIUsageBatchClient(cfg),
-		AIUsageLineItem:                    NewAIUsageLineItemClient(cfg),
-		AIUsageOutbox:                      NewAIUsageOutboxClient(cfg),
-		AIUsageRatecardEntry:               NewAIUsageRatecardEntryClient(cfg),
-		AIUsageRatingSnapshot:              NewAIUsageRatingSnapshotClient(cfg),
-		AIUsageWatermark:                   NewAIUsageWatermarkClient(cfg),
 		Addon:                              NewAddonClient(cfg),
 		AddonRateCard:                      NewAddonRateCardClient(cfg),
 		App:                                NewAppClient(cfg),
@@ -651,7 +608,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CurrencyCostBasis:                                NewCurrencyCostBasisClient(cfg),
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
-		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
 		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
@@ -669,7 +625,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		LedgerSubAccountRoute:                            NewLedgerSubAccountRouteClient(cfg),
 		LedgerTransaction:                                NewLedgerTransactionClient(cfg),
 		LedgerTransactionGroup:                           NewLedgerTransactionGroupClient(cfg),
-		ManualResourceCost:                               NewManualResourceCostClient(cfg),
 		Meter:                                            NewMeterClient(cfg),
 		NotificationChannel:                              NewNotificationChannelClient(cfg),
 		NotificationEvent:                                NewNotificationEventClient(cfg),
@@ -715,13 +670,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                                ctx,
 		config:                             cfg,
-		AIUsageAllocation:                  NewAIUsageAllocationClient(cfg),
-		AIUsageBatch:                       NewAIUsageBatchClient(cfg),
-		AIUsageLineItem:                    NewAIUsageLineItemClient(cfg),
-		AIUsageOutbox:                      NewAIUsageOutboxClient(cfg),
-		AIUsageRatecardEntry:               NewAIUsageRatecardEntryClient(cfg),
-		AIUsageRatingSnapshot:              NewAIUsageRatingSnapshotClient(cfg),
-		AIUsageWatermark:                   NewAIUsageWatermarkClient(cfg),
 		Addon:                              NewAddonClient(cfg),
 		AddonRateCard:                      NewAddonRateCardClient(cfg),
 		App:                                NewAppClient(cfg),
@@ -784,7 +732,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CurrencyCostBasis:                                NewCurrencyCostBasisClient(cfg),
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
-		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
 		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
@@ -802,7 +749,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		LedgerSubAccountRoute:                            NewLedgerSubAccountRouteClient(cfg),
 		LedgerTransaction:                                NewLedgerTransactionClient(cfg),
 		LedgerTransactionGroup:                           NewLedgerTransactionGroupClient(cfg),
-		ManualResourceCost:                               NewManualResourceCostClient(cfg),
 		Meter:                                            NewMeterClient(cfg),
 		NotificationChannel:                              NewNotificationChannelClient(cfg),
 		NotificationEvent:                                NewNotificationEventClient(cfg),
@@ -835,7 +781,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		AIUsageAllocation.
+//		Addon.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -858,11 +804,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AIUsageAllocation, c.AIUsageBatch, c.AIUsageLineItem, c.AIUsageOutbox,
-		c.AIUsageRatecardEntry, c.AIUsageRatingSnapshot, c.AIUsageWatermark, c.Addon,
-		c.AddonRateCard, c.App, c.AppCustomInvoicing, c.AppCustomInvoicingCustomer,
-		c.AppCustomer, c.AppStripe, c.AppStripeCustomer, c.BalanceSnapshot,
-		c.BillingCustomerLock, c.BillingCustomerOverride,
+		c.Addon, c.AddonRateCard, c.App, c.AppCustomInvoicing,
+		c.AppCustomInvoicingCustomer, c.AppCustomer, c.AppStripe, c.AppStripeCustomer,
+		c.BalanceSnapshot, c.BillingCustomerLock, c.BillingCustomerOverride,
 		c.BillingGatheringInvoiceLine, c.BillingInvoice,
 		c.BillingInvoiceFlatFeeLineConfig, c.BillingInvoiceLine,
 		c.BillingInvoiceLineDiscount, c.BillingInvoiceLineUsageDiscount,
@@ -884,19 +828,19 @@ func (c *Client) Use(hooks ...Hook) {
 		c.CommerceProduct, c.CreditCharge, c.CreditRealizationLineage,
 		c.CreditRealizationLineageSegment, c.CreditReservation,
 		c.CreditReservationCommand, c.CreditReservationOutbox, c.CurrencyCostBasis,
-		c.CustomCurrency, c.Customer, c.CustomerAIRatePackage, c.CustomerCreditLimit,
-		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
-		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
-		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
-		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
-		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
-		c.NotificationChannel, c.NotificationEvent, c.NotificationEventDeliveryStatus,
-		c.NotificationRule, c.OfflinePayment, c.OrganizationDefaultTaxCodes,
-		c.PaymentAttempt, c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase,
-		c.PlanRateCard, c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact,
-		c.RefundRequest, c.Subject, c.Subscription, c.SubscriptionAddon,
-		c.SubscriptionAddonQuantity, c.SubscriptionBillingSyncState,
-		c.SubscriptionItem, c.SubscriptionPhase, c.TaxCode, c.UsageReset,
+		c.CustomCurrency, c.Customer, c.CustomerCreditLimit, c.CustomerSubjects,
+		c.Entitlement, c.ExternalInvoiceRef, c.Feature, c.Fulfillment, c.Grant,
+		c.LLMCostPrice, c.LedgerAccount, c.LedgerBreakageRecord,
+		c.LedgerCreditVoidRecord, c.LedgerCustomerAccount, c.LedgerEntry,
+		c.LedgerSubAccount, c.LedgerSubAccountRoute, c.LedgerTransaction,
+		c.LedgerTransactionGroup, c.Meter, c.NotificationChannel, c.NotificationEvent,
+		c.NotificationEventDeliveryStatus, c.NotificationRule, c.OfflinePayment,
+		c.OrganizationDefaultTaxCodes, c.PaymentAttempt, c.PaymentFact, c.Plan,
+		c.PlanAddon, c.PlanPhase, c.PlanRateCard, c.ReceivableAccount,
+		c.ReceivablePeriod, c.RefundFact, c.RefundRequest, c.Subject, c.Subscription,
+		c.SubscriptionAddon, c.SubscriptionAddonQuantity,
+		c.SubscriptionBillingSyncState, c.SubscriptionItem, c.SubscriptionPhase,
+		c.TaxCode, c.UsageReset,
 	} {
 		n.Use(hooks...)
 	}
@@ -906,11 +850,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AIUsageAllocation, c.AIUsageBatch, c.AIUsageLineItem, c.AIUsageOutbox,
-		c.AIUsageRatecardEntry, c.AIUsageRatingSnapshot, c.AIUsageWatermark, c.Addon,
-		c.AddonRateCard, c.App, c.AppCustomInvoicing, c.AppCustomInvoicingCustomer,
-		c.AppCustomer, c.AppStripe, c.AppStripeCustomer, c.BalanceSnapshot,
-		c.BillingCustomerLock, c.BillingCustomerOverride,
+		c.Addon, c.AddonRateCard, c.App, c.AppCustomInvoicing,
+		c.AppCustomInvoicingCustomer, c.AppCustomer, c.AppStripe, c.AppStripeCustomer,
+		c.BalanceSnapshot, c.BillingCustomerLock, c.BillingCustomerOverride,
 		c.BillingGatheringInvoiceLine, c.BillingInvoice,
 		c.BillingInvoiceFlatFeeLineConfig, c.BillingInvoiceLine,
 		c.BillingInvoiceLineDiscount, c.BillingInvoiceLineUsageDiscount,
@@ -932,19 +874,19 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.CommerceOrderLine, c.CommerceOutbox, c.CommerceProduct, c.CreditCharge,
 		c.CreditRealizationLineage, c.CreditRealizationLineageSegment,
 		c.CreditReservation, c.CreditReservationCommand, c.CreditReservationOutbox,
-		c.CurrencyCostBasis, c.CustomCurrency, c.Customer, c.CustomerAIRatePackage,
-		c.CustomerCreditLimit, c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef,
-		c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
+		c.CurrencyCostBasis, c.CustomCurrency, c.Customer, c.CustomerCreditLimit,
+		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
+		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
 		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
 		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
-		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
-		c.NotificationChannel, c.NotificationEvent, c.NotificationEventDeliveryStatus,
-		c.NotificationRule, c.OfflinePayment, c.OrganizationDefaultTaxCodes,
-		c.PaymentAttempt, c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase,
-		c.PlanRateCard, c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact,
-		c.RefundRequest, c.Subject, c.Subscription, c.SubscriptionAddon,
-		c.SubscriptionAddonQuantity, c.SubscriptionBillingSyncState,
-		c.SubscriptionItem, c.SubscriptionPhase, c.TaxCode, c.UsageReset,
+		c.LedgerTransaction, c.LedgerTransactionGroup, c.Meter, c.NotificationChannel,
+		c.NotificationEvent, c.NotificationEventDeliveryStatus, c.NotificationRule,
+		c.OfflinePayment, c.OrganizationDefaultTaxCodes, c.PaymentAttempt,
+		c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase, c.PlanRateCard,
+		c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact, c.RefundRequest,
+		c.Subject, c.Subscription, c.SubscriptionAddon, c.SubscriptionAddonQuantity,
+		c.SubscriptionBillingSyncState, c.SubscriptionItem, c.SubscriptionPhase,
+		c.TaxCode, c.UsageReset,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -953,20 +895,6 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
-	case *AIUsageAllocationMutation:
-		return c.AIUsageAllocation.mutate(ctx, m)
-	case *AIUsageBatchMutation:
-		return c.AIUsageBatch.mutate(ctx, m)
-	case *AIUsageLineItemMutation:
-		return c.AIUsageLineItem.mutate(ctx, m)
-	case *AIUsageOutboxMutation:
-		return c.AIUsageOutbox.mutate(ctx, m)
-	case *AIUsageRatecardEntryMutation:
-		return c.AIUsageRatecardEntry.mutate(ctx, m)
-	case *AIUsageRatingSnapshotMutation:
-		return c.AIUsageRatingSnapshot.mutate(ctx, m)
-	case *AIUsageWatermarkMutation:
-		return c.AIUsageWatermark.mutate(ctx, m)
 	case *AddonMutation:
 		return c.Addon.mutate(ctx, m)
 	case *AddonRateCardMutation:
@@ -1089,8 +1017,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CustomCurrency.mutate(ctx, m)
 	case *CustomerMutation:
 		return c.Customer.mutate(ctx, m)
-	case *CustomerAIRatePackageMutation:
-		return c.CustomerAIRatePackage.mutate(ctx, m)
 	case *CustomerCreditLimitMutation:
 		return c.CustomerCreditLimit.mutate(ctx, m)
 	case *CustomerSubjectsMutation:
@@ -1125,8 +1051,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.LedgerTransaction.mutate(ctx, m)
 	case *LedgerTransactionGroupMutation:
 		return c.LedgerTransactionGroup.mutate(ctx, m)
-	case *ManualResourceCostMutation:
-		return c.ManualResourceCost.mutate(ctx, m)
 	case *MeterMutation:
 		return c.Meter.mutate(ctx, m)
 	case *NotificationChannelMutation:
@@ -1181,1065 +1105,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.UsageReset.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("db: unknown mutation type %T", m)
-	}
-}
-
-// AIUsageAllocationClient is a client for the AIUsageAllocation schema.
-type AIUsageAllocationClient struct {
-	config
-}
-
-// NewAIUsageAllocationClient returns a client for the AIUsageAllocation from the given config.
-func NewAIUsageAllocationClient(c config) *AIUsageAllocationClient {
-	return &AIUsageAllocationClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusageallocation.Hooks(f(g(h())))`.
-func (c *AIUsageAllocationClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageAllocation = append(c.hooks.AIUsageAllocation, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusageallocation.Intercept(f(g(h())))`.
-func (c *AIUsageAllocationClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageAllocation = append(c.inters.AIUsageAllocation, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageAllocation entity.
-func (c *AIUsageAllocationClient) Create() *AIUsageAllocationCreate {
-	mutation := newAIUsageAllocationMutation(c.config, OpCreate)
-	return &AIUsageAllocationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageAllocation entities.
-func (c *AIUsageAllocationClient) CreateBulk(builders ...*AIUsageAllocationCreate) *AIUsageAllocationCreateBulk {
-	return &AIUsageAllocationCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageAllocationClient) MapCreateBulk(slice any, setFunc func(*AIUsageAllocationCreate, int)) *AIUsageAllocationCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageAllocationCreateBulk{err: fmt.Errorf("calling to AIUsageAllocationClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageAllocationCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageAllocationCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageAllocation.
-func (c *AIUsageAllocationClient) Update() *AIUsageAllocationUpdate {
-	mutation := newAIUsageAllocationMutation(c.config, OpUpdate)
-	return &AIUsageAllocationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageAllocationClient) UpdateOne(_m *AIUsageAllocation) *AIUsageAllocationUpdateOne {
-	mutation := newAIUsageAllocationMutation(c.config, OpUpdateOne, withAIUsageAllocation(_m))
-	return &AIUsageAllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageAllocationClient) UpdateOneID(id string) *AIUsageAllocationUpdateOne {
-	mutation := newAIUsageAllocationMutation(c.config, OpUpdateOne, withAIUsageAllocationID(id))
-	return &AIUsageAllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageAllocation.
-func (c *AIUsageAllocationClient) Delete() *AIUsageAllocationDelete {
-	mutation := newAIUsageAllocationMutation(c.config, OpDelete)
-	return &AIUsageAllocationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageAllocationClient) DeleteOne(_m *AIUsageAllocation) *AIUsageAllocationDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageAllocationClient) DeleteOneID(id string) *AIUsageAllocationDeleteOne {
-	builder := c.Delete().Where(aiusageallocation.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageAllocationDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageAllocation.
-func (c *AIUsageAllocationClient) Query() *AIUsageAllocationQuery {
-	return &AIUsageAllocationQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageAllocation},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageAllocation entity by its id.
-func (c *AIUsageAllocationClient) Get(ctx context.Context, id string) (*AIUsageAllocation, error) {
-	return c.Query().Where(aiusageallocation.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageAllocationClient) GetX(ctx context.Context, id string) *AIUsageAllocation {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBatch queries the batch edge of a AIUsageAllocation.
-func (c *AIUsageAllocationClient) QueryBatch(_m *AIUsageAllocation) *AIUsageBatchQuery {
-	query := (&AIUsageBatchClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusageallocation.Table, aiusageallocation.FieldID, id),
-			sqlgraph.To(aiusagebatch.Table, aiusagebatch.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, aiusageallocation.BatchTable, aiusageallocation.BatchColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageAllocationClient) Hooks() []Hook {
-	return c.hooks.AIUsageAllocation
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageAllocationClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageAllocation
-}
-
-func (c *AIUsageAllocationClient) mutate(ctx context.Context, m *AIUsageAllocationMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageAllocationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageAllocationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageAllocationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageAllocationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageAllocation mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageBatchClient is a client for the AIUsageBatch schema.
-type AIUsageBatchClient struct {
-	config
-}
-
-// NewAIUsageBatchClient returns a client for the AIUsageBatch from the given config.
-func NewAIUsageBatchClient(c config) *AIUsageBatchClient {
-	return &AIUsageBatchClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusagebatch.Hooks(f(g(h())))`.
-func (c *AIUsageBatchClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageBatch = append(c.hooks.AIUsageBatch, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusagebatch.Intercept(f(g(h())))`.
-func (c *AIUsageBatchClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageBatch = append(c.inters.AIUsageBatch, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageBatch entity.
-func (c *AIUsageBatchClient) Create() *AIUsageBatchCreate {
-	mutation := newAIUsageBatchMutation(c.config, OpCreate)
-	return &AIUsageBatchCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageBatch entities.
-func (c *AIUsageBatchClient) CreateBulk(builders ...*AIUsageBatchCreate) *AIUsageBatchCreateBulk {
-	return &AIUsageBatchCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageBatchClient) MapCreateBulk(slice any, setFunc func(*AIUsageBatchCreate, int)) *AIUsageBatchCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageBatchCreateBulk{err: fmt.Errorf("calling to AIUsageBatchClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageBatchCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageBatchCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageBatch.
-func (c *AIUsageBatchClient) Update() *AIUsageBatchUpdate {
-	mutation := newAIUsageBatchMutation(c.config, OpUpdate)
-	return &AIUsageBatchUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageBatchClient) UpdateOne(_m *AIUsageBatch) *AIUsageBatchUpdateOne {
-	mutation := newAIUsageBatchMutation(c.config, OpUpdateOne, withAIUsageBatch(_m))
-	return &AIUsageBatchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageBatchClient) UpdateOneID(id string) *AIUsageBatchUpdateOne {
-	mutation := newAIUsageBatchMutation(c.config, OpUpdateOne, withAIUsageBatchID(id))
-	return &AIUsageBatchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageBatch.
-func (c *AIUsageBatchClient) Delete() *AIUsageBatchDelete {
-	mutation := newAIUsageBatchMutation(c.config, OpDelete)
-	return &AIUsageBatchDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageBatchClient) DeleteOne(_m *AIUsageBatch) *AIUsageBatchDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageBatchClient) DeleteOneID(id string) *AIUsageBatchDeleteOne {
-	builder := c.Delete().Where(aiusagebatch.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageBatchDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageBatch.
-func (c *AIUsageBatchClient) Query() *AIUsageBatchQuery {
-	return &AIUsageBatchQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageBatch},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageBatch entity by its id.
-func (c *AIUsageBatchClient) Get(ctx context.Context, id string) (*AIUsageBatch, error) {
-	return c.Query().Where(aiusagebatch.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageBatchClient) GetX(ctx context.Context, id string) *AIUsageBatch {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryLineItems queries the line_items edge of a AIUsageBatch.
-func (c *AIUsageBatchClient) QueryLineItems(_m *AIUsageBatch) *AIUsageLineItemQuery {
-	query := (&AIUsageLineItemClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, id),
-			sqlgraph.To(aiusagelineitem.Table, aiusagelineitem.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.LineItemsTable, aiusagebatch.LineItemsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryRatingSnapshots queries the rating_snapshots edge of a AIUsageBatch.
-func (c *AIUsageBatchClient) QueryRatingSnapshots(_m *AIUsageBatch) *AIUsageRatingSnapshotQuery {
-	query := (&AIUsageRatingSnapshotClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, id),
-			sqlgraph.To(aiusageratingsnapshot.Table, aiusageratingsnapshot.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.RatingSnapshotsTable, aiusagebatch.RatingSnapshotsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryAllocations queries the allocations edge of a AIUsageBatch.
-func (c *AIUsageBatchClient) QueryAllocations(_m *AIUsageBatch) *AIUsageAllocationQuery {
-	query := (&AIUsageAllocationClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, id),
-			sqlgraph.To(aiusageallocation.Table, aiusageallocation.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.AllocationsTable, aiusagebatch.AllocationsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryOutboxEvents queries the outbox_events edge of a AIUsageBatch.
-func (c *AIUsageBatchClient) QueryOutboxEvents(_m *AIUsageBatch) *AIUsageOutboxQuery {
-	query := (&AIUsageOutboxClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusagebatch.Table, aiusagebatch.FieldID, id),
-			sqlgraph.To(aiusageoutbox.Table, aiusageoutbox.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, aiusagebatch.OutboxEventsTable, aiusagebatch.OutboxEventsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageBatchClient) Hooks() []Hook {
-	return c.hooks.AIUsageBatch
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageBatchClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageBatch
-}
-
-func (c *AIUsageBatchClient) mutate(ctx context.Context, m *AIUsageBatchMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageBatchCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageBatchUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageBatchUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageBatchDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageBatch mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageLineItemClient is a client for the AIUsageLineItem schema.
-type AIUsageLineItemClient struct {
-	config
-}
-
-// NewAIUsageLineItemClient returns a client for the AIUsageLineItem from the given config.
-func NewAIUsageLineItemClient(c config) *AIUsageLineItemClient {
-	return &AIUsageLineItemClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusagelineitem.Hooks(f(g(h())))`.
-func (c *AIUsageLineItemClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageLineItem = append(c.hooks.AIUsageLineItem, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusagelineitem.Intercept(f(g(h())))`.
-func (c *AIUsageLineItemClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageLineItem = append(c.inters.AIUsageLineItem, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageLineItem entity.
-func (c *AIUsageLineItemClient) Create() *AIUsageLineItemCreate {
-	mutation := newAIUsageLineItemMutation(c.config, OpCreate)
-	return &AIUsageLineItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageLineItem entities.
-func (c *AIUsageLineItemClient) CreateBulk(builders ...*AIUsageLineItemCreate) *AIUsageLineItemCreateBulk {
-	return &AIUsageLineItemCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageLineItemClient) MapCreateBulk(slice any, setFunc func(*AIUsageLineItemCreate, int)) *AIUsageLineItemCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageLineItemCreateBulk{err: fmt.Errorf("calling to AIUsageLineItemClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageLineItemCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageLineItemCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageLineItem.
-func (c *AIUsageLineItemClient) Update() *AIUsageLineItemUpdate {
-	mutation := newAIUsageLineItemMutation(c.config, OpUpdate)
-	return &AIUsageLineItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageLineItemClient) UpdateOne(_m *AIUsageLineItem) *AIUsageLineItemUpdateOne {
-	mutation := newAIUsageLineItemMutation(c.config, OpUpdateOne, withAIUsageLineItem(_m))
-	return &AIUsageLineItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageLineItemClient) UpdateOneID(id string) *AIUsageLineItemUpdateOne {
-	mutation := newAIUsageLineItemMutation(c.config, OpUpdateOne, withAIUsageLineItemID(id))
-	return &AIUsageLineItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageLineItem.
-func (c *AIUsageLineItemClient) Delete() *AIUsageLineItemDelete {
-	mutation := newAIUsageLineItemMutation(c.config, OpDelete)
-	return &AIUsageLineItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageLineItemClient) DeleteOne(_m *AIUsageLineItem) *AIUsageLineItemDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageLineItemClient) DeleteOneID(id string) *AIUsageLineItemDeleteOne {
-	builder := c.Delete().Where(aiusagelineitem.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageLineItemDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageLineItem.
-func (c *AIUsageLineItemClient) Query() *AIUsageLineItemQuery {
-	return &AIUsageLineItemQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageLineItem},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageLineItem entity by its id.
-func (c *AIUsageLineItemClient) Get(ctx context.Context, id string) (*AIUsageLineItem, error) {
-	return c.Query().Where(aiusagelineitem.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageLineItemClient) GetX(ctx context.Context, id string) *AIUsageLineItem {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBatch queries the batch edge of a AIUsageLineItem.
-func (c *AIUsageLineItemClient) QueryBatch(_m *AIUsageLineItem) *AIUsageBatchQuery {
-	query := (&AIUsageBatchClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusagelineitem.Table, aiusagelineitem.FieldID, id),
-			sqlgraph.To(aiusagebatch.Table, aiusagebatch.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, aiusagelineitem.BatchTable, aiusagelineitem.BatchColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageLineItemClient) Hooks() []Hook {
-	return c.hooks.AIUsageLineItem
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageLineItemClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageLineItem
-}
-
-func (c *AIUsageLineItemClient) mutate(ctx context.Context, m *AIUsageLineItemMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageLineItemCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageLineItemUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageLineItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageLineItemDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageLineItem mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageOutboxClient is a client for the AIUsageOutbox schema.
-type AIUsageOutboxClient struct {
-	config
-}
-
-// NewAIUsageOutboxClient returns a client for the AIUsageOutbox from the given config.
-func NewAIUsageOutboxClient(c config) *AIUsageOutboxClient {
-	return &AIUsageOutboxClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusageoutbox.Hooks(f(g(h())))`.
-func (c *AIUsageOutboxClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageOutbox = append(c.hooks.AIUsageOutbox, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusageoutbox.Intercept(f(g(h())))`.
-func (c *AIUsageOutboxClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageOutbox = append(c.inters.AIUsageOutbox, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageOutbox entity.
-func (c *AIUsageOutboxClient) Create() *AIUsageOutboxCreate {
-	mutation := newAIUsageOutboxMutation(c.config, OpCreate)
-	return &AIUsageOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageOutbox entities.
-func (c *AIUsageOutboxClient) CreateBulk(builders ...*AIUsageOutboxCreate) *AIUsageOutboxCreateBulk {
-	return &AIUsageOutboxCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageOutboxClient) MapCreateBulk(slice any, setFunc func(*AIUsageOutboxCreate, int)) *AIUsageOutboxCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageOutboxCreateBulk{err: fmt.Errorf("calling to AIUsageOutboxClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageOutboxCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageOutboxCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageOutbox.
-func (c *AIUsageOutboxClient) Update() *AIUsageOutboxUpdate {
-	mutation := newAIUsageOutboxMutation(c.config, OpUpdate)
-	return &AIUsageOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageOutboxClient) UpdateOne(_m *AIUsageOutbox) *AIUsageOutboxUpdateOne {
-	mutation := newAIUsageOutboxMutation(c.config, OpUpdateOne, withAIUsageOutbox(_m))
-	return &AIUsageOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageOutboxClient) UpdateOneID(id string) *AIUsageOutboxUpdateOne {
-	mutation := newAIUsageOutboxMutation(c.config, OpUpdateOne, withAIUsageOutboxID(id))
-	return &AIUsageOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageOutbox.
-func (c *AIUsageOutboxClient) Delete() *AIUsageOutboxDelete {
-	mutation := newAIUsageOutboxMutation(c.config, OpDelete)
-	return &AIUsageOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageOutboxClient) DeleteOne(_m *AIUsageOutbox) *AIUsageOutboxDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageOutboxClient) DeleteOneID(id string) *AIUsageOutboxDeleteOne {
-	builder := c.Delete().Where(aiusageoutbox.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageOutboxDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageOutbox.
-func (c *AIUsageOutboxClient) Query() *AIUsageOutboxQuery {
-	return &AIUsageOutboxQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageOutbox},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageOutbox entity by its id.
-func (c *AIUsageOutboxClient) Get(ctx context.Context, id string) (*AIUsageOutbox, error) {
-	return c.Query().Where(aiusageoutbox.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageOutboxClient) GetX(ctx context.Context, id string) *AIUsageOutbox {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBatch queries the batch edge of a AIUsageOutbox.
-func (c *AIUsageOutboxClient) QueryBatch(_m *AIUsageOutbox) *AIUsageBatchQuery {
-	query := (&AIUsageBatchClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusageoutbox.Table, aiusageoutbox.FieldID, id),
-			sqlgraph.To(aiusagebatch.Table, aiusagebatch.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, aiusageoutbox.BatchTable, aiusageoutbox.BatchColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageOutboxClient) Hooks() []Hook {
-	return c.hooks.AIUsageOutbox
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageOutboxClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageOutbox
-}
-
-func (c *AIUsageOutboxClient) mutate(ctx context.Context, m *AIUsageOutboxMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageOutbox mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageRatecardEntryClient is a client for the AIUsageRatecardEntry schema.
-type AIUsageRatecardEntryClient struct {
-	config
-}
-
-// NewAIUsageRatecardEntryClient returns a client for the AIUsageRatecardEntry from the given config.
-func NewAIUsageRatecardEntryClient(c config) *AIUsageRatecardEntryClient {
-	return &AIUsageRatecardEntryClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusageratecardentry.Hooks(f(g(h())))`.
-func (c *AIUsageRatecardEntryClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageRatecardEntry = append(c.hooks.AIUsageRatecardEntry, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusageratecardentry.Intercept(f(g(h())))`.
-func (c *AIUsageRatecardEntryClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageRatecardEntry = append(c.inters.AIUsageRatecardEntry, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageRatecardEntry entity.
-func (c *AIUsageRatecardEntryClient) Create() *AIUsageRatecardEntryCreate {
-	mutation := newAIUsageRatecardEntryMutation(c.config, OpCreate)
-	return &AIUsageRatecardEntryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageRatecardEntry entities.
-func (c *AIUsageRatecardEntryClient) CreateBulk(builders ...*AIUsageRatecardEntryCreate) *AIUsageRatecardEntryCreateBulk {
-	return &AIUsageRatecardEntryCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageRatecardEntryClient) MapCreateBulk(slice any, setFunc func(*AIUsageRatecardEntryCreate, int)) *AIUsageRatecardEntryCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageRatecardEntryCreateBulk{err: fmt.Errorf("calling to AIUsageRatecardEntryClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageRatecardEntryCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageRatecardEntryCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageRatecardEntry.
-func (c *AIUsageRatecardEntryClient) Update() *AIUsageRatecardEntryUpdate {
-	mutation := newAIUsageRatecardEntryMutation(c.config, OpUpdate)
-	return &AIUsageRatecardEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageRatecardEntryClient) UpdateOne(_m *AIUsageRatecardEntry) *AIUsageRatecardEntryUpdateOne {
-	mutation := newAIUsageRatecardEntryMutation(c.config, OpUpdateOne, withAIUsageRatecardEntry(_m))
-	return &AIUsageRatecardEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageRatecardEntryClient) UpdateOneID(id string) *AIUsageRatecardEntryUpdateOne {
-	mutation := newAIUsageRatecardEntryMutation(c.config, OpUpdateOne, withAIUsageRatecardEntryID(id))
-	return &AIUsageRatecardEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageRatecardEntry.
-func (c *AIUsageRatecardEntryClient) Delete() *AIUsageRatecardEntryDelete {
-	mutation := newAIUsageRatecardEntryMutation(c.config, OpDelete)
-	return &AIUsageRatecardEntryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageRatecardEntryClient) DeleteOne(_m *AIUsageRatecardEntry) *AIUsageRatecardEntryDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageRatecardEntryClient) DeleteOneID(id string) *AIUsageRatecardEntryDeleteOne {
-	builder := c.Delete().Where(aiusageratecardentry.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageRatecardEntryDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageRatecardEntry.
-func (c *AIUsageRatecardEntryClient) Query() *AIUsageRatecardEntryQuery {
-	return &AIUsageRatecardEntryQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageRatecardEntry},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageRatecardEntry entity by its id.
-func (c *AIUsageRatecardEntryClient) Get(ctx context.Context, id string) (*AIUsageRatecardEntry, error) {
-	return c.Query().Where(aiusageratecardentry.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageRatecardEntryClient) GetX(ctx context.Context, id string) *AIUsageRatecardEntry {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageRatecardEntryClient) Hooks() []Hook {
-	return c.hooks.AIUsageRatecardEntry
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageRatecardEntryClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageRatecardEntry
-}
-
-func (c *AIUsageRatecardEntryClient) mutate(ctx context.Context, m *AIUsageRatecardEntryMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageRatecardEntryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageRatecardEntryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageRatecardEntryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageRatecardEntryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageRatecardEntry mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageRatingSnapshotClient is a client for the AIUsageRatingSnapshot schema.
-type AIUsageRatingSnapshotClient struct {
-	config
-}
-
-// NewAIUsageRatingSnapshotClient returns a client for the AIUsageRatingSnapshot from the given config.
-func NewAIUsageRatingSnapshotClient(c config) *AIUsageRatingSnapshotClient {
-	return &AIUsageRatingSnapshotClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusageratingsnapshot.Hooks(f(g(h())))`.
-func (c *AIUsageRatingSnapshotClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageRatingSnapshot = append(c.hooks.AIUsageRatingSnapshot, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusageratingsnapshot.Intercept(f(g(h())))`.
-func (c *AIUsageRatingSnapshotClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageRatingSnapshot = append(c.inters.AIUsageRatingSnapshot, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageRatingSnapshot entity.
-func (c *AIUsageRatingSnapshotClient) Create() *AIUsageRatingSnapshotCreate {
-	mutation := newAIUsageRatingSnapshotMutation(c.config, OpCreate)
-	return &AIUsageRatingSnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageRatingSnapshot entities.
-func (c *AIUsageRatingSnapshotClient) CreateBulk(builders ...*AIUsageRatingSnapshotCreate) *AIUsageRatingSnapshotCreateBulk {
-	return &AIUsageRatingSnapshotCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageRatingSnapshotClient) MapCreateBulk(slice any, setFunc func(*AIUsageRatingSnapshotCreate, int)) *AIUsageRatingSnapshotCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageRatingSnapshotCreateBulk{err: fmt.Errorf("calling to AIUsageRatingSnapshotClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageRatingSnapshotCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageRatingSnapshotCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageRatingSnapshot.
-func (c *AIUsageRatingSnapshotClient) Update() *AIUsageRatingSnapshotUpdate {
-	mutation := newAIUsageRatingSnapshotMutation(c.config, OpUpdate)
-	return &AIUsageRatingSnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageRatingSnapshotClient) UpdateOne(_m *AIUsageRatingSnapshot) *AIUsageRatingSnapshotUpdateOne {
-	mutation := newAIUsageRatingSnapshotMutation(c.config, OpUpdateOne, withAIUsageRatingSnapshot(_m))
-	return &AIUsageRatingSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageRatingSnapshotClient) UpdateOneID(id string) *AIUsageRatingSnapshotUpdateOne {
-	mutation := newAIUsageRatingSnapshotMutation(c.config, OpUpdateOne, withAIUsageRatingSnapshotID(id))
-	return &AIUsageRatingSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageRatingSnapshot.
-func (c *AIUsageRatingSnapshotClient) Delete() *AIUsageRatingSnapshotDelete {
-	mutation := newAIUsageRatingSnapshotMutation(c.config, OpDelete)
-	return &AIUsageRatingSnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageRatingSnapshotClient) DeleteOne(_m *AIUsageRatingSnapshot) *AIUsageRatingSnapshotDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageRatingSnapshotClient) DeleteOneID(id string) *AIUsageRatingSnapshotDeleteOne {
-	builder := c.Delete().Where(aiusageratingsnapshot.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageRatingSnapshotDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageRatingSnapshot.
-func (c *AIUsageRatingSnapshotClient) Query() *AIUsageRatingSnapshotQuery {
-	return &AIUsageRatingSnapshotQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageRatingSnapshot},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageRatingSnapshot entity by its id.
-func (c *AIUsageRatingSnapshotClient) Get(ctx context.Context, id string) (*AIUsageRatingSnapshot, error) {
-	return c.Query().Where(aiusageratingsnapshot.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageRatingSnapshotClient) GetX(ctx context.Context, id string) *AIUsageRatingSnapshot {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryBatch queries the batch edge of a AIUsageRatingSnapshot.
-func (c *AIUsageRatingSnapshotClient) QueryBatch(_m *AIUsageRatingSnapshot) *AIUsageBatchQuery {
-	query := (&AIUsageBatchClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(aiusageratingsnapshot.Table, aiusageratingsnapshot.FieldID, id),
-			sqlgraph.To(aiusagebatch.Table, aiusagebatch.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, aiusageratingsnapshot.BatchTable, aiusageratingsnapshot.BatchColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageRatingSnapshotClient) Hooks() []Hook {
-	return c.hooks.AIUsageRatingSnapshot
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageRatingSnapshotClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageRatingSnapshot
-}
-
-func (c *AIUsageRatingSnapshotClient) mutate(ctx context.Context, m *AIUsageRatingSnapshotMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageRatingSnapshotCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageRatingSnapshotUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageRatingSnapshotUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageRatingSnapshotDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageRatingSnapshot mutation op: %q", m.Op())
-	}
-}
-
-// AIUsageWatermarkClient is a client for the AIUsageWatermark schema.
-type AIUsageWatermarkClient struct {
-	config
-}
-
-// NewAIUsageWatermarkClient returns a client for the AIUsageWatermark from the given config.
-func NewAIUsageWatermarkClient(c config) *AIUsageWatermarkClient {
-	return &AIUsageWatermarkClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `aiusagewatermark.Hooks(f(g(h())))`.
-func (c *AIUsageWatermarkClient) Use(hooks ...Hook) {
-	c.hooks.AIUsageWatermark = append(c.hooks.AIUsageWatermark, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `aiusagewatermark.Intercept(f(g(h())))`.
-func (c *AIUsageWatermarkClient) Intercept(interceptors ...Interceptor) {
-	c.inters.AIUsageWatermark = append(c.inters.AIUsageWatermark, interceptors...)
-}
-
-// Create returns a builder for creating a AIUsageWatermark entity.
-func (c *AIUsageWatermarkClient) Create() *AIUsageWatermarkCreate {
-	mutation := newAIUsageWatermarkMutation(c.config, OpCreate)
-	return &AIUsageWatermarkCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of AIUsageWatermark entities.
-func (c *AIUsageWatermarkClient) CreateBulk(builders ...*AIUsageWatermarkCreate) *AIUsageWatermarkCreateBulk {
-	return &AIUsageWatermarkCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *AIUsageWatermarkClient) MapCreateBulk(slice any, setFunc func(*AIUsageWatermarkCreate, int)) *AIUsageWatermarkCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &AIUsageWatermarkCreateBulk{err: fmt.Errorf("calling to AIUsageWatermarkClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*AIUsageWatermarkCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &AIUsageWatermarkCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for AIUsageWatermark.
-func (c *AIUsageWatermarkClient) Update() *AIUsageWatermarkUpdate {
-	mutation := newAIUsageWatermarkMutation(c.config, OpUpdate)
-	return &AIUsageWatermarkUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *AIUsageWatermarkClient) UpdateOne(_m *AIUsageWatermark) *AIUsageWatermarkUpdateOne {
-	mutation := newAIUsageWatermarkMutation(c.config, OpUpdateOne, withAIUsageWatermark(_m))
-	return &AIUsageWatermarkUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *AIUsageWatermarkClient) UpdateOneID(id string) *AIUsageWatermarkUpdateOne {
-	mutation := newAIUsageWatermarkMutation(c.config, OpUpdateOne, withAIUsageWatermarkID(id))
-	return &AIUsageWatermarkUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for AIUsageWatermark.
-func (c *AIUsageWatermarkClient) Delete() *AIUsageWatermarkDelete {
-	mutation := newAIUsageWatermarkMutation(c.config, OpDelete)
-	return &AIUsageWatermarkDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *AIUsageWatermarkClient) DeleteOne(_m *AIUsageWatermark) *AIUsageWatermarkDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AIUsageWatermarkClient) DeleteOneID(id string) *AIUsageWatermarkDeleteOne {
-	builder := c.Delete().Where(aiusagewatermark.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &AIUsageWatermarkDeleteOne{builder}
-}
-
-// Query returns a query builder for AIUsageWatermark.
-func (c *AIUsageWatermarkClient) Query() *AIUsageWatermarkQuery {
-	return &AIUsageWatermarkQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeAIUsageWatermark},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a AIUsageWatermark entity by its id.
-func (c *AIUsageWatermarkClient) Get(ctx context.Context, id string) (*AIUsageWatermark, error) {
-	return c.Query().Where(aiusagewatermark.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *AIUsageWatermarkClient) GetX(ctx context.Context, id string) *AIUsageWatermark {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *AIUsageWatermarkClient) Hooks() []Hook {
-	return c.hooks.AIUsageWatermark
-}
-
-// Interceptors returns the client interceptors.
-func (c *AIUsageWatermarkClient) Interceptors() []Interceptor {
-	return c.inters.AIUsageWatermark
-}
-
-func (c *AIUsageWatermarkClient) mutate(ctx context.Context, m *AIUsageWatermarkMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&AIUsageWatermarkCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&AIUsageWatermarkUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&AIUsageWatermarkUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&AIUsageWatermarkDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown AIUsageWatermark mutation op: %q", m.Op())
 	}
 }
 
@@ -13698,139 +12563,6 @@ func (c *CustomerClient) mutate(ctx context.Context, m *CustomerMutation) (Value
 	}
 }
 
-// CustomerAIRatePackageClient is a client for the CustomerAIRatePackage schema.
-type CustomerAIRatePackageClient struct {
-	config
-}
-
-// NewCustomerAIRatePackageClient returns a client for the CustomerAIRatePackage from the given config.
-func NewCustomerAIRatePackageClient(c config) *CustomerAIRatePackageClient {
-	return &CustomerAIRatePackageClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `customerairatepackage.Hooks(f(g(h())))`.
-func (c *CustomerAIRatePackageClient) Use(hooks ...Hook) {
-	c.hooks.CustomerAIRatePackage = append(c.hooks.CustomerAIRatePackage, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `customerairatepackage.Intercept(f(g(h())))`.
-func (c *CustomerAIRatePackageClient) Intercept(interceptors ...Interceptor) {
-	c.inters.CustomerAIRatePackage = append(c.inters.CustomerAIRatePackage, interceptors...)
-}
-
-// Create returns a builder for creating a CustomerAIRatePackage entity.
-func (c *CustomerAIRatePackageClient) Create() *CustomerAIRatePackageCreate {
-	mutation := newCustomerAIRatePackageMutation(c.config, OpCreate)
-	return &CustomerAIRatePackageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of CustomerAIRatePackage entities.
-func (c *CustomerAIRatePackageClient) CreateBulk(builders ...*CustomerAIRatePackageCreate) *CustomerAIRatePackageCreateBulk {
-	return &CustomerAIRatePackageCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *CustomerAIRatePackageClient) MapCreateBulk(slice any, setFunc func(*CustomerAIRatePackageCreate, int)) *CustomerAIRatePackageCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &CustomerAIRatePackageCreateBulk{err: fmt.Errorf("calling to CustomerAIRatePackageClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*CustomerAIRatePackageCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &CustomerAIRatePackageCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for CustomerAIRatePackage.
-func (c *CustomerAIRatePackageClient) Update() *CustomerAIRatePackageUpdate {
-	mutation := newCustomerAIRatePackageMutation(c.config, OpUpdate)
-	return &CustomerAIRatePackageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *CustomerAIRatePackageClient) UpdateOne(_m *CustomerAIRatePackage) *CustomerAIRatePackageUpdateOne {
-	mutation := newCustomerAIRatePackageMutation(c.config, OpUpdateOne, withCustomerAIRatePackage(_m))
-	return &CustomerAIRatePackageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *CustomerAIRatePackageClient) UpdateOneID(id string) *CustomerAIRatePackageUpdateOne {
-	mutation := newCustomerAIRatePackageMutation(c.config, OpUpdateOne, withCustomerAIRatePackageID(id))
-	return &CustomerAIRatePackageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for CustomerAIRatePackage.
-func (c *CustomerAIRatePackageClient) Delete() *CustomerAIRatePackageDelete {
-	mutation := newCustomerAIRatePackageMutation(c.config, OpDelete)
-	return &CustomerAIRatePackageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *CustomerAIRatePackageClient) DeleteOne(_m *CustomerAIRatePackage) *CustomerAIRatePackageDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *CustomerAIRatePackageClient) DeleteOneID(id string) *CustomerAIRatePackageDeleteOne {
-	builder := c.Delete().Where(customerairatepackage.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &CustomerAIRatePackageDeleteOne{builder}
-}
-
-// Query returns a query builder for CustomerAIRatePackage.
-func (c *CustomerAIRatePackageClient) Query() *CustomerAIRatePackageQuery {
-	return &CustomerAIRatePackageQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeCustomerAIRatePackage},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a CustomerAIRatePackage entity by its id.
-func (c *CustomerAIRatePackageClient) Get(ctx context.Context, id string) (*CustomerAIRatePackage, error) {
-	return c.Query().Where(customerairatepackage.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *CustomerAIRatePackageClient) GetX(ctx context.Context, id string) *CustomerAIRatePackage {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *CustomerAIRatePackageClient) Hooks() []Hook {
-	return c.hooks.CustomerAIRatePackage
-}
-
-// Interceptors returns the client interceptors.
-func (c *CustomerAIRatePackageClient) Interceptors() []Interceptor {
-	return c.inters.CustomerAIRatePackage
-}
-
-func (c *CustomerAIRatePackageClient) mutate(ctx context.Context, m *CustomerAIRatePackageMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&CustomerAIRatePackageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&CustomerAIRatePackageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&CustomerAIRatePackageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&CustomerAIRatePackageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown CustomerAIRatePackage mutation op: %q", m.Op())
-	}
-}
-
 // CustomerCreditLimitClient is a client for the CustomerCreditLimit schema.
 type CustomerCreditLimitClient struct {
 	config
@@ -16873,139 +15605,6 @@ func (c *LedgerTransactionGroupClient) mutate(ctx context.Context, m *LedgerTran
 		return (&LedgerTransactionGroupDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("db: unknown LedgerTransactionGroup mutation op: %q", m.Op())
-	}
-}
-
-// ManualResourceCostClient is a client for the ManualResourceCost schema.
-type ManualResourceCostClient struct {
-	config
-}
-
-// NewManualResourceCostClient returns a client for the ManualResourceCost from the given config.
-func NewManualResourceCostClient(c config) *ManualResourceCostClient {
-	return &ManualResourceCostClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `manualresourcecost.Hooks(f(g(h())))`.
-func (c *ManualResourceCostClient) Use(hooks ...Hook) {
-	c.hooks.ManualResourceCost = append(c.hooks.ManualResourceCost, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `manualresourcecost.Intercept(f(g(h())))`.
-func (c *ManualResourceCostClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ManualResourceCost = append(c.inters.ManualResourceCost, interceptors...)
-}
-
-// Create returns a builder for creating a ManualResourceCost entity.
-func (c *ManualResourceCostClient) Create() *ManualResourceCostCreate {
-	mutation := newManualResourceCostMutation(c.config, OpCreate)
-	return &ManualResourceCostCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of ManualResourceCost entities.
-func (c *ManualResourceCostClient) CreateBulk(builders ...*ManualResourceCostCreate) *ManualResourceCostCreateBulk {
-	return &ManualResourceCostCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ManualResourceCostClient) MapCreateBulk(slice any, setFunc func(*ManualResourceCostCreate, int)) *ManualResourceCostCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ManualResourceCostCreateBulk{err: fmt.Errorf("calling to ManualResourceCostClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ManualResourceCostCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ManualResourceCostCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for ManualResourceCost.
-func (c *ManualResourceCostClient) Update() *ManualResourceCostUpdate {
-	mutation := newManualResourceCostMutation(c.config, OpUpdate)
-	return &ManualResourceCostUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ManualResourceCostClient) UpdateOne(_m *ManualResourceCost) *ManualResourceCostUpdateOne {
-	mutation := newManualResourceCostMutation(c.config, OpUpdateOne, withManualResourceCost(_m))
-	return &ManualResourceCostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ManualResourceCostClient) UpdateOneID(id string) *ManualResourceCostUpdateOne {
-	mutation := newManualResourceCostMutation(c.config, OpUpdateOne, withManualResourceCostID(id))
-	return &ManualResourceCostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ManualResourceCost.
-func (c *ManualResourceCostClient) Delete() *ManualResourceCostDelete {
-	mutation := newManualResourceCostMutation(c.config, OpDelete)
-	return &ManualResourceCostDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ManualResourceCostClient) DeleteOne(_m *ManualResourceCost) *ManualResourceCostDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ManualResourceCostClient) DeleteOneID(id string) *ManualResourceCostDeleteOne {
-	builder := c.Delete().Where(manualresourcecost.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ManualResourceCostDeleteOne{builder}
-}
-
-// Query returns a query builder for ManualResourceCost.
-func (c *ManualResourceCostClient) Query() *ManualResourceCostQuery {
-	return &ManualResourceCostQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeManualResourceCost},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a ManualResourceCost entity by its id.
-func (c *ManualResourceCostClient) Get(ctx context.Context, id string) (*ManualResourceCost, error) {
-	return c.Query().Where(manualresourcecost.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ManualResourceCostClient) GetX(ctx context.Context, id string) *ManualResourceCost {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *ManualResourceCostClient) Hooks() []Hook {
-	return c.hooks.ManualResourceCost
-}
-
-// Interceptors returns the client interceptors.
-func (c *ManualResourceCostClient) Interceptors() []Interceptor {
-	return c.inters.ManualResourceCost
-}
-
-func (c *ManualResourceCostClient) mutate(ctx context.Context, m *ManualResourceCostMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ManualResourceCostCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ManualResourceCostUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ManualResourceCostUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ManualResourceCostDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("db: unknown ManualResourceCost mutation op: %q", m.Op())
 	}
 }
 
@@ -21750,9 +20349,7 @@ func (c *UsageResetClient) mutate(ctx context.Context, m *UsageResetMutation) (V
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AIUsageAllocation, AIUsageBatch, AIUsageLineItem, AIUsageOutbox,
-		AIUsageRatecardEntry, AIUsageRatingSnapshot, AIUsageWatermark, Addon,
-		AddonRateCard, App, AppCustomInvoicing, AppCustomInvoicingCustomer,
+		Addon, AddonRateCard, App, AppCustomInvoicing, AppCustomInvoicingCustomer,
 		AppCustomer, AppStripe, AppStripeCustomer, BalanceSnapshot,
 		BillingCustomerLock, BillingCustomerOverride, BillingGatheringInvoiceLine,
 		BillingInvoice, BillingInvoiceFlatFeeLineConfig, BillingInvoiceLine,
@@ -21773,22 +20370,20 @@ type (
 		CommerceOrderLine, CommerceOutbox, CommerceProduct, CreditCharge,
 		CreditRealizationLineage, CreditRealizationLineageSegment, CreditReservation,
 		CreditReservationCommand, CreditReservationOutbox, CurrencyCostBasis,
-		CustomCurrency, Customer, CustomerAIRatePackage, CustomerCreditLimit,
-		CustomerSubjects, Entitlement, ExternalInvoiceRef, Feature, Fulfillment, Grant,
-		LLMCostPrice, LedgerAccount, LedgerBreakageRecord, LedgerCreditVoidRecord,
-		LedgerCustomerAccount, LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute,
-		LedgerTransaction, LedgerTransactionGroup, ManualResourceCost, Meter,
-		NotificationChannel, NotificationEvent, NotificationEventDeliveryStatus,
-		NotificationRule, OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt,
-		PaymentFact, Plan, PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount,
-		ReceivablePeriod, RefundFact, RefundRequest, Subject, Subscription,
-		SubscriptionAddon, SubscriptionAddonQuantity, SubscriptionBillingSyncState,
-		SubscriptionItem, SubscriptionPhase, TaxCode, UsageReset []ent.Hook
+		CustomCurrency, Customer, CustomerCreditLimit, CustomerSubjects, Entitlement,
+		ExternalInvoiceRef, Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount,
+		LedgerBreakageRecord, LedgerCreditVoidRecord, LedgerCustomerAccount,
+		LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute, LedgerTransaction,
+		LedgerTransactionGroup, Meter, NotificationChannel, NotificationEvent,
+		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
+		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
+		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
+		RefundRequest, Subject, Subscription, SubscriptionAddon,
+		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
+		SubscriptionPhase, TaxCode, UsageReset []ent.Hook
 	}
 	inters struct {
-		AIUsageAllocation, AIUsageBatch, AIUsageLineItem, AIUsageOutbox,
-		AIUsageRatecardEntry, AIUsageRatingSnapshot, AIUsageWatermark, Addon,
-		AddonRateCard, App, AppCustomInvoicing, AppCustomInvoicingCustomer,
+		Addon, AddonRateCard, App, AppCustomInvoicing, AppCustomInvoicingCustomer,
 		AppCustomer, AppStripe, AppStripeCustomer, BalanceSnapshot,
 		BillingCustomerLock, BillingCustomerOverride, BillingGatheringInvoiceLine,
 		BillingInvoice, BillingInvoiceFlatFeeLineConfig, BillingInvoiceLine,
@@ -21809,16 +20404,15 @@ type (
 		CommerceOrder, CommerceOrderLine, CommerceOutbox, CommerceProduct,
 		CreditCharge, CreditRealizationLineage, CreditRealizationLineageSegment,
 		CreditReservation, CreditReservationCommand, CreditReservationOutbox,
-		CurrencyCostBasis, CustomCurrency, Customer, CustomerAIRatePackage,
-		CustomerCreditLimit, CustomerSubjects, Entitlement, ExternalInvoiceRef,
-		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
-		LedgerCreditVoidRecord, LedgerCustomerAccount, LedgerEntry, LedgerSubAccount,
-		LedgerSubAccountRoute, LedgerTransaction, LedgerTransactionGroup,
-		ManualResourceCost, Meter, NotificationChannel, NotificationEvent,
-		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
-		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
-		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
-		RefundRequest, Subject, Subscription, SubscriptionAddon,
+		CurrencyCostBasis, CustomCurrency, Customer, CustomerCreditLimit,
+		CustomerSubjects, Entitlement, ExternalInvoiceRef, Feature, Fulfillment, Grant,
+		LLMCostPrice, LedgerAccount, LedgerBreakageRecord, LedgerCreditVoidRecord,
+		LedgerCustomerAccount, LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute,
+		LedgerTransaction, LedgerTransactionGroup, Meter, NotificationChannel,
+		NotificationEvent, NotificationEventDeliveryStatus, NotificationRule,
+		OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan,
+		PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod,
+		RefundFact, RefundRequest, Subject, Subscription, SubscriptionAddon,
 		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
 		SubscriptionPhase, TaxCode, UsageReset []ent.Interceptor
 	}

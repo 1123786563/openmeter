@@ -19,90 +19,6 @@ import (
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
-func (e *AIUsageAllocation) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageAllocation) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageBatch) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageBatch) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageBatch) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *AIUsageLineItem) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageLineItem) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageLineItem) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *AIUsageOutbox) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageOutbox) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageRatecardEntry) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageRatecardEntry) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageRatecardEntry) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *AIUsageRatecardEntry) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *AIUsageRatecardEntry) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *AIUsageRatecardEntry) GetDeletedAt() *time.Time {
-	return e.DeletedAt
-}
-
-func (e *AIUsageRatingSnapshot) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageRatingSnapshot) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *AIUsageRatingSnapshot) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *AIUsageWatermark) GetID() string {
-	return e.ID
-}
-
-func (e *AIUsageWatermark) GetNamespace() string {
-	return e.Namespace
-}
-
 func (e *Addon) GetID() string {
 	return e.ID
 }
@@ -2647,30 +2563,6 @@ func (e *Customer) GetAnnotations() models.Annotations {
 	return e.Annotations
 }
 
-func (e *CustomerAIRatePackage) GetID() string {
-	return e.ID
-}
-
-func (e *CustomerAIRatePackage) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *CustomerAIRatePackage) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *CustomerAIRatePackage) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *CustomerAIRatePackage) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *CustomerAIRatePackage) GetDeletedAt() *time.Time {
-	return e.DeletedAt
-}
-
 func (e *CustomerCreditLimit) GetID() string {
 	return e.ID
 }
@@ -3028,30 +2920,6 @@ func (e *LedgerTransactionGroup) GetUpdatedAt() time.Time {
 }
 
 func (e *LedgerTransactionGroup) GetDeletedAt() *time.Time {
-	return e.DeletedAt
-}
-
-func (e *ManualResourceCost) GetID() string {
-	return e.ID
-}
-
-func (e *ManualResourceCost) GetNamespace() string {
-	return e.Namespace
-}
-
-func (e *ManualResourceCost) GetAnnotations() models.Annotations {
-	return e.Annotations
-}
-
-func (e *ManualResourceCost) GetCreatedAt() time.Time {
-	return e.CreatedAt
-}
-
-func (e *ManualResourceCost) GetUpdatedAt() time.Time {
-	return e.UpdatedAt
-}
-
-func (e *ManualResourceCost) GetDeletedAt() *time.Time {
 	return e.DeletedAt
 }
 
