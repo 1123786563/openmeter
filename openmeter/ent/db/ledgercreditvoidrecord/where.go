@@ -8,7 +8,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/alpacahq/alpacadecimal"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/predicate"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 )
 
 // ID filters vertices based on their ID field.
@@ -97,9 +96,8 @@ func CustomerID(v string) predicate.LedgerCreditVoidRecord {
 }
 
 // Currency applies equality check predicate on the "currency" field. It's identical to CurrencyEQ.
-func Currency(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldEQ(FieldCurrency, vc))
+func Currency(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldEQ(FieldCurrency, v))
 }
 
 // VoidedAt applies equality check predicate on the "voided_at" field. It's identical to VoidedAtEQ.
@@ -443,87 +441,68 @@ func CustomerIDContainsFold(v string) predicate.LedgerCreditVoidRecord {
 }
 
 // CurrencyEQ applies the EQ predicate on the "currency" field.
-func CurrencyEQ(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldEQ(FieldCurrency, vc))
+func CurrencyEQ(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldEQ(FieldCurrency, v))
 }
 
 // CurrencyNEQ applies the NEQ predicate on the "currency" field.
-func CurrencyNEQ(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldNEQ(FieldCurrency, vc))
+func CurrencyNEQ(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldNEQ(FieldCurrency, v))
 }
 
 // CurrencyIn applies the In predicate on the "currency" field.
-func CurrencyIn(vs ...currencyx.Code) predicate.LedgerCreditVoidRecord {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = string(vs[i])
-	}
-	return predicate.LedgerCreditVoidRecord(sql.FieldIn(FieldCurrency, v...))
+func CurrencyIn(vs ...string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldIn(FieldCurrency, vs...))
 }
 
 // CurrencyNotIn applies the NotIn predicate on the "currency" field.
-func CurrencyNotIn(vs ...currencyx.Code) predicate.LedgerCreditVoidRecord {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = string(vs[i])
-	}
-	return predicate.LedgerCreditVoidRecord(sql.FieldNotIn(FieldCurrency, v...))
+func CurrencyNotIn(vs ...string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldNotIn(FieldCurrency, vs...))
 }
 
 // CurrencyGT applies the GT predicate on the "currency" field.
-func CurrencyGT(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldGT(FieldCurrency, vc))
+func CurrencyGT(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldGT(FieldCurrency, v))
 }
 
 // CurrencyGTE applies the GTE predicate on the "currency" field.
-func CurrencyGTE(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldGTE(FieldCurrency, vc))
+func CurrencyGTE(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldGTE(FieldCurrency, v))
 }
 
 // CurrencyLT applies the LT predicate on the "currency" field.
-func CurrencyLT(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldLT(FieldCurrency, vc))
+func CurrencyLT(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldLT(FieldCurrency, v))
 }
 
 // CurrencyLTE applies the LTE predicate on the "currency" field.
-func CurrencyLTE(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldLTE(FieldCurrency, vc))
+func CurrencyLTE(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldLTE(FieldCurrency, v))
 }
 
 // CurrencyContains applies the Contains predicate on the "currency" field.
-func CurrencyContains(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldContains(FieldCurrency, vc))
+func CurrencyContains(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldContains(FieldCurrency, v))
 }
 
 // CurrencyHasPrefix applies the HasPrefix predicate on the "currency" field.
-func CurrencyHasPrefix(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldHasPrefix(FieldCurrency, vc))
+func CurrencyHasPrefix(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldHasPrefix(FieldCurrency, v))
 }
 
 // CurrencyHasSuffix applies the HasSuffix predicate on the "currency" field.
-func CurrencyHasSuffix(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldHasSuffix(FieldCurrency, vc))
+func CurrencyHasSuffix(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldHasSuffix(FieldCurrency, v))
 }
 
 // CurrencyEqualFold applies the EqualFold predicate on the "currency" field.
-func CurrencyEqualFold(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldEqualFold(FieldCurrency, vc))
+func CurrencyEqualFold(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldEqualFold(FieldCurrency, v))
 }
 
 // CurrencyContainsFold applies the ContainsFold predicate on the "currency" field.
-func CurrencyContainsFold(v currencyx.Code) predicate.LedgerCreditVoidRecord {
-	vc := string(v)
-	return predicate.LedgerCreditVoidRecord(sql.FieldContainsFold(FieldCurrency, vc))
+func CurrencyContainsFold(v string) predicate.LedgerCreditVoidRecord {
+	return predicate.LedgerCreditVoidRecord(sql.FieldContainsFold(FieldCurrency, v))
 }
 
 // VoidedAtEQ applies the EQ predicate on the "voided_at" field.

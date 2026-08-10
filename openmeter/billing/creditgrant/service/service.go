@@ -25,6 +25,7 @@ import (
 	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/datetime"
+	"github.com/openmeterio/openmeter/pkg/filter"
 	"github.com/openmeterio/openmeter/pkg/framework/commonhttp"
 	"github.com/openmeterio/openmeter/pkg/framework/transaction"
 	"github.com/openmeterio/openmeter/pkg/models"
@@ -38,6 +39,7 @@ type Config struct {
 	BillingService        billing.Service
 	CustomerService       customer.Service
 	CreditVoidService     creditvoid.Service
+	CurrenciesService     currencies.Service
 	TransactionManager    transaction.Creator
 }
 
@@ -63,6 +65,9 @@ func (c Config) Validate() error {
 	if c.CreditVoidService == nil {
 		errs = append(errs, errors.New("credit void service is required"))
 	}
+	if c.CurrenciesService == nil {
+		errs = append(errs, errors.New("currencies service is required"))
+	}
 
 	if c.TransactionManager == nil {
 		errs = append(errs, errors.New("transaction manager is required"))
@@ -82,6 +87,7 @@ func New(config Config) (creditgrant.Service, error) {
 		billingService:        config.BillingService,
 		customerService:       config.CustomerService,
 		creditVoidService:     config.CreditVoidService,
+		currenciesService:     config.CurrenciesService,
 		transactionManager:    config.TransactionManager,
 	}, nil
 }
@@ -92,6 +98,7 @@ type service struct {
 	billingService        billing.Service
 	customerService       customer.Service
 	creditVoidService     creditvoid.Service
+	currenciesService     currencies.Service
 	transactionManager    transaction.Creator
 }
 
@@ -129,8 +136,13 @@ func (s *service) Create(ctx context.Context, input creditgrant.CreateInput) (cr
 		}
 	}
 
+	resolvedCurrency, err := s.resolveCurrency(ctx, input.Namespace, input.Currency)
+	if err != nil {
+		return creditpurchase.Charge{}, fmt.Errorf("resolve credit grant currency: %w", err)
+	}
+
 	// Build the credit purchase intent
-	intent, err := toIntent(input)
+	intent, err := toIntent(input, resolvedCurrency)
 	if err != nil {
 		return creditpurchase.Charge{}, fmt.Errorf("build credit grant intent: %w", err)
 	}
@@ -289,10 +301,6 @@ func (s *service) Void(ctx context.Context, input creditgrant.VoidInput) (credit
 		return creditpurchase.Charge{}, err
 	}
 
-	if charge.Intent.Currency.IsCustom() {
-		return creditpurchase.Charge{}, fmt.Errorf("credit grant with custom currency: %w", meta.ErrCustomCurrencyNotSupported)
-	}
-
 	if charge.State.VoidedAt != nil {
 		return charge, nil
 	}
@@ -308,7 +316,7 @@ func (s *service) Void(ctx context.Context, input creditgrant.VoidInput) (credit
 				ID:        input.CustomerID,
 			},
 			ChargeID: charge.ID,
-			Currency: charge.Intent.Currency.GetCode(),
+			Currency: charge.Intent.Currency.Reference(),
 			Annotations: ledger.ChargeAnnotations(models.NamespacedID{
 				Namespace: charge.Namespace,
 				ID:        charge.ID,
@@ -359,20 +367,41 @@ func validateChargeVoidable(charge creditpurchase.Charge) error {
 	return nil
 }
 
-func toIntent(input creditgrant.CreateInput) (creditpurchase.Intent, error) {
+func (s *service) resolveCurrency(ctx context.Context, namespace string, code currencyx.Code) (currencies.Currency, error) {
+	if code.IsFiat() {
+		currency, err := currencies.NewFiatCurrency(code)
+		if err != nil {
+			return currencies.Currency{}, err
+		}
+		return currency, nil
+	}
+	if !code.IsCustom() {
+		return currencies.Currency{}, fmt.Errorf("unsupported currency type: %s", code.Type())
+	}
+	customType := currencyx.CurrencyTypeCustom
+	result, err := s.currenciesService.ListCurrencies(ctx, currencies.ListCurrenciesInput{
+		Namespace: namespace, CurrencyType: &customType, Code: &filter.FilterString{Eq: lo.ToPtr(code.String())},
+	})
+	if err != nil {
+		return currencies.Currency{}, err
+	}
+	if len(result.Items) != 1 {
+		return currencies.Currency{}, fmt.Errorf("managed custom currency %s not found or ambiguous", code)
+	}
+	return result.Items[0], nil
+}
+
+func toIntent(input creditgrant.CreateInput, currency currencies.Currency) (creditpurchase.Intent, error) {
 	effectiveAt := lo.FromPtrOr(input.EffectiveAt, clock.Now()).UTC()
 	period := timeutil.ClosedPeriod{From: effectiveAt, To: effectiveAt}
-	currency, err := currencyx.NewCurrencyBuilder(currencyx.CurrencyTypeFiat).
-		WithCode(input.Currency).
-		Build()
-	if err != nil {
-		return creditpurchase.Intent{}, fmt.Errorf("build fiat currency: %w", err)
+	if err := currency.Validate(); err != nil {
+		return creditpurchase.Intent{}, fmt.Errorf("validate resolved currency: %w", err)
 	}
 
 	intent := creditpurchase.Intent{
 		Intent: meta.Intent{
 			CustomerID: input.CustomerID,
-			Currency:   currencies.Currency{Currency: currency},
+			Currency:   currency,
 			ManagedBy:  billing.ManuallyManagedLine,
 			TaxConfig:  productcatalog.TaxCodeConfigFrom(input.TaxConfig),
 		},

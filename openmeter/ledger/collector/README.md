@@ -115,7 +115,12 @@ This bridge is needed because later correction starts from a billing allocation,
 
 ## Credit-Only Advance
 
-If credit-only collection cannot cover the requested amount, the shortfall becomes advance.
+If credit-only collection cannot cover the requested amount, an advance is
+permitted only when its caller supplies an explicit remaining enterprise credit
+limit. A missing limit fails with `ErrInsufficientCredit`; a shortfall above
+that remaining limit fails with `ErrCreditLimitExceeded`. Neither failure
+commits a receivable. `credit_then_invoice` never consults this limit and
+leaves its uncovered amount to the invoice path.
 
 Example:
 

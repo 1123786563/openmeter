@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/alpacahq/alpacadecimal"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/ledgercreditvoidrecord"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -36,7 +35,7 @@ type LedgerCreditVoidRecord struct {
 	// CustomerID holds the value of the "customer_id" field.
 	CustomerID string `json:"customer_id,omitempty"`
 	// Currency holds the value of the "currency" field.
-	Currency currencyx.Code `json:"currency,omitempty"`
+	Currency string `json:"currency,omitempty"`
 	// VoidedAt holds the value of the "voided_at" field.
 	VoidedAt time.Time `json:"voided_at,omitempty"`
 	// SourceChargeID holds the value of the "source_charge_id" field.
@@ -135,7 +134,7 @@ func (_m *LedgerCreditVoidRecord) assignValues(columns []string, values []any) e
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field currency", values[i])
 			} else if value.Valid {
-				_m.Currency = currencyx.Code(value.String)
+				_m.Currency = value.String
 			}
 		case ledgercreditvoidrecord.FieldVoidedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -233,7 +232,7 @@ func (_m *LedgerCreditVoidRecord) String() string {
 	builder.WriteString(_m.CustomerID)
 	builder.WriteString(", ")
 	builder.WriteString("currency=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Currency))
+	builder.WriteString(_m.Currency)
 	builder.WriteString(", ")
 	builder.WriteString("voided_at=")
 	builder.WriteString(_m.VoidedAt.Format(time.ANSIC))

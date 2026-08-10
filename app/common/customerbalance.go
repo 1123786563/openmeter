@@ -4,6 +4,7 @@ import (
 	"github.com/google/wire"
 
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	ledgeraccount "github.com/openmeterio/openmeter/openmeter/ledger/account"
 	ledgerbreakage "github.com/openmeterio/openmeter/openmeter/ledger/breakage"
@@ -25,6 +26,7 @@ func NewCustomerBalanceService(
 	billingRegistry BillingRegistry,
 	breakageService ledgerbreakage.Service,
 	creditVoidService creditvoid.Service,
+	currenciesService currencies.Service,
 ) (customerbalance.Service, error) {
 	if !creditsConfig.Enabled {
 		return customerbalance.NewNoopService(), nil
@@ -40,6 +42,7 @@ func NewCustomerBalanceService(
 		BalanceQuerier:    balanceQuerier,
 		Breakage:          breakageService,
 		CreditVoid:        creditVoidService,
+		Currencies:        currenciesService,
 	})
 }
 

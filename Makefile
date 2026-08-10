@@ -353,6 +353,16 @@ weknora-ai-billing-p1-acceptance: ## Phase 1 AI billing acceptance gate (spec, S
 	POSTGRES_HOST=127.0.0.1 go test -tags=dynamic -count=1 ./openmeter/aiusage/... ./api/v3/handlers/aiusage/...
 	go test -C e2e -count=1 -run '^TestV3AIUsage' ./
 
+.PHONY: credit-reservation-v2-acceptance
+credit-reservation-v2-acceptance: ## Credit Reservation v2 live acceptance gate (fails when infrastructure is unavailable)
+	$(call print-target)
+	$(MAKE) migrate-check
+	$(MAKE) update-openapi
+	$(MAKE) test-go-sdk
+	POSTGRES_HOST=127.0.0.1 go test -tags=dynamic -count=1 ./openmeter/creditlimit/... ./openmeter/creditreservation/... ./openmeter/ledger/collector/... ./api/v3/handlers/creditreservations/...
+	go test ./openmeter/creditreservation/... ./api/v3/server -count=1
+	go test -C e2e -tags=credit_reservation_acceptance -count=1 -run '^TestCreditReservationV3Acceptance$$' ./
+
 .PHONY: help
 .DEFAULT_GOAL := help
 help:

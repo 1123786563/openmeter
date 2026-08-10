@@ -238,8 +238,8 @@ type FenceResult struct {
 // Implementations serialize fence requests per customer so only one refund can
 // hold the fence at a time.
 type FenceClient interface {
-	EstablishFence(ctx context.Context, namespace, customerID string) (FenceResult, error)
-	ReleaseFence(ctx context.Context, namespace, customerID, fenceSequence string) error
+	EstablishFence(ctx context.Context, namespace, customerID, refundID string) (FenceResult, error)
+	ReleaseFence(ctx context.Context, namespace, customerID, refundID, fenceSequence string) error
 	ConfirmSnapshotApplied(ctx context.Context, namespace, customerID, snapshotVersion string) (bool, error)
 }
 
@@ -438,7 +438,7 @@ func (s *service) processPendingFence(ctx context.Context, rec *RefundRequest) (
 	}
 
 	// Step 2: Establish the whole-customer fence.
-	fenceRes, err := s.fence.EstablishFence(ctx, rec.Namespace, rec.CustomerID)
+	fenceRes, err := s.fence.EstablishFence(ctx, rec.Namespace, rec.CustomerID, rec.ID)
 	if err != nil {
 		s.logger.InfoContext(ctx, "refund: fence failed (stays in pending_fence)", "id", rec.ID, "error", err)
 		return rec, err
@@ -447,11 +447,9 @@ func (s *service) processPendingFence(ctx context.Context, rec *RefundRequest) (
 		return rec, ErrFenceTimeout
 	}
 
-	rec, err = s.repo.SetFence(ctx, rec.Namespace, rec.ID, fenceRes.Sequence)
-	if err != nil {
-		s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, fenceRes.Sequence)
-		return nil, fmt.Errorf("refund: set fence: %w", err)
-	}
+	// EstablishFence persisted the stable sequence under the shared customer
+	// lock. Avoid a second, unlocked write that could race a Reserve command.
+	rec.FenceSequence = fenceRes.Sequence
 
 	// Step 3: Under the fence, recompute unused paid Credit and reserve.
 	rec, err = s.reserveAndSubmit(ctx, rec)
@@ -462,7 +460,7 @@ func (s *service) processPendingFence(ctx context.Context, rec *RefundRequest) (
 		// For pre-provider_processing failures (reserve failures), the fence is
 		// still safe to release.
 		if rec != nil && rec.Status == RefundStatusPendingFence {
-			s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, fenceRes.Sequence)
+			s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, rec.ID, fenceRes.Sequence)
 		}
 		return rec, err
 	}
@@ -706,7 +704,7 @@ func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest
 	}
 
 	// Release the fence.
-	s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, rec.FenceSequence)
+	s.releaseFenceQuietly(ctx, rec.Namespace, rec.CustomerID, rec.ID, rec.FenceSequence)
 
 	return rec, nil
 }
@@ -843,7 +841,7 @@ func (s *service) failRefund(ctx context.Context, rec *RefundRequest, reason str
 		s.logger.ErrorContext(ctx, "refund: MarkFailed itself failed", "id", rec.ID, "error", err)
 		return rec
 	}
-	s.releaseFenceQuietly(ctx, updated.Namespace, updated.CustomerID, updated.FenceSequence)
+	s.releaseFenceQuietly(ctx, updated.Namespace, updated.CustomerID, updated.ID, updated.FenceSequence)
 	return updated
 }
 
@@ -915,11 +913,11 @@ func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fac
 	return nil
 }
 
-func (s *service) releaseFenceQuietly(ctx context.Context, namespace, customerID, fenceSeq string) {
+func (s *service) releaseFenceQuietly(ctx context.Context, namespace, customerID, refundID, fenceSeq string) {
 	if s.fence == nil || fenceSeq == "" {
 		return
 	}
-	if err := s.fence.ReleaseFence(ctx, namespace, customerID, fenceSeq); err != nil {
+	if err := s.fence.ReleaseFence(ctx, namespace, customerID, refundID, fenceSeq); err != nil {
 		s.logger.WarnContext(ctx, "refund: release fence failed", "fence", fenceSeq, "error", err)
 	}
 }

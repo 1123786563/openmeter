@@ -21,6 +21,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/meta"
 	chargestestutils "github.com/openmeterio/openmeter/openmeter/billing/charges/testutils"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	currenciestestutils "github.com/openmeterio/openmeter/openmeter/currencies/testutils/currency"
 	"github.com/openmeterio/openmeter/openmeter/customer"
@@ -64,6 +65,7 @@ type BaseSuite struct {
 	FlatFeeHandler       flatfee.Handler
 	LineageService       lineage.Service
 	RevenueRecognizer    recognizer.Service
+	CurrencyService      currencies.Service
 }
 
 func (s *BaseSuite) SetupSuite() {
@@ -157,6 +159,7 @@ func (s *BaseSuite) SetupSuite() {
 		deps.HistoricalLedger,
 		transactions.ResolverDependencies{AccountService: deps.ResolversService, AccountCatalog: deps.AccountService, BalanceQuerier: deps.HistoricalLedger},
 		collectorService,
+		creditlimit.NoopAllowanceResolver{},
 	)
 	s.FlatFeeHandler = flatFeeHandler
 
@@ -172,12 +175,13 @@ func (s *BaseSuite) SetupSuite() {
 		TaxCodeService:        s.TaxCodeService,
 		FlatFeeHandler:        flatFeeHandler,
 		CreditPurchaseHandler: creditPurchaseHandler,
-		UsageBasedHandler:     ledgerchargeadapter.NewUsageBasedHandler(deps.HistoricalLedger, transactions.ResolverDependencies{AccountService: deps.ResolversService, AccountCatalog: deps.AccountService, BalanceQuerier: deps.HistoricalLedger}, collectorService),
+		UsageBasedHandler:     ledgerchargeadapter.NewUsageBasedHandler(deps.HistoricalLedger, transactions.ResolverDependencies{AccountService: deps.ResolversService, AccountCatalog: deps.AccountService, BalanceQuerier: deps.HistoricalLedger}, collectorService, creditlimit.NoopAllowanceResolver{}),
 	})
 	s.NoError(err)
 	s.Charges = stack.ChargesService
 	s.CreditPurchaseSvc = stack.CreditPurchaseService
 	s.UsageBasedSvc = stack.UsageBasedService
+	s.CurrencyService = stack.CurrencyService
 
 	customerBalanceSvc, err := customerbalance.New(customerbalance.Config{
 		AccountResolver:   deps.ResolversService,
@@ -189,6 +193,7 @@ func (s *BaseSuite) SetupSuite() {
 		BalanceQuerier:    deps.HistoricalLedger,
 		Breakage:          breakageService,
 		CreditVoid:        creditVoidService,
+		Currencies:        stack.CurrencyService,
 	})
 	s.NoError(err)
 	s.CustomerBalanceSvc = customerBalanceSvc

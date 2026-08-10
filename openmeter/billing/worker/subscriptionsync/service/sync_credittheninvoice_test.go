@@ -23,6 +23,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased"
 	"github.com/openmeterio/openmeter/openmeter/billing/models/totals"
 	"github.com/openmeterio/openmeter/openmeter/billing/worker/subscriptionsync"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	currenciestestutils "github.com/openmeterio/openmeter/openmeter/currencies/testutils/currency"
 	"github.com/openmeterio/openmeter/openmeter/customer"
@@ -114,6 +115,7 @@ func (s *CreditThenInvoiceTestSuite) SetupSuite() {
 				BalanceQuerier: ledgerDeps.HistoricalLedger,
 			},
 			collectorService,
+			creditlimit.NoopAllowanceResolver{},
 		),
 		CreditPurchaseHandler: creditPurchaseHandler,
 		UsageBasedHandler: ledgerchargeadapter.NewUsageBasedHandler(
@@ -124,6 +126,7 @@ func (s *CreditThenInvoiceTestSuite) SetupSuite() {
 				BalanceQuerier: ledgerDeps.HistoricalLedger,
 			},
 			collectorService,
+			creditlimit.NoopAllowanceResolver{},
 		),
 	})
 	s.NoError(err)

@@ -20,7 +20,7 @@ func newVoidedCreditTransactionLoader(s *service) creditTransactionLoader {
 func (l *voidedCreditTransactionLoader) Load(ctx context.Context, input creditTransactionLoaderInput) (creditTransactionLoaderResult, error) {
 	result, err := l.service.CreditVoid.ListVoidedCreditImpacts(ctx, creditvoid.ListVoidedCreditImpactsInput{
 		CustomerID: input.CustomerID,
-		Currency:   input.Currency,
+		Currency:   input.CurrencyReference,
 		AsOf:       input.AsOf,
 		After:      input.After,
 		Before:     input.Before,
@@ -35,15 +35,16 @@ func (l *voidedCreditTransactionLoader) Load(ctx context.Context, input creditTr
 	for _, impact := range result.Items {
 		balanceAsOf := impact.VoidedAt
 		items = append(items, CreditTransaction{
-			ID:          impact.ID,
-			CreatedAt:   impact.CreatedAt,
-			BookedAt:    impact.VoidedAt,
-			Type:        CreditTransactionTypeVoided,
-			Currency:    impact.Currency,
-			Amount:      impact.Amount,
-			Name:        "Voided credits",
-			Annotations: impact.Annotations,
-			balanceAsOf: &balanceAsOf,
+			ID:                impact.ID,
+			CreatedAt:         impact.CreatedAt,
+			BookedAt:          impact.VoidedAt,
+			Type:              CreditTransactionTypeVoided,
+			Currency:          impact.Currency.Code,
+			CurrencyReference: &impact.Currency,
+			Amount:            impact.Amount,
+			Name:              "Voided credits",
+			Annotations:       impact.Annotations,
+			balanceAsOf:       &balanceAsOf,
 		})
 	}
 

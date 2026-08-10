@@ -68,6 +68,21 @@ persist the returned group reference with its own lifecycle state. Ledger
 annotations and entry identity preserve accounting meaning and provenance; they
 are not operation idempotency keys.
 
+## Credit Reservation Integration
+
+`creditreservation` uses the collector only when a reservation or direct
+charge settles. Authorization holds are application lifecycle facts: they are
+not Ledger postings and must never be exposed as an independently mutable
+balance. The reservation service owns command idempotency and the customer
+lock, supplies a bounded enterprise `ReceivableLimit`, then persists the
+returned Ledger group reference alongside its terminal state.
+
+Reversals must use collector correction with the allocations and original
+Ledger-group provenance saved by that settlement; they must not reconstruct a
+new debit or credit from today's balance. The credit usage outbox is likewise
+a delivery relay for standard meter events, not a financial ledger: a relay
+retry may repeat the event ID but must never repeat a Ledger settlement.
+
 ## Route invariants
 
 Routes currently carry currency, feature restrictions, cost basis, credit

@@ -354,7 +354,7 @@ func (f *mockFenceClient) getLock(customerID string) *sync.Mutex {
 	return l
 }
 
-func (f *mockFenceClient) EstablishFence(_ context.Context, _ string, customerID string) (FenceResult, error) {
+func (f *mockFenceClient) EstablishFence(_ context.Context, _ string, customerID, _ string) (FenceResult, error) {
 	if f.failNext.Swap(false) {
 		return FenceResult{}, ErrFenceTimeout
 	}
@@ -362,7 +362,7 @@ func (f *mockFenceClient) EstablishFence(_ context.Context, _ string, customerID
 	return FenceResult{Sequence: "fence-" + customerID, Established: true}, nil
 }
 
-func (f *mockFenceClient) ReleaseFence(_ context.Context, _ string, customerID, _ string) error {
+func (f *mockFenceClient) ReleaseFence(_ context.Context, _ string, customerID, _, _ string) error {
 	f.getLock(customerID).Unlock()
 	f.released.Add(1)
 	return nil

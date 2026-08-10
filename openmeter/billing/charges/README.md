@@ -100,8 +100,10 @@ when an active override hides it.
 
 Flat-fee and usage-based charges support two modes:
 
-- `credit_only` realizes against customer credit; live-balance projection treats
-  its impact as unbounded and may therefore go negative
+- `credit_only` realizes against customer credit and may issue a receivable
+  only within an explicit, active enterprise limit. Without that limit a
+  prepaid-credit shortfall fails; a shortfall above its remaining allowance
+  fails with `ErrCreditLimitExceeded` and writes no receivable.
 - `credit_then_invoice` consumes eligible positive credit and sends the
   remaining overage through billing
 
@@ -165,8 +167,10 @@ balance queries, and historical migration.
 ## Receivable Allocation Path (AI Usage)
 
 When AI usage settlement calls `collector.CollectToAccrued` with
-`SettlementMode = CreditOnly` and the customer's prepaid wallet is exhausted,
-the collector issues an advance-backed receivable:
+`SettlementMode = CreditOnly`, a prepaid-wallet shortfall issues an
+advance-backed receivable only after the charge adapter resolved and supplied
+an active enterprise allowance. Without an allowance the collector rejects the
+shortfall before writing the ledger group:
 
 1. The shortfall is issued as a customer receivable via
    `IssueCustomerReceivableTemplate`.
@@ -179,7 +183,8 @@ the collector issues an advance-backed receivable:
 
 When a `ReceivableHardLimit` is set on the settlement input, the settlement
 service checks the collected amount against the charged amount and rejects
-with `ErrCreditLimitExceeded` if the receivable portion exceeds the limit.
+with `ErrCreditLimitExceeded` if the receivable portion exceeds the remaining
+explicit limit.
 
 Corrections of advance-backed allocations unwind both the collection
 transaction and the companion receivable issue, keeping the receivable

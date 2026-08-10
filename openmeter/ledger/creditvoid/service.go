@@ -17,7 +17,6 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ledger/breakage"
 	"github.com/openmeterio/openmeter/openmeter/ledger/transactions"
 	"github.com/openmeterio/openmeter/pkg/clock"
-	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/framework/transaction"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -94,7 +93,7 @@ type service struct {
 type VoidCreditPurchaseInput struct {
 	CustomerID  customer.CustomerID
 	ChargeID    string
-	Currency    currencyx.Code
+	Currency    currencies.CurrencyReference
 	Annotations models.Annotations
 }
 
@@ -124,7 +123,7 @@ type VoidCreditPurchaseResult struct {
 
 type ListVoidedCreditImpactsInput struct {
 	CustomerID customer.CustomerID
-	Currency   *currencyx.Code
+	Currency   *currencies.CurrencyReference
 	AsOf       time.Time
 	After      *ledger.TransactionCursor
 	Before     *ledger.TransactionCursor
@@ -179,7 +178,7 @@ type VoidImpact struct {
 	CreatedAt   time.Time
 	VoidedAt    time.Time
 	CustomerID  customer.CustomerID
-	Currency    currencyx.Code
+	Currency    currencies.CurrencyReference
 	Amount      alpacadecimal.Decimal
 	Annotations models.Annotations
 }
@@ -251,7 +250,7 @@ func (s *service) planVoid(ctx context.Context, input VoidCreditPurchaseInput) (
 			SourceChargeID: mo.Some(&input.ChargeID),
 			AsOf:           &voidedAt,
 			Route: ledger.RouteFilter{
-				Currency: currencies.NewCurrencyReference(input.Currency),
+				Currency: input.Currency,
 			},
 		},
 		GroupBy: []string{ledger.BalanceBucketGroupBySourceChargeID},
@@ -303,7 +302,7 @@ func (s *service) planVoid(ctx context.Context, input VoidCreditPurchaseInput) (
 func (s *service) openExpiryPlansBySubAccount(ctx context.Context, input VoidCreditPurchaseInput, voidedAt time.Time) (map[string]breakage.Plan, error) {
 	openPlans, err := s.breakage.ListPlans(ctx, breakage.ListPlansInput{
 		CustomerID: input.CustomerID,
-		Currency:   input.Currency,
+		Currency:   input.Currency.Code,
 		AsOf:       voidedAt,
 	})
 	if err != nil {
@@ -421,7 +420,7 @@ func (s *service) resolveVoidSlice(ctx context.Context, input VoidCreditPurchase
 		ID:                     recordID,
 		Amount:                 slice.amount,
 		CustomerID:             input.CustomerID,
-		Currency:               route.Currency.Code,
+		Currency:               route.Currency,
 		VoidedAt:               voidedAt,
 		SourceChargeID:         input.ChargeID,
 		FBOSubAccountID:        correctedFBO,
@@ -440,7 +439,7 @@ func (s *service) originalIssueTransaction(ctx context.Context, input VoidCredit
 			Cursor:         cursor,
 			Limit:          100,
 			AccountIDs:     []string{slice.fboAccount},
-			Currency:       &input.Currency,
+			Currency:       &input.Currency.Code,
 			AsOf:           &voidedAt,
 			CreditMovement: ledger.ListTransactionsCreditMovementPositive,
 			AnnotationFilters: map[string]string{
@@ -600,9 +599,10 @@ func (s *service) ListVoidedCreditImpacts(ctx context.Context, input ListVoidedC
 
 	groups := make(map[voidImpactGroupKey]*voidImpactGroup)
 	for _, record := range records {
+		currencyKey := record.Currency.IdentityKey()
 		key := voidImpactGroupKey{
 			voidedAt:           record.VoidedAt,
-			currency:           record.Currency,
+			currency:           currencyKey,
 			sourceChargeID:     record.SourceChargeID,
 			transactionGroupID: record.VoidTransactionGroupID,
 		}
@@ -687,7 +687,7 @@ func voidImpactMatchesCursorWindow(item VoidImpact, after, before *ledger.Transa
 
 type voidImpactGroupKey struct {
 	voidedAt           time.Time
-	currency           currencyx.Code
+	currency           string
 	sourceChargeID     string
 	transactionGroupID string
 }
@@ -696,7 +696,7 @@ type voidImpactGroup struct {
 	id          models.NamespacedID
 	createdAt   time.Time
 	voidedAt    time.Time
-	currency    currencyx.Code
+	currency    currencies.CurrencyReference
 	amount      alpacadecimal.Decimal
 	annotations models.Annotations
 }

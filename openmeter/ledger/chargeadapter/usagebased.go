@@ -11,6 +11,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/ledgertransaction"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/openmeter/ledger/collector"
@@ -23,6 +24,7 @@ type usageBasedHandler struct {
 	ledger    ledger.Ledger
 	deps      transactions.ResolverDependencies
 	collector collector.Service
+	allowance creditlimit.AllowanceResolver
 }
 
 var _ usagebased.Handler = (*usageBasedHandler)(nil)
@@ -31,11 +33,16 @@ func NewUsageBasedHandler(
 	ledger ledger.Ledger,
 	deps transactions.ResolverDependencies,
 	collectorService collector.Service,
+	allowanceResolver creditlimit.AllowanceResolver,
 ) usagebased.Handler {
+	if allowanceResolver == nil {
+		allowanceResolver = creditlimit.NoopAllowanceResolver{}
+	}
 	return &usageBasedHandler{
 		ledger:    ledger,
 		deps:      deps,
 		collector: collectorService,
+		allowance: allowanceResolver,
 	}
 }
 
@@ -259,6 +266,17 @@ func (h *usageBasedHandler) OnCreditsOnlyUsageAccrued(ctx context.Context, input
 		return nil, fmt.Errorf("credits only usage accrued: %w", err)
 	}
 
+	var receivableLimit *alpacadecimal.Decimal
+	var err error
+	if intent.GetSettlementMode() == productcatalog.CreditOnlySettlementMode {
+		receivableLimit, err = h.allowance.Remaining(ctx, creditlimit.RemainingInput{
+			Namespace: input.Charge.Namespace, CustomerID: intent.GetCustomerID(), Currency: intent.GetCurrency().Reference(), FeatureKey: intent.GetFeatureKey(), AsOf: input.BookedAt,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("resolve remaining credit allowance: %w", err)
+		}
+	}
+
 	realizations, err := h.collector.CollectToAccrued(ctx, collector.CollectToAccruedInput{
 		Namespace:         input.Charge.Namespace,
 		ChargeID:          input.Charge.ID,
@@ -273,6 +291,7 @@ func (h *usageBasedHandler) OnCreditsOnlyUsageAccrued(ctx context.Context, input
 		SettlementMode:    intent.GetSettlementMode(),
 		ServicePeriod:     intent.GetEffectiveServicePeriod(),
 		Amount:            input.AmountToAllocate,
+		ReceivableLimit:   receivableLimit,
 	})
 	if err != nil {
 		return nil, err

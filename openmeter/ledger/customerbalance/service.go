@@ -81,6 +81,7 @@ type service struct {
 	BalanceQuerier    ledger.BalanceQuerier
 	Breakage          ledgerbreakage.Service
 	CreditVoid        creditvoid.Service
+	Currencies        currencies.Service
 
 	balanceCalculator chargeLiveBalanceCalculator
 }
@@ -97,6 +98,7 @@ type Config struct {
 	BalanceQuerier    ledger.BalanceQuerier
 	Breakage          ledgerbreakage.Service
 	CreditVoid        creditvoid.Service
+	Currencies        currencies.Service
 }
 
 type GetBalanceServiceInput struct {
@@ -240,6 +242,9 @@ func (c Config) Validate() error {
 	if c.BalanceQuerier == nil {
 		errs = append(errs, errors.New("balance querier is required"))
 	}
+	if c.Currencies == nil {
+		errs = append(errs, errors.New("currencies service is required"))
+	}
 
 	return errors.Join(errs...)
 }
@@ -268,6 +273,7 @@ func New(config Config) (*service, error) {
 		BalanceQuerier:    config.BalanceQuerier,
 		Breakage:          breakageService,
 		CreditVoid:        creditVoidService,
+		Currencies:        config.Currencies,
 		balanceCalculator: chargeLiveBalanceCalculator{},
 	}, nil
 }

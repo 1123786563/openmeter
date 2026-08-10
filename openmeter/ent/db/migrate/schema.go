@@ -3977,6 +3977,60 @@ var (
 			},
 		},
 	}
+	// CreditChargesColumns holds the columns for the "credit_charges" table.
+	CreditChargesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "reservation_id", Type: field.TypeString, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "operation", Type: field.TypeString},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "payload_hash", Type: field.TypeString},
+		{Name: "currency", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "custom_currency_id", Type: field.TypeString, Nullable: true},
+		{Name: "rated_lines", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "amount", Type: field.TypeInt64},
+		{Name: "rate_version", Type: field.TypeString, Default: ""},
+		{Name: "settlement_allocations", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"SETTLED", "REVERSED"}},
+		{Name: "settlement_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "reversal_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "reversal_idempotency_key", Type: field.TypeString, Default: ""},
+		{Name: "reversal_payload_hash", Type: field.TypeString, Default: ""},
+		{Name: "usage_event_id", Type: field.TypeString, Default: ""},
+	}
+	// CreditChargesTable holds the schema information for the "credit_charges" table.
+	CreditChargesTable = &schema.Table{
+		Name:       "credit_charges",
+		Columns:    CreditChargesColumns,
+		PrimaryKey: []*schema.Column{CreditChargesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "creditcharge_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditChargesColumns[0]},
+			},
+			{
+				Name:    "creditcharge_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CreditChargesColumns[1]},
+			},
+			{
+				Name:    "creditcharge_namespace_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{CreditChargesColumns[1], CreditChargesColumns[9]},
+			},
+			{
+				Name:    "creditcharge_namespace_reservation_id",
+				Unique:  false,
+				Columns: []*schema.Column{CreditChargesColumns[1], CreditChargesColumns[5]},
+			},
+		},
+	}
 	// CreditRealizationLineagesColumns holds the columns for the "credit_realization_lineages" table.
 	CreditRealizationLineagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
@@ -4070,6 +4124,162 @@ var (
 				Name:    "creditrealizationlineagesegment_lineage_id_closed_at",
 				Unique:  false,
 				Columns: []*schema.Column{CreditRealizationLineageSegmentsColumns[8], CreditRealizationLineageSegmentsColumns[6]},
+			},
+		},
+	}
+	// CreditReservationsColumns holds the columns for the "credit_reservations" table.
+	CreditReservationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "subject_id", Type: field.TypeString},
+		{Name: "client_call_id", Type: field.TypeString},
+		{Name: "operation", Type: field.TypeString},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "payload_hash", Type: field.TypeString},
+		{Name: "currency", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "custom_currency_id", Type: field.TypeString, Nullable: true},
+		{Name: "estimated_lines", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "rated_lines", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "actual_lines", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "ceiling_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "prepaid_hold", Type: field.TypeInt64, Default: 0},
+		{Name: "enterprise_hold", Type: field.TypeInt64, Default: 0},
+		{Name: "settled_credits", Type: field.TypeInt64, Default: 0},
+		{Name: "settlement_idempotency_key", Type: field.TypeString, Default: ""},
+		{Name: "settlement_payload_hash", Type: field.TypeString, Default: ""},
+		{Name: "rate_version", Type: field.TypeString, Default: ""},
+		{Name: "state", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "model", Type: field.TypeString, Default: ""},
+		{Name: "request_id", Type: field.TypeString, Default: ""},
+		{Name: "authorization_expires_at", Type: field.TypeTime, Nullable: true},
+		{Name: "execution_deadline", Type: field.TypeTime, Nullable: true},
+		{Name: "hold_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "settlement_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "release_ledger_group_id", Type: field.TypeString, Default: ""},
+		{Name: "usage_event_id", Type: field.TypeString, Default: ""},
+	}
+	// CreditReservationsTable holds the schema information for the "credit_reservations" table.
+	CreditReservationsTable = &schema.Table{
+		Name:       "credit_reservations",
+		Columns:    CreditReservationsColumns,
+		PrimaryKey: []*schema.Column{CreditReservationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "creditreservation_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationsColumns[0]},
+			},
+			{
+				Name:    "creditreservation_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationsColumns[1]},
+			},
+			{
+				Name:    "credit_reservation_idempotency",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationsColumns[1], CreditReservationsColumns[9]},
+			},
+			{
+				Name:    "credit_reservation_call",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationsColumns[1], CreditReservationsColumns[7]},
+			},
+			{
+				Name:    "credit_reservation_active_holds",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationsColumns[1], CreditReservationsColumns[5], CreditReservationsColumns[12], CreditReservationsColumns[23]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "state IN ('ACTIVE', 'EXECUTING', 'UNKNOWN', 'MANUAL_REVIEW')",
+				},
+			},
+		},
+	}
+	// CreditReservationCommandsColumns holds the columns for the "credit_reservation_commands" table.
+	CreditReservationCommandsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "reservation_id", Type: field.TypeString},
+		{Name: "command_kind", Type: field.TypeString},
+		{Name: "idempotency_key", Type: field.TypeString},
+		{Name: "payload_hash", Type: field.TypeString},
+	}
+	// CreditReservationCommandsTable holds the schema information for the "credit_reservation_commands" table.
+	CreditReservationCommandsTable = &schema.Table{
+		Name:       "credit_reservation_commands",
+		Columns:    CreditReservationCommandsColumns,
+		PrimaryKey: []*schema.Column{CreditReservationCommandsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "creditreservationcommand_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[0]},
+			},
+			{
+				Name:    "creditreservationcommand_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[1]},
+			},
+			{
+				Name:    "creditreservationcommand_namespace_reservation_id_command_kind_idempotency_key",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationCommandsColumns[1], CreditReservationCommandsColumns[3], CreditReservationCommandsColumns[4], CreditReservationCommandsColumns[5]},
+			},
+		},
+	}
+	// CreditReservationOutboxesColumns holds the columns for the "credit_reservation_outboxes" table.
+	CreditReservationOutboxesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "event_id", Type: field.TypeString},
+		{Name: "aggregate_type", Type: field.TypeString},
+		{Name: "aggregate_id", Type: field.TypeString},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "payload", Type: field.TypeJSON, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "published", Type: field.TypeBool, Default: false},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true},
+		{Name: "owner", Type: field.TypeString, Default: ""},
+		{Name: "claim_count", Type: field.TypeInt, Default: 0},
+		{Name: "leased_until", Type: field.TypeTime, Nullable: true},
+		{Name: "dead_lettered", Type: field.TypeBool, Default: false},
+		{Name: "dead_letter_reason", Type: field.TypeString, Default: ""},
+	}
+	// CreditReservationOutboxesTable holds the schema information for the "credit_reservation_outboxes" table.
+	CreditReservationOutboxesTable = &schema.Table{
+		Name:       "credit_reservation_outboxes",
+		Columns:    CreditReservationOutboxesColumns,
+		PrimaryKey: []*schema.Column{CreditReservationOutboxesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "creditreservationoutbox_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationOutboxesColumns[0]},
+			},
+			{
+				Name:    "creditreservationoutbox_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationOutboxesColumns[1]},
+			},
+			{
+				Name:    "creditreservationoutbox_namespace_event_id",
+				Unique:  true,
+				Columns: []*schema.Column{CreditReservationOutboxesColumns[1], CreditReservationOutboxesColumns[3]},
+			},
+			{
+				Name:    "creditreservationoutbox_namespace_published_dead_lettered_leased_until",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationOutboxesColumns[1], CreditReservationOutboxesColumns[8], CreditReservationOutboxesColumns[13], CreditReservationOutboxesColumns[12]},
+			},
+			{
+				Name:    "creditreservationoutbox_namespace_aggregate_id",
+				Unique:  false,
+				Columns: []*schema.Column{CreditReservationOutboxesColumns[1], CreditReservationOutboxesColumns[5]},
 			},
 		},
 	}
@@ -4302,6 +4512,47 @@ var (
 				Name:    "customerairatepackage_namespace_customer_id_status",
 				Unique:  false,
 				Columns: []*schema.Column{CustomerAiRatePackagesColumns[1], CustomerAiRatePackagesColumns[6], CustomerAiRatePackagesColumns[10]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
+	}
+	// CustomerCreditLimitsColumns holds the columns for the "customer_credit_limits" table.
+	CustomerCreditLimitsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "char(26)"}},
+		{Name: "namespace", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "customer_id", Type: field.TypeString},
+		{Name: "currency", Type: field.TypeString},
+		{Name: "custom_currency_id", Type: field.TypeString},
+		{Name: "amount", Type: field.TypeOther, SchemaType: map[string]string{"postgres": "numeric"}},
+		{Name: "effective_from", Type: field.TypeTime},
+		{Name: "effective_to", Type: field.TypeTime, Nullable: true},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+	}
+	// CustomerCreditLimitsTable holds the schema information for the "customer_credit_limits" table.
+	CustomerCreditLimitsTable = &schema.Table{
+		Name:       "customer_credit_limits",
+		Columns:    CustomerCreditLimitsColumns,
+		PrimaryKey: []*schema.Column{CustomerCreditLimitsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "customercreditlimit_id",
+				Unique:  true,
+				Columns: []*schema.Column{CustomerCreditLimitsColumns[0]},
+			},
+			{
+				Name:    "customercreditlimit_namespace",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerCreditLimitsColumns[1]},
+			},
+			{
+				Name:    "customercreditlimit_namespace_customer_id_custom_currency_id_effective_from",
+				Unique:  true,
+				Columns: []*schema.Column{CustomerCreditLimitsColumns[1], CustomerCreditLimitsColumns[5], CustomerCreditLimitsColumns[7], CustomerCreditLimitsColumns[9]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},
@@ -7113,12 +7364,17 @@ var (
 		CommerceOrderLinesTable,
 		CommerceOutboxesTable,
 		CommerceProductsTable,
+		CreditChargesTable,
 		CreditRealizationLineagesTable,
 		CreditRealizationLineageSegmentsTable,
+		CreditReservationsTable,
+		CreditReservationCommandsTable,
+		CreditReservationOutboxesTable,
 		CurrencyCostBasesTable,
 		CustomCurrenciesTable,
 		CustomersTable,
 		CustomerAiRatePackagesTable,
+		CustomerCreditLimitsTable,
 		CustomerSubjectsTable,
 		EntitlementsTable,
 		ExternalInvoiceRefsTable,

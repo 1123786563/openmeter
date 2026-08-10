@@ -122,6 +122,19 @@ credits:
 #       appPrivateKeyFile: /run/secrets/alipay-app-private-key.pem
 #       alipayPublicKeyFile: /run/secrets/alipay-public-key.pem
 
+# Credit reservations are disabled by default. Enable only after the
+# Reservation v2 cutover checks in docs/operations/credit-reservation-v2.md pass.
+creditReservation:
+  enabled: false
+  authorizationTTL: 5m
+  executionDeadline: 10m
+  unknownManualReviewAfter: 1h
+  worker:
+    pollInterval: 5s
+    leaseDuration: 30s
+    batchSize: 50
+    maxClaimCount: 3
+
 # unitConfig gates the UnitConfig feature on rate cards (conversion + rounding
 # of metered quantities before rating). Off by default: unit_config is rejected
 # on create/update and rating is unchanged. Enable per environment during rollout.

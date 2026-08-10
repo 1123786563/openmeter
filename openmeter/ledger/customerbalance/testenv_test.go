@@ -29,6 +29,7 @@ import (
 	usagebasedadapter "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased/adapter"
 	usagebasedservice "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased/service"
 	billingratingservice "github.com/openmeterio/openmeter/openmeter/billing/rating/service"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	currencyadapter "github.com/openmeterio/openmeter/openmeter/currencies/adapter"
 	currencyservice "github.com/openmeterio/openmeter/openmeter/currencies/service"
@@ -260,6 +261,7 @@ func newTestEnv(t *testing.T) *testEnv {
 				BalanceQuerier: base.Deps.HistoricalLedger,
 			},
 			collectorService,
+			creditlimit.NoopAllowanceResolver{},
 		),
 		Lineage:       lineageService,
 		MetaAdapter:   metaAdapter,
@@ -279,6 +281,7 @@ func newTestEnv(t *testing.T) *testEnv {
 				BalanceQuerier: base.Deps.HistoricalLedger,
 			},
 			collectorService,
+			creditlimit.NoopAllowanceResolver{},
 		),
 		Lineage:                 lineageService,
 		Locker:                  locker,
@@ -338,6 +341,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		BalanceQuerier:    base.Deps.HistoricalLedger,
 		Breakage:          breakageService,
 		CreditVoid:        creditVoidService,
+		Currencies:        currencyService,
 	})
 	require.NoError(t, err)
 

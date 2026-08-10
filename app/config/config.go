@@ -35,6 +35,7 @@ type Configuration struct {
 	Entitlements       EntitlementsConfiguration
 	Customer           CustomerConfiguration
 	Credits            CreditsConfiguration
+	CreditReservation  CreditReservationConfiguration
 	Dedupe             DedupeConfiguration
 	Events             EventsConfiguration
 	Ingest             IngestConfiguration
@@ -153,6 +154,10 @@ func (c Configuration) Validate() error {
 		errs = append(errs, errorsx.WithPrefix(err, "credits"))
 	}
 
+	if err := c.CreditReservation.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "creditReservation"))
+	}
+
 	if err := c.Apps.Validate(); err != nil {
 		errs = append(errs, errorsx.WithPrefix(err, "apps"))
 	}
@@ -245,6 +250,7 @@ func SetViperDefaults(v *viper.Viper, flags *pflag.FlagSet) {
 	ConfigureProgressManager(v)
 	ConfigureCustomer(v, "customer")
 	ConfigureCredits(v, "credits")
+	ConfigureCreditReservation(v)
 	ConfigureTaxCode(v)
 	ConfigureFeatureGate(v, "featureGate")
 	ConfigureUnitConfig(v, "unitConfig")

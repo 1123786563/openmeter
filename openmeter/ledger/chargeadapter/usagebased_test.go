@@ -19,6 +19,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/payment"
 	chargeusagebased "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased"
 	"github.com/openmeterio/openmeter/openmeter/billing/models/totals"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	currenciestestutils "github.com/openmeterio/openmeter/openmeter/currencies/testutils/currency"
 	ledgertransactiondb "github.com/openmeterio/openmeter/openmeter/ent/db/ledgertransaction"
@@ -36,6 +37,16 @@ import (
 )
 
 func TestOnUsageBasedCreditsOnlyUsageAccrued(t *testing.T) {
+	t.Run("credit_only without active limit reaches collector rejection", func(t *testing.T) {
+		env := newUsageBasedHandlerTestEnv(t, noActiveLimitForTest())
+
+		_, err := env.handler.OnCreditsOnlyUsageAccrued(t.Context(), chargeusagebased.CreditsOnlyUsageAccruedInput{
+			Charge: env.newCreditsOnlyCharge(), Run: env.newRun(), BookedAt: env.Now(), AmountToAllocate: alpacadecimal.NewFromInt(30),
+		})
+		require.ErrorIs(t, err, ledgercollector.ErrInsufficientCredit)
+		require.True(t, env.sumBalance(t, env.unknownReceivableSubAccountForFeature(t, "api_requests")).Equal(alpacadecimal.Zero))
+	})
+
 	t.Run("credit_only advances uncovered amount", func(t *testing.T) {
 		env := newUsageBasedHandlerTestEnv(t)
 
@@ -556,7 +567,7 @@ type usageBasedHandlerTestEnv struct {
 	currency   currencies.Currency
 }
 
-func newUsageBasedHandlerTestEnv(t *testing.T) *usageBasedHandlerTestEnv {
+func newUsageBasedHandlerTestEnv(t *testing.T, allowanceResolvers ...creditlimit.AllowanceResolver) *usageBasedHandlerTestEnv {
 	base := ledgertestutils.NewIntegrationEnv(t, "chargeadapter-usagebased")
 	collectorService, err := ledgercollector.NewService(ledgercollector.Config{
 		Ledger: base.Deps.HistoricalLedger,
@@ -592,13 +603,17 @@ func newUsageBasedHandlerTestEnv(t *testing.T) *usageBasedHandlerTestEnv {
 	})
 	require.NoError(t, err)
 
+	allowance := generousAllowanceForTest()
+	if len(allowanceResolvers) == 1 {
+		allowance = allowanceResolvers[0]
+	}
 	return &usageBasedHandlerTestEnv{
 		IntegrationEnv: base,
 		handler: chargeadapter.NewUsageBasedHandler(base.Deps.HistoricalLedger, transactions.ResolverDependencies{
 			AccountService: base.Deps.ResolversService,
 			AccountCatalog: base.Deps.AccountService,
 			BalanceQuerier: base.Deps.HistoricalLedger,
-		}, collectorService),
+		}, collectorService, allowance),
 		lineage:    lineageService,
 		recognizer: recognizerService,
 		currency:   currenciestestutils.NewFiatCurrency(t, "USD"),

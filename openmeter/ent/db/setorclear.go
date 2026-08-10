@@ -3,6 +3,7 @@
 package db
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/alpacahq/alpacadecimal"
@@ -4444,6 +4445,20 @@ func (u *CommerceProductUpdateOne) SetOrClearMetadata(value *map[string]interfac
 	return u.SetMetadata(*value)
 }
 
+func (u *CreditChargeUpdate) SetOrClearDeletedAt(value *time.Time) *CreditChargeUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CreditChargeUpdateOne) SetOrClearDeletedAt(value *time.Time) *CreditChargeUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
 func (u *CreditRealizationLineageSegmentUpdate) SetOrClearBackingTransactionGroupID(value *string) *CreditRealizationLineageSegmentUpdate {
 	if value == nil {
 		return u.ClearBackingTransactionGroupID()
@@ -4498,6 +4513,90 @@ func (u *CreditRealizationLineageSegmentUpdateOne) SetOrClearClosedAt(value *tim
 		return u.ClearClosedAt()
 	}
 	return u.SetClosedAt(*value)
+}
+
+func (u *CreditReservationUpdate) SetOrClearDeletedAt(value *time.Time) *CreditReservationUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CreditReservationUpdateOne) SetOrClearDeletedAt(value *time.Time) *CreditReservationUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CreditReservationUpdate) SetOrClearActualLines(value *[]json.RawMessage) *CreditReservationUpdate {
+	if value == nil {
+		return u.ClearActualLines()
+	}
+	return u.SetActualLines(*value)
+}
+
+func (u *CreditReservationUpdateOne) SetOrClearActualLines(value *[]json.RawMessage) *CreditReservationUpdateOne {
+	if value == nil {
+		return u.ClearActualLines()
+	}
+	return u.SetActualLines(*value)
+}
+
+func (u *CreditReservationUpdate) SetOrClearAuthorizationExpiresAt(value *time.Time) *CreditReservationUpdate {
+	if value == nil {
+		return u.ClearAuthorizationExpiresAt()
+	}
+	return u.SetAuthorizationExpiresAt(*value)
+}
+
+func (u *CreditReservationUpdateOne) SetOrClearAuthorizationExpiresAt(value *time.Time) *CreditReservationUpdateOne {
+	if value == nil {
+		return u.ClearAuthorizationExpiresAt()
+	}
+	return u.SetAuthorizationExpiresAt(*value)
+}
+
+func (u *CreditReservationUpdate) SetOrClearExecutionDeadline(value *time.Time) *CreditReservationUpdate {
+	if value == nil {
+		return u.ClearExecutionDeadline()
+	}
+	return u.SetExecutionDeadline(*value)
+}
+
+func (u *CreditReservationUpdateOne) SetOrClearExecutionDeadline(value *time.Time) *CreditReservationUpdateOne {
+	if value == nil {
+		return u.ClearExecutionDeadline()
+	}
+	return u.SetExecutionDeadline(*value)
+}
+
+func (u *CreditReservationOutboxUpdate) SetOrClearPublishedAt(value *time.Time) *CreditReservationOutboxUpdate {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *CreditReservationOutboxUpdateOne) SetOrClearPublishedAt(value *time.Time) *CreditReservationOutboxUpdateOne {
+	if value == nil {
+		return u.ClearPublishedAt()
+	}
+	return u.SetPublishedAt(*value)
+}
+
+func (u *CreditReservationOutboxUpdate) SetOrClearLeasedUntil(value *time.Time) *CreditReservationOutboxUpdate {
+	if value == nil {
+		return u.ClearLeasedUntil()
+	}
+	return u.SetLeasedUntil(*value)
+}
+
+func (u *CreditReservationOutboxUpdateOne) SetOrClearLeasedUntil(value *time.Time) *CreditReservationOutboxUpdateOne {
+	if value == nil {
+		return u.ClearLeasedUntil()
+	}
+	return u.SetLeasedUntil(*value)
 }
 
 func (u *CurrencyCostBasisUpdate) SetOrClearDeletedAt(value *time.Time) *CurrencyCostBasisUpdate {
@@ -4802,6 +4901,34 @@ func (u *CustomerAIRatePackageUpdate) SetOrClearEffectiveTo(value *time.Time) *C
 }
 
 func (u *CustomerAIRatePackageUpdateOne) SetOrClearEffectiveTo(value *time.Time) *CustomerAIRatePackageUpdateOne {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *CustomerCreditLimitUpdate) SetOrClearDeletedAt(value *time.Time) *CustomerCreditLimitUpdate {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CustomerCreditLimitUpdateOne) SetOrClearDeletedAt(value *time.Time) *CustomerCreditLimitUpdateOne {
+	if value == nil {
+		return u.ClearDeletedAt()
+	}
+	return u.SetDeletedAt(*value)
+}
+
+func (u *CustomerCreditLimitUpdate) SetOrClearEffectiveTo(value *time.Time) *CustomerCreditLimitUpdate {
+	if value == nil {
+		return u.ClearEffectiveTo()
+	}
+	return u.SetEffectiveTo(*value)
+}
+
+func (u *CustomerCreditLimitUpdateOne) SetOrClearEffectiveTo(value *time.Time) *CustomerCreditLimitUpdateOne {
 	if value == nil {
 		return u.ClearEffectiveTo()
 	}

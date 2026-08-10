@@ -27,6 +27,7 @@ import (
 	usagebasedadapter "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased/adapter"
 	usagebasedservice "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased/service"
 	"github.com/openmeterio/openmeter/openmeter/billing/rating"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	enttx "github.com/openmeterio/openmeter/openmeter/ent/tx"
@@ -124,12 +125,13 @@ func NewChargesFlatFeeHandler(
 	accountResolver ledger.AccountResolver,
 	accountService ledgeraccount.Service,
 	collectorService ledgercollector.Service,
+	allowanceResolver creditlimit.AllowanceResolver,
 ) flatfee.Handler {
 	return ledgerchargeadapter.NewFlatFeeHandler(ledgerService, transactions.ResolverDependencies{
 		AccountService: accountResolver,
 		AccountCatalog: accountService,
 		BalanceQuerier: balanceQuerier,
-	}, collectorService)
+	}, collectorService, allowanceResolver)
 }
 
 func NewChargesCreditPurchaseHandler(
@@ -154,12 +156,13 @@ func NewChargesUsageBasedHandler(
 	accountResolver ledger.AccountResolver,
 	accountService ledgeraccount.Service,
 	collectorService ledgercollector.Service,
+	allowanceResolver creditlimit.AllowanceResolver,
 ) usagebased.Handler {
 	return ledgerchargeadapter.NewUsageBasedHandler(ledgerService, transactions.ResolverDependencies{
 		AccountService: accountResolver,
 		AccountCatalog: accountService,
 		BalanceQuerier: balanceQuerier,
-	}, collectorService)
+	}, collectorService, allowanceResolver)
 }
 
 func NewChargesFlatFeeAdapter(
@@ -459,8 +462,19 @@ func newChargesRegistry(
 		return nil, err
 	}
 
-	flatFeeHandler := NewChargesFlatFeeHandler(ledgerService, balanceQuerier, accountResolver, accountService, collectorService)
-	usageBasedHandler := NewChargesUsageBasedHandler(ledgerService, balanceQuerier, accountResolver, accountService, collectorService)
+	activeHoldReader, err := activeHoldReaderForCredits(creditsConfig)
+	if err != nil {
+		return nil, err
+	}
+	creditLimitService, err := creditlimit.NewService(creditlimit.Config{
+		Client: db, BalanceQuerier: balanceQuerier, AccountService: accountResolver, AccountLocker: accountService,
+		ActiveHoldReader: activeHoldReader,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create credit limit service: %w", err)
+	}
+	flatFeeHandler := NewChargesFlatFeeHandler(ledgerService, balanceQuerier, accountResolver, accountService, collectorService, creditLimitService)
+	usageBasedHandler := NewChargesUsageBasedHandler(ledgerService, balanceQuerier, accountResolver, accountService, collectorService, creditLimitService)
 	creditPurchaseHandler, err := NewChargesCreditPurchaseHandler(
 		ledgerService,
 		balanceQuerier,
@@ -581,4 +595,11 @@ func newChargesRegistry(
 		CreditPurchaseService: creditPurchaseSvc,
 		RecognizerService:     recognizerService,
 	}, nil
+}
+
+func activeHoldReaderForCredits(creditsConfig config.CreditsConfiguration) (creditlimit.ActiveHoldReader, error) {
+	if creditsConfig.ReservationsEnabled {
+		return nil, fmt.Errorf("reservation persistence is enabled but no durable active hold reader is wired")
+	}
+	return creditlimit.NoActiveHoldReader{}, nil
 }

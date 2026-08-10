@@ -41,6 +41,22 @@ func (c *accrualCollector) collectCustomerFBOSelections(
 	return selectFBOSources(sources, target), nil
 }
 
+func (c *accrualCollector) getCollectableAmount(ctx context.Context, input GetCollectableAmountInput) (alpacadecimal.Decimal, error) {
+	sources, err := c.listCustomerFBOSources(ctx, input.CustomerID, input.Currency, input.FeatureKey, input.AsOf)
+	if err != nil {
+		return alpacadecimal.Zero, err
+	}
+
+	total := alpacadecimal.Zero
+	for _, source := range sources {
+		if source.available.IsPositive() {
+			total = total.Add(source.available)
+		}
+	}
+
+	return total, nil
+}
+
 func (c *accrualCollector) listCustomerFBOSources(
 	ctx context.Context,
 	customerID customer.CustomerID,

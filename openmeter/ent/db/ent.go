@@ -73,12 +73,17 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditcharge"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -246,12 +251,17 @@ func checkColumn(t, c string) error {
 			commerceorderline.Table:                                commerceorderline.ValidColumn,
 			commerceoutbox.Table:                                   commerceoutbox.ValidColumn,
 			commerceproduct.Table:                                  commerceproduct.ValidColumn,
+			creditcharge.Table:                                     creditcharge.ValidColumn,
 			creditrealizationlineage.Table:                         creditrealizationlineage.ValidColumn,
 			creditrealizationlineagesegment.Table:                  creditrealizationlineagesegment.ValidColumn,
+			creditreservation.Table:                                creditreservation.ValidColumn,
+			creditreservationcommand.Table:                         creditreservationcommand.ValidColumn,
+			creditreservationoutbox.Table:                          creditreservationoutbox.ValidColumn,
 			currencycostbasis.Table:                                currencycostbasis.ValidColumn,
 			customcurrency.Table:                                   customcurrency.ValidColumn,
 			customer.Table:                                         customer.ValidColumn,
 			customerairatepackage.Table:                            customerairatepackage.ValidColumn,
+			customercreditlimit.Table:                              customercreditlimit.ValidColumn,
 			customersubjects.Table:                                 customersubjects.ValidColumn,
 			entitlement.Table:                                      entitlement.ValidColumn,
 			externalinvoiceref.Table:                               externalinvoiceref.ValidColumn,

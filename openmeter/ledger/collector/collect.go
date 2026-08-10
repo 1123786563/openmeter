@@ -46,9 +46,16 @@ func (c *accrualCollector) collect(ctx context.Context, input CollectToAccruedIn
 		}
 		inputs := resolved.inputs
 
-		// Credit-only: if the wallet didn't cover the full accrual, issue advance and
-		// move that slice through the advance-to-accrued path.
-		if shortfall := input.Amount.Sub(collectedInputs(inputs).collectedFBOAmount()); c.shouldAdvanceShortfall(input, shortfall) {
+		// Credit-only can issue an advance only when its caller resolved and
+		// explicitly supplied a remaining enterprise allowance.
+		if shortfall := input.Amount.Sub(collectedInputs(inputs).collectedFBOAmount()); shortfall.IsPositive() && input.SettlementMode == productcatalog.CreditOnlySettlementMode {
+			if input.ReceivableLimit == nil {
+				return nil, ErrInsufficientCredit
+			}
+			if shortfall.GreaterThan(*input.ReceivableLimit) {
+				return nil, ErrCreditLimitExceeded
+			}
+
 			advanceInputs, err := c.resolveAdvanceInputs(ctx, input, shortfall)
 			if err != nil {
 				return nil, err
@@ -220,10 +227,6 @@ func (c *accrualCollector) resolveAdvanceInputs(ctx context.Context, input Colle
 	}
 
 	return inputs, nil
-}
-
-func (c *accrualCollector) shouldAdvanceShortfall(input CollectToAccruedInput, shortfall alpacadecimal.Decimal) bool {
-	return input.SettlementMode == productcatalog.CreditOnlySettlementMode && shortfall.IsPositive()
 }
 
 func (c *accrualCollector) resolutionScope(input CollectToAccruedInput) transactions.ResolutionScope {

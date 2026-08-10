@@ -18,6 +18,7 @@ import "./governance/index.tsp";
 import "./invoices/index.tsp";
 import "./aiusage/index.tsp";
 import "./commerce/index.tsp";
+import "./creditreservations/index.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;
@@ -237,6 +238,15 @@ interface AIUsageCustomerCreditBalanceEndpoints
 @tag(Shared.AIUsageTag)
 interface AIUsageCustomerCreditTransactionEndpoints
   extends AIUsage.CreditTransactionOperations {}
+
+@route("/credit-reservations")
+@tag(Shared.BillingTag)
+interface CreditReservationEndpoints
+  extends CreditReservations.CreditReservationOperations {}
+
+@route("/credit-charges")
+@tag(Shared.BillingTag)
+interface CreditChargeEndpoints extends CreditReservations.CreditChargeOperations {}
 
 @route("/customers/{customerId}/wallet")
 @tag(Shared.CommerceTag)

@@ -15,6 +15,7 @@ import "./tax/index.tsp";
 import "./defaults/index.tsp";
 import "./governance/index.tsp";
 import "./invoices/index.tsp";
+import "./creditreservations/index.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.OpenAPI;
@@ -209,6 +210,15 @@ interface OrganizationDefaultTaxCodesEndpoints
 @route("/openmeter/governance")
 @tag(Shared.GovernanceTag)
 interface GovernanceEndpoints extends Governance.GovernanceOperations {}
+
+@route("/credit-reservations")
+@tag(Shared.BillingTag)
+interface CreditReservationEndpoints
+  extends CreditReservations.CreditReservationOperations {}
+
+@route("/credit-charges")
+@tag(Shared.BillingTag)
+interface CreditChargeEndpoints extends CreditReservations.CreditChargeOperations {}
 
 /**
  * The system account access token is meant for automations and integrations that

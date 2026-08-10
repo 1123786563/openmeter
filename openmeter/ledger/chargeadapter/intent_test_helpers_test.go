@@ -1,12 +1,29 @@
 package chargeadapter_test
 
 import (
+	"context"
 	"testing"
+
+	"github.com/alpacahq/alpacadecimal"
 
 	chargeflatfee "github.com/openmeterio/openmeter/openmeter/billing/charges/flatfee"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/meta"
 	chargeusagebased "github.com/openmeterio/openmeter/openmeter/billing/charges/usagebased"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 )
+
+type allowanceResolverForTest struct{ remaining *alpacadecimal.Decimal }
+
+func (r allowanceResolverForTest) Remaining(context.Context, creditlimit.RemainingInput) (*alpacadecimal.Decimal, error) {
+	return r.remaining, nil
+}
+
+func generousAllowanceForTest() creditlimit.AllowanceResolver {
+	remaining := alpacadecimal.NewFromInt(1_000_000)
+	return allowanceResolverForTest{remaining: &remaining}
+}
+
+func noActiveLimitForTest() creditlimit.AllowanceResolver { return creditlimit.NoopAllowanceResolver{} }
 
 func editFlatFeeBaseIntentForTest(t testing.TB, charge *chargeflatfee.Charge, edit func(*chargeflatfee.Intent)) {
 	t.Helper()

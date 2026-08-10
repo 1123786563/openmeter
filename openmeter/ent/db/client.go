@@ -74,12 +74,17 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorderline"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditcharge"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineage"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/creditrealizationlineagesegment"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationcommand"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/creditreservationoutbox"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/currencycostbasis"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customcurrency"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customer"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customerairatepackage"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/customercreditlimit"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/customersubjects"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/externalinvoiceref"
@@ -252,10 +257,18 @@ type Client struct {
 	CommerceOutbox *CommerceOutboxClient
 	// CommerceProduct is the client for interacting with the CommerceProduct builders.
 	CommerceProduct *CommerceProductClient
+	// CreditCharge is the client for interacting with the CreditCharge builders.
+	CreditCharge *CreditChargeClient
 	// CreditRealizationLineage is the client for interacting with the CreditRealizationLineage builders.
 	CreditRealizationLineage *CreditRealizationLineageClient
 	// CreditRealizationLineageSegment is the client for interacting with the CreditRealizationLineageSegment builders.
 	CreditRealizationLineageSegment *CreditRealizationLineageSegmentClient
+	// CreditReservation is the client for interacting with the CreditReservation builders.
+	CreditReservation *CreditReservationClient
+	// CreditReservationCommand is the client for interacting with the CreditReservationCommand builders.
+	CreditReservationCommand *CreditReservationCommandClient
+	// CreditReservationOutbox is the client for interacting with the CreditReservationOutbox builders.
+	CreditReservationOutbox *CreditReservationOutboxClient
 	// CurrencyCostBasis is the client for interacting with the CurrencyCostBasis builders.
 	CurrencyCostBasis *CurrencyCostBasisClient
 	// CustomCurrency is the client for interacting with the CustomCurrency builders.
@@ -264,6 +277,8 @@ type Client struct {
 	Customer *CustomerClient
 	// CustomerAIRatePackage is the client for interacting with the CustomerAIRatePackage builders.
 	CustomerAIRatePackage *CustomerAIRatePackageClient
+	// CustomerCreditLimit is the client for interacting with the CustomerCreditLimit builders.
+	CustomerCreditLimit *CustomerCreditLimitClient
 	// CustomerSubjects is the client for interacting with the CustomerSubjects builders.
 	CustomerSubjects *CustomerSubjectsClient
 	// Entitlement is the client for interacting with the Entitlement builders.
@@ -421,12 +436,17 @@ func (c *Client) init() {
 	c.CommerceOrderLine = NewCommerceOrderLineClient(c.config)
 	c.CommerceOutbox = NewCommerceOutboxClient(c.config)
 	c.CommerceProduct = NewCommerceProductClient(c.config)
+	c.CreditCharge = NewCreditChargeClient(c.config)
 	c.CreditRealizationLineage = NewCreditRealizationLineageClient(c.config)
 	c.CreditRealizationLineageSegment = NewCreditRealizationLineageSegmentClient(c.config)
+	c.CreditReservation = NewCreditReservationClient(c.config)
+	c.CreditReservationCommand = NewCreditReservationCommandClient(c.config)
+	c.CreditReservationOutbox = NewCreditReservationOutboxClient(c.config)
 	c.CurrencyCostBasis = NewCurrencyCostBasisClient(c.config)
 	c.CustomCurrency = NewCustomCurrencyClient(c.config)
 	c.Customer = NewCustomerClient(c.config)
 	c.CustomerAIRatePackage = NewCustomerAIRatePackageClient(c.config)
+	c.CustomerCreditLimit = NewCustomerCreditLimitClient(c.config)
 	c.CustomerSubjects = NewCustomerSubjectsClient(c.config)
 	c.Entitlement = NewEntitlementClient(c.config)
 	c.ExternalInvoiceRef = NewExternalInvoiceRefClient(c.config)
@@ -622,12 +642,17 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CommerceOrderLine:                                NewCommerceOrderLineClient(cfg),
 		CommerceOutbox:                                   NewCommerceOutboxClient(cfg),
 		CommerceProduct:                                  NewCommerceProductClient(cfg),
+		CreditCharge:                                     NewCreditChargeClient(cfg),
 		CreditRealizationLineage:                         NewCreditRealizationLineageClient(cfg),
 		CreditRealizationLineageSegment:                  NewCreditRealizationLineageSegmentClient(cfg),
+		CreditReservation:                                NewCreditReservationClient(cfg),
+		CreditReservationCommand:                         NewCreditReservationCommandClient(cfg),
+		CreditReservationOutbox:                          NewCreditReservationOutboxClient(cfg),
 		CurrencyCostBasis:                                NewCurrencyCostBasisClient(cfg),
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
 		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
+		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
 		ExternalInvoiceRef:                               NewExternalInvoiceRefClient(cfg),
@@ -750,12 +775,17 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CommerceOrderLine:                                NewCommerceOrderLineClient(cfg),
 		CommerceOutbox:                                   NewCommerceOutboxClient(cfg),
 		CommerceProduct:                                  NewCommerceProductClient(cfg),
+		CreditCharge:                                     NewCreditChargeClient(cfg),
 		CreditRealizationLineage:                         NewCreditRealizationLineageClient(cfg),
 		CreditRealizationLineageSegment:                  NewCreditRealizationLineageSegmentClient(cfg),
+		CreditReservation:                                NewCreditReservationClient(cfg),
+		CreditReservationCommand:                         NewCreditReservationCommandClient(cfg),
+		CreditReservationOutbox:                          NewCreditReservationOutboxClient(cfg),
 		CurrencyCostBasis:                                NewCurrencyCostBasisClient(cfg),
 		CustomCurrency:                                   NewCustomCurrencyClient(cfg),
 		Customer:                                         NewCustomerClient(cfg),
 		CustomerAIRatePackage:                            NewCustomerAIRatePackageClient(cfg),
+		CustomerCreditLimit:                              NewCustomerCreditLimitClient(cfg),
 		CustomerSubjects:                                 NewCustomerSubjectsClient(cfg),
 		Entitlement:                                      NewEntitlementClient(cfg),
 		ExternalInvoiceRef:                               NewExternalInvoiceRefClient(cfg),
@@ -851,21 +881,22 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ChargeUsageBasedRunCreditAllocations, c.ChargeUsageBasedRunDetailedLine,
 		c.ChargeUsageBasedRunInvoicedUsage, c.ChargeUsageBasedRunPayment,
 		c.ChargeUsageBasedRuns, c.CommerceOrder, c.CommerceOrderLine, c.CommerceOutbox,
-		c.CommerceProduct, c.CreditRealizationLineage,
-		c.CreditRealizationLineageSegment, c.CurrencyCostBasis, c.CustomCurrency,
-		c.Customer, c.CustomerAIRatePackage, c.CustomerSubjects, c.Entitlement,
-		c.ExternalInvoiceRef, c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice,
-		c.LedgerAccount, c.LedgerBreakageRecord, c.LedgerCreditVoidRecord,
-		c.LedgerCustomerAccount, c.LedgerEntry, c.LedgerSubAccount,
-		c.LedgerSubAccountRoute, c.LedgerTransaction, c.LedgerTransactionGroup,
-		c.ManualResourceCost, c.Meter, c.NotificationChannel, c.NotificationEvent,
-		c.NotificationEventDeliveryStatus, c.NotificationRule, c.OfflinePayment,
-		c.OrganizationDefaultTaxCodes, c.PaymentAttempt, c.PaymentFact, c.Plan,
-		c.PlanAddon, c.PlanPhase, c.PlanRateCard, c.ReceivableAccount,
-		c.ReceivablePeriod, c.RefundFact, c.RefundRequest, c.Subject, c.Subscription,
-		c.SubscriptionAddon, c.SubscriptionAddonQuantity,
-		c.SubscriptionBillingSyncState, c.SubscriptionItem, c.SubscriptionPhase,
-		c.TaxCode, c.UsageReset,
+		c.CommerceProduct, c.CreditCharge, c.CreditRealizationLineage,
+		c.CreditRealizationLineageSegment, c.CreditReservation,
+		c.CreditReservationCommand, c.CreditReservationOutbox, c.CurrencyCostBasis,
+		c.CustomCurrency, c.Customer, c.CustomerAIRatePackage, c.CustomerCreditLimit,
+		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
+		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
+		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
+		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
+		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
+		c.NotificationChannel, c.NotificationEvent, c.NotificationEventDeliveryStatus,
+		c.NotificationRule, c.OfflinePayment, c.OrganizationDefaultTaxCodes,
+		c.PaymentAttempt, c.PaymentFact, c.Plan, c.PlanAddon, c.PlanPhase,
+		c.PlanRateCard, c.ReceivableAccount, c.ReceivablePeriod, c.RefundFact,
+		c.RefundRequest, c.Subject, c.Subscription, c.SubscriptionAddon,
+		c.SubscriptionAddonQuantity, c.SubscriptionBillingSyncState,
+		c.SubscriptionItem, c.SubscriptionPhase, c.TaxCode, c.UsageReset,
 	} {
 		n.Use(hooks...)
 	}
@@ -898,11 +929,12 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ChargeUsageBasedRunCreditAllocations, c.ChargeUsageBasedRunDetailedLine,
 		c.ChargeUsageBasedRunInvoicedUsage, c.ChargeUsageBasedRunPayment,
 		c.ChargeUsageBasedRuns, c.ChargesSearchV1, c.CommerceOrder,
-		c.CommerceOrderLine, c.CommerceOutbox, c.CommerceProduct,
+		c.CommerceOrderLine, c.CommerceOutbox, c.CommerceProduct, c.CreditCharge,
 		c.CreditRealizationLineage, c.CreditRealizationLineageSegment,
+		c.CreditReservation, c.CreditReservationCommand, c.CreditReservationOutbox,
 		c.CurrencyCostBasis, c.CustomCurrency, c.Customer, c.CustomerAIRatePackage,
-		c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef, c.Feature,
-		c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
+		c.CustomerCreditLimit, c.CustomerSubjects, c.Entitlement, c.ExternalInvoiceRef,
+		c.Feature, c.Fulfillment, c.Grant, c.LLMCostPrice, c.LedgerAccount,
 		c.LedgerBreakageRecord, c.LedgerCreditVoidRecord, c.LedgerCustomerAccount,
 		c.LedgerEntry, c.LedgerSubAccount, c.LedgerSubAccountRoute,
 		c.LedgerTransaction, c.LedgerTransactionGroup, c.ManualResourceCost, c.Meter,
@@ -1039,10 +1071,18 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CommerceOutbox.mutate(ctx, m)
 	case *CommerceProductMutation:
 		return c.CommerceProduct.mutate(ctx, m)
+	case *CreditChargeMutation:
+		return c.CreditCharge.mutate(ctx, m)
 	case *CreditRealizationLineageMutation:
 		return c.CreditRealizationLineage.mutate(ctx, m)
 	case *CreditRealizationLineageSegmentMutation:
 		return c.CreditRealizationLineageSegment.mutate(ctx, m)
+	case *CreditReservationMutation:
+		return c.CreditReservation.mutate(ctx, m)
+	case *CreditReservationCommandMutation:
+		return c.CreditReservationCommand.mutate(ctx, m)
+	case *CreditReservationOutboxMutation:
+		return c.CreditReservationOutbox.mutate(ctx, m)
 	case *CurrencyCostBasisMutation:
 		return c.CurrencyCostBasis.mutate(ctx, m)
 	case *CustomCurrencyMutation:
@@ -1051,6 +1091,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Customer.mutate(ctx, m)
 	case *CustomerAIRatePackageMutation:
 		return c.CustomerAIRatePackage.mutate(ctx, m)
+	case *CustomerCreditLimitMutation:
+		return c.CustomerCreditLimit.mutate(ctx, m)
 	case *CustomerSubjectsMutation:
 		return c.CustomerSubjects.mutate(ctx, m)
 	case *EntitlementMutation:
@@ -12123,6 +12165,139 @@ func (c *CommerceProductClient) mutate(ctx context.Context, m *CommerceProductMu
 	}
 }
 
+// CreditChargeClient is a client for the CreditCharge schema.
+type CreditChargeClient struct {
+	config
+}
+
+// NewCreditChargeClient returns a client for the CreditCharge from the given config.
+func NewCreditChargeClient(c config) *CreditChargeClient {
+	return &CreditChargeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `creditcharge.Hooks(f(g(h())))`.
+func (c *CreditChargeClient) Use(hooks ...Hook) {
+	c.hooks.CreditCharge = append(c.hooks.CreditCharge, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `creditcharge.Intercept(f(g(h())))`.
+func (c *CreditChargeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CreditCharge = append(c.inters.CreditCharge, interceptors...)
+}
+
+// Create returns a builder for creating a CreditCharge entity.
+func (c *CreditChargeClient) Create() *CreditChargeCreate {
+	mutation := newCreditChargeMutation(c.config, OpCreate)
+	return &CreditChargeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CreditCharge entities.
+func (c *CreditChargeClient) CreateBulk(builders ...*CreditChargeCreate) *CreditChargeCreateBulk {
+	return &CreditChargeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CreditChargeClient) MapCreateBulk(slice any, setFunc func(*CreditChargeCreate, int)) *CreditChargeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CreditChargeCreateBulk{err: fmt.Errorf("calling to CreditChargeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CreditChargeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CreditChargeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CreditCharge.
+func (c *CreditChargeClient) Update() *CreditChargeUpdate {
+	mutation := newCreditChargeMutation(c.config, OpUpdate)
+	return &CreditChargeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CreditChargeClient) UpdateOne(_m *CreditCharge) *CreditChargeUpdateOne {
+	mutation := newCreditChargeMutation(c.config, OpUpdateOne, withCreditCharge(_m))
+	return &CreditChargeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CreditChargeClient) UpdateOneID(id string) *CreditChargeUpdateOne {
+	mutation := newCreditChargeMutation(c.config, OpUpdateOne, withCreditChargeID(id))
+	return &CreditChargeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CreditCharge.
+func (c *CreditChargeClient) Delete() *CreditChargeDelete {
+	mutation := newCreditChargeMutation(c.config, OpDelete)
+	return &CreditChargeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CreditChargeClient) DeleteOne(_m *CreditCharge) *CreditChargeDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CreditChargeClient) DeleteOneID(id string) *CreditChargeDeleteOne {
+	builder := c.Delete().Where(creditcharge.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CreditChargeDeleteOne{builder}
+}
+
+// Query returns a query builder for CreditCharge.
+func (c *CreditChargeClient) Query() *CreditChargeQuery {
+	return &CreditChargeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCreditCharge},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CreditCharge entity by its id.
+func (c *CreditChargeClient) Get(ctx context.Context, id string) (*CreditCharge, error) {
+	return c.Query().Where(creditcharge.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CreditChargeClient) GetX(ctx context.Context, id string) *CreditCharge {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CreditChargeClient) Hooks() []Hook {
+	return c.hooks.CreditCharge
+}
+
+// Interceptors returns the client interceptors.
+func (c *CreditChargeClient) Interceptors() []Interceptor {
+	return c.inters.CreditCharge
+}
+
+func (c *CreditChargeClient) mutate(ctx context.Context, m *CreditChargeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CreditChargeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CreditChargeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CreditChargeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CreditChargeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CreditCharge mutation op: %q", m.Op())
+	}
+}
+
 // CreditRealizationLineageClient is a client for the CreditRealizationLineage schema.
 type CreditRealizationLineageClient struct {
 	config
@@ -12434,6 +12609,405 @@ func (c *CreditRealizationLineageSegmentClient) mutate(ctx context.Context, m *C
 		return (&CreditRealizationLineageSegmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("db: unknown CreditRealizationLineageSegment mutation op: %q", m.Op())
+	}
+}
+
+// CreditReservationClient is a client for the CreditReservation schema.
+type CreditReservationClient struct {
+	config
+}
+
+// NewCreditReservationClient returns a client for the CreditReservation from the given config.
+func NewCreditReservationClient(c config) *CreditReservationClient {
+	return &CreditReservationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `creditreservation.Hooks(f(g(h())))`.
+func (c *CreditReservationClient) Use(hooks ...Hook) {
+	c.hooks.CreditReservation = append(c.hooks.CreditReservation, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `creditreservation.Intercept(f(g(h())))`.
+func (c *CreditReservationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CreditReservation = append(c.inters.CreditReservation, interceptors...)
+}
+
+// Create returns a builder for creating a CreditReservation entity.
+func (c *CreditReservationClient) Create() *CreditReservationCreate {
+	mutation := newCreditReservationMutation(c.config, OpCreate)
+	return &CreditReservationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CreditReservation entities.
+func (c *CreditReservationClient) CreateBulk(builders ...*CreditReservationCreate) *CreditReservationCreateBulk {
+	return &CreditReservationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CreditReservationClient) MapCreateBulk(slice any, setFunc func(*CreditReservationCreate, int)) *CreditReservationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CreditReservationCreateBulk{err: fmt.Errorf("calling to CreditReservationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CreditReservationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CreditReservationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CreditReservation.
+func (c *CreditReservationClient) Update() *CreditReservationUpdate {
+	mutation := newCreditReservationMutation(c.config, OpUpdate)
+	return &CreditReservationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CreditReservationClient) UpdateOne(_m *CreditReservation) *CreditReservationUpdateOne {
+	mutation := newCreditReservationMutation(c.config, OpUpdateOne, withCreditReservation(_m))
+	return &CreditReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CreditReservationClient) UpdateOneID(id string) *CreditReservationUpdateOne {
+	mutation := newCreditReservationMutation(c.config, OpUpdateOne, withCreditReservationID(id))
+	return &CreditReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CreditReservation.
+func (c *CreditReservationClient) Delete() *CreditReservationDelete {
+	mutation := newCreditReservationMutation(c.config, OpDelete)
+	return &CreditReservationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CreditReservationClient) DeleteOne(_m *CreditReservation) *CreditReservationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CreditReservationClient) DeleteOneID(id string) *CreditReservationDeleteOne {
+	builder := c.Delete().Where(creditreservation.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CreditReservationDeleteOne{builder}
+}
+
+// Query returns a query builder for CreditReservation.
+func (c *CreditReservationClient) Query() *CreditReservationQuery {
+	return &CreditReservationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCreditReservation},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CreditReservation entity by its id.
+func (c *CreditReservationClient) Get(ctx context.Context, id string) (*CreditReservation, error) {
+	return c.Query().Where(creditreservation.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CreditReservationClient) GetX(ctx context.Context, id string) *CreditReservation {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CreditReservationClient) Hooks() []Hook {
+	return c.hooks.CreditReservation
+}
+
+// Interceptors returns the client interceptors.
+func (c *CreditReservationClient) Interceptors() []Interceptor {
+	return c.inters.CreditReservation
+}
+
+func (c *CreditReservationClient) mutate(ctx context.Context, m *CreditReservationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CreditReservationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CreditReservationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CreditReservationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CreditReservationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CreditReservation mutation op: %q", m.Op())
+	}
+}
+
+// CreditReservationCommandClient is a client for the CreditReservationCommand schema.
+type CreditReservationCommandClient struct {
+	config
+}
+
+// NewCreditReservationCommandClient returns a client for the CreditReservationCommand from the given config.
+func NewCreditReservationCommandClient(c config) *CreditReservationCommandClient {
+	return &CreditReservationCommandClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `creditreservationcommand.Hooks(f(g(h())))`.
+func (c *CreditReservationCommandClient) Use(hooks ...Hook) {
+	c.hooks.CreditReservationCommand = append(c.hooks.CreditReservationCommand, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `creditreservationcommand.Intercept(f(g(h())))`.
+func (c *CreditReservationCommandClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CreditReservationCommand = append(c.inters.CreditReservationCommand, interceptors...)
+}
+
+// Create returns a builder for creating a CreditReservationCommand entity.
+func (c *CreditReservationCommandClient) Create() *CreditReservationCommandCreate {
+	mutation := newCreditReservationCommandMutation(c.config, OpCreate)
+	return &CreditReservationCommandCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CreditReservationCommand entities.
+func (c *CreditReservationCommandClient) CreateBulk(builders ...*CreditReservationCommandCreate) *CreditReservationCommandCreateBulk {
+	return &CreditReservationCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CreditReservationCommandClient) MapCreateBulk(slice any, setFunc func(*CreditReservationCommandCreate, int)) *CreditReservationCommandCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CreditReservationCommandCreateBulk{err: fmt.Errorf("calling to CreditReservationCommandClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CreditReservationCommandCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CreditReservationCommandCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CreditReservationCommand.
+func (c *CreditReservationCommandClient) Update() *CreditReservationCommandUpdate {
+	mutation := newCreditReservationCommandMutation(c.config, OpUpdate)
+	return &CreditReservationCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CreditReservationCommandClient) UpdateOne(_m *CreditReservationCommand) *CreditReservationCommandUpdateOne {
+	mutation := newCreditReservationCommandMutation(c.config, OpUpdateOne, withCreditReservationCommand(_m))
+	return &CreditReservationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CreditReservationCommandClient) UpdateOneID(id string) *CreditReservationCommandUpdateOne {
+	mutation := newCreditReservationCommandMutation(c.config, OpUpdateOne, withCreditReservationCommandID(id))
+	return &CreditReservationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CreditReservationCommand.
+func (c *CreditReservationCommandClient) Delete() *CreditReservationCommandDelete {
+	mutation := newCreditReservationCommandMutation(c.config, OpDelete)
+	return &CreditReservationCommandDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CreditReservationCommandClient) DeleteOne(_m *CreditReservationCommand) *CreditReservationCommandDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CreditReservationCommandClient) DeleteOneID(id string) *CreditReservationCommandDeleteOne {
+	builder := c.Delete().Where(creditreservationcommand.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CreditReservationCommandDeleteOne{builder}
+}
+
+// Query returns a query builder for CreditReservationCommand.
+func (c *CreditReservationCommandClient) Query() *CreditReservationCommandQuery {
+	return &CreditReservationCommandQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCreditReservationCommand},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CreditReservationCommand entity by its id.
+func (c *CreditReservationCommandClient) Get(ctx context.Context, id string) (*CreditReservationCommand, error) {
+	return c.Query().Where(creditreservationcommand.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CreditReservationCommandClient) GetX(ctx context.Context, id string) *CreditReservationCommand {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CreditReservationCommandClient) Hooks() []Hook {
+	return c.hooks.CreditReservationCommand
+}
+
+// Interceptors returns the client interceptors.
+func (c *CreditReservationCommandClient) Interceptors() []Interceptor {
+	return c.inters.CreditReservationCommand
+}
+
+func (c *CreditReservationCommandClient) mutate(ctx context.Context, m *CreditReservationCommandMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CreditReservationCommandCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CreditReservationCommandUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CreditReservationCommandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CreditReservationCommandDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CreditReservationCommand mutation op: %q", m.Op())
+	}
+}
+
+// CreditReservationOutboxClient is a client for the CreditReservationOutbox schema.
+type CreditReservationOutboxClient struct {
+	config
+}
+
+// NewCreditReservationOutboxClient returns a client for the CreditReservationOutbox from the given config.
+func NewCreditReservationOutboxClient(c config) *CreditReservationOutboxClient {
+	return &CreditReservationOutboxClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `creditreservationoutbox.Hooks(f(g(h())))`.
+func (c *CreditReservationOutboxClient) Use(hooks ...Hook) {
+	c.hooks.CreditReservationOutbox = append(c.hooks.CreditReservationOutbox, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `creditreservationoutbox.Intercept(f(g(h())))`.
+func (c *CreditReservationOutboxClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CreditReservationOutbox = append(c.inters.CreditReservationOutbox, interceptors...)
+}
+
+// Create returns a builder for creating a CreditReservationOutbox entity.
+func (c *CreditReservationOutboxClient) Create() *CreditReservationOutboxCreate {
+	mutation := newCreditReservationOutboxMutation(c.config, OpCreate)
+	return &CreditReservationOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CreditReservationOutbox entities.
+func (c *CreditReservationOutboxClient) CreateBulk(builders ...*CreditReservationOutboxCreate) *CreditReservationOutboxCreateBulk {
+	return &CreditReservationOutboxCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CreditReservationOutboxClient) MapCreateBulk(slice any, setFunc func(*CreditReservationOutboxCreate, int)) *CreditReservationOutboxCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CreditReservationOutboxCreateBulk{err: fmt.Errorf("calling to CreditReservationOutboxClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CreditReservationOutboxCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CreditReservationOutboxCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CreditReservationOutbox.
+func (c *CreditReservationOutboxClient) Update() *CreditReservationOutboxUpdate {
+	mutation := newCreditReservationOutboxMutation(c.config, OpUpdate)
+	return &CreditReservationOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CreditReservationOutboxClient) UpdateOne(_m *CreditReservationOutbox) *CreditReservationOutboxUpdateOne {
+	mutation := newCreditReservationOutboxMutation(c.config, OpUpdateOne, withCreditReservationOutbox(_m))
+	return &CreditReservationOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CreditReservationOutboxClient) UpdateOneID(id string) *CreditReservationOutboxUpdateOne {
+	mutation := newCreditReservationOutboxMutation(c.config, OpUpdateOne, withCreditReservationOutboxID(id))
+	return &CreditReservationOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CreditReservationOutbox.
+func (c *CreditReservationOutboxClient) Delete() *CreditReservationOutboxDelete {
+	mutation := newCreditReservationOutboxMutation(c.config, OpDelete)
+	return &CreditReservationOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CreditReservationOutboxClient) DeleteOne(_m *CreditReservationOutbox) *CreditReservationOutboxDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CreditReservationOutboxClient) DeleteOneID(id string) *CreditReservationOutboxDeleteOne {
+	builder := c.Delete().Where(creditreservationoutbox.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CreditReservationOutboxDeleteOne{builder}
+}
+
+// Query returns a query builder for CreditReservationOutbox.
+func (c *CreditReservationOutboxClient) Query() *CreditReservationOutboxQuery {
+	return &CreditReservationOutboxQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCreditReservationOutbox},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CreditReservationOutbox entity by its id.
+func (c *CreditReservationOutboxClient) Get(ctx context.Context, id string) (*CreditReservationOutbox, error) {
+	return c.Query().Where(creditreservationoutbox.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CreditReservationOutboxClient) GetX(ctx context.Context, id string) *CreditReservationOutbox {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CreditReservationOutboxClient) Hooks() []Hook {
+	return c.hooks.CreditReservationOutbox
+}
+
+// Interceptors returns the client interceptors.
+func (c *CreditReservationOutboxClient) Interceptors() []Interceptor {
+	return c.inters.CreditReservationOutbox
+}
+
+func (c *CreditReservationOutboxClient) mutate(ctx context.Context, m *CreditReservationOutboxMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CreditReservationOutboxCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CreditReservationOutboxUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CreditReservationOutboxUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CreditReservationOutboxDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CreditReservationOutbox mutation op: %q", m.Op())
 	}
 }
 
@@ -13254,6 +13828,139 @@ func (c *CustomerAIRatePackageClient) mutate(ctx context.Context, m *CustomerAIR
 		return (&CustomerAIRatePackageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("db: unknown CustomerAIRatePackage mutation op: %q", m.Op())
+	}
+}
+
+// CustomerCreditLimitClient is a client for the CustomerCreditLimit schema.
+type CustomerCreditLimitClient struct {
+	config
+}
+
+// NewCustomerCreditLimitClient returns a client for the CustomerCreditLimit from the given config.
+func NewCustomerCreditLimitClient(c config) *CustomerCreditLimitClient {
+	return &CustomerCreditLimitClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `customercreditlimit.Hooks(f(g(h())))`.
+func (c *CustomerCreditLimitClient) Use(hooks ...Hook) {
+	c.hooks.CustomerCreditLimit = append(c.hooks.CustomerCreditLimit, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `customercreditlimit.Intercept(f(g(h())))`.
+func (c *CustomerCreditLimitClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CustomerCreditLimit = append(c.inters.CustomerCreditLimit, interceptors...)
+}
+
+// Create returns a builder for creating a CustomerCreditLimit entity.
+func (c *CustomerCreditLimitClient) Create() *CustomerCreditLimitCreate {
+	mutation := newCustomerCreditLimitMutation(c.config, OpCreate)
+	return &CustomerCreditLimitCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of CustomerCreditLimit entities.
+func (c *CustomerCreditLimitClient) CreateBulk(builders ...*CustomerCreditLimitCreate) *CustomerCreditLimitCreateBulk {
+	return &CustomerCreditLimitCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *CustomerCreditLimitClient) MapCreateBulk(slice any, setFunc func(*CustomerCreditLimitCreate, int)) *CustomerCreditLimitCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &CustomerCreditLimitCreateBulk{err: fmt.Errorf("calling to CustomerCreditLimitClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*CustomerCreditLimitCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &CustomerCreditLimitCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Update() *CustomerCreditLimitUpdate {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdate)
+	return &CustomerCreditLimitUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CustomerCreditLimitClient) UpdateOne(_m *CustomerCreditLimit) *CustomerCreditLimitUpdateOne {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdateOne, withCustomerCreditLimit(_m))
+	return &CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CustomerCreditLimitClient) UpdateOneID(id string) *CustomerCreditLimitUpdateOne {
+	mutation := newCustomerCreditLimitMutation(c.config, OpUpdateOne, withCustomerCreditLimitID(id))
+	return &CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Delete() *CustomerCreditLimitDelete {
+	mutation := newCustomerCreditLimitMutation(c.config, OpDelete)
+	return &CustomerCreditLimitDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CustomerCreditLimitClient) DeleteOne(_m *CustomerCreditLimit) *CustomerCreditLimitDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CustomerCreditLimitClient) DeleteOneID(id string) *CustomerCreditLimitDeleteOne {
+	builder := c.Delete().Where(customercreditlimit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CustomerCreditLimitDeleteOne{builder}
+}
+
+// Query returns a query builder for CustomerCreditLimit.
+func (c *CustomerCreditLimitClient) Query() *CustomerCreditLimitQuery {
+	return &CustomerCreditLimitQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeCustomerCreditLimit},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a CustomerCreditLimit entity by its id.
+func (c *CustomerCreditLimitClient) Get(ctx context.Context, id string) (*CustomerCreditLimit, error) {
+	return c.Query().Where(customercreditlimit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CustomerCreditLimitClient) GetX(ctx context.Context, id string) *CustomerCreditLimit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CustomerCreditLimitClient) Hooks() []Hook {
+	return c.hooks.CustomerCreditLimit
+}
+
+// Interceptors returns the client interceptors.
+func (c *CustomerCreditLimitClient) Interceptors() []Interceptor {
+	return c.inters.CustomerCreditLimit
+}
+
+func (c *CustomerCreditLimitClient) mutate(ctx context.Context, m *CustomerCreditLimitMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CustomerCreditLimitCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CustomerCreditLimitUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CustomerCreditLimitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CustomerCreditLimitDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("db: unknown CustomerCreditLimit mutation op: %q", m.Op())
 	}
 }
 
@@ -21063,19 +21770,20 @@ type (
 		ChargeUsageBasedOverride, ChargeUsageBasedRunCreditAllocations,
 		ChargeUsageBasedRunDetailedLine, ChargeUsageBasedRunInvoicedUsage,
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, CommerceOrder,
-		CommerceOrderLine, CommerceOutbox, CommerceProduct, CreditRealizationLineage,
-		CreditRealizationLineageSegment, CurrencyCostBasis, CustomCurrency, Customer,
-		CustomerAIRatePackage, CustomerSubjects, Entitlement, ExternalInvoiceRef,
-		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
-		LedgerCreditVoidRecord, LedgerCustomerAccount, LedgerEntry, LedgerSubAccount,
-		LedgerSubAccountRoute, LedgerTransaction, LedgerTransactionGroup,
-		ManualResourceCost, Meter, NotificationChannel, NotificationEvent,
-		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
-		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
-		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
-		RefundRequest, Subject, Subscription, SubscriptionAddon,
-		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
-		SubscriptionPhase, TaxCode, UsageReset []ent.Hook
+		CommerceOrderLine, CommerceOutbox, CommerceProduct, CreditCharge,
+		CreditRealizationLineage, CreditRealizationLineageSegment, CreditReservation,
+		CreditReservationCommand, CreditReservationOutbox, CurrencyCostBasis,
+		CustomCurrency, Customer, CustomerAIRatePackage, CustomerCreditLimit,
+		CustomerSubjects, Entitlement, ExternalInvoiceRef, Feature, Fulfillment, Grant,
+		LLMCostPrice, LedgerAccount, LedgerBreakageRecord, LedgerCreditVoidRecord,
+		LedgerCustomerAccount, LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute,
+		LedgerTransaction, LedgerTransactionGroup, ManualResourceCost, Meter,
+		NotificationChannel, NotificationEvent, NotificationEventDeliveryStatus,
+		NotificationRule, OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt,
+		PaymentFact, Plan, PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount,
+		ReceivablePeriod, RefundFact, RefundRequest, Subject, Subscription,
+		SubscriptionAddon, SubscriptionAddonQuantity, SubscriptionBillingSyncState,
+		SubscriptionItem, SubscriptionPhase, TaxCode, UsageReset []ent.Hook
 	}
 	inters struct {
 		AIUsageAllocation, AIUsageBatch, AIUsageLineItem, AIUsageOutbox,
@@ -21099,16 +21807,18 @@ type (
 		ChargeUsageBasedRunDetailedLine, ChargeUsageBasedRunInvoicedUsage,
 		ChargeUsageBasedRunPayment, ChargeUsageBasedRuns, ChargesSearchV1,
 		CommerceOrder, CommerceOrderLine, CommerceOutbox, CommerceProduct,
-		CreditRealizationLineage, CreditRealizationLineageSegment, CurrencyCostBasis,
-		CustomCurrency, Customer, CustomerAIRatePackage, CustomerSubjects, Entitlement,
-		ExternalInvoiceRef, Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount,
-		LedgerBreakageRecord, LedgerCreditVoidRecord, LedgerCustomerAccount,
-		LedgerEntry, LedgerSubAccount, LedgerSubAccountRoute, LedgerTransaction,
-		LedgerTransactionGroup, ManualResourceCost, Meter, NotificationChannel,
-		NotificationEvent, NotificationEventDeliveryStatus, NotificationRule,
-		OfflinePayment, OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan,
-		PlanAddon, PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod,
-		RefundFact, RefundRequest, Subject, Subscription, SubscriptionAddon,
+		CreditCharge, CreditRealizationLineage, CreditRealizationLineageSegment,
+		CreditReservation, CreditReservationCommand, CreditReservationOutbox,
+		CurrencyCostBasis, CustomCurrency, Customer, CustomerAIRatePackage,
+		CustomerCreditLimit, CustomerSubjects, Entitlement, ExternalInvoiceRef,
+		Feature, Fulfillment, Grant, LLMCostPrice, LedgerAccount, LedgerBreakageRecord,
+		LedgerCreditVoidRecord, LedgerCustomerAccount, LedgerEntry, LedgerSubAccount,
+		LedgerSubAccountRoute, LedgerTransaction, LedgerTransactionGroup,
+		ManualResourceCost, Meter, NotificationChannel, NotificationEvent,
+		NotificationEventDeliveryStatus, NotificationRule, OfflinePayment,
+		OrganizationDefaultTaxCodes, PaymentAttempt, PaymentFact, Plan, PlanAddon,
+		PlanPhase, PlanRateCard, ReceivableAccount, ReceivablePeriod, RefundFact,
+		RefundRequest, Subject, Subscription, SubscriptionAddon,
 		SubscriptionAddonQuantity, SubscriptionBillingSyncState, SubscriptionItem,
 		SubscriptionPhase, TaxCode, UsageReset []ent.Interceptor
 	}

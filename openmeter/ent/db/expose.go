@@ -209,9 +209,17 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 
 		CommerceProduct: NewCommerceProductClient(config),
 
+		CreditCharge: NewCreditChargeClient(config),
+
 		CreditRealizationLineage: NewCreditRealizationLineageClient(config),
 
 		CreditRealizationLineageSegment: NewCreditRealizationLineageSegmentClient(config),
+
+		CreditReservation: NewCreditReservationClient(config),
+
+		CreditReservationCommand: NewCreditReservationCommandClient(config),
+
+		CreditReservationOutbox: NewCreditReservationOutboxClient(config),
 
 		CurrencyCostBasis: NewCurrencyCostBasisClient(config),
 
@@ -220,6 +228,8 @@ func NewTxClientFromRawConfig(ctx context.Context, cfg entutils.RawEntConfig) *T
 		Customer: NewCustomerClient(config),
 
 		CustomerAIRatePackage: NewCustomerAIRatePackageClient(config),
+
+		CustomerCreditLimit: NewCustomerCreditLimitClient(config),
 
 		CustomerSubjects: NewCustomerSubjectsClient(config),
 

@@ -2475,6 +2475,26 @@ func (e *CommerceProduct) GetDeletedAt() *time.Time {
 	return e.DeletedAt
 }
 
+func (e *CreditCharge) GetID() string {
+	return e.ID
+}
+
+func (e *CreditCharge) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CreditCharge) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *CreditCharge) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *CreditCharge) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
 func (e *CreditRealizationLineage) GetID() string {
 	return e.ID
 }
@@ -2485,6 +2505,42 @@ func (e *CreditRealizationLineage) GetNamespace() string {
 
 func (e *CreditRealizationLineageSegment) GetID() string {
 	return e.ID
+}
+
+func (e *CreditReservation) GetID() string {
+	return e.ID
+}
+
+func (e *CreditReservation) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CreditReservation) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *CreditReservation) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *CreditReservation) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *CreditReservationCommand) GetID() string {
+	return e.ID
+}
+
+func (e *CreditReservationCommand) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CreditReservationOutbox) GetID() string {
+	return e.ID
+}
+
+func (e *CreditReservationOutbox) GetNamespace() string {
+	return e.Namespace
 }
 
 func (e *CurrencyCostBasis) GetID() string {
@@ -2612,6 +2668,26 @@ func (e *CustomerAIRatePackage) GetUpdatedAt() time.Time {
 }
 
 func (e *CustomerAIRatePackage) GetDeletedAt() *time.Time {
+	return e.DeletedAt
+}
+
+func (e *CustomerCreditLimit) GetID() string {
+	return e.ID
+}
+
+func (e *CustomerCreditLimit) GetNamespace() string {
+	return e.Namespace
+}
+
+func (e *CustomerCreditLimit) GetCreatedAt() time.Time {
+	return e.CreatedAt
+}
+
+func (e *CustomerCreditLimit) GetUpdatedAt() time.Time {
+	return e.UpdatedAt
+}
+
+func (e *CustomerCreditLimit) GetDeletedAt() *time.Time {
 	return e.DeletedAt
 }
 
