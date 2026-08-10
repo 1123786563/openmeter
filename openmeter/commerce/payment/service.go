@@ -407,7 +407,12 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 func (s *service) HandleCallback(ctx context.Context, namespace string, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error) {
 	provider, ok := s.providers[providerName]
 	if !ok {
-		return CallbackResult{}, fmt.Errorf("payment: provider %s not configured", providerName)
+		return CallbackResult{}, &ProviderError{
+			Provider:  providerName,
+			Operation: "callback",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
+		}
 	}
 
 	// Verify the signature — the adapter does this and extracts verified fields.
@@ -428,7 +433,12 @@ func (s *service) ConfirmPayment(ctx context.Context, namespace, attemptID strin
 
 	provider, ok := s.providers[attempt.Provider]
 	if !ok {
-		return CallbackResult{}, fmt.Errorf("payment: provider %s not configured", attempt.Provider)
+		return CallbackResult{}, &ProviderError{
+			Provider:  attempt.Provider,
+			Operation: "confirm",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
+		}
 	}
 
 	if attempt.ProviderOrderID == "" {

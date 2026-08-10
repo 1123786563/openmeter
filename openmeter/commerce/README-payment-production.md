@@ -198,7 +198,9 @@ commerce:
 Effects of `enabled=false`:
 
 - New checkout sessions for that channel are rejected.
-- The callback handler returns `501 Not Implemented` for that channel.
+- The callback handler returns a permanent 4xx error (non-retryable) for that
+  channel, so the provider stops retrying and existing in-flight callbacks are
+  cleanly rejected.
 - **Order queries remain available** -- existing orders can still be looked up.
 - **The fulfillment worker continues running** -- already-paid orders still
   receive their credit grants.
