@@ -45,9 +45,8 @@ type CommerceWiring struct {
 // refund collaborators. Production currently passes nil; tests and future
 // runtime integrations can supply complete real implementations atomically.
 type commerceRuntimeDependencies struct {
-	RefundFence             refund.FenceClient
-	RefundCreditReverser    refund.CreditReverser
-	RefundSnapshotPublisher refund.SnapshotPublisher
+	RefundFence          refund.FenceClient
+	RefundCreditReverser refund.CreditReverser
 }
 
 // wireCommerce builds the commerce services that have Ent-backed implementations
@@ -153,7 +152,6 @@ func wireCommerce(
 				Reverser:         runtimeDeps.RefundCreditReverser,
 				Providers:        refundProviders,
 				ProviderResolver: paymentProviderResolverAdapter{entAdapter},
-				Snapshots:        runtimeDeps.RefundSnapshotPublisher,
 				Logger:           logger,
 			})
 			if err != nil {
@@ -354,11 +352,9 @@ func validateCommerceProviderConfiguration(cfg config.CommerceConfiguration, log
 func validateAutomaticRefundDependencies(deps *commerceRuntimeDependencies) error {
 	var fence refund.FenceClient
 	var reverser refund.CreditReverser
-	var publisher refund.SnapshotPublisher
 	if deps != nil {
 		fence = deps.RefundFence
 		reverser = deps.RefundCreditReverser
-		publisher = deps.RefundSnapshotPublisher
 	}
 	for _, dependency := range []struct {
 		name  string
@@ -366,7 +362,6 @@ func validateAutomaticRefundDependencies(deps *commerceRuntimeDependencies) erro
 	}{
 		{name: "refund fence", value: fence},
 		{name: "credit reverser", value: reverser},
-		{name: "snapshot publisher", value: publisher},
 	} {
 		if unavailableCommerceDependency(dependency.value) {
 			return fmt.Errorf("commerce automatic refund disabled: real %s is required", dependency.name)
@@ -830,14 +825,6 @@ func (a refundRepoAdapter) SetFence(ctx context.Context, namespace, id, fenceSeq
 	return mapWireToRefundRequest(w), nil
 }
 
-func (a refundRepoAdapter) SetSnapshot(ctx context.Context, namespace, id, snapshotVersion string) (*refund.RefundRequest, error) {
-	w, err := a.EntAdapter.SetRefundSnapshot(ctx, namespace, id, snapshotVersion)
-	if err != nil {
-		return nil, err
-	}
-	return mapWireToRefundRequest(w), nil
-}
-
 func (a refundRepoAdapter) MarkFailed(ctx context.Context, namespace, id, reason string) (*refund.RefundRequest, error) {
 	w, err := a.EntAdapter.MarkRefundFailed(ctx, namespace, id, reason)
 	if err != nil {
@@ -929,7 +916,6 @@ func mapWireToRefundRequest(w *commerce.RefundRequestWire) *refund.RefundRequest
 		ProviderName:     w.ProviderName,
 		ProviderRefundID: w.ProviderRefundID,
 		FenceSequence:    w.FenceSequence,
-		SnapshotVersion:  w.SnapshotVersion,
 		CreatedAt:        w.CreatedAt,
 		UpdatedAt:        w.UpdatedAt,
 	}

@@ -48,20 +48,10 @@ func (testFenceClient) ReleaseFence(context.Context, string, string, string, str
 	return nil
 }
 
-func (testFenceClient) ConfirmSnapshotApplied(context.Context, string, string, string) (bool, error) {
-	return true, nil
-}
-
 type testCreditReverser struct{}
 
 func (testCreditReverser) ReverseCredits(_ context.Context, in refund.ReverseCreditsInput) (refund.ReverseCreditsResult, error) {
 	return refund.ReverseCreditsResult{LedgerEntryID: "reversal-1", Credits: in.Credits}, nil
-}
-
-type testSnapshotPublisher struct{}
-
-func (testSnapshotPublisher) PublishSnapshot(context.Context, refund.PublishSnapshotInput) (string, error) {
-	return "snapshot-1", nil
 }
 
 type testNoopFence struct{ testFenceClient }
@@ -76,9 +66,8 @@ func (s testRefundProcessorService) ProcessOne(context.Context, string, string) 
 
 func completeRuntimeDependencies() *commerceRuntimeDependencies {
 	return &commerceRuntimeDependencies{
-		RefundFence:             testFenceClient{},
-		RefundCreditReverser:    testCreditReverser{},
-		RefundSnapshotPublisher: testSnapshotPublisher{},
+		RefundFence:          testFenceClient{},
+		RefundCreditReverser: testCreditReverser{},
 	}
 }
 
@@ -140,17 +129,12 @@ func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.
 		{name: "missing bundle", want: "refund fence"},
 		{
 			name: "missing credit reverser",
-			deps: &commerceRuntimeDependencies{RefundFence: testFenceClient{}, RefundSnapshotPublisher: testSnapshotPublisher{}},
+			deps: &commerceRuntimeDependencies{RefundFence: testFenceClient{}},
 			want: "credit reverser",
 		},
 		{
-			name: "missing snapshot publisher",
-			deps: &commerceRuntimeDependencies{RefundFence: testFenceClient{}, RefundCreditReverser: testCreditReverser{}},
-			want: "snapshot publisher",
-		},
-		{
 			name: "noop dependency",
-			deps: &commerceRuntimeDependencies{RefundFence: testNoopFence{}, RefundCreditReverser: testCreditReverser{}, RefundSnapshotPublisher: testSnapshotPublisher{}},
+			deps: &commerceRuntimeDependencies{RefundFence: testNoopFence{}, RefundCreditReverser: testCreditReverser{}},
 			want: "refund fence",
 		},
 	} {
