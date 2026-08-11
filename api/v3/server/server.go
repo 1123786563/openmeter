@@ -485,7 +485,6 @@ func (s *Server) RegisterRoutes(r chi.Router) error {
 			Middlewares:      middlewares,
 			ErrorHandlerFunc: apierrors.NewV3ErrorHandlerFunc(s.ErrorHandler),
 		})
-
 	})
 
 	return nil
