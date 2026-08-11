@@ -616,6 +616,9 @@ func (s *service) processProviderProcessing(ctx context.Context, rec *RefundRequ
 	if err != nil {
 		return rec, fmt.Errorf("refund: provider query: %w", err)
 	}
+	if err := s.validateRefundFactAuthority(ctx, rec, fact); err != nil {
+		return rec, err
+	}
 
 	if err := s.persistRefundFact(ctx, rec, fact); err != nil {
 		return rec, err
@@ -707,10 +710,8 @@ func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fac
 	if err != nil {
 		return nil, fmt.Errorf("refund: locate refund by provider refund id %s: %w", fact.ProviderRefundID, err)
 	}
-	if rec.ProviderName == string(payment.ProviderWeChat) || fact.Provider == payment.ProviderWeChat {
-		if err := s.validateWechatRefundCallbackAuthority(ctx, rec, fact); err != nil {
-			return rec, err
-		}
+	if err := s.validateRefundFactAuthority(ctx, rec, fact); err != nil {
+		return rec, err
 	}
 
 	// Dedup: persist the fact. If we've already seen it, return the current state.
@@ -765,7 +766,7 @@ func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fac
 	return rec, nil
 }
 
-func (s *service) validateWechatRefundCallbackAuthority(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {
+func (s *service) validateRefundFactAuthority(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {
 	if s.aResolver == nil {
 		return fmt.Errorf("%w: payment authority resolver is unavailable", ErrRefundFactMismatch)
 	}
@@ -773,7 +774,8 @@ func (s *service) validateWechatRefundCallbackAuthority(ctx context.Context, rec
 	if err != nil {
 		return fmt.Errorf("refund: resolve payment authority: %w", err)
 	}
-	if rec.ProviderName != string(payment.ProviderWeChat) || fact.Provider != payment.ProviderWeChat || authority.Provider != payment.ProviderWeChat {
+	if rec.ProviderName == "" || rec.ProviderName != string(fact.Provider) || authority.Provider != fact.Provider ||
+		(fact.Provider != payment.ProviderWeChat && fact.Provider != payment.ProviderAlipay) {
 		return fmt.Errorf("%w: provider", ErrRefundFactMismatch)
 	}
 	if rec.ProviderRefundID == "" || fact.ProviderRefundID != rec.ProviderRefundID {
@@ -797,20 +799,29 @@ func (s *service) validateWechatRefundCallbackAuthority(ctx context.Context, rec
 	if fact.Currency != "CNY" || rec.Currency != "CNY" || authority.Currency != "CNY" {
 		return fmt.Errorf("%w: currency", ErrRefundFactMismatch)
 	}
-	if !fact.Terminal || fact.RawHash == "" {
-		return fmt.Errorf("%w: terminal callback", ErrRefundFactMismatch)
+	validStatus := false
+	switch fact.Provider {
+	case payment.ProviderWeChat:
+		switch fact.Status {
+		case "SUCCESS":
+			validStatus = fact.Success && fact.Terminal && fact.RawHash != ""
+		case "CLOSED", "ABNORMAL":
+			validStatus = !fact.Success && fact.Terminal && fact.RawHash != ""
+		case "PROCESSING":
+			validStatus = !fact.Success && !fact.Terminal && fact.RawHash == ""
+		}
+	case payment.ProviderAlipay:
+		switch fact.Status {
+		case "REFUND_SUCCESS":
+			validStatus = fact.Success && fact.Terminal && fact.RawHash != ""
+		case "REFUND_FAIL":
+			validStatus = !fact.Success && fact.Terminal && fact.RawHash != ""
+		case "REFUND_PROCESSING":
+			validStatus = !fact.Success && !fact.Terminal && fact.RawHash == ""
+		}
 	}
-	switch fact.Status {
-	case "SUCCESS":
-		if !fact.Success {
-			return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
-		}
-	case "CLOSED", "ABNORMAL":
-		if fact.Success {
-			return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
-		}
-	default:
-		return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
+	if !validStatus {
+		return fmt.Errorf("%w: refund status coherence", ErrRefundFactMismatch)
 	}
 	return nil
 }

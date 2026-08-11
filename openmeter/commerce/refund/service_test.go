@@ -451,8 +451,10 @@ type mockProviderResolver struct {
 }
 
 type mockPaymentAuthorityResolver struct {
-	orders *mockOrders
-	err    error
+	orders     *mockOrders
+	provider   payment.Provider
+	merchantID string
+	err        error
 }
 
 func (r mockPaymentAuthorityResolver) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (PaymentAuthority, error) {
@@ -464,10 +466,10 @@ func (r mockPaymentAuthorityResolver) ResolvePaymentAuthorityForOrder(ctx contex
 		return PaymentAuthority{}, err
 	}
 	return PaymentAuthority{
-		Provider:          payment.ProviderWeChat,
+		Provider:          r.provider,
 		ProviderOrderID:   order.PublicID,
 		ProviderPaymentID: "payment-" + orderID,
-		MerchantID:        "wx-mch",
+		MerchantID:        r.merchantID,
 		AmountMinor:       order.AmountMinor,
 		Currency:          order.Currency,
 	}, nil
@@ -492,13 +494,21 @@ type testHarness struct {
 }
 
 func newTestHarness(t *testing.T) *testHarness {
+	return newTestHarnessForProvider(t, payment.ProviderWeChat)
+}
+
+func newTestHarnessForProvider(t *testing.T, providerName payment.Provider) *testHarness {
 	t.Helper()
 	wallet := newMockWallet()
 	orders := newMockOrders()
 	reverser := newMockReverser()
-	provider := newMockProvider(payment.ProviderWeChat)
+	provider := newMockProvider(providerName)
 	repo := newMockRepo(wallet)
 	fence := newMockFenceClient(repo)
+	merchantID := "wx-mch"
+	if providerName == payment.ProviderAlipay {
+		merchantID = "ali-seller"
+	}
 
 	svc, err := New(Config{
 		Repo:                     repo,
@@ -506,8 +516,8 @@ func newTestHarness(t *testing.T) *testHarness {
 		Wallet:                   wallet,
 		Fence:                    fence,
 		Reverser:                 reverser,
-		Providers:                map[payment.Provider]ProviderRefunder{payment.ProviderWeChat: provider},
-		PaymentAuthorityResolver: mockPaymentAuthorityResolver{orders: orders},
+		Providers:                map[payment.Provider]ProviderRefunder{providerName: provider},
+		PaymentAuthorityResolver: mockPaymentAuthorityResolver{orders: orders, provider: providerName, merchantID: merchantID},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -518,14 +528,28 @@ func newTestHarness(t *testing.T) *testHarness {
 	}
 }
 
-func verifiedWechatRefundCallbackFact(orderID, providerRefundID, status, rawHash string, amountMinor int64) payment.RefundFact {
+func verifiedRefundFact(provider payment.Provider, orderID, providerRefundID, status, rawHash string, amountMinor int64) payment.RefundFact {
+	merchantID := "wx-mch"
+	successStatus := "SUCCESS"
+	processingStatus := "PROCESSING"
+	if provider == payment.ProviderAlipay {
+		merchantID = "ali-seller"
+		successStatus = "REFUND_SUCCESS"
+		processingStatus = "REFUND_PROCESSING"
+	}
+	success := status == successStatus
+	terminal := status != processingStatus
 	return payment.RefundFact{
-		Provider: payment.ProviderWeChat, ProviderRefundID: providerRefundID,
+		Provider: provider, ProviderRefundID: providerRefundID,
 		ProviderOrderID: "pub-" + orderID, ProviderPaymentID: "payment-" + orderID,
-		MerchantID: "wx-mch", AmountMinor: amountMinor, TotalAmountMinor: 10000,
-		Currency: "CNY", Status: status, Success: status == "SUCCESS", Terminal: true,
+		MerchantID: merchantID, AmountMinor: amountMinor, TotalAmountMinor: 10000,
+		Currency: "CNY", Status: status, Success: success, Terminal: terminal,
 		RawHash: rawHash, Timestamp: time.Now(),
 	}
+}
+
+func verifiedWechatRefundCallbackFact(orderID, providerRefundID, status, rawHash string, amountMinor int64) payment.RefundFact {
+	return verifiedRefundFact(payment.ProviderWeChat, orderID, providerRefundID, status, rawHash, amountMinor)
 }
 
 // rechargeGrant creates a recharge-source grant with the given granted, consumed,
@@ -1210,15 +1234,7 @@ func TestProcessOneProviderProcessingThenSuccess(t *testing.T) {
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
 		queryCalled.Store(true)
 		queryInput = input
-		return payment.RefundFact{
-			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: input.ProviderRefundID,
-			Success:          true,
-			RawHash:          "hash-" + input.ProviderRefundID,
-			AmountMinor:      10000,
-			Currency:         "CNY",
-			Timestamp:        time.Now(),
-		}, nil
+		return verifiedRefundFact(payment.ProviderWeChat, "order-proc", input.ProviderRefundID, "SUCCESS", "hash-"+input.ProviderRefundID, 10000), nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
@@ -1352,10 +1368,7 @@ func TestProcessOneProviderSuccessStopsWhenFactPersistenceFails(t *testing.T) {
 		}, nil
 	}
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
-		return payment.RefundFact{
-			Provider: payment.ProviderWeChat, ProviderRefundID: input.ProviderRefundID,
-			Success: true, RawHash: "fact-error-hash", AmountMinor: 10000, Currency: "CNY",
-		}, nil
+		return verifiedRefundFact(payment.ProviderWeChat, "order-fact-error", input.ProviderRefundID, "SUCCESS", "fact-error-hash", 10000), nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
@@ -1391,12 +1404,9 @@ func TestProcessOneProviderProcessingResultRetainsFence(t *testing.T) {
 	// QueryRefund returns a verified provider-processing result (no success and
 	// no definitive RawHash), so the service must retain the fence.
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
-		return payment.RefundFact{
-			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: input.ProviderRefundID,
-			Success:          false,
-			SignedPayload:    map[string]any{"refund_status": "REFUND_PROCESSING"},
-		}, nil
+		fact := verifiedRefundFact(payment.ProviderWeChat, "order-unknown", input.ProviderRefundID, "PROCESSING", "", input.AmountMinor)
+		fact.SignedPayload = map[string]any{"status": "PROCESSING"}
+		return fact, nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
@@ -1443,13 +1453,7 @@ func TestProcessOneProviderDefinitiveFailureReleasesFence(t *testing.T) {
 	}
 	// QueryRefund returns definitive failure (non-success with raw hash).
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
-		return payment.RefundFact{
-			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: input.ProviderRefundID,
-			Success:          false,
-			RawHash:          "def-hash-" + input.ProviderRefundID,
-			Timestamp:        time.Now(),
-		}, nil
+		return verifiedRefundFact(payment.ProviderWeChat, "order-def-fail", input.ProviderRefundID, "CLOSED", "def-hash-"+input.ProviderRefundID, input.AmountMinor), nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
@@ -1600,7 +1604,7 @@ func TestQuantumConservation(t *testing.T) {
 // Fix #1 tests: Provider money validation
 // ===========================================================================
 
-func TestProviderMoneyUnderRefundFails(t *testing.T) {
+func TestProviderMoneyUnderRefundIsRejectedBeforeFailureTransition(t *testing.T) {
 	h := newTestHarness(t)
 	h.wallet.setGrants("cust", []commerce.AllocationGrant{
 		rechargeGrant("grant-1", 100000, 0, 100000),
@@ -1612,14 +1616,7 @@ func TestProviderMoneyUnderRefundFails(t *testing.T) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
-		return payment.RefundFact{
-			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: input.ProviderRefundID,
-			Success:          true,
-			AmountMinor:      5000, // only 5,000 fen — but 10,000 was reserved
-			RawHash:          "hash-money-under",
-			Timestamp:        time.Now(),
-		}, nil
+		return verifiedRefundFact(payment.ProviderWeChat, "order-money-under", input.ProviderRefundID, "SUCCESS", "hash-money-under", 5000), nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
@@ -1638,8 +1635,11 @@ func TestProviderMoneyUnderRefundFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected money validation failure")
 	}
-	if result.Status != RefundStatusFailed {
-		t.Errorf("status = %s, want failed", result.Status)
+	if !errors.Is(err, ErrRefundFactMismatch) {
+		t.Fatalf("error = %v, want ErrRefundFactMismatch", err)
+	}
+	if result.Status != RefundStatusProviderProcessing {
+		t.Errorf("status = %s, want provider_processing", result.Status)
 	}
 	// No credits reversed.
 	if h.reverser.totalReversed() != 0 {
@@ -1659,14 +1659,7 @@ func TestProviderMoneyMatchesSucceeds(t *testing.T) {
 		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
 	}
 	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
-		return payment.RefundFact{
-			Provider:         payment.ProviderWeChat,
-			ProviderRefundID: input.ProviderRefundID,
-			Success:          true,
-			AmountMinor:      10000, // exact match
-			RawHash:          "hash-money-match",
-			Timestamp:        time.Now(),
-		}, nil
+		return verifiedRefundFact(payment.ProviderWeChat, "order-money-match", input.ProviderRefundID, "SUCCESS", "hash-money-match", 10000), nil
 	}
 
 	rec, _, err := h.svc.CreateRefund(context.Background(), CreateRefundInput{
@@ -1937,6 +1930,179 @@ func TestApplyRefundCallbackRejectsPersistedAuthorityMismatchesBeforeEffects(t *
 			require.Empty(t, facts)
 		})
 	}
+}
+
+func TestAlipayQueryRejectsPersistedAuthorityMismatchesBeforeEffects(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*payment.RefundFact)
+	}{
+		{name: "provider", mutate: func(f *payment.RefundFact) { f.Provider = payment.ProviderWeChat }},
+		{name: "refund ID", mutate: func(f *payment.RefundFact) { f.ProviderRefundID = "other-refund" }},
+		{name: "merchant order", mutate: func(f *payment.RefundFact) { f.ProviderOrderID = "other-order" }},
+		{name: "original payment ID", mutate: func(f *payment.RefundFact) { f.ProviderPaymentID = "other-payment" }},
+		{name: "merchant", mutate: func(f *payment.RefundFact) { f.MerchantID = "other-merchant" }},
+		{name: "refund amount", mutate: func(f *payment.RefundFact) { f.AmountMinor++ }},
+		{name: "original total", mutate: func(f *payment.RefundFact) { f.TotalAmountMinor++ }},
+		{name: "currency", mutate: func(f *payment.RefundFact) { f.Currency = "USD" }},
+		{name: "non-terminal success", mutate: func(f *payment.RefundFact) { f.Terminal = false }},
+		{name: "success without hash", mutate: func(f *payment.RefundFact) { f.RawHash = "" }},
+		{name: "status success mismatch", mutate: func(f *payment.RefundFact) { f.Success = false }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarnessForProvider(t, payment.ProviderAlipay)
+			h.wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+			const orderID = "order-alipay-query-authority"
+			h.orders.addFulfilledOrder("ns", orderID, "cust", 10000)
+			h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
+				return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
+			}
+			h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
+				fact := verifiedRefundFact(payment.ProviderAlipay, orderID, input.ProviderRefundID, "REFUND_SUCCESS", "hash-"+orderID, input.AmountMinor)
+				tt.mutate(&fact)
+				return fact, nil
+			}
+
+			rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+				Namespace: "ns", OrderID: orderID, CustomerID: "cust", Currency: "CNY", IdempotencyKey: "idem-alipay-query-authority",
+			})
+			require.NoError(t, err)
+			rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+			require.NoError(t, err)
+			require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+
+			result, err := h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+			require.ErrorIs(t, err, ErrRefundFactMismatch)
+			require.Equal(t, RefundStatusProviderProcessing, result.Status)
+			require.Zero(t, h.reverser.totalReversed())
+			require.Zero(t, h.fence.released.Load())
+			facts, factsErr := h.repo.GetFacts(t.Context(), "ns", rec.ID)
+			require.NoError(t, factsErr)
+			require.Empty(t, facts)
+		})
+	}
+}
+
+func TestAlipayQueryWithMatchingPersistedAuthorityFulfills(t *testing.T) {
+	h := newTestHarnessForProvider(t, payment.ProviderAlipay)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+	const orderID = "order-alipay-query-success"
+	h.orders.addFulfilledOrder("ns", orderID, "cust", 10000)
+	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
+	}
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
+		return verifiedRefundFact(payment.ProviderAlipay, orderID, input.ProviderRefundID, "REFUND_SUCCESS", "hash-alipay-query-success", input.AmountMinor), nil
+	}
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: orderID, CustomerID: "cust", Currency: "CNY", IdempotencyKey: "idem-alipay-query-success",
+	})
+	require.NoError(t, err)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusFulfilled, rec.Status)
+	require.Equal(t, int64(100000), h.reverser.totalReversed())
+	require.Equal(t, int64(1), h.fence.released.Load())
+}
+
+func TestAlipayQueryRejectsMismatchedDefinitiveFailureBeforeTransition(t *testing.T) {
+	h := newTestHarnessForProvider(t, payment.ProviderAlipay)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+	const orderID = "order-alipay-query-failure-authority"
+	h.orders.addFulfilledOrder("ns", orderID, "cust", 10000)
+	h.provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
+	}
+	h.provider.queryResult = func(input payment.RefundQueryInput) (payment.RefundFact, error) {
+		fact := verifiedRefundFact(payment.ProviderAlipay, orderID, input.ProviderRefundID, "REFUND_FAIL", "hash-failure", input.AmountMinor)
+		fact.MerchantID = "wrong-merchant"
+		return fact, nil
+	}
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: orderID, CustomerID: "cust", Currency: "CNY", IdempotencyKey: "idem-alipay-query-failure-authority",
+	})
+	require.NoError(t, err)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	result, err := h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.ErrorIs(t, err, ErrRefundFactMismatch)
+	require.Equal(t, RefundStatusProviderProcessing, result.Status)
+	require.Zero(t, h.reverser.totalReversed())
+	require.Zero(t, h.fence.released.Load())
+}
+
+func TestAlipayCallbackRejectsPersistedAuthorityMismatchesBeforeEffects(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*payment.RefundFact)
+	}{
+		{name: "provider", mutate: func(f *payment.RefundFact) { f.Provider = payment.ProviderWeChat }},
+		{name: "merchant order", mutate: func(f *payment.RefundFact) { f.ProviderOrderID = "other-order" }},
+		{name: "original payment ID", mutate: func(f *payment.RefundFact) { f.ProviderPaymentID = "other-payment" }},
+		{name: "merchant", mutate: func(f *payment.RefundFact) { f.MerchantID = "other-merchant" }},
+		{name: "refund amount", mutate: func(f *payment.RefundFact) { f.AmountMinor++ }},
+		{name: "original total", mutate: func(f *payment.RefundFact) { f.TotalAmountMinor++ }},
+		{name: "currency", mutate: func(f *payment.RefundFact) { f.Currency = "USD" }},
+		{name: "non-terminal success", mutate: func(f *payment.RefundFact) { f.Terminal = false }},
+		{name: "success without hash", mutate: func(f *payment.RefundFact) { f.RawHash = "" }},
+		{name: "status success mismatch", mutate: func(f *payment.RefundFact) { f.Status = "REFUND_FAIL" }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarnessForProvider(t, payment.ProviderAlipay)
+			h.wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+			const orderID = "order-alipay-callback-authority"
+			h.orders.addFulfilledOrder("ns", orderID, "cust", 10000)
+			h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+				return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: "pr-alipay-callback", Status: "processing"}, nil
+			}
+			rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+				Namespace: "ns", OrderID: orderID, CustomerID: "cust", Currency: "CNY", IdempotencyKey: "idem-alipay-callback-authority",
+			})
+			require.NoError(t, err)
+			rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+			require.NoError(t, err)
+
+			fact := verifiedRefundFact(payment.ProviderAlipay, orderID, rec.ProviderRefundID, "REFUND_SUCCESS", "hash-"+orderID, 10000)
+			tt.mutate(&fact)
+			result, err := h.svc.ApplyRefundCallback(t.Context(), "ns", fact)
+			require.ErrorIs(t, err, ErrRefundFactMismatch)
+			require.Equal(t, RefundStatusProviderProcessing, result.Status)
+			require.Zero(t, h.reverser.totalReversed())
+			require.Zero(t, h.fence.released.Load())
+			facts, factsErr := h.repo.GetFacts(t.Context(), "ns", rec.ID)
+			require.NoError(t, factsErr)
+			require.Empty(t, facts)
+		})
+	}
+}
+
+func TestAlipayCallbackWithMatchingPersistedAuthorityFulfills(t *testing.T) {
+	h := newTestHarnessForProvider(t, payment.ProviderAlipay)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+	const orderID = "order-alipay-callback-success"
+	h.orders.addFulfilledOrder("ns", orderID, "cust", 10000)
+	h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: "pr-alipay-callback-success", Status: "processing"}, nil
+	}
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: orderID, CustomerID: "cust", Currency: "CNY", IdempotencyKey: "idem-alipay-callback-success",
+	})
+	require.NoError(t, err)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	fact := verifiedRefundFact(payment.ProviderAlipay, orderID, rec.ProviderRefundID, "REFUND_SUCCESS", "hash-alipay-callback-success", 10000)
+	rec, err = h.svc.ApplyRefundCallback(t.Context(), "ns", fact)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusFulfilled, rec.Status)
+	require.Equal(t, int64(100000), h.reverser.totalReversed())
+	require.Equal(t, int64(1), h.fence.released.Load())
 }
 
 // Compile-time check that mockProvider satisfies interfaces.

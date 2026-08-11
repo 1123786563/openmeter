@@ -106,6 +106,10 @@ func (a *Adapter) verifyResponse(ctx context.Context, body []byte, responseKey, 
 	if err := decoder.Decode(&envelope); err != nil {
 		return nil, permanentProviderHTTPError(operation, httpStatus, "invalid response envelope", payment.ErrPermanentProviderProtocol)
 	}
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return nil, permanentProviderHTTPError(operation, httpStatus, "response envelope has trailing data", payment.ErrPermanentProviderProtocol)
+	}
 	responseBody := envelope[responseKey]
 	if len(responseBody) == 0 || bytes.Equal(responseBody, []byte("null")) {
 		return nil, permanentProviderHTTPError(operation, httpStatus, "response object is missing", payment.ErrPermanentProviderProtocol)

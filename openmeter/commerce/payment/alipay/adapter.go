@@ -193,12 +193,19 @@ func (a *Adapter) VerifyCallback(ctx context.Context, _ http.Header, body []byte
 	if !validTradeStatus(status) {
 		return payment.PaymentFact{}, fmt.Errorf("%w: callback trade status is invalid", payment.ErrPermanentProviderProtocol)
 	}
-	if successfulTradeStatus(status) && strings.TrimSpace(values.Get("trade_no")) == "" {
-		return payment.PaymentFact{}, fmt.Errorf("%w: successful callback trade number is required", payment.ErrPermanentProviderProtocol)
+	tradeNo := strings.TrimSpace(values.Get("trade_no"))
+	if tradeNo == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: callback trade number is required", payment.ErrPermanentProviderProtocol)
 	}
-	timestamp, err := time.ParseInLocation("2006-01-02 15:04:05", values.Get("notify_time"), a.now().Location())
-	if err != nil {
-		return payment.PaymentFact{}, fmt.Errorf("%w: callback notify_time is invalid", payment.ErrPermanentProviderProtocol)
+	var timestamp time.Time
+	if successfulTradeStatus(status) {
+		timestamp, err = parseOptionalProviderTime(values.Get("gmt_payment"))
+		if err != nil {
+			return payment.PaymentFact{}, fmt.Errorf("%w: callback payment time is invalid", payment.ErrPermanentProviderProtocol)
+		}
+		if timestamp.IsZero() {
+			return payment.PaymentFact{}, fmt.Errorf("%w: successful callback payment time is required", payment.ErrPermanentProviderProtocol)
+		}
 	}
 	rawHash := hashBody(body)
 	eventID := strings.TrimSpace(values.Get("notify_id"))
@@ -208,7 +215,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, _ http.Header, body []byte
 	return payment.PaymentFact{
 		Provider:          payment.ProviderAlipay,
 		ProviderOrderID:   orderID,
-		ProviderPaymentID: values.Get("trade_no"),
+		ProviderPaymentID: tradeNo,
 		ProviderEventID:   eventID,
 		MerchantID:        values.Get("seller_id"),
 		ApplicationID:     values.Get("app_id"),
@@ -240,8 +247,8 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	if response.OutTradeNo != providerOrderID || !validTradeStatus(response.TradeState) {
 		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
-	if successfulTradeStatus(response.TradeState) && strings.TrimSpace(response.TradeNo) == "" {
-		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "successful response trade number is missing", payment.ErrPermanentProviderProtocol)
+	if strings.TrimSpace(response.TradeNo) == "" {
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response trade number is missing", payment.ErrPermanentProviderProtocol)
 	}
 	amount, err := parseAmountMinor(response.Amount)
 	if err != nil {
@@ -251,9 +258,12 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	if err != nil {
 		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "signed response payload is invalid", payment.ErrPermanentProviderProtocol)
 	}
-	factTime, err := parseOptionalProviderTime(response.SendPayDate)
-	if err != nil {
-		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response payment time is invalid", payment.ErrPermanentProviderProtocol)
+	var factTime time.Time
+	if successfulTradeStatus(response.TradeState) {
+		factTime, err = parseOptionalProviderTime(response.SendPayDate)
+		if err != nil {
+			return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response payment time is invalid", payment.ErrPermanentProviderProtocol)
+		}
 	}
 	return payment.PaymentFact{
 		Provider:          payment.ProviderAlipay,
@@ -294,7 +304,10 @@ func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (paymen
 	if err != nil || amount != input.AmountMinor || response.OutTradeNo != orderID {
 		return payment.RefundSubmission{}, permanentProviderError("alipay.trade.refund", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
-	return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: requestID, Status: "success"}, nil
+	// alipay.trade.refund acknowledges that the request was accepted, but the
+	// persisted refund authority can only be fulfilled from a signed query fact
+	// carrying the original trade, merchant, refund amount, and total amount.
+	return payment.RefundSubmission{Provider: payment.ProviderAlipay, ProviderRefundID: requestID, Status: "processing"}, nil
 }
 
 // QueryRefund queries an idempotent refund by out_request_no and binds the
@@ -372,8 +385,11 @@ func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInpu
 	}, nil
 }
 
-// VerifyRefundCallback verifies an Alipay refund notification using the same
-// RSA2 canonicalization as payment notifications.
+// VerifyRefundCallback verifies the notification signature and configured
+// identity, then rejects it as a fulfillment fact. Alipay's face-to-face refund
+// flow does not provide a documented callback carrying the complete persisted
+// refund authority (notably original trade ID and original total amount), so
+// fulfillment is deliberately query-only.
 func (a *Adapter) VerifyRefundCallback(ctx context.Context, _ http.Header, body []byte) (payment.RefundFact, error) {
 	values, err := url.ParseQuery(string(body))
 	if err != nil {
@@ -391,35 +407,7 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, _ http.Header, body 
 	if values.Get("seller_id") != a.sellerID {
 		return payment.RefundFact{}, fmt.Errorf("%w: refund callback seller ID mismatch", payment.ErrPermanentProviderProtocol)
 	}
-	providerOrderID := strings.TrimSpace(values.Get("out_trade_no"))
-	providerRefundID := strings.TrimSpace(values.Get("out_request_no"))
-	if providerOrderID == "" || providerRefundID == "" {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund callback order and request IDs are required", payment.ErrPermanentProviderProtocol)
-	}
-	if currency := values.Get("refund_currency"); currency != "" && strings.ToUpper(strings.TrimSpace(currency)) != "CNY" {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund callback currency must be CNY", payment.ErrPermanentProviderProtocol)
-	}
-	amount, err := parseAmountMinor(values.Get("refund_fee"))
-	if err != nil || amount <= 0 {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund callback amount is invalid", payment.ErrPermanentProviderProtocol)
-	}
-	status := values.Get("refund_status")
-	if status != "REFUND_SUCCESS" && status != "REFUND_PROCESSING" && status != "REFUND_FAIL" {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund callback status is invalid", payment.ErrPermanentProviderProtocol)
-	}
-	timestamp, err := time.ParseInLocation("2006-01-02 15:04:05", values.Get("gmt_refund"), a.now().Location())
-	if err != nil {
-		return payment.RefundFact{}, fmt.Errorf("%w: refund callback time is invalid", payment.ErrPermanentProviderProtocol)
-	}
-	rawHash := ""
-	if status != "REFUND_PROCESSING" {
-		rawHash = hashBody(body)
-	}
-	return payment.RefundFact{
-		Provider: payment.ProviderAlipay, ProviderRefundID: providerRefundID,
-		ProviderOrderID: providerOrderID, AmountMinor: amount, Currency: "CNY", Success: status == "REFUND_SUCCESS",
-		RawHash: rawHash, Timestamp: timestamp, SignedPayload: valuesToMap(values),
-	}, nil
+	return payment.RefundFact{}, fmt.Errorf("%w: Alipay refund notifications are not fulfillment facts; signed refund query is required", payment.ErrPermanentProviderProtocol)
 }
 
 func validateProviderSuccess(operation string, response providerResponse) error {
