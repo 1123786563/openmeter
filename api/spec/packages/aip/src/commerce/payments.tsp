@@ -70,8 +70,8 @@ model PaymentFact {
 }
 
 /**
- * Successful WeChat Pay callback response. WeChat treats an empty 204 response
- * as the native acknowledgment and will retry any response with a body.
+ * Successful WeChat Pay callback response. WeChat treats an empty 204 response as
+ * the native acknowledgment and will retry any response with a body.
  */
 @friendlyName("WechatCallbackSuccess")
 model WechatCallbackSuccess {
@@ -79,8 +79,8 @@ model WechatCallbackSuccess {
 }
 
 /**
- * Successful Alipay callback response. Alipay requires a plain-text success
- * token and retries when the response body differs from exactly "success".
+ * Successful Alipay callback response. Alipay requires a plain-text success token
+ * and retries when the response body differs from exactly "success".
  */
 @friendlyName("AlipayCallbackSuccess")
 model AlipayCallbackSuccess {

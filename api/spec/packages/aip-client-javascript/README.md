@@ -34,6 +34,7 @@ TypeSpec definitions and ships fully-typed request and response models.
   - [PlanAddons](#planaddons)
   - [Defaults](#defaults)
   - [AIUsage](#aiusage)
+  - [CreditReservations](#creditreservations)
   - [Commerce](#commerce)
 - [Internal Operations](#internal-operations)
   - [Internal Subscriptions](#internal-subscriptions)
@@ -414,6 +415,19 @@ The full call path, HTTP route, and a short description are listed below.
 | `client.aiUsage.getCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark.                                                                                                                                                                  |
 | `client.aiUsage.getCreditBalance`                | `GET /customers/{customerId}/credit-balance`        | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                             |
 | `client.aiUsage.listCreditTransactions`          | `GET /customers/{customerId}/credit-transactions`   | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                   |
+
+### CreditReservations
+
+| Method                                    | HTTP                                                | Description                              |
+| ----------------------------------------- | --------------------------------------------------- | ---------------------------------------- |
+| `client.creditReservations.create`        | `POST /credit-reservations`                         | Create a credit reservation              |
+| `client.creditReservations.get`           | `GET /credit-reservations/{reservationId}`          | Get a credit reservation                 |
+| `client.creditReservations.execute`       | `POST /credit-reservations/{reservationId}/execute` | Start executing a credit reservation     |
+| `client.creditReservations.settle`        | `POST /credit-reservations/{reservationId}/settle`  | Settle a credit reservation              |
+| `client.creditReservations.release`       | `POST /credit-reservations/{reservationId}/release` | Release a credit reservation             |
+| `client.creditReservations.markUnknown`   | `POST /credit-reservations/{reservationId}/unknown` | Mark a credit reservation as unknown     |
+| `client.creditReservations.createCharge`  | `POST /credit-charges`                              | Create and settle a direct credit charge |
+| `client.creditReservations.reverseCharge` | `POST /credit-charges/{chargeId}/reverse`           | Reverse a direct credit charge           |
 
 ### Commerce
 

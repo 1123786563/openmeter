@@ -35,6 +35,7 @@ TypeSpec definitions and ships typed request and response models.
   - [Defaults](#defaults)
   - [Governance](#governance)
   - [AIUsage](#aiusage)
+  - [CreditReservations](#creditreservations)
   - [Commerce](#commerce)
 - [Error Handling](#error-handling)
 - [Pagination and Streaming](#pagination-and-streaming)
@@ -330,6 +331,19 @@ The full call path, HTTP route, and a short description are listed below.
 | `om.AIUsage.GetCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark. |
 | `om.AIUsage.GetCreditBalance` | `GET /customers/{customerId}/credit-balance` | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
 | `om.AIUsage.ListCreditTransactions` | `GET /customers/{customerId}/credit-transactions` | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
+
+### CreditReservations
+
+| Method | HTTP | Description |
+| --- | --- | --- |
+| `om.CreditReservations.Create` | `POST /credit-reservations` |  |
+| `om.CreditReservations.Get` | `GET /credit-reservations/{reservationId}` |  |
+| `om.CreditReservations.Execute` | `POST /credit-reservations/{reservationId}/execute` |  |
+| `om.CreditReservations.Settle` | `POST /credit-reservations/{reservationId}/settle` |  |
+| `om.CreditReservations.Release` | `POST /credit-reservations/{reservationId}/release` |  |
+| `om.CreditReservations.MarkUnknown` | `POST /credit-reservations/{reservationId}/unknown` |  |
+| `om.CreditReservations.CreateCharge` | `POST /credit-charges` |  |
+| `om.CreditReservations.ReverseCharge` | `POST /credit-charges/{chargeId}/reverse` |  |
 
 ### Commerce
 

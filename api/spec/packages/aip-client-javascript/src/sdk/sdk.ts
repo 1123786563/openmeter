@@ -15,6 +15,7 @@ import { Addons } from './addons.js'
 import { PlanAddons } from './planAddons.js'
 import { Defaults } from './defaults.js'
 import { AIUsage } from './aiUsage.js'
+import { CreditReservations } from './creditReservations.js'
 import { Commerce } from './commerce.js'
 import { Internal } from './internal.js'
 
@@ -87,6 +88,11 @@ export class OpenMeter extends Client {
   private _aiUsage?: AIUsage
   get aiUsage(): AIUsage {
     return (this._aiUsage ??= new AIUsage(this))
+  }
+
+  private _creditReservations?: CreditReservations
+  get creditReservations(): CreditReservations {
+    return (this._creditReservations ??= new CreditReservations(this))
   }
 
   private _commerce?: Commerce

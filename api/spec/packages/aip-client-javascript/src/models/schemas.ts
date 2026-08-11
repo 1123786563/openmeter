@@ -1229,6 +1229,72 @@ export const aiUsageCreditTransactionType = z
     'The type of a credit movement on the AI Usage integer credit ledger.',
   )
 
+export const creditResourceLine = z.object({
+  featureKey: z.string(),
+  resourceCode: z.string(),
+  quantity: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  dimensions: z.record(z.string(), z.string()).optional(),
+})
+
+export const creditCurrency = z.object({
+  code: z.string(),
+  customCurrencyId: z.string().optional(),
+})
+
+export const creditReservationState = z.enum([
+  'active',
+  'executing',
+  'settled',
+  'released',
+  'unknown',
+  'expired',
+  'manual_review',
+])
+
+export const creditRatedLine = z.object({
+  featureKey: z.string(),
+  resourceCode: z.string(),
+  quantity: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  dimensions: z.record(z.string(), z.string()).optional(),
+  rateCardKey: z.string(),
+  rateVersion: z.string(),
+  credits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+})
+
+export const creditFundingSplit = z.object({
+  prepaidHold: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  enterpriseHold: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+})
+
+export const creditReservationEvidenceKind = z.enum([
+  'not_sent',
+  'provider_confirmed_not_executed',
+])
+
+export const creditReservationUnknown = z.object({
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+})
+
 export const commerceWalletBucketSource = z
   .enum(['plan', 'gift', 'recharge', 'enterprise_receivable'])
 
@@ -2404,6 +2470,18 @@ export const aiUsageCreditBalance = z
     'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
   )
 
+export const creditReservationExecute = z.object({
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  executionDeadline: dateTime,
+})
+
+export const creditChargeReverse = z.object({
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  reversedAt: dateTime,
+})
+
 export const commerceExternalInvoiceUpdate = z
   .object({
     idempotencyKey: z
@@ -2638,6 +2716,8 @@ export const notFound = baseError.describe('Not Found.')
 export const gone = baseError.describe('Gone.')
 
 export const conflict = baseError.describe('Conflict.')
+
+export const creditBalanceInsufficient = baseError
 
 export const payloadTooLarge = baseError.describe('Payload Too Large.')
 
@@ -3645,6 +3725,80 @@ export const aiUsageCreditTransaction = z
   .describe(
     'An immutable credit movement on the AI Usage integer credit ledger.',
   )
+
+export const creditReservationCreate = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  subjectId: z.string(),
+  clientCallId: z.string(),
+  operation: z.string(),
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  lines: z.array(creditResourceLine),
+  authorizationExpiresAt: dateTime,
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  requestId: z.string().optional(),
+})
+
+export const creditReservationSettle = z.object({
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  actualLines: z.array(creditResourceLine),
+  settledAt: dateTime,
+})
+
+export const creditChargeCreate = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  subjectId: z.string(),
+  operation: z.string(),
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  lines: z.array(creditResourceLine),
+  bookedAt: dateTime,
+})
+
+export const creditCharge = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  reservationId: z.string(),
+  currency: creditCurrency,
+  rateVersion: z.string(),
+  lines: z.array(creditRatedLine),
+  totalCredits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  state: z.string(),
+})
+
+export const creditReservation = z.object({
+  id: z.string(),
+  customerId: z.string(),
+  currency: creditCurrency,
+  state: creditReservationState,
+  rateVersion: z.string(),
+  lines: z.array(creditRatedLine),
+  ceilingCredits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  settledCredits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  expiresAt: dateTime.optional(),
+  executionDeadline: dateTime.optional(),
+  funding: creditFundingSplit,
+})
+
+export const creditReservationRelease = z.object({
+  idempotencyKey: z.string(),
+  payloadHash: z.string(),
+  evidenceKind: creditReservationEvidenceKind,
+  evidenceReference: z.string().optional(),
+})
 
 export const commerceWalletBucket = z
   .object({
@@ -7929,6 +8083,60 @@ export const listAiUsageCreditTransactionsResponse = z.object({
   meta: cursorMeta,
 })
 
+export const createCreditReservationBody = creditReservationCreate
+
+export const createCreditReservationResponse = creditReservation
+
+export const getCreditReservationPathParams = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const getCreditReservationResponse = creditReservation
+
+export const executeCreditReservationPathParams = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const executeCreditReservationBody = creditReservationExecute
+
+export const executeCreditReservationResponse = creditReservation
+
+export const settleCreditReservationPathParams = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const settleCreditReservationBody = creditReservationSettle
+
+export const settleCreditReservationResponse = creditReservation
+
+export const releaseCreditReservationPathParams = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const releaseCreditReservationBody = creditReservationRelease
+
+export const releaseCreditReservationResponse = creditReservation
+
+export const markCreditReservationUnknownPathParams = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const markCreditReservationUnknownBody = creditReservationUnknown
+
+export const markCreditReservationUnknownResponse = creditReservation
+
+export const createCreditChargeBody = creditChargeCreate
+
+export const createCreditChargeResponse = creditCharge
+
+export const reverseCreditChargePathParams = z.object({
+  chargeId: z.coerce.string(),
+})
+
+export const reverseCreditChargeBody = creditChargeReverse
+
+export const reverseCreditChargeResponse = creditCharge
+
 export const getCustomerWalletPathParams = z.object({
   customerId: ulid,
 })
@@ -9232,6 +9440,72 @@ export const aiUsageCreditTransactionTypeWire = z
     'The type of a credit movement on the AI Usage integer credit ledger.',
   )
 
+export const creditResourceLineWire = z.strictObject({
+  feature_key: z.string(),
+  resource_code: z.string(),
+  quantity: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  dimensions: z.record(z.string(), z.string()).optional(),
+})
+
+export const creditCurrencyWire = z.strictObject({
+  code: z.string(),
+  custom_currency_id: z.string().optional(),
+})
+
+export const creditReservationStateWire = z.enum([
+  'active',
+  'executing',
+  'settled',
+  'released',
+  'unknown',
+  'expired',
+  'manual_review',
+])
+
+export const creditRatedLineWire = z.strictObject({
+  feature_key: z.string(),
+  resource_code: z.string(),
+  quantity: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  dimensions: z.record(z.string(), z.string()).optional(),
+  rate_card_key: z.string(),
+  rate_version: z.string(),
+  credits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+})
+
+export const creditFundingSplitWire = z.strictObject({
+  prepaid_hold: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  enterprise_hold: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+})
+
+export const creditReservationEvidenceKindWire = z.enum([
+  'not_sent',
+  'provider_confirmed_not_executed',
+])
+
+export const creditReservationUnknownWire = z.strictObject({
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+})
+
 export const commerceWalletBucketSourceWire = z
   .enum(['plan', 'gift', 'recharge', 'enterprise_receivable'])
 
@@ -10406,6 +10680,18 @@ export const aiUsageCreditBalanceWire = z
     'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
   )
 
+export const creditReservationExecuteWire = z.strictObject({
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  execution_deadline: dateTimeWire,
+})
+
+export const creditChargeReverseWire = z.strictObject({
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  reversed_at: dateTimeWire,
+})
+
 export const commerceExternalInvoiceUpdateWire = z
   .strictObject({
     idempotency_key: z
@@ -10642,6 +10928,8 @@ export const notFoundWire = baseErrorWire.describe('Not Found.')
 export const goneWire = baseErrorWire.describe('Gone.')
 
 export const conflictWire = baseErrorWire.describe('Conflict.')
+
+export const creditBalanceInsufficientWire = baseErrorWire
 
 export const payloadTooLargeWire = baseErrorWire.describe('Payload Too Large.')
 
@@ -11632,6 +11920,80 @@ export const aiUsageCreditTransactionWire = z
   .describe(
     'An immutable credit movement on the AI Usage integer credit ledger.',
   )
+
+export const creditReservationCreateWire = z.strictObject({
+  id: z.string(),
+  customer_id: z.string(),
+  subject_id: z.string(),
+  client_call_id: z.string(),
+  operation: z.string(),
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  lines: z.array(creditResourceLineWire),
+  authorization_expires_at: dateTimeWire,
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  request_id: z.string().optional(),
+})
+
+export const creditReservationSettleWire = z.strictObject({
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  actual_lines: z.array(creditResourceLineWire),
+  settled_at: dateTimeWire,
+})
+
+export const creditChargeCreateWire = z.strictObject({
+  id: z.string(),
+  customer_id: z.string(),
+  subject_id: z.string(),
+  operation: z.string(),
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  lines: z.array(creditResourceLineWire),
+  booked_at: dateTimeWire,
+})
+
+export const creditChargeWire = z.strictObject({
+  id: z.string(),
+  customer_id: z.string(),
+  reservation_id: z.string(),
+  currency: creditCurrencyWire,
+  rate_version: z.string(),
+  lines: z.array(creditRatedLineWire),
+  total_credits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  state: z.string(),
+})
+
+export const creditReservationWire = z.strictObject({
+  id: z.string(),
+  customer_id: z.string(),
+  currency: creditCurrencyWire,
+  state: creditReservationStateWire,
+  rate_version: z.string(),
+  lines: z.array(creditRatedLineWire),
+  ceiling_credits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  settled_credits: z.coerce
+    .bigint()
+    .gte(-9223372036854775808n)
+    .lte(9223372036854775807n),
+  expires_at: dateTimeWire.optional(),
+  execution_deadline: dateTimeWire.optional(),
+  funding: creditFundingSplitWire,
+})
+
+export const creditReservationReleaseWire = z.strictObject({
+  idempotency_key: z.string(),
+  payload_hash: z.string(),
+  evidence_kind: creditReservationEvidenceKindWire,
+  evidence_reference: z.string().optional(),
+})
 
 export const commerceWalletBucketWire = z
   .strictObject({
@@ -15997,6 +16359,60 @@ export const listAiUsageCreditTransactionsResponseWire = z.strictObject({
   data: z.array(aiUsageCreditTransactionWire),
   meta: cursorMetaWire,
 })
+
+export const createCreditReservationBodyWire = creditReservationCreateWire
+
+export const createCreditReservationResponseWire = creditReservationWire
+
+export const getCreditReservationPathParamsWire = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const getCreditReservationResponseWire = creditReservationWire
+
+export const executeCreditReservationPathParamsWire = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const executeCreditReservationBodyWire = creditReservationExecuteWire
+
+export const executeCreditReservationResponseWire = creditReservationWire
+
+export const settleCreditReservationPathParamsWire = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const settleCreditReservationBodyWire = creditReservationSettleWire
+
+export const settleCreditReservationResponseWire = creditReservationWire
+
+export const releaseCreditReservationPathParamsWire = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const releaseCreditReservationBodyWire = creditReservationReleaseWire
+
+export const releaseCreditReservationResponseWire = creditReservationWire
+
+export const markCreditReservationUnknownPathParamsWire = z.object({
+  reservationId: z.coerce.string(),
+})
+
+export const markCreditReservationUnknownBodyWire = creditReservationUnknownWire
+
+export const markCreditReservationUnknownResponseWire = creditReservationWire
+
+export const createCreditChargeBodyWire = creditChargeCreateWire
+
+export const createCreditChargeResponseWire = creditChargeWire
+
+export const reverseCreditChargePathParamsWire = z.object({
+  chargeId: z.coerce.string(),
+})
+
+export const reverseCreditChargeBodyWire = creditChargeReverseWire
+
+export const reverseCreditChargeResponseWire = creditChargeWire
 
 export const getCustomerWalletPathParamsWire = z.object({
   customerId: ulidWire,

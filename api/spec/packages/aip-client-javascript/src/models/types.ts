@@ -452,6 +452,42 @@ export interface AiUsageRuntimeAuthorizationQuery {
   reservationId?: string
 }
 
+export interface CreditResourceLine {
+  featureKey: string
+  resourceCode: string
+  quantity: bigint
+  provider?: string
+  model?: string
+  dimensions?: Record<string, string>
+}
+
+export interface CreditCurrency {
+  code: string
+  customCurrencyId?: string
+}
+
+export interface CreditRatedLine {
+  featureKey: string
+  resourceCode: string
+  quantity: bigint
+  provider?: string
+  model?: string
+  dimensions?: Record<string, string>
+  rateCardKey: string
+  rateVersion: string
+  credits: bigint
+}
+
+export interface CreditFundingSplit {
+  prepaidHold: bigint
+  enterpriseHold: bigint
+}
+
+export interface CreditReservationUnknown {
+  idempotencyKey: string
+  payloadHash: string
+}
+
 /**
  * A query filter for an integer attribute. Operators are mutually exclusive, only
  * one operator is allowed at a time.
@@ -1265,6 +1301,18 @@ export interface AiUsageCreditBalance {
   pendingCredits: bigint
 }
 
+export interface CreditReservationExecute {
+  idempotencyKey: string
+  payloadHash: string
+  executionDeadline: Date
+}
+
+export interface CreditChargeReverse {
+  idempotencyKey: string
+  payloadHash: string
+  reversedAt: Date
+}
+
 /**
  * Request body for attaching or updating an external invoice reference on a
  * receivable period (e.g. a VAT invoice number from the external tax service).
@@ -1472,6 +1520,8 @@ export interface Gone extends BaseError {}
 
 /** Conflict. */
 export interface Conflict extends BaseError {}
+
+export interface CreditBalanceInsufficient extends BaseError {}
 
 /** Payload Too Large. */
 export interface PayloadTooLarge extends BaseError {}
@@ -2512,6 +2562,78 @@ export interface AiUsageCreditTransaction {
   availableBalanceBefore: bigint
   /** Available balance after this transaction. */
   availableBalanceAfter: bigint
+}
+
+export interface CreditReservationCreate {
+  id: string
+  customerId: string
+  subjectId: string
+  clientCallId: string
+  operation: string
+  idempotencyKey: string
+  payloadHash: string
+  lines: CreditResourceLine[]
+  authorizationExpiresAt: Date
+  provider?: string
+  model?: string
+  requestId?: string
+}
+
+export interface CreditReservationSettle {
+  idempotencyKey: string
+  payloadHash: string
+  actualLines: CreditResourceLine[]
+  settledAt: Date
+}
+
+export interface CreditChargeCreate {
+  id: string
+  customerId: string
+  subjectId: string
+  operation: string
+  idempotencyKey: string
+  payloadHash: string
+  lines: CreditResourceLine[]
+  bookedAt: Date
+}
+
+export interface CreditCharge {
+  id: string
+  customerId: string
+  reservationId: string
+  currency: CreditCurrency
+  rateVersion: string
+  lines: CreditRatedLine[]
+  totalCredits: bigint
+  state: string
+}
+
+export interface CreditReservation {
+  id: string
+  customerId: string
+  currency: CreditCurrency
+  state:
+    | 'active'
+    | 'executing'
+    | 'settled'
+    | 'released'
+    | 'unknown'
+    | 'expired'
+    | 'manual_review'
+  rateVersion: string
+  lines: CreditRatedLine[]
+  ceilingCredits: bigint
+  settledCredits: bigint
+  expiresAt?: Date
+  executionDeadline?: Date
+  funding: CreditFundingSplit
+}
+
+export interface CreditReservationRelease {
+  idempotencyKey: string
+  payloadHash: string
+  evidenceKind: 'not_sent' | 'provider_confirmed_not_executed'
+  evidenceReference?: string
 }
 
 /**
@@ -6470,6 +6592,8 @@ export interface GoneInput extends BaseErrorInput {}
 
 /** Conflict. */
 export interface ConflictInput extends BaseErrorInput {}
+
+export interface CreditBalanceInsufficientInput extends BaseErrorInput {}
 
 /** Payload Too Large. */
 export interface PayloadTooLargeInput extends BaseErrorInput {}

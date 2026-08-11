@@ -144,9 +144,9 @@ model RuntimeAuthorization {
   denial_reason?: string;
 
   /**
-   * Canonical JSON payload for consumer-side verification. The raw bytes of
-   * the canonicalized authorization object, used to derive the SHA-256 hash
-   * and verify the signature.
+   * Canonical JSON payload for consumer-side verification. The raw bytes of the
+   * canonicalized authorization object, used to derive the SHA-256 hash and verify
+   * the signature.
    */
   @extension("x-go-name", "CanonicalPayload")
   @extension("x-go-type", "json.RawMessage")

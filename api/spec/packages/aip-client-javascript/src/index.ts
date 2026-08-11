@@ -15,6 +15,7 @@ export { Addons } from './sdk/addons.js'
 export { PlanAddons } from './sdk/planAddons.js'
 export { Defaults } from './sdk/defaults.js'
 export { AIUsage } from './sdk/aiUsage.js'
+export { CreditReservations } from './sdk/creditReservations.js'
 export { Commerce } from './sdk/commerce.js'
 export { Client } from './core.js'
 export { HTTPError } from './models/errors.js'
@@ -58,6 +59,7 @@ export type * from './models/operations/planAddons.js'
 export type * from './models/operations/defaults.js'
 export type * from './models/operations/governance.js'
 export type * from './models/operations/aiUsage.js'
+export type * from './models/operations/creditReservations.js'
 export type * from './models/operations/commerce.js'
 
 export type {
@@ -100,6 +102,11 @@ export type {
   GovernanceQueryRequestFeatures,
   AiUsageUsageLineCreate,
   AiUsageRuntimeAuthorizationQuery,
+  CreditResourceLine,
+  CreditCurrency,
+  CreditRatedLine,
+  CreditFundingSplit,
+  CreditReservationUnknown,
   QueryFilterInteger,
   QueryFilterFloat,
   QueryFilterBoolean,
@@ -157,6 +164,8 @@ export type {
   FeatureCostQueryRow,
   AiUsageRuntimeAuthorization,
   AiUsageCreditBalance,
+  CreditReservationExecute,
+  CreditChargeReverse,
   CommerceExternalInvoiceUpdate,
   CommerceExternalInvoice,
   Resource,
@@ -173,6 +182,7 @@ export type {
   NotFound,
   Gone,
   Conflict,
+  CreditBalanceInsufficient,
   PayloadTooLarge,
   Internal,
   UnsupportedMediaType,
@@ -229,6 +239,12 @@ export type {
   GovernanceQueryError,
   AiUsageUsageBatchCreate,
   AiUsageCreditTransaction,
+  CreditReservationCreate,
+  CreditReservationSettle,
+  CreditChargeCreate,
+  CreditCharge,
+  CreditReservation,
+  CreditReservationRelease,
   CommerceWalletBucket,
   CommerceLedgerProvenance,
   CommerceRechargeProduct,
@@ -418,6 +434,7 @@ export type {
   NotFoundInput,
   GoneInput,
   ConflictInput,
+  CreditBalanceInsufficientInput,
   PayloadTooLargeInput,
   InternalInput,
   UnsupportedMediaTypeInput,
