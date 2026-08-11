@@ -7,8 +7,9 @@
 //   - payment-query-recovery: polls payment providers for callback-lost orders
 //     (attempts stuck in "pending" beyond the callback window).
 //   - fulfillment: processes pending fulfillment records toward "fulfilled".
-//   - refund-query: polls payment providers for refund status on refunds stuck
-//     in "provider_processing".
+//   - refund-query: advances refunds in "pending_fence", polls providers for
+//     "provider_processing", and resumes "ledger_reversing" after crashes.
+//     Storage returns at most 100 per tick in stable updated_at/ID order.
 //   - receivable-close: closes enterprise receivable periods that have ended.
 //   - reconciliation: runs the scheduled reconciliation checks.
 //

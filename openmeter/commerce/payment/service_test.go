@@ -248,13 +248,19 @@ type mockProvider struct {
 	verifyFn    func(ctx context.Context, headers http.Header, body []byte) (PaymentFact, error)
 	queryFn     func(ctx context.Context, providerOrderID string) (PaymentFact, error)
 	qrFn        func(ctx context.Context, in CheckoutInput) (CheckoutFact, error)
+	identityN   atomic.Int64
+	qrN         atomic.Int64
+	verifyN     atomic.Int64
+	queryN      atomic.Int64
 }
 
 func (m *mockProvider) Identity(_ context.Context) (ProviderIdentity, error) {
+	m.identityN.Add(1)
 	return m.identity, m.identityErr
 }
 
 func (m *mockProvider) CreateQRCode(ctx context.Context, in CheckoutInput) (CheckoutFact, error) {
+	m.qrN.Add(1)
 	if m.qrFn != nil {
 		return m.qrFn(ctx, in)
 	}
@@ -262,10 +268,12 @@ func (m *mockProvider) CreateQRCode(ctx context.Context, in CheckoutInput) (Chec
 }
 
 func (m *mockProvider) VerifyCallback(ctx context.Context, headers http.Header, body []byte) (PaymentFact, error) {
+	m.verifyN.Add(1)
 	return m.verifyFn(ctx, headers, body)
 }
 
 func (m *mockProvider) QueryPayment(ctx context.Context, providerOrderID string) (PaymentFact, error) {
+	m.queryN.Add(1)
 	if m.queryFn != nil {
 		return m.queryFn(ctx, providerOrderID)
 	}
@@ -1177,6 +1185,114 @@ func TestProviderOperationsTreatNilAdapterAsDisabled(t *testing.T) {
 				err := operation.call()
 				require.ErrorIs(t, err, ErrPermanentProviderProtocol)
 			})
+		})
+	}
+}
+
+func TestProviderOperationsTreatTypedNilAdapterAsDisabled(t *testing.T) {
+	h := newTestHarness(t)
+	_, attempt := h.setupPaidOrder("ns", "customer-1", "order-typed-nil-provider", "provider-order-typed-nil", 100)
+	var typedNil *mockProvider
+
+	svc, err := New(Config{
+		Attempts: h.attempts, Facts: h.facts, Orders: h.orders, TxRunner: h.paidTx,
+		Providers: map[Provider]ProviderAdapter{ProviderWeChat: typedNil},
+	})
+	require.NoError(t, err)
+
+	for _, operation := range []struct {
+		name string
+		call func() error
+	}{
+		{name: "create attempt", call: func() error {
+			_, _, err := svc.CreateAttempt(t.Context(), CreateAttemptInput{
+				Namespace: "ns", OrderID: "new-order", CustomerID: "customer-1", Provider: ProviderWeChat,
+				IdempotencyKey: "typed-nil-create", AmountMinor: 100, Currency: "CNY",
+			})
+			return err
+		}},
+		{name: "checkout", call: func() error {
+			_, err := svc.InitiateCheckout(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+		{name: "callback", call: func() error {
+			_, err := svc.HandleCallback(t.Context(), "ns", ProviderWeChat, nil, []byte("callback"))
+			return err
+		}},
+		{name: "confirm", call: func() error {
+			_, err := svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			var operationErr error
+			require.NotPanics(t, func() {
+				operationErr = operation.call()
+			})
+			require.ErrorIs(t, operationErr, ErrPermanentProviderProtocol)
+			var providerErr *ProviderError
+			require.ErrorAs(t, operationErr, &providerErr)
+			require.Equal(t, ProviderErrorPermanent, providerErr.Kind)
+		})
+	}
+}
+
+func TestProviderKeyNameMismatchStopsEveryPaymentChannelCall(t *testing.T) {
+	for _, operation := range []struct {
+		name string
+		call func(Service, *PaymentAttempt) error
+	}{
+		{name: "create attempt", call: func(svc Service, _ *PaymentAttempt) error {
+			_, _, err := svc.CreateAttempt(t.Context(), CreateAttemptInput{
+				Namespace: "ns", OrderID: "new-order", CustomerID: "customer-1", Provider: ProviderWeChat,
+				IdempotencyKey: "mismatched-create", AmountMinor: 100, Currency: "CNY",
+			})
+			return err
+		}},
+		{name: "checkout", call: func(svc Service, attempt *PaymentAttempt) error {
+			_, err := svc.InitiateCheckout(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+		{name: "callback", call: func(svc Service, _ *PaymentAttempt) error {
+			_, err := svc.HandleCallback(t.Context(), "ns", ProviderWeChat, nil, []byte("callback"))
+			return err
+		}},
+		{name: "confirm", call: func(svc Service, attempt *PaymentAttempt) error {
+			_, err := svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			_, attempt := h.setupPaidOrder("ns", "customer-1", "order-mismatched-provider", "provider-order-mismatched", 100)
+			wrongChannel := &mockProvider{
+				name:     ProviderAlipay,
+				identity: ProviderIdentity{MerchantID: "seller-1", ApplicationID: "alipay-app-1"},
+				qrFn: func(context.Context, CheckoutInput) (CheckoutFact, error) {
+					return CheckoutFact{Provider: ProviderAlipay, ProviderOrderID: "wrong-order"}, nil
+				},
+				verifyFn: func(context.Context, http.Header, []byte) (PaymentFact, error) {
+					return PaymentFact{Provider: ProviderAlipay, ProviderOrderID: "wrong-order"}, nil
+				},
+				queryFn: func(context.Context, string) (PaymentFact, error) {
+					return PaymentFact{Provider: ProviderAlipay, ProviderOrderID: "wrong-order"}, nil
+				},
+			}
+			svc, err := New(Config{
+				Attempts: h.attempts, Facts: h.facts, Orders: h.orders, TxRunner: h.paidTx,
+				Providers: map[Provider]ProviderAdapter{ProviderWeChat: wrongChannel},
+			})
+			require.NoError(t, err)
+
+			err = operation.call(svc, attempt)
+			require.ErrorIs(t, err, ErrPermanentProviderProtocol)
+			var providerErr *ProviderError
+			require.ErrorAs(t, err, &providerErr)
+			require.Equal(t, ProviderErrorPermanent, providerErr.Kind)
+			require.Zero(t, wrongChannel.identityN.Load())
+			require.Zero(t, wrongChannel.qrN.Load())
+			require.Zero(t, wrongChannel.verifyN.Load())
+			require.Zero(t, wrongChannel.queryN.Load())
 		})
 	}
 }

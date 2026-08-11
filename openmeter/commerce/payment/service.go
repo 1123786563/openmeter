@@ -312,12 +312,20 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 
 func (s *service) providerAdapter(providerName Provider, operation string) (ProviderAdapter, error) {
 	provider, ok := s.providers[providerName]
-	if !ok || provider == nil {
+	if !ok {
 		return nil, &ProviderError{
 			Provider:  providerName,
 			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
+		}
+	}
+	if err := ValidateProviderAdapter(providerName, provider); err != nil {
+		return nil, &ProviderError{
+			Provider:  providerName,
+			Operation: operation,
+			Kind:      ProviderErrorPermanent,
+			Cause:     err,
 		}
 	}
 	return provider, nil

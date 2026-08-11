@@ -1322,6 +1322,36 @@ func TestProcessOneInvalidResolverResultDoesNotFallBackToAnotherProvider(t *test
 	}
 }
 
+func TestProcessOneProviderKeyNameMismatchDoesNotCallRefundChannel(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-provider-mismatch", "cust", 10000)
+	wrongChannel := newMockProvider(payment.ProviderAlipay)
+
+	service, err := New(Config{
+		Repo: h.repo, Orders: h.orders, Wallet: h.wallet, Fence: h.fence, Reverser: h.reverser,
+		Providers: map[payment.Provider]ProviderRefunder{
+			payment.ProviderWeChat: wrongChannel,
+		},
+		ProviderResolver: mockProviderResolver{provider: payment.ProviderWeChat},
+	})
+	require.NoError(t, err)
+
+	rec, _, err := service.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-provider-mismatch", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-provider-mismatch",
+	})
+	require.NoError(t, err)
+
+	rec, err = service.ProcessOne(t.Context(), "ns", rec.ID)
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+	require.Zero(t, wrongChannel.refundCallN.Load())
+	require.Zero(t, wrongChannel.queryCallN.Load())
+}
+
 func TestProcessOnePersistedUnavailableProviderDoesNotFallBackWithoutResolver(t *testing.T) {
 	h := newTestHarness(t)
 	h.orders.addFulfilledOrder("ns", "order-persisted-provider", "cust", 10000)

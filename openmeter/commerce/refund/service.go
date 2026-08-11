@@ -898,8 +898,9 @@ func (s *service) failRefund(ctx context.Context, rec *RefundRequest, reason str
 //     authoritative: its errors and invalid results must not switch channels.
 func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) (ProviderRefunder, error) {
 	if rec.ProviderName != "" {
-		if p, ok := s.providers[payment.Provider(rec.ProviderName)]; ok {
-			return p, nil
+		providerName := payment.Provider(rec.ProviderName)
+		if p, ok := s.providers[providerName]; ok {
+			return validateConfiguredProvider(providerName, p)
 		}
 		return nil, fmt.Errorf("refund: persisted provider %q is not configured", rec.ProviderName)
 	}
@@ -916,7 +917,7 @@ func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) (Provi
 		if !ok {
 			return nil, fmt.Errorf("refund: resolved provider %q is not configured", prov)
 		}
-		return provider, nil
+		return validateConfiguredProvider(prov, provider)
 	}
 	// Deterministic fallback: sorted first key — never iterate the map.
 	if len(s.providers) > 0 {
@@ -925,9 +926,22 @@ func (s *service) lookupProvider(ctx context.Context, rec *RefundRequest) (Provi
 			keys = append(keys, string(k))
 		}
 		sort.Strings(keys)
-		return s.providers[payment.Provider(keys[0])], nil
+		providerName := payment.Provider(keys[0])
+		return validateConfiguredProvider(providerName, s.providers[providerName])
 	}
 	return nil, nil
+}
+
+func validateConfiguredProvider(providerName payment.Provider, provider ProviderRefunder) (ProviderRefunder, error) {
+	if err := payment.ValidateProviderAdapter(providerName, provider); err != nil {
+		return nil, &payment.ProviderError{
+			Provider:  providerName,
+			Operation: "refund",
+			Kind:      payment.ProviderErrorPermanent,
+			Cause:     err,
+		}
+	}
+	return provider, nil
 }
 
 func (s *service) persistRefundFact(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {

@@ -125,8 +125,10 @@ worker restores convergence without manual intervention.
   states do not trigger a transition.
 
 The refund side has an analogous `refund-query` worker (15-second interval)
-that polls refunds in `provider_processing`. It does **not** infer a
-`PROCESSING` refund status as success.
+that establishes fences for `pending_fence`, polls `provider_processing`, and
+resumes `ledger_reversing` after crashes. Each tick processes at most 100
+refunds in stable `updated_at,id` order. It does **not** infer a `PROCESSING`
+refund status as success.
 
 ## 5. Certificate Rotation Procedure
 
