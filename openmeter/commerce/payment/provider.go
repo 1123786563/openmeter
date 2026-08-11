@@ -195,15 +195,20 @@ type RefundQueryInput struct {
 
 // RefundFact is a verified refund result from the provider.
 type RefundFact struct {
-	Provider         Provider
-	ProviderRefundID string
-	ProviderOrderID  string
-	AmountMinor      int64
-	Currency         string
-	Success          bool
-	RawHash          string
-	Timestamp        time.Time
-	SignedPayload    map[string]any
+	Provider          Provider
+	ProviderRefundID  string
+	ProviderOrderID   string
+	ProviderPaymentID string
+	MerchantID        string
+	AmountMinor       int64
+	TotalAmountMinor  int64
+	Currency          string
+	Status            string
+	Success           bool
+	Terminal          bool
+	RawHash           string
+	Timestamp         time.Time
+	SignedPayload     map[string]any
 }
 
 // Provider is the boundary between the payment domain and external payment

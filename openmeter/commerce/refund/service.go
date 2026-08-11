@@ -216,6 +216,25 @@ type ProviderResolver interface {
 	ResolveProviderForOrder(ctx context.Context, namespace, orderID string) (payment.Provider, error)
 }
 
+// PaymentAuthority is the persisted successful payment identity a verified
+// refund callback must match before it can drive fulfillment.
+type PaymentAuthority struct {
+	Provider          payment.Provider
+	ProviderOrderID   string
+	ProviderPaymentID string
+	MerchantID        string
+	AmountMinor       int64
+	Currency          string
+}
+
+// PaymentAuthorityResolver returns the persisted successful payment attempt
+// for an order. It is deliberately separate from ProviderResolver so existing
+// provider selection remains deterministic while callback ingestion can apply
+// the stronger identity and money binding.
+type PaymentAuthorityResolver interface {
+	ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (PaymentAuthority, error)
+}
+
 // WalletDataPort provides refundable credit grants from the Credit Ledger.
 type WalletDataPort interface {
 	GetGrants(ctx context.Context, namespace, customerID string) ([]commerce.AllocationGrant, error)
@@ -281,6 +300,7 @@ var (
 	ErrInsufficientRefundable  = errors.New("refund: insufficient refundable credit")
 	ErrFenceTimeout            = errors.New("refund: fence establishment timed out")
 	ErrProviderRefundFailed    = errors.New("refund: provider returned failure")
+	ErrRefundFactMismatch      = errors.New("refund: verified provider fact does not match persisted payment authority")
 )
 
 // ---------------------------------------------------------------------------
@@ -311,7 +331,10 @@ type Config struct {
 	// (I5). If nil, lookupProvider falls back to the refund's ProviderName or,
 	// failing that, a deterministic first-key selection (no map iteration).
 	ProviderResolver ProviderResolver
-	Logger           *slog.Logger
+	// PaymentAuthorityResolver binds verified refund callbacks to the persisted
+	// successful payment attempt before any fact or fulfillment side effect.
+	PaymentAuthorityResolver PaymentAuthorityResolver
+	Logger                   *slog.Logger
 }
 
 type service struct {
@@ -322,6 +345,7 @@ type service struct {
 	reverser  CreditReverser
 	providers map[payment.Provider]ProviderRefunder
 	pResolver ProviderResolver
+	aResolver PaymentAuthorityResolver
 	logger    *slog.Logger
 }
 
@@ -348,6 +372,7 @@ func New(cfg Config) (Service, error) {
 		reverser:  cfg.Reverser,
 		providers: cfg.Providers,
 		pResolver: cfg.ProviderResolver,
+		aResolver: cfg.PaymentAuthorityResolver,
 		logger:    logger,
 	}, nil
 }
@@ -682,6 +707,11 @@ func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fac
 	if err != nil {
 		return nil, fmt.Errorf("refund: locate refund by provider refund id %s: %w", fact.ProviderRefundID, err)
 	}
+	if rec.ProviderName == string(payment.ProviderWeChat) || fact.Provider == payment.ProviderWeChat {
+		if err := s.validateWechatRefundCallbackAuthority(ctx, rec, fact); err != nil {
+			return rec, err
+		}
+	}
 
 	// Dedup: persist the fact. If we've already seen it, return the current state.
 	_, inserted, err := s.repo.AppendFact(ctx, RefundFactRecord{
@@ -733,6 +763,56 @@ func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fac
 
 	// Unknown result — retain the fence.
 	return rec, nil
+}
+
+func (s *service) validateWechatRefundCallbackAuthority(ctx context.Context, rec *RefundRequest, fact payment.RefundFact) error {
+	if s.aResolver == nil {
+		return fmt.Errorf("%w: payment authority resolver is unavailable", ErrRefundFactMismatch)
+	}
+	authority, err := s.aResolver.ResolvePaymentAuthorityForOrder(ctx, rec.Namespace, rec.CommerceOrderID)
+	if err != nil {
+		return fmt.Errorf("refund: resolve payment authority: %w", err)
+	}
+	if rec.ProviderName != string(payment.ProviderWeChat) || fact.Provider != payment.ProviderWeChat || authority.Provider != payment.ProviderWeChat {
+		return fmt.Errorf("%w: provider", ErrRefundFactMismatch)
+	}
+	if rec.ProviderRefundID == "" || fact.ProviderRefundID != rec.ProviderRefundID {
+		return fmt.Errorf("%w: refund ID", ErrRefundFactMismatch)
+	}
+	if authority.ProviderOrderID == "" || fact.ProviderOrderID != authority.ProviderOrderID {
+		return fmt.Errorf("%w: merchant order", ErrRefundFactMismatch)
+	}
+	if authority.ProviderPaymentID == "" || fact.ProviderPaymentID != authority.ProviderPaymentID {
+		return fmt.Errorf("%w: original payment ID", ErrRefundFactMismatch)
+	}
+	if authority.MerchantID == "" || fact.MerchantID != authority.MerchantID {
+		return fmt.Errorf("%w: merchant", ErrRefundFactMismatch)
+	}
+	if rec.RefundFen <= 0 || fact.AmountMinor != rec.RefundFen {
+		return fmt.Errorf("%w: refund amount", ErrRefundFactMismatch)
+	}
+	if authority.AmountMinor <= 0 || fact.TotalAmountMinor != authority.AmountMinor {
+		return fmt.Errorf("%w: original payment amount", ErrRefundFactMismatch)
+	}
+	if fact.Currency != "CNY" || rec.Currency != "CNY" || authority.Currency != "CNY" {
+		return fmt.Errorf("%w: currency", ErrRefundFactMismatch)
+	}
+	if !fact.Terminal || fact.RawHash == "" {
+		return fmt.Errorf("%w: terminal callback", ErrRefundFactMismatch)
+	}
+	switch fact.Status {
+	case "SUCCESS":
+		if !fact.Success {
+			return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
+		}
+	case "CLOSED", "ABNORMAL":
+		if fact.Success {
+			return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
+		}
+	default:
+		return fmt.Errorf("%w: refund status", ErrRefundFactMismatch)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------

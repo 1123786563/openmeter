@@ -60,12 +60,13 @@ type refundRequest struct {
 }
 
 type refund struct {
-	RefundID    string       `json:"refund_id"`
-	OutRefundNo string       `json:"out_refund_no"`
-	OutTradeNo  string       `json:"out_trade_no"`
-	Status      string       `json:"status"`
-	SuccessTime string       `json:"success_time"`
-	Amount      refundAmount `json:"amount"`
+	RefundID      string       `json:"refund_id"`
+	OutRefundNo   string       `json:"out_refund_no"`
+	OutTradeNo    string       `json:"out_trade_no"`
+	TransactionID string       `json:"transaction_id"`
+	Status        string       `json:"status"`
+	SuccessTime   string       `json:"success_time"`
+	Amount        refundAmount `json:"amount"`
 }
 
 type refundNotificationResource struct {

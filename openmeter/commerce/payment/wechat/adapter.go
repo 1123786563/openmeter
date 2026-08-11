@@ -227,6 +227,10 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	if response.OutTradeNo != providerOrderID {
 		return payment.PaymentFact{}, fmt.Errorf("%w: transaction out_trade_no mismatch", payment.ErrPermanentProviderProtocol)
 	}
+	factTime, err := transactionFactTime(response)
+	if err != nil {
+		return payment.PaymentFact{}, err
+	}
 	payload, err := payment.ExtractSignedPayload(rawBody)
 	if err != nil {
 		return payment.PaymentFact{}, fmt.Errorf("%w: invalid transaction response", payment.ErrPermanentProviderProtocol)
@@ -242,7 +246,7 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 		Success:           response.TradeState == "SUCCESS",
 		Terminal:          terminalTradeState(response.TradeState),
 		RawHash:           hashBody(rawBody),
-		Timestamp:         parseProviderTime(response.SuccessTime, a.now()),
+		Timestamp:         factTime,
 		SignedPayload:     payload,
 	}, nil
 }
@@ -253,8 +257,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
 		return payment.PaymentFact{}, err
 	}
-	callbackTime, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp"))
-	if err != nil {
+	if _, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp")); err != nil {
 		return payment.PaymentFact{}, err
 	}
 
@@ -267,6 +270,10 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 	}
 	if envelope.EventType != "TRANSACTION.SUCCESS" || envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "transaction" {
 		return payment.PaymentFact{}, fmt.Errorf("%w: notification context does not describe a transaction success", payment.ErrPermanentProviderProtocol)
+	}
+	eventTime, err := requiredProviderTime(envelope.CreateTime, "notification create_time")
+	if err != nil {
+		return payment.PaymentFact{}, err
 	}
 	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
 	if err != nil {
@@ -302,7 +309,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 		Success:           resource.TradeState == "SUCCESS",
 		Terminal:          terminalTradeState(resource.TradeState),
 		RawHash:           hashBody(body),
-		Timestamp:         callbackTime,
+		Timestamp:         eventTime,
 		SignedPayload:     payload,
 	}, nil
 }
@@ -375,16 +382,25 @@ func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInpu
 	if response.Status == "SUCCESS" || response.Status == "CLOSED" || response.Status == "ABNORMAL" {
 		rawHash = hashBody(rawBody)
 	}
+	factTime, err := refundFactTime(response)
+	if err != nil {
+		return payment.RefundFact{}, err
+	}
 	return payment.RefundFact{
-		Provider:         payment.ProviderWeChat,
-		ProviderRefundID: response.OutRefundNo,
-		ProviderOrderID:  response.OutTradeNo,
-		AmountMinor:      response.Amount.Refund,
-		Currency:         response.Amount.Currency,
-		Success:          response.Status == "SUCCESS",
-		RawHash:          rawHash,
-		Timestamp:        parseProviderTime(response.SuccessTime, a.now()),
-		SignedPayload:    payload,
+		Provider:          payment.ProviderWeChat,
+		ProviderRefundID:  response.OutRefundNo,
+		ProviderOrderID:   response.OutTradeNo,
+		ProviderPaymentID: response.TransactionID,
+		MerchantID:        a.merchantID,
+		AmountMinor:       response.Amount.Refund,
+		TotalAmountMinor:  response.Amount.Total,
+		Currency:          response.Amount.Currency,
+		Status:            response.Status,
+		Success:           response.Status == "SUCCESS",
+		Terminal:          terminalRefundStatus(response.Status),
+		RawHash:           rawHash,
+		Timestamp:         factTime,
+		SignedPayload:     payload,
 	}, nil
 }
 
@@ -394,8 +410,7 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
 		return payment.RefundFact{}, err
 	}
-	callbackTime, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp"))
-	if err != nil {
+	if _, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp")); err != nil {
 		return payment.RefundFact{}, err
 	}
 	var envelope notification
@@ -407,6 +422,10 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	}
 	if envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "refund" {
 		return payment.RefundFact{}, fmt.Errorf("%w: notification context does not describe a refund", payment.ErrPermanentProviderProtocol)
+	}
+	eventTime, err := requiredProviderTime(envelope.CreateTime, "refund notification create_time")
+	if err != nil {
+		return payment.RefundFact{}, err
 	}
 	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
 	if err != nil {
@@ -423,11 +442,12 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 		return payment.RefundFact{}, fmt.Errorf("%w: refund transaction ID is required", payment.ErrPermanentProviderProtocol)
 	}
 	resource := refund{
-		RefundID:    notificationResource.RefundID,
-		OutRefundNo: notificationResource.OutRefundNo,
-		OutTradeNo:  notificationResource.OutTradeNo,
-		Status:      notificationResource.RefundStatus,
-		SuccessTime: notificationResource.SuccessTime,
+		RefundID:      notificationResource.RefundID,
+		OutRefundNo:   notificationResource.OutRefundNo,
+		OutTradeNo:    notificationResource.OutTradeNo,
+		TransactionID: notificationResource.TransactionID,
+		Status:        notificationResource.RefundStatus,
+		SuccessTime:   notificationResource.SuccessTime,
 		Amount: refundAmount{
 			Refund:   notificationResource.Amount.Refund,
 			Total:    notificationResource.Amount.Total,
@@ -446,20 +466,26 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	}
 	payload["notification_id"] = envelope.ID
 	payload["event_type"] = envelope.EventType
+	payload["create_time"] = envelope.CreateTime
 	rawHash := ""
 	if resource.Status == "SUCCESS" || resource.Status == "CLOSED" || resource.Status == "ABNORMAL" {
 		rawHash = hashBody(body)
 	}
 	return payment.RefundFact{
-		Provider:         payment.ProviderWeChat,
-		ProviderRefundID: resource.OutRefundNo,
-		ProviderOrderID:  resource.OutTradeNo,
-		AmountMinor:      resource.Amount.Refund,
-		Currency:         resource.Amount.Currency,
-		Success:          resource.Status == "SUCCESS",
-		RawHash:          rawHash,
-		Timestamp:        callbackTime,
-		SignedPayload:    payload,
+		Provider:          payment.ProviderWeChat,
+		ProviderRefundID:  resource.OutRefundNo,
+		ProviderOrderID:   resource.OutTradeNo,
+		ProviderPaymentID: resource.TransactionID,
+		MerchantID:        notificationResource.MchID,
+		AmountMinor:       resource.Amount.Refund,
+		TotalAmountMinor:  resource.Amount.Total,
+		Currency:          resource.Amount.Currency,
+		Status:            resource.Status,
+		Success:           resource.Status == "SUCCESS",
+		Terminal:          terminalRefundStatus(resource.Status),
+		RawHash:           rawHash,
+		Timestamp:         eventTime,
+		SignedPayload:     payload,
 	}, nil
 }
 
@@ -479,6 +505,11 @@ func (a *Adapter) validateTransaction(value transaction) error {
 	if value.TradeState == "SUCCESS" && value.TransactionID == "" {
 		return fmt.Errorf("%w: successful transaction ID is required", payment.ErrPermanentProviderProtocol)
 	}
+	if value.TradeState == "SUCCESS" {
+		if _, err := requiredProviderTime(value.SuccessTime, "transaction success_time"); err != nil {
+			return err
+		}
+	}
 	if value.Amount.Currency != "CNY" {
 		return fmt.Errorf("%w: transaction currency must be CNY", payment.ErrPermanentProviderProtocol)
 	}
@@ -496,6 +527,10 @@ func validTradeState(state string) bool {
 
 func terminalTradeState(state string) bool {
 	return state == "SUCCESS" || state == "CLOSED" || state == "PAYERROR"
+}
+
+func terminalRefundStatus(status string) bool {
+	return status == "SUCCESS" || status == "CLOSED" || status == "ABNORMAL"
 }
 
 func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string) error {
@@ -519,6 +554,11 @@ func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string
 	default:
 		return fmt.Errorf("%w: refund status is invalid", payment.ErrPermanentProviderProtocol)
 	}
+	if value.Status == "SUCCESS" {
+		if _, err := requiredProviderTime(value.SuccessTime, "refund success_time"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -527,15 +567,12 @@ func (a *Adapter) validateSignatureTime(timestamp string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, fmt.Errorf("%w: invalid Wechatpay timestamp", payment.ErrInvalidSignature)
 	}
-	callbackTime := time.Unix(seconds, 0)
-	difference := a.now().Sub(callbackTime)
-	if difference < 0 {
-		difference = -difference
-	}
-	if difference > a.callbackMaxAge {
+	signedTime := time.Unix(seconds, 0)
+	now := a.now()
+	if signedTime.Before(now.Add(-a.callbackMaxAge)) || signedTime.After(now.Add(a.callbackMaxAge)) {
 		return time.Time{}, fmt.Errorf("%w: Wechatpay timestamp is outside the accepted window", payment.ErrInvalidSignature)
 	}
-	return callbackTime, nil
+	return signedTime, nil
 }
 
 func (a *Adapter) decryptNotificationResource(ctx context.Context, resource encryptedResource) ([]byte, error) {
@@ -555,12 +592,26 @@ func hashBody(body []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func parseProviderTime(value string, fallback time.Time) time.Time {
-	parsed, err := time.Parse(time.RFC3339, value)
+func requiredProviderTime(value, field string) (time.Time, error) {
+	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
 	if err != nil {
-		return fallback
+		return time.Time{}, fmt.Errorf("%w: invalid %s", payment.ErrPermanentProviderProtocol, field)
 	}
-	return parsed
+	return parsed, nil
+}
+
+func transactionFactTime(value transaction) (time.Time, error) {
+	if value.TradeState != "SUCCESS" {
+		return time.Time{}, nil
+	}
+	return requiredProviderTime(value.SuccessTime, "transaction success_time")
+}
+
+func refundFactTime(value refund) (time.Time, error) {
+	if value.Status != "SUCCESS" {
+		return time.Time{}, nil
+	}
+	return requiredProviderTime(value.SuccessTime, "refund success_time")
 }
 
 var _ payment.ProviderAdapter = (*Adapter)(nil)

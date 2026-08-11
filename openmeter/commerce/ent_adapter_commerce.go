@@ -302,16 +302,26 @@ func (a *EntAdapter) ListStalePendingPaymentAttempts(ctx context.Context, namesp
 	return result, nil
 }
 
-// ResolvePaymentProviderForOrder returns the successful provider when present,
-// otherwise the most recently updated attempt's provider.
+// ResolvePaymentAuthorityForOrder returns the successful payment attempt whose
+// immutable provider identity, order, payment, and money fields are the
+// persisted authority for refund callback ingestion.
+func (a *EntAdapter) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (*PaymentAttemptWire, error) {
+	attempts, err := a.listPaymentAttemptsForOrder(ctx, namespace, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("ent: resolve payment authority for order: %w", err)
+	}
+	for _, attempt := range attempts {
+		if attempt.Status == paymentattempt.StatusSucceeded {
+			return mapEntPaymentAttempt(attempt), nil
+		}
+	}
+	return nil, ErrPaymentAttemptNotFound
+}
+
+// ResolvePaymentProviderForOrder preserves the provider-only resolver contract
+// for refund submission routing.
 func (a *EntAdapter) ResolvePaymentProviderForOrder(ctx context.Context, namespace, orderID string) (PaymentProviderWire, error) {
-	attempts, err := a.db.PaymentAttempt.Query().
-		Where(
-			paymentattempt.NamespaceEQ(namespace),
-			paymentattempt.CommerceOrderIDEQ(orderID),
-		).
-		Order(paymentattempt.ByUpdatedAt(entsql.OrderDesc()), paymentattempt.ByID(entsql.OrderDesc())).
-		All(ctx)
+	attempts, err := a.listPaymentAttemptsForOrder(ctx, namespace, orderID)
 	if err != nil {
 		return "", fmt.Errorf("ent: resolve payment provider for order: %w", err)
 	}
@@ -324,6 +334,16 @@ func (a *EntAdapter) ResolvePaymentProviderForOrder(ctx context.Context, namespa
 		}
 	}
 	return string(attempts[0].Provider), nil
+}
+
+func (a *EntAdapter) listPaymentAttemptsForOrder(ctx context.Context, namespace, orderID string) ([]*entdb.PaymentAttempt, error) {
+	return a.db.PaymentAttempt.Query().
+		Where(
+			paymentattempt.NamespaceEQ(namespace),
+			paymentattempt.CommerceOrderIDEQ(orderID),
+		).
+		Order(paymentattempt.ByUpdatedAt(entsql.OrderDesc()), paymentattempt.ByID(entsql.OrderDesc())).
+		All(ctx)
 }
 
 func (a *EntAdapter) UpdatePaymentAttemptStatus(ctx context.Context, namespace, id string, expectedFrom, to AttemptStatusWire) (*PaymentAttemptWire, error) {

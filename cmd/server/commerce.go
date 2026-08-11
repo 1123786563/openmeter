@@ -144,15 +144,17 @@ func wireCommerce(
 			}
 			paymentRecovery = payment.NewRecovery(attemptRepo, paymentSvc, cfg.Payment.PendingStaleAfter)
 
+			paymentResolver := paymentProviderResolverAdapter{entAdapter}
 			refundSvc, err = refund.New(refund.Config{
-				Repo:             refundRepoAdapter{entAdapter},
-				Orders:           refundOrderReader{entAdapter},
-				Wallet:           refundWalletAdapter{entAdapter},
-				Fence:            runtimeDeps.RefundFence,
-				Reverser:         runtimeDeps.RefundCreditReverser,
-				Providers:        refundProviders,
-				ProviderResolver: paymentProviderResolverAdapter{entAdapter},
-				Logger:           logger,
+				Repo:                     refundRepoAdapter{entAdapter},
+				Orders:                   refundOrderReader{entAdapter},
+				Wallet:                   refundWalletAdapter{entAdapter},
+				Fence:                    runtimeDeps.RefundFence,
+				Reverser:                 runtimeDeps.RefundCreditReverser,
+				Providers:                refundProviders,
+				ProviderResolver:         paymentResolver,
+				PaymentAuthorityResolver: paymentResolver,
+				Logger:                   logger,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("refund service: %w", err)
@@ -652,6 +654,21 @@ func (a paymentProviderResolverAdapter) ResolveProviderForOrder(ctx context.Cont
 		return "", err
 	}
 	return payment.Provider(provider), nil
+}
+
+func (a paymentProviderResolverAdapter) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (refund.PaymentAuthority, error) {
+	attempt, err := a.EntAdapter.ResolvePaymentAuthorityForOrder(ctx, namespace, orderID)
+	if err != nil {
+		return refund.PaymentAuthority{}, err
+	}
+	return refund.PaymentAuthority{
+		Provider:          payment.Provider(attempt.Provider),
+		ProviderOrderID:   attempt.ProviderOrderID,
+		ProviderPaymentID: attempt.ProviderPaymentID,
+		MerchantID:        attempt.ExpectedMerchantID,
+		AmountMinor:       attempt.AmountMinor,
+		Currency:          attempt.Currency,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------
