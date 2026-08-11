@@ -87,7 +87,7 @@ The refund holds a whole-customer Credit fence during `provider_processing` and
 2. Establish whole-customer fence (stops new reservations, drains in-flight).
 3. Under fence: lock source allocation, recompute unused credit, reserve exact
    quantum (10 Credit : 1 fen), submit to provider → `provider_processing`.
-4. Provider success → reverse fenced credit, publish snapshot → `fulfilled`.
+4. Provider success → reverse fenced credit, transition to `fulfilled`, release the fence.
 5. Definitive failure → `failed`, release fence.
 
 ## Transaction & Idempotency Rules
