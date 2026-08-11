@@ -246,7 +246,8 @@ interface CreditReservationEndpoints
 
 @route("/credit-charges")
 @tag(Shared.BillingTag)
-interface CreditChargeEndpoints extends CreditReservations.CreditChargeOperations {}
+interface CreditChargeEndpoints
+  extends CreditReservations.CreditChargeOperations {}
 
 @route("/customers/{customerId}/wallet")
 @tag(Shared.CommerceTag)

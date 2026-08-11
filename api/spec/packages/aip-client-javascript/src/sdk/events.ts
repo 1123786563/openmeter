@@ -2,22 +2,15 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginateCursor,
-} from '../lib/paginate.js'
-import {
-  listMeteringEvents,
-  ingestMeteringEvents,
-} from '../funcs/events.js'
+import { paginateCursor } from '../lib/paginate.js'
+import { listMeteringEvents, ingestMeteringEvents } from '../funcs/events.js'
 import type {
   ListMeteringEventsRequest,
   ListMeteringEventsResponse,
   IngestMeteringEventsRequest,
   IngestMeteringEventsResponse,
 } from '../models/operations/events.js'
-import type {
-  IngestedEvent,
-} from '../models/types.js'
+import type { IngestedEvent } from '../models/types.js'
 
 export class Events {
   constructor(private readonly _client: Client) {}

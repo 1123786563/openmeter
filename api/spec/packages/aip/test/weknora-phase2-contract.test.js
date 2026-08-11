@@ -123,8 +123,14 @@ describe('WeKnora Phase 2 commerce contract', () => {
       const responseRef = spec.components.schemas.CommercePlanRef
 
       assert.ok(requestRef.properties.plan_id, 'request plan_id property')
-      assert.ok(!requestRef.required.includes('plan_id'), 'request plan_id is optional')
-      assert.ok(responseRef.required.includes('plan_id'), 'response plan_id is required')
+      assert.ok(
+        !requestRef.required.includes('plan_id'),
+        'request plan_id is optional',
+      )
+      assert.ok(
+        responseRef.required.includes('plan_id'),
+        'response plan_id is required',
+      )
     })
   })
 

@@ -2,9 +2,7 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginatePages,
-} from '../lib/paginate.js'
+import { paginatePages } from '../lib/paginate.js'
 import {
   listAddons,
   createAddon,
@@ -30,9 +28,7 @@ import type {
   PublishAddonRequest,
   PublishAddonResponse,
 } from '../models/operations/addons.js'
-import type {
-  Addon,
-} from '../models/types.js'
+import type { Addon } from '../models/types.js'
 
 export class Addons {
   constructor(private readonly _client: Client) {}

@@ -58,7 +58,12 @@ export function getCustomerWallet(
     if (client._options.validate) {
       assertValid(schemas.getCustomerWalletPathParamsWire, pathParams)
     }
-    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/wallet`
+    const path = `customers/${(() => {
+      if (pathParams.customerId === undefined) {
+        throw new Error('missing path parameter: customerId')
+      }
+      return encodeURIComponent(String(pathParams.customerId))
+    })()}/wallet`
     return http(client)
       .get(path, options)
       .json()
@@ -84,9 +89,12 @@ export function listRechargeProducts(
   options?: RequestOptions,
 ): Promise<Result<ListRechargeProductsResponse>> {
   return request(() => {
-    const query = toWire({
-      currency: req.currency,
-    }, schemas.listRechargeProductsQueryParams)
+    const query = toWire(
+      {
+        currency: req.currency,
+      },
+      schemas.listRechargeProductsQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listRechargeProductsQueryParamsWire, query)
     }
@@ -157,7 +165,12 @@ export function getOrder(
     if (client._options.validate) {
       assertValid(schemas.getOrderPathParamsWire, pathParams)
     }
-    const path = `orders/${(() => { if (pathParams.orderId === undefined) { throw new Error('missing path parameter: orderId') } return encodeURIComponent(String(pathParams.orderId)) })()}`
+    const path = `orders/${(() => {
+      if (pathParams.orderId === undefined) {
+        throw new Error('missing path parameter: orderId')
+      }
+      return encodeURIComponent(String(pathParams.orderId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -193,7 +206,12 @@ export function createCheckoutSession(
     if (client._options.validate) {
       assertValid(schemas.createCheckoutSessionPathParamsWire, pathParams)
     }
-    const path = `orders/${(() => { if (pathParams.orderId === undefined) { throw new Error('missing path parameter: orderId') } return encodeURIComponent(String(pathParams.orderId)) })()}/checkout-sessions`
+    const path = `orders/${(() => {
+      if (pathParams.orderId === undefined) {
+        throw new Error('missing path parameter: orderId')
+      }
+      return encodeURIComponent(String(pathParams.orderId))
+    })()}/checkout-sessions`
     const body = toWire(req.body, schemas.createCheckoutSessionBody)
     if (client._options.validate) {
       assertValid(schemas.createCheckoutSessionBodyWire, body)
@@ -233,7 +251,12 @@ export function getCheckoutSession(
     if (client._options.validate) {
       assertValid(schemas.getCheckoutSessionPathParamsWire, pathParams)
     }
-    const path = `checkout-sessions/${(() => { if (pathParams.sessionId === undefined) { throw new Error('missing path parameter: sessionId') } return encodeURIComponent(String(pathParams.sessionId)) })()}`
+    const path = `checkout-sessions/${(() => {
+      if (pathParams.sessionId === undefined) {
+        throw new Error('missing path parameter: sessionId')
+      }
+      return encodeURIComponent(String(pathParams.sessionId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -297,7 +320,12 @@ export function getRefund(
     if (client._options.validate) {
       assertValid(schemas.getRefundPathParamsWire, pathParams)
     }
-    const path = `refunds/${(() => { if (pathParams.refundId === undefined) { throw new Error('missing path parameter: refundId') } return encodeURIComponent(String(pathParams.refundId)) })()}`
+    const path = `refunds/${(() => {
+      if (pathParams.refundId === undefined) {
+        throw new Error('missing path parameter: refundId')
+      }
+      return encodeURIComponent(String(pathParams.refundId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -328,7 +356,10 @@ export function wechatPaymentCallback(
     if (client._options.validate) {
       assertValid(schemas.wechatPaymentCallbackBodyWire, body)
     }
-    await http(client).post('payment-providers/wechat/callback', { ...options, json: body })
+    await http(client).post('payment-providers/wechat/callback', {
+      ...options,
+      json: body,
+    })
   })
 }
 
@@ -353,7 +384,11 @@ export function alipayPaymentCallback(
       assertValid(schemas.alipayPaymentCallbackBodyWire, body)
     }
     return http(client)
-      .post('payment-providers/alipay/callback', { ...options, json: body, headers })
+      .post('payment-providers/alipay/callback', {
+        ...options,
+        json: body,
+        headers,
+      })
       .text()
   })
 }
@@ -380,10 +415,18 @@ export function listReceivablePeriods(
     if (client._options.validate) {
       assertValid(schemas.listReceivablePeriodsPathParamsWire, pathParams)
     }
-    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/receivable-periods`
-    const query = toWire({
-      page: req.page,
-    }, schemas.listReceivablePeriodsQueryParams)
+    const path = `customers/${(() => {
+      if (pathParams.customerId === undefined) {
+        throw new Error('missing path parameter: customerId')
+      }
+      return encodeURIComponent(String(pathParams.customerId))
+    })()}/receivable-periods`
+    const query = toWire(
+      {
+        page: req.page,
+      },
+      schemas.listReceivablePeriodsQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listReceivablePeriodsQueryParamsWire, query)
     }
@@ -424,7 +467,12 @@ export function createOfflinePayment(
     if (client._options.validate) {
       assertValid(schemas.createOfflinePaymentPathParamsWire, pathParams)
     }
-    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/offline-payments`
+    const path = `customers/${(() => {
+      if (pathParams.customerId === undefined) {
+        throw new Error('missing path parameter: customerId')
+      }
+      return encodeURIComponent(String(pathParams.customerId))
+    })()}/offline-payments`
     const body = toWire(req.body, schemas.createOfflinePaymentBody)
     if (client._options.validate) {
       assertValid(schemas.createOfflinePaymentBodyWire, body)
@@ -464,7 +512,17 @@ export function updateExternalInvoice(
     if (client._options.validate) {
       assertValid(schemas.updateExternalInvoicePathParamsWire, pathParams)
     }
-    const path = `customers/${(() => { if (pathParams.customerId === undefined) { throw new Error('missing path parameter: customerId') } return encodeURIComponent(String(pathParams.customerId)) })()}/receivable-periods/${(() => { if (pathParams.periodId === undefined) { throw new Error('missing path parameter: periodId') } return encodeURIComponent(String(pathParams.periodId)) })()}/external-invoice`
+    const path = `customers/${(() => {
+      if (pathParams.customerId === undefined) {
+        throw new Error('missing path parameter: customerId')
+      }
+      return encodeURIComponent(String(pathParams.customerId))
+    })()}/receivable-periods/${(() => {
+      if (pathParams.periodId === undefined) {
+        throw new Error('missing path parameter: periodId')
+      }
+      return encodeURIComponent(String(pathParams.periodId))
+    })()}/external-invoice`
     const body = toWire(req.body, schemas.updateExternalInvoiceBody)
     if (client._options.validate) {
       assertValid(schemas.updateExternalInvoiceBodyWire, body)

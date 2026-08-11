@@ -2,9 +2,7 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginateCursor,
-} from '../lib/paginate.js'
+import { paginateCursor } from '../lib/paginate.js'
 import {
   getCustomerWallet,
   listRechargeProducts,
@@ -48,9 +46,7 @@ import type {
   UpdateExternalInvoiceRequest,
   UpdateExternalInvoiceResponse,
 } from '../models/operations/commerce.js'
-import type {
-  CommerceReceivablePeriod,
-} from '../models/types.js'
+import type { CommerceReceivablePeriod } from '../models/types.js'
 
 export class Commerce {
   constructor(private readonly _client: Client) {}

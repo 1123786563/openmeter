@@ -67,7 +67,9 @@ export class CreditReservations {
     request: ExecuteCreditReservationRequest,
     options?: RequestOptions,
   ): Promise<ExecuteCreditReservationResponse> {
-    return unwrap(await executeCreditReservation(this._client, request, options))
+    return unwrap(
+      await executeCreditReservation(this._client, request, options),
+    )
   }
 
   /**
@@ -91,7 +93,9 @@ export class CreditReservations {
     request: ReleaseCreditReservationRequest,
     options?: RequestOptions,
   ): Promise<ReleaseCreditReservationResponse> {
-    return unwrap(await releaseCreditReservation(this._client, request, options))
+    return unwrap(
+      await releaseCreditReservation(this._client, request, options),
+    )
   }
 
   /**
@@ -103,7 +107,9 @@ export class CreditReservations {
     request: MarkCreditReservationUnknownRequest,
     options?: RequestOptions,
   ): Promise<MarkCreditReservationUnknownResponse> {
-    return unwrap(await markCreditReservationUnknown(this._client, request, options))
+    return unwrap(
+      await markCreditReservationUnknown(this._client, request, options),
+    )
   }
 
   /**

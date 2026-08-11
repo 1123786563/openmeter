@@ -139,15 +139,15 @@ model RuntimeAuthorization {
   covered_tenant_seq: int64;
 
   /**
-  * The reason authorization was denied, when `authorized` is `false`.
-  */
- denial_reason?: string;
+   * The reason authorization was denied, when `authorized` is `false`.
+   */
+  denial_reason?: string;
 
   /**
    * Canonical JSON payload for consumer-side verification. The raw bytes of
    * the canonicalized authorization object, used to derive the SHA-256 hash
    * and verify the signature.
-  */
+   */
   @extension("x-go-name", "CanonicalPayload")
   @extension("x-go-type", "json.RawMessage")
   @extension("x-go-type-skip-optional-pointer", true)

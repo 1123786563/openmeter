@@ -219,7 +219,7 @@ requests:
 
 ```typescript
 for await (const meter of client.meters.listAll({ filter: { key: 'api' } })) {
-  if (meter.key === "api-requests") {
+  if (meter.key === 'api-requests') {
     break // stops iterating; no further pages are fetched
   }
 }
@@ -262,176 +262,176 @@ The full call path, HTTP route, and a short description are listed below.
 
 ### Events
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.events.list` | `GET /openmeter/events` | List ingested events. |
+| Method                 | HTTP                     | Description                                                                  |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `client.events.list`   | `GET /openmeter/events`  | List ingested events.                                                        |
 | `client.events.ingest` | `POST /openmeter/events` | Ingests an event or batch of events following the CloudEvents specification. |
 
 ### Meters
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.meters.create` | `POST /openmeter/meters` | Create a meter. |
-| `client.meters.get` | `GET /openmeter/meters/{meterId}` | Get a meter by ID. |
-| `client.meters.list` | `GET /openmeter/meters` | List meters. |
-| `client.meters.update` | `PUT /openmeter/meters/{meterId}` | Update a meter. |
-| `client.meters.delete` | `DELETE /openmeter/meters/{meterId}` | Delete a meter. |
-| `client.meters.query` | `POST /openmeter/meters/{meterId}/query` | Query a meter for usage. Set `Accept: application/json` (the default) to get a structured JSON response. Set `Accept: text/csv` to download the same data as a CSV file suitable for spreadsheets. The CSV columns, in order, are: `from, to, [subject,] [customer_id, customer_key, customer_name,] <dimensions...>, value` The `subject` column is emitted only when `subject` is in the query's `group_by_dimensions`. The three `customer_*` columns are emitted together only when `customer_id` is in the query's `group_by_dimensions`. |
-| `client.meters.queryCsv` | `POST /openmeter/meters/{meterId}/query` |  |
+| Method                   | HTTP                                     | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.meters.create`   | `POST /openmeter/meters`                 | Create a meter.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `client.meters.get`      | `GET /openmeter/meters/{meterId}`        | Get a meter by ID.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `client.meters.list`     | `GET /openmeter/meters`                  | List meters.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `client.meters.update`   | `PUT /openmeter/meters/{meterId}`        | Update a meter.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `client.meters.delete`   | `DELETE /openmeter/meters/{meterId}`     | Delete a meter.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `client.meters.query`    | `POST /openmeter/meters/{meterId}/query` | Query a meter for usage. Set `Accept: application/json` (the default) to get a structured JSON response. Set `Accept: text/csv` to download the same data as a CSV file suitable for spreadsheets. The CSV columns, in order, are: `from, to, [subject,] [customer_id, customer_key, customer_name,] <dimensions...>, value` The `subject` column is emitted only when `subject` is in the query's `group_by_dimensions`. The three `customer_*` columns are emitted together only when `customer_id` is in the query's `group_by_dimensions`. |
+| `client.meters.queryCsv` | `POST /openmeter/meters/{meterId}/query` |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ### Customers
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.customers.create` | `POST /openmeter/customers` | Create customer |
-| `client.customers.get` | `GET /openmeter/customers/{customerId}` | Get customer |
-| `client.customers.list` | `GET /openmeter/customers` | List customers |
-| `client.customers.upsert` | `PUT /openmeter/customers/{customerId}` | Upsert customer |
-| `client.customers.delete` | `DELETE /openmeter/customers/{customerId}` | Delete customer |
-| `client.customers.billing.get` | `GET /openmeter/customers/{customerId}/billing` | Get customer billing data |
-| `client.customers.billing.update` | `PUT /openmeter/customers/{customerId}/billing` | Update customer billing data |
-| `client.customers.billing.updateAppData` | `PUT /openmeter/customers/{customerId}/billing/app-data` | Update customer billing app data |
-| `client.customers.billing.createStripeCheckoutSession` | `POST /openmeter/customers/{customerId}/billing/stripe/checkout-sessions` | Create a [Stripe Checkout Session](https://docs.stripe.com/payments/checkout) for the customer. Creates a Checkout Session for collecting payment method information from customers. The session operates in "setup" mode, which collects payment details without charging the customer immediately. The collected payment method can be used for future subscription billing. For hosted checkout sessions, redirect customers to the returned URL. For embedded sessions, use the client_secret to initialize Stripe.js in your application. |
-| `client.customers.billing.createStripePortalSession` | `POST /openmeter/customers/{customerId}/billing/stripe/portal-sessions` | Create Stripe Customer Portal Session. Useful to redirect the customer to the Stripe Customer Portal to manage their payment methods, change their billing address and access their invoice history. Only returns URL if the customer billing profile is linked to a stripe app and customer. |
-| `client.customers.credits.grants.create` | `POST /openmeter/customers/{customerId}/credits/grants` | Create a new credit grant. A credit grant represents an allocation of prepaid credits to a customer. |
-| `client.customers.credits.grants.get` | `GET /openmeter/customers/{customerId}/credits/grants/{creditGrantId}` | Get a credit grant. |
-| `client.customers.credits.grants.list` | `GET /openmeter/customers/{customerId}/credits/grants` | List credit grants. |
-| `client.customers.credits.balance.get` | `GET /openmeter/customers/{customerId}/credits/balance` | Get a credit balance. |
-| `client.customers.credits.adjustments.create` | `POST /openmeter/customers/{customerId}/credits/adjustments` | A credit adjustment can be used to make manual adjustments to a customer's credit balance. Supported use-cases: - Usage correction |
-| `client.customers.credits.grants.void` | `POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/void` | Void a credit grant, forfeiting the remaining unused balance. Voiding is a forward-looking, irreversible operation. Credits already consumed by usage remain unaffected — only the remaining balance is forfeited. The grant reads as `voided` status afterwards. Payment state is not adjusted when `payment_adjustment` is `none`, so invoice-backed or externally collected payments may still collect the original amount. Only `active` grants can be voided; voiding a pending, expired, or fully consumed grant returns a conflict. Retrying a successful void is an idempotent success. |
-| `client.customers.credits.grants.updateExternalSettlement` | `POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/settlement/external` | Update the payment settlement status of an externally funded credit grant. Use this endpoint to synchronize the payment state of an external payment with the system so that revenue recognition and credit availability work as expected. |
-| `client.customers.credits.transactions.list` | `GET /openmeter/customers/{customerId}/credits/transactions` | List credit transactions for a customer. Returns an immutable, chronological record of credit movements: funded credits and consumed credits. Transactions are returned in reverse chronological order by default. |
-| `client.customers.charges.list` | `GET /openmeter/customers/{customerId}/charges` | List customer charges. Returns the customer's charges that are represented as either flat fee or usage-based charges. |
-| `client.customers.charges.create` | `POST /openmeter/customers/{customerId}/charges` | Create customer charge. |
+| Method                                                     | HTTP                                                                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.customers.create`                                  | `POST /openmeter/customers`                                                                 | Create customer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `client.customers.get`                                     | `GET /openmeter/customers/{customerId}`                                                     | Get customer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `client.customers.list`                                    | `GET /openmeter/customers`                                                                  | List customers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `client.customers.upsert`                                  | `PUT /openmeter/customers/{customerId}`                                                     | Upsert customer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `client.customers.delete`                                  | `DELETE /openmeter/customers/{customerId}`                                                  | Delete customer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `client.customers.billing.get`                             | `GET /openmeter/customers/{customerId}/billing`                                             | Get customer billing data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `client.customers.billing.update`                          | `PUT /openmeter/customers/{customerId}/billing`                                             | Update customer billing data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `client.customers.billing.updateAppData`                   | `PUT /openmeter/customers/{customerId}/billing/app-data`                                    | Update customer billing app data                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `client.customers.billing.createStripeCheckoutSession`     | `POST /openmeter/customers/{customerId}/billing/stripe/checkout-sessions`                   | Create a [Stripe Checkout Session](https://docs.stripe.com/payments/checkout) for the customer. Creates a Checkout Session for collecting payment method information from customers. The session operates in "setup" mode, which collects payment details without charging the customer immediately. The collected payment method can be used for future subscription billing. For hosted checkout sessions, redirect customers to the returned URL. For embedded sessions, use the client_secret to initialize Stripe.js in your application.                                                  |
+| `client.customers.billing.createStripePortalSession`       | `POST /openmeter/customers/{customerId}/billing/stripe/portal-sessions`                     | Create Stripe Customer Portal Session. Useful to redirect the customer to the Stripe Customer Portal to manage their payment methods, change their billing address and access their invoice history. Only returns URL if the customer billing profile is linked to a stripe app and customer.                                                                                                                                                                                                                                                                                                   |
+| `client.customers.credits.grants.create`                   | `POST /openmeter/customers/{customerId}/credits/grants`                                     | Create a new credit grant. A credit grant represents an allocation of prepaid credits to a customer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `client.customers.credits.grants.get`                      | `GET /openmeter/customers/{customerId}/credits/grants/{creditGrantId}`                      | Get a credit grant.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `client.customers.credits.grants.list`                     | `GET /openmeter/customers/{customerId}/credits/grants`                                      | List credit grants.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `client.customers.credits.balance.get`                     | `GET /openmeter/customers/{customerId}/credits/balance`                                     | Get a credit balance.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `client.customers.credits.adjustments.create`              | `POST /openmeter/customers/{customerId}/credits/adjustments`                                | A credit adjustment can be used to make manual adjustments to a customer's credit balance. Supported use-cases: - Usage correction                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `client.customers.credits.grants.void`                     | `POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/void`                | Void a credit grant, forfeiting the remaining unused balance. Voiding is a forward-looking, irreversible operation. Credits already consumed by usage remain unaffected — only the remaining balance is forfeited. The grant reads as `voided` status afterwards. Payment state is not adjusted when `payment_adjustment` is `none`, so invoice-backed or externally collected payments may still collect the original amount. Only `active` grants can be voided; voiding a pending, expired, or fully consumed grant returns a conflict. Retrying a successful void is an idempotent success. |
+| `client.customers.credits.grants.updateExternalSettlement` | `POST /openmeter/customers/{customerId}/credits/grants/{creditGrantId}/settlement/external` | Update the payment settlement status of an externally funded credit grant. Use this endpoint to synchronize the payment state of an external payment with the system so that revenue recognition and credit availability work as expected.                                                                                                                                                                                                                                                                                                                                                      |
+| `client.customers.credits.transactions.list`               | `GET /openmeter/customers/{customerId}/credits/transactions`                                | List credit transactions for a customer. Returns an immutable, chronological record of credit movements: funded credits and consumed credits. Transactions are returned in reverse chronological order by default.                                                                                                                                                                                                                                                                                                                                                                              |
+| `client.customers.charges.list`                            | `GET /openmeter/customers/{customerId}/charges`                                             | List customer charges. Returns the customer's charges that are represented as either flat fee or usage-based charges.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `client.customers.charges.create`                          | `POST /openmeter/customers/{customerId}/charges`                                            | Create customer charge.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### Entitlements
 
-| Method | HTTP | Description |
-| --- | --- | --- |
+| Method                                   | HTTP                                                       | Description                      |
+| ---------------------------------------- | ---------------------------------------------------------- | -------------------------------- |
 | `client.entitlements.listCustomerAccess` | `GET /openmeter/customers/{customerId}/entitlement-access` | List customer entitlement access |
 
 ### Subscriptions
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.subscriptions.create` | `POST /openmeter/subscriptions` | Create subscription |
-| `client.subscriptions.list` | `GET /openmeter/subscriptions` | List subscriptions |
-| `client.subscriptions.get` | `GET /openmeter/subscriptions/{subscriptionId}` | Get subscription |
-| `client.subscriptions.cancel` | `POST /openmeter/subscriptions/{subscriptionId}/cancel` | Cancels the subscription. Will result in a scheduling conflict if there are other subscriptions scheduled to start after the cancelation time. |
-| `client.subscriptions.unscheduleCancelation` | `POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation` | Unschedules the subscription cancelation. |
-| `client.subscriptions.change` | `POST /openmeter/subscriptions/{subscriptionId}/change` | Closes a running subscription and starts a new one according to the specification. Can be used for upgrades, downgrades, and plan changes. |
-| `client.subscriptions.listAddons` | `GET /openmeter/subscriptions/{subscriptionId}/addons` | List the add-ons of a subscription. |
-| `client.subscriptions.getAddon` | `GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}` | Get an add-on association for a subscription. |
+| Method                                       | HTTP                                                                         | Description                                                                                                                                    |
+| -------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.subscriptions.create`                | `POST /openmeter/subscriptions`                                              | Create subscription                                                                                                                            |
+| `client.subscriptions.list`                  | `GET /openmeter/subscriptions`                                               | List subscriptions                                                                                                                             |
+| `client.subscriptions.get`                   | `GET /openmeter/subscriptions/{subscriptionId}`                              | Get subscription                                                                                                                               |
+| `client.subscriptions.cancel`                | `POST /openmeter/subscriptions/{subscriptionId}/cancel`                      | Cancels the subscription. Will result in a scheduling conflict if there are other subscriptions scheduled to start after the cancelation time. |
+| `client.subscriptions.unscheduleCancelation` | `POST /openmeter/subscriptions/{subscriptionId}/unschedule-cancelation`      | Unschedules the subscription cancelation.                                                                                                      |
+| `client.subscriptions.change`                | `POST /openmeter/subscriptions/{subscriptionId}/change`                      | Closes a running subscription and starts a new one according to the specification. Can be used for upgrades, downgrades, and plan changes.     |
+| `client.subscriptions.listAddons`            | `GET /openmeter/subscriptions/{subscriptionId}/addons`                       | List the add-ons of a subscription.                                                                                                            |
+| `client.subscriptions.getAddon`              | `GET /openmeter/subscriptions/{subscriptionId}/addons/{subscriptionAddonId}` | Get an add-on association for a subscription.                                                                                                  |
 
 ### Billing
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.billing.listProfiles` | `GET /openmeter/profiles` | List billing profiles. |
-| `client.billing.createProfile` | `POST /openmeter/profiles` | Create a new billing profile. Billing profiles contain the settings for billing and controls invoice generation. An organization can have multiple billing profiles defined. A billing profile is linked to a specific app. This association is established during the billing profile's creation and remains immutable. |
-| `client.billing.getProfile` | `GET /openmeter/profiles/{id}` | Get a billing profile. |
-| `client.billing.updateProfile` | `PUT /openmeter/profiles/{id}` | Update a billing profile. |
-| `client.billing.deleteProfile` | `DELETE /openmeter/profiles/{id}` | Delete a billing profile. Only such billing profiles can be deleted that are: - not the default profile - not pinned to any customer using customer overrides - only have finalized invoices |
+| Method                         | HTTP                              | Description                                                                                                                                                                                                                                                                                                              |
+| ------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `client.billing.listProfiles`  | `GET /openmeter/profiles`         | List billing profiles.                                                                                                                                                                                                                                                                                                   |
+| `client.billing.createProfile` | `POST /openmeter/profiles`        | Create a new billing profile. Billing profiles contain the settings for billing and controls invoice generation. An organization can have multiple billing profiles defined. A billing profile is linked to a specific app. This association is established during the billing profile's creation and remains immutable. |
+| `client.billing.getProfile`    | `GET /openmeter/profiles/{id}`    | Get a billing profile.                                                                                                                                                                                                                                                                                                   |
+| `client.billing.updateProfile` | `PUT /openmeter/profiles/{id}`    | Update a billing profile.                                                                                                                                                                                                                                                                                                |
+| `client.billing.deleteProfile` | `DELETE /openmeter/profiles/{id}` | Delete a billing profile. Only such billing profiles can be deleted that are: - not the default profile - not pinned to any customer using customer overrides - only have finalized invoices                                                                                                                             |
 
 ### Tax
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.tax.createCode` | `POST /openmeter/tax-codes` | Create tax code |
-| `client.tax.getCode` | `GET /openmeter/tax-codes/{taxCodeId}` | Get tax code |
-| `client.tax.listCodes` | `GET /openmeter/tax-codes` | List tax codes |
-| `client.tax.upsertCode` | `PUT /openmeter/tax-codes/{taxCodeId}` | Upsert tax code |
+| Method                  | HTTP                                      | Description     |
+| ----------------------- | ----------------------------------------- | --------------- |
+| `client.tax.createCode` | `POST /openmeter/tax-codes`               | Create tax code |
+| `client.tax.getCode`    | `GET /openmeter/tax-codes/{taxCodeId}`    | Get tax code    |
+| `client.tax.listCodes`  | `GET /openmeter/tax-codes`                | List tax codes  |
+| `client.tax.upsertCode` | `PUT /openmeter/tax-codes/{taxCodeId}`    | Upsert tax code |
 | `client.tax.deleteCode` | `DELETE /openmeter/tax-codes/{taxCodeId}` | Delete tax code |
 
 ### Features
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.features.list` | `GET /openmeter/features` | List all features. |
-| `client.features.create` | `POST /openmeter/features` | Create a feature. |
-| `client.features.get` | `GET /openmeter/features/{featureId}` | Get a feature by id. |
-| `client.features.update` | `PATCH /openmeter/features/{featureId}` | Update a feature by id. Currently only the unit_cost field can be updated. |
-| `client.features.delete` | `DELETE /openmeter/features/{featureId}` | Delete a feature by id. |
-| `client.features.queryCost` | `POST /openmeter/features/{featureId}/cost/query` | Query the cost of a feature. |
+| Method                      | HTTP                                              | Description                                                                |
+| --------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| `client.features.list`      | `GET /openmeter/features`                         | List all features.                                                         |
+| `client.features.create`    | `POST /openmeter/features`                        | Create a feature.                                                          |
+| `client.features.get`       | `GET /openmeter/features/{featureId}`             | Get a feature by id.                                                       |
+| `client.features.update`    | `PATCH /openmeter/features/{featureId}`           | Update a feature by id. Currently only the unit_cost field can be updated. |
+| `client.features.delete`    | `DELETE /openmeter/features/{featureId}`          | Delete a feature by id.                                                    |
+| `client.features.queryCost` | `POST /openmeter/features/{featureId}/cost/query` | Query the cost of a feature.                                               |
 
 ### LLMCost
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.llmCost.listPrices` | `GET /openmeter/llm-cost/prices` | List global LLM cost prices. Returns prices with overrides applied if any. |
-| `client.llmCost.getPrice` | `GET /openmeter/llm-cost/prices/{priceId}` | Get a specific LLM cost price by ID. Returns the price with overrides applied if any. |
-| `client.llmCost.listOverrides` | `GET /openmeter/llm-cost/overrides` | List per-namespace price overrides. |
-| `client.llmCost.createOverride` | `POST /openmeter/llm-cost/overrides` | Create a per-namespace price override. |
-| `client.llmCost.deleteOverride` | `DELETE /openmeter/llm-cost/overrides/{priceId}` | Delete a per-namespace price override. |
+| Method                          | HTTP                                             | Description                                                                           |
+| ------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `client.llmCost.listPrices`     | `GET /openmeter/llm-cost/prices`                 | List global LLM cost prices. Returns prices with overrides applied if any.            |
+| `client.llmCost.getPrice`       | `GET /openmeter/llm-cost/prices/{priceId}`       | Get a specific LLM cost price by ID. Returns the price with overrides applied if any. |
+| `client.llmCost.listOverrides`  | `GET /openmeter/llm-cost/overrides`              | List per-namespace price overrides.                                                   |
+| `client.llmCost.createOverride` | `POST /openmeter/llm-cost/overrides`             | Create a per-namespace price override.                                                |
+| `client.llmCost.deleteOverride` | `DELETE /openmeter/llm-cost/overrides/{priceId}` | Delete a per-namespace price override.                                                |
 
 ### Plans
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.plans.list` | `GET /openmeter/plans` | List all plans. |
-| `client.plans.create` | `POST /openmeter/plans` | Create a new plan. |
-| `client.plans.update` | `PUT /openmeter/plans/{planId}` | Update a plan by id. |
-| `client.plans.get` | `GET /openmeter/plans/{planId}` | Get a plan by id. |
-| `client.plans.delete` | `DELETE /openmeter/plans/{planId}` | Delete a plan by id. |
+| Method                 | HTTP                                     | Description             |
+| ---------------------- | ---------------------------------------- | ----------------------- |
+| `client.plans.list`    | `GET /openmeter/plans`                   | List all plans.         |
+| `client.plans.create`  | `POST /openmeter/plans`                  | Create a new plan.      |
+| `client.plans.update`  | `PUT /openmeter/plans/{planId}`          | Update a plan by id.    |
+| `client.plans.get`     | `GET /openmeter/plans/{planId}`          | Get a plan by id.       |
+| `client.plans.delete`  | `DELETE /openmeter/plans/{planId}`       | Delete a plan by id.    |
 | `client.plans.archive` | `POST /openmeter/plans/{planId}/archive` | Archive a plan version. |
 | `client.plans.publish` | `POST /openmeter/plans/{planId}/publish` | Publish a plan version. |
 
 ### Addons
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.addons.list` | `GET /openmeter/addons` | List all add-ons. |
-| `client.addons.create` | `POST /openmeter/addons` | Create a new add-on. |
-| `client.addons.update` | `PUT /openmeter/addons/{addonId}` | Update an add-on by id. |
-| `client.addons.get` | `GET /openmeter/addons/{addonId}` | Get add-on by id. |
-| `client.addons.delete` | `DELETE /openmeter/addons/{addonId}` | Soft delete add-on by id. |
+| Method                  | HTTP                                       | Description                |
+| ----------------------- | ------------------------------------------ | -------------------------- |
+| `client.addons.list`    | `GET /openmeter/addons`                    | List all add-ons.          |
+| `client.addons.create`  | `POST /openmeter/addons`                   | Create a new add-on.       |
+| `client.addons.update`  | `PUT /openmeter/addons/{addonId}`          | Update an add-on by id.    |
+| `client.addons.get`     | `GET /openmeter/addons/{addonId}`          | Get add-on by id.          |
+| `client.addons.delete`  | `DELETE /openmeter/addons/{addonId}`       | Soft delete add-on by id.  |
 | `client.addons.archive` | `POST /openmeter/addons/{addonId}/archive` | Archive an add-on version. |
 | `client.addons.publish` | `POST /openmeter/addons/{addonId}/publish` | Publish an add-on version. |
 
 ### PlanAddons
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.planAddons.list` | `GET /openmeter/plans/{planId}/addons` | List add-ons associated with a plan. |
-| `client.planAddons.create` | `POST /openmeter/plans/{planId}/addons` | Add an add-on to a plan. |
-| `client.planAddons.get` | `GET /openmeter/plans/{planId}/addons/{planAddonId}` | Get an add-on association for a plan. |
-| `client.planAddons.update` | `PUT /openmeter/plans/{planId}/addons/{planAddonId}` | Update an add-on association for a plan. |
-| `client.planAddons.delete` | `DELETE /openmeter/plans/{planId}/addons/{planAddonId}` | Remove an add-on from a plan. |
+| Method                     | HTTP                                                    | Description                              |
+| -------------------------- | ------------------------------------------------------- | ---------------------------------------- |
+| `client.planAddons.list`   | `GET /openmeter/plans/{planId}/addons`                  | List add-ons associated with a plan.     |
+| `client.planAddons.create` | `POST /openmeter/plans/{planId}/addons`                 | Add an add-on to a plan.                 |
+| `client.planAddons.get`    | `GET /openmeter/plans/{planId}/addons/{planAddonId}`    | Get an add-on association for a plan.    |
+| `client.planAddons.update` | `PUT /openmeter/plans/{planId}/addons/{planAddonId}`    | Update an add-on association for a plan. |
+| `client.planAddons.delete` | `DELETE /openmeter/plans/{planId}/addons/{planAddonId}` | Remove an add-on from a plan.            |
 
 ### Defaults
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.defaults.getOrganizationTaxCodes` | `GET /openmeter/defaults/tax-codes` | Get organization default tax codes |
+| Method                                       | HTTP                                | Description                           |
+| -------------------------------------------- | ----------------------------------- | ------------------------------------- |
+| `client.defaults.getOrganizationTaxCodes`    | `GET /openmeter/defaults/tax-codes` | Get organization default tax codes    |
 | `client.defaults.updateOrganizationTaxCodes` | `PUT /openmeter/defaults/tax-codes` | Update organization default tax codes |
 
 ### AIUsage
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.aiUsage.createBatch` | `POST /ai-usage-batches` | Submit a Canonical AI Usage Batch for settlement. The first submit for a given `idempotency_key` returns HTTP 201 with the settled batch. An identical replay (same `idempotency_key` and `payload_hash`) returns HTTP 200 with the stored result. A replay with the same `idempotency_key` but a different `payload_hash` returns HTTP 409. |
-| `client.aiUsage.getBatch` | `GET /ai-usage-batches/{batchId}` | Retrieve a settled AI Usage Batch by its ID. |
-| `client.aiUsage.getCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark. |
-| `client.aiUsage.getCreditBalance` | `GET /customers/{customerId}/credit-balance` | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
-| `client.aiUsage.listCreditTransactions` | `GET /customers/{customerId}/credit-transactions` | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route. |
+| Method                                           | HTTP                                                | Description                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.aiUsage.createBatch`                     | `POST /ai-usage-batches`                            | Submit a Canonical AI Usage Batch for settlement. The first submit for a given `idempotency_key` returns HTTP 201 with the settled batch. An identical replay (same `idempotency_key` and `payload_hash`) returns HTTP 200 with the stored result. A replay with the same `idempotency_key` but a different `payload_hash` returns HTTP 409. |
+| `client.aiUsage.getBatch`                        | `GET /ai-usage-batches/{batchId}`                   | Retrieve a settled AI Usage Batch by its ID.                                                                                                                                                                                                                                                                                                 |
+| `client.aiUsage.getCustomerRuntimeAuthorization` | `GET /customers/{customerId}/runtime-authorization` | Check whether a customer is authorized to consume AI resources. Returns the current integer credit balance, reservation ceiling, and the covered tenant sequence watermark.                                                                                                                                                                  |
+| `client.aiUsage.getCreditBalance`                | `GET /customers/{customerId}/credit-balance`        | Get a customer's credit balance for AI usage. Returns the same balance model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                             |
+| `client.aiUsage.listCreditTransactions`          | `GET /customers/{customerId}/credit-transactions`   | List credit transactions for a customer's AI usage. Returns the same transaction model as the OpenMeter Credits endpoint but scoped to the AI Usage route.                                                                                                                                                                                   |
 
 ### Commerce
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.commerce.getCustomerWallet` | `GET /customers/{customerId}/wallet` | Get a customer's Wallet view, including all credit buckets and recent transactions. |
-| `client.commerce.listRechargeProducts` | `GET /recharge-products` | List all active recharge products available for purchase. |
-| `client.commerce.createOrder` | `POST /orders` | Create a new order (plan purchase, subscription renewal, or wallet top-up). Returns HTTP 201 on first creation. Replaying the same idempotency key returns the stored order with HTTP 200. |
-| `client.commerce.getOrder` | `GET /orders/{orderId}` | Retrieve an order by its ID. |
-| `client.commerce.createCheckoutSession` | `POST /orders/{orderId}/checkout-sessions` | Create a checkout session for an order, initiating a payment attempt with the specified provider. |
-| `client.commerce.getCheckoutSession` | `GET /checkout-sessions/{sessionId}` | Retrieve a checkout session by its ID (for polling payment status after QR code expiry or page reload). |
-| `client.commerce.createRefund` | `POST /refunds` | Create a refund request for an order. |
-| `client.commerce.getRefund` | `GET /refunds/{refundId}` | Retrieve a refund by its ID. |
-| `client.commerce.wechatPaymentCallback` | `POST /payment-providers/wechat/callback` | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
-| `client.commerce.alipayPaymentCallback` | `POST /payment-providers/alipay/callback` | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
-| `client.commerce.listReceivablePeriods` | `GET /customers/{customerId}/receivable-periods` | List receivable periods for a customer. |
-| `client.commerce.createOfflinePayment` | `POST /customers/{customerId}/offline-payments` | Record an offline payment (bank transfer, enterprise remittance) for a customer. The payment is held for reconciliation before being applied to a receivable period. |
-| `client.commerce.updateExternalInvoice` | `PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice` | Attach or update an external invoice reference on a receivable period. |
+| Method                                  | HTTP                                                                         | Description                                                                                                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `client.commerce.getCustomerWallet`     | `GET /customers/{customerId}/wallet`                                         | Get a customer's Wallet view, including all credit buckets and recent transactions.                                                                                                        |
+| `client.commerce.listRechargeProducts`  | `GET /recharge-products`                                                     | List all active recharge products available for purchase.                                                                                                                                  |
+| `client.commerce.createOrder`           | `POST /orders`                                                               | Create a new order (plan purchase, subscription renewal, or wallet top-up). Returns HTTP 201 on first creation. Replaying the same idempotency key returns the stored order with HTTP 200. |
+| `client.commerce.getOrder`              | `GET /orders/{orderId}`                                                      | Retrieve an order by its ID.                                                                                                                                                               |
+| `client.commerce.createCheckoutSession` | `POST /orders/{orderId}/checkout-sessions`                                   | Create a checkout session for an order, initiating a payment attempt with the specified provider.                                                                                          |
+| `client.commerce.getCheckoutSession`    | `GET /checkout-sessions/{sessionId}`                                         | Retrieve a checkout session by its ID (for polling payment status after QR code expiry or page reload).                                                                                    |
+| `client.commerce.createRefund`          | `POST /refunds`                                                              | Create a refund request for an order.                                                                                                                                                      |
+| `client.commerce.getRefund`             | `GET /refunds/{refundId}`                                                    | Retrieve a refund by its ID.                                                                                                                                                               |
+| `client.commerce.wechatPaymentCallback` | `POST /payment-providers/wechat/callback`                                    | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order.                                                                          |
+| `client.commerce.alipayPaymentCallback` | `POST /payment-providers/alipay/callback`                                    | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order.                                                                              |
+| `client.commerce.listReceivablePeriods` | `GET /customers/{customerId}/receivable-periods`                             | List receivable periods for a customer.                                                                                                                                                    |
+| `client.commerce.createOfflinePayment`  | `POST /customers/{customerId}/offline-payments`                              | Record an offline payment (bank transfer, enterprise remittance) for a customer. The payment is held for reconciliation before being applied to a receivable period.                       |
+| `client.commerce.updateExternalInvoice` | `PUT /customers/{customerId}/receivable-periods/{periodId}/external-invoice` | Attach or update an external invoice reference on a receivable period.                                                                                                                     |
 
 ## Internal Operations
 
@@ -442,49 +442,49 @@ they can change or be removed without notice or semver consideration.
 
 ### Internal Subscriptions
 
-| Method | HTTP | Description |
-| --- | --- | --- |
+| Method                                      | HTTP                                                    | Description                   |
+| ------------------------------------------- | ------------------------------------------------------- | ----------------------------- |
 | `client.internal.subscriptions.createAddon` | `POST /openmeter/subscriptions/{subscriptionId}/addons` | Add add-on to a subscription. |
 
 ### Internal Apps
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.internal.apps.list` | `GET /openmeter/apps` | List installed apps. |
-| `client.internal.apps.get` | `GET /openmeter/apps/{appId}` | Get an installed app. |
-| `client.internal.apps.uninstall` | `DELETE /openmeter/apps/{appId}` | Uninstall an app by ID. |
-| `client.internal.apps.update` | `PUT /openmeter/apps/{appId}` | Update an installed app. |
-| `client.internal.apps.listCatalog` | `GET /openmeter/app-catalog` | List available apps. |
+| Method                                | HTTP                                   | Description                      |
+| ------------------------------------- | -------------------------------------- | -------------------------------- |
+| `client.internal.apps.list`           | `GET /openmeter/apps`                  | List installed apps.             |
+| `client.internal.apps.get`            | `GET /openmeter/apps/{appId}`          | Get an installed app.            |
+| `client.internal.apps.uninstall`      | `DELETE /openmeter/apps/{appId}`       | Uninstall an app by ID.          |
+| `client.internal.apps.update`         | `PUT /openmeter/apps/{appId}`          | Update an installed app.         |
+| `client.internal.apps.listCatalog`    | `GET /openmeter/app-catalog`           | List available apps.             |
 | `client.internal.apps.getCatalogItem` | `GET /openmeter/app-catalog/{appType}` | Get an app catalog item by type. |
-| `client.internal.apps.install` | `POST /openmeter/app-catalog/install` | Install an app from the catalog. |
+| `client.internal.apps.install`        | `POST /openmeter/app-catalog/install`  | Install an app from the catalog. |
 
 ### Internal Invoices
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.internal.invoices.list` | `GET /openmeter/billing/invoices` | List billing invoices. Returns a page of invoices. Gathering invoices are never included. Use `filter` to narrow by status, customer, dates, or service period start. Use `sort` to control ordering. |
-| `client.internal.invoices.get` | `GET /openmeter/billing/invoices/{invoiceId}` | Get a billing invoice by ID. Returns the full invoice resource including line items, status details, totals, and workflow configuration snapshot. |
-| `client.internal.invoices.update` | `PUT /openmeter/billing/invoices/{invoiceId}` | Update a billing invoice. Only the mutable fields of the invoice can be edited: description, labels, supplier, customer, workflow settings, and top-level lines. Top-level lines are matched by `id`; lines without an `id` are created, and existing lines omitted from `lines` are deleted. Detailed (child) lines are always computed and cannot be edited directly. Only invoices in draft status can be updated. |
-| `client.internal.invoices.delete` | `DELETE /openmeter/billing/invoices/{invoiceId}` | Delete a billing invoice. Only standard invoices in draft status can be deleted. Deleting an invoice will also delete all associated line items and workflow configuration. |
-| `client.internal.invoices.advance` | `POST /openmeter/billing/invoices/{invoiceId}/advance` | Advance a billing invoice. Advances the invoice to the next workflow state. The next state is determined by the invoice's current status and workflow configuration. Only invoices in draft or issued status can be advanced. |
-| `client.internal.invoices.approve` | `POST /openmeter/billing/invoices/{invoiceId}/approve` | Approve a billing invoice. This call instantly sends the invoice to the customer using the configured billing profile app. This call is valid in two invoice statuses: - draft: the invoice will be sent to the customer, the invoice state becomes issued - manual_approval_needed: the invoice will be sent to the customer, the invoice state becomes issued |
-| `client.internal.invoices.retry` | `POST /openmeter/billing/invoices/{invoiceId}/retry` | Retry sending a billing invoice. Retry advancing the invoice after a failed attempt. The action can be called when the invoice's statusDetails' actions field contain the "retry" action. |
-| `client.internal.invoices.snapshotQuantities` | `POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities` | Snapshot quantities for usage-based line items. This call will snapshot the quantities for all usage based line items in the invoice. This call is only valid in draft.waiting_for_collection status, where the collection period can be skipped using this action. |
+| Method                                        | HTTP                                                               | Description                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.internal.invoices.list`               | `GET /openmeter/billing/invoices`                                  | List billing invoices. Returns a page of invoices. Gathering invoices are never included. Use `filter` to narrow by status, customer, dates, or service period start. Use `sort` to control ordering.                                                                                                                                                                                                                 |
+| `client.internal.invoices.get`                | `GET /openmeter/billing/invoices/{invoiceId}`                      | Get a billing invoice by ID. Returns the full invoice resource including line items, status details, totals, and workflow configuration snapshot.                                                                                                                                                                                                                                                                     |
+| `client.internal.invoices.update`             | `PUT /openmeter/billing/invoices/{invoiceId}`                      | Update a billing invoice. Only the mutable fields of the invoice can be edited: description, labels, supplier, customer, workflow settings, and top-level lines. Top-level lines are matched by `id`; lines without an `id` are created, and existing lines omitted from `lines` are deleted. Detailed (child) lines are always computed and cannot be edited directly. Only invoices in draft status can be updated. |
+| `client.internal.invoices.delete`             | `DELETE /openmeter/billing/invoices/{invoiceId}`                   | Delete a billing invoice. Only standard invoices in draft status can be deleted. Deleting an invoice will also delete all associated line items and workflow configuration.                                                                                                                                                                                                                                           |
+| `client.internal.invoices.advance`            | `POST /openmeter/billing/invoices/{invoiceId}/advance`             | Advance a billing invoice. Advances the invoice to the next workflow state. The next state is determined by the invoice's current status and workflow configuration. Only invoices in draft or issued status can be advanced.                                                                                                                                                                                         |
+| `client.internal.invoices.approve`            | `POST /openmeter/billing/invoices/{invoiceId}/approve`             | Approve a billing invoice. This call instantly sends the invoice to the customer using the configured billing profile app. This call is valid in two invoice statuses: - draft: the invoice will be sent to the customer, the invoice state becomes issued - manual_approval_needed: the invoice will be sent to the customer, the invoice state becomes issued                                                       |
+| `client.internal.invoices.retry`              | `POST /openmeter/billing/invoices/{invoiceId}/retry`               | Retry sending a billing invoice. Retry advancing the invoice after a failed attempt. The action can be called when the invoice's statusDetails' actions field contain the "retry" action.                                                                                                                                                                                                                             |
+| `client.internal.invoices.snapshotQuantities` | `POST /openmeter/billing/invoices/{invoiceId}/snapshot-quantities` | Snapshot quantities for usage-based line items. This call will snapshot the quantities for all usage based line items in the invoice. This call is only valid in draft.waiting_for_collection status, where the collection period can be skipped using this action.                                                                                                                                                   |
 
 ### Internal Currencies
 
-| Method | HTTP | Description |
-| --- | --- | --- |
-| `client.internal.currencies.list` | `GET /openmeter/currencies` | List currencies supported by the billing system. |
-| `client.internal.currencies.createCustomCurrency` | `POST /openmeter/currencies/custom` | Create a custom currency. This operation allows defining your own custom currency for billing purposes. |
-| `client.internal.currencies.getCustomCurrency` | `GET /openmeter/currencies/custom/{currencyId}` | Get a custom currency. |
-| `client.internal.currencies.listCostBases` | `GET /openmeter/currencies/custom/{currencyId}/cost-bases` | List cost bases for a currency. For custom currencies, there can be multiple cost bases with different `effective_from` dates. |
-| `client.internal.currencies.createCostBasis` | `POST /openmeter/currencies/custom/{currencyId}/cost-bases` | Create a cost basis for a currency. |
+| Method                                            | HTTP                                                        | Description                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `client.internal.currencies.list`                 | `GET /openmeter/currencies`                                 | List currencies supported by the billing system.                                                                               |
+| `client.internal.currencies.createCustomCurrency` | `POST /openmeter/currencies/custom`                         | Create a custom currency. This operation allows defining your own custom currency for billing purposes.                        |
+| `client.internal.currencies.getCustomCurrency`    | `GET /openmeter/currencies/custom/{currencyId}`             | Get a custom currency.                                                                                                         |
+| `client.internal.currencies.listCostBases`        | `GET /openmeter/currencies/custom/{currencyId}/cost-bases`  | List cost bases for a currency. For custom currencies, there can be multiple cost bases with different `effective_from` dates. |
+| `client.internal.currencies.createCostBasis`      | `POST /openmeter/currencies/custom/{currencyId}/cost-bases` | Create a cost basis for a currency.                                                                                            |
 
 ### Internal Governance
 
-| Method | HTTP | Description |
-| --- | --- | --- |
+| Method                                   | HTTP                               | Description                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `client.internal.governance.queryAccess` | `POST /openmeter/governance/query` | Query feature access for a list of customers. The endpoint resolves each provided identifier to a customer and returns the access status for the requested features, plus optional credit balance availability. _Designed to be called on a fixed refresh interval and the query response is intended to be cached._ |
 
 ## Runtime Validation (validate option)

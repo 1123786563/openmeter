@@ -2,10 +2,7 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import {
-  paginateCursor,
-  paginatePages,
-} from '../lib/paginate.js'
+import { paginateCursor, paginatePages } from '../lib/paginate.js'
 import {
   createCustomer,
   getCustomer,
@@ -210,7 +207,9 @@ export class CustomersBilling {
     request: UpdateCustomerBillingAppDataRequest,
     options?: RequestOptions,
   ): Promise<UpdateCustomerBillingAppDataResponse> {
-    return unwrap(await updateCustomerBillingAppData(this._client, request, options))
+    return unwrap(
+      await updateCustomerBillingAppData(this._client, request, options),
+    )
   }
 
   /**
@@ -234,7 +233,9 @@ export class CustomersBilling {
     request: CreateCustomerStripeCheckoutSessionRequest,
     options?: RequestOptions,
   ): Promise<CreateCustomerStripeCheckoutSessionResponse> {
-    return unwrap(await createCustomerStripeCheckoutSession(this._client, request, options))
+    return unwrap(
+      await createCustomerStripeCheckoutSession(this._client, request, options),
+    )
   }
 
   /**
@@ -253,7 +254,9 @@ export class CustomersBilling {
     request: CreateCustomerStripePortalSessionRequest,
     options?: RequestOptions,
   ): Promise<CreateCustomerStripePortalSessionResponse> {
-    return unwrap(await createCustomerStripePortalSession(this._client, request, options))
+    return unwrap(
+      await createCustomerStripePortalSession(this._client, request, options),
+    )
   }
 }
 
@@ -277,7 +280,9 @@ export class CustomersCredits {
 
   private _transactions?: CustomersCreditsTransactions
   get transactions(): CustomersCreditsTransactions {
-    return (this._transactions ??= new CustomersCreditsTransactions(this._client))
+    return (this._transactions ??= new CustomersCreditsTransactions(
+      this._client,
+    ))
   }
 }
 
@@ -383,7 +388,9 @@ export class CustomersCreditsGrants {
     request: UpdateCreditGrantExternalSettlementRequest,
     options?: RequestOptions,
   ): Promise<UpdateCreditGrantExternalSettlementResponse> {
-    return unwrap(await updateCreditGrantExternalSettlement(this._client, request, options))
+    return unwrap(
+      await updateCreditGrantExternalSettlement(this._client, request, options),
+    )
   }
 }
 
@@ -401,7 +408,9 @@ export class CustomersCreditsBalance {
     request: GetCustomerCreditBalanceRequest,
     options?: RequestOptions,
   ): Promise<GetCustomerCreditBalanceResponse> {
-    return unwrap(await getCustomerCreditBalance(this._client, request, options))
+    return unwrap(
+      await getCustomerCreditBalance(this._client, request, options),
+    )
   }
 }
 

@@ -4,7 +4,13 @@ import { type Client, http } from '../core.js'
 import { type Result, type RequestOptions } from '../lib/types.js'
 import { request } from '../lib/request.js'
 import { toURLSearchParams, encodeSort } from '../lib/encodings.js'
-import { toWire, toPathWire, fromWire, assertValid, toSnakeCase } from '../lib/wire.js'
+import {
+  toWire,
+  toPathWire,
+  fromWire,
+  assertValid,
+  toSnakeCase,
+} from '../lib/wire.js'
 import * as schemas from '../models/schemas.js'
 import type {
   ListFeaturesRequest,
@@ -37,11 +43,14 @@ export function listFeatures(
     if (client._options.validate && req.sort !== undefined) {
       assertValid(schemas.listFeaturesQueryParams.shape.sort, req.sort)
     }
-    const query = toWire({
-      page: req.page,
-      sort: encodeSort(req.sort, toSnakeCase),
-      filter: req.filter,
-    }, schemas.listFeaturesQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+        sort: encodeSort(req.sort, toSnakeCase),
+        filter: req.filter,
+      },
+      schemas.listFeaturesQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listFeaturesQueryParamsWire, query)
     }
@@ -109,7 +118,12 @@ export function getFeature(
     if (client._options.validate) {
       assertValid(schemas.getFeaturePathParamsWire, pathParams)
     }
-    const path = `openmeter/features/${(() => { if (pathParams.featureId === undefined) { throw new Error('missing path parameter: featureId') } return encodeURIComponent(String(pathParams.featureId)) })()}`
+    const path = `openmeter/features/${(() => {
+      if (pathParams.featureId === undefined) {
+        throw new Error('missing path parameter: featureId')
+      }
+      return encodeURIComponent(String(pathParams.featureId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -144,7 +158,12 @@ export function updateFeature(
     if (client._options.validate) {
       assertValid(schemas.updateFeaturePathParamsWire, pathParams)
     }
-    const path = `openmeter/features/${(() => { if (pathParams.featureId === undefined) { throw new Error('missing path parameter: featureId') } return encodeURIComponent(String(pathParams.featureId)) })()}`
+    const path = `openmeter/features/${(() => {
+      if (pathParams.featureId === undefined) {
+        throw new Error('missing path parameter: featureId')
+      }
+      return encodeURIComponent(String(pathParams.featureId))
+    })()}`
     const body = toWire(req.body, schemas.updateFeatureBody)
     if (client._options.validate) {
       assertValid(schemas.updateFeatureBodyWire, body)
@@ -183,7 +202,12 @@ export function deleteFeature(
     if (client._options.validate) {
       assertValid(schemas.deleteFeaturePathParamsWire, pathParams)
     }
-    const path = `openmeter/features/${(() => { if (pathParams.featureId === undefined) { throw new Error('missing path parameter: featureId') } return encodeURIComponent(String(pathParams.featureId)) })()}`
+    const path = `openmeter/features/${(() => {
+      if (pathParams.featureId === undefined) {
+        throw new Error('missing path parameter: featureId')
+      }
+      return encodeURIComponent(String(pathParams.featureId))
+    })()}`
     await http(client).delete(path, options)
   })
 }
@@ -210,7 +234,12 @@ export function queryFeatureCost(
     if (client._options.validate) {
       assertValid(schemas.queryFeatureCostPathParamsWire, pathParams)
     }
-    const path = `openmeter/features/${(() => { if (pathParams.featureId === undefined) { throw new Error('missing path parameter: featureId') } return encodeURIComponent(String(pathParams.featureId)) })()}/cost/query`
+    const path = `openmeter/features/${(() => {
+      if (pathParams.featureId === undefined) {
+        throw new Error('missing path parameter: featureId')
+      }
+      return encodeURIComponent(String(pathParams.featureId))
+    })()}/cost/query`
     const body = toWire(req.body, schemas.queryFeatureCostBody)
     if (client._options.validate) {
       assertValid(schemas.queryFeatureCostBodyWire, body)

@@ -4,7 +4,13 @@ import { type Client, http } from '../core.js'
 import { type Result, type RequestOptions } from '../lib/types.js'
 import { request } from '../lib/request.js'
 import { toURLSearchParams, encodeSort } from '../lib/encodings.js'
-import { toWire, toPathWire, fromWire, assertValid, toSnakeCase } from '../lib/wire.js'
+import {
+  toWire,
+  toPathWire,
+  fromWire,
+  assertValid,
+  toSnakeCase,
+} from '../lib/wire.js'
 import * as schemas from '../models/schemas.js'
 import type {
   ListLlmCostPricesRequest,
@@ -35,11 +41,14 @@ export function listLlmCostPrices(
     if (client._options.validate && req.sort !== undefined) {
       assertValid(schemas.listLlmCostPricesQueryParams.shape.sort, req.sort)
     }
-    const query = toWire({
-      filter: req.filter,
-      sort: encodeSort(req.sort, toSnakeCase),
-      page: req.page,
-    }, schemas.listLlmCostPricesQueryParams)
+    const query = toWire(
+      {
+        filter: req.filter,
+        sort: encodeSort(req.sort, toSnakeCase),
+        page: req.page,
+      },
+      schemas.listLlmCostPricesQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listLlmCostPricesQueryParamsWire, query)
     }
@@ -79,7 +88,12 @@ export function getLlmCostPrice(
     if (client._options.validate) {
       assertValid(schemas.getLlmCostPricePathParamsWire, pathParams)
     }
-    const path = `openmeter/llm-cost/prices/${(() => { if (pathParams.priceId === undefined) { throw new Error('missing path parameter: priceId') } return encodeURIComponent(String(pathParams.priceId)) })()}`
+    const path = `openmeter/llm-cost/prices/${(() => {
+      if (pathParams.priceId === undefined) {
+        throw new Error('missing path parameter: priceId')
+      }
+      return encodeURIComponent(String(pathParams.priceId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -105,10 +119,13 @@ export function listLlmCostOverrides(
   options?: RequestOptions,
 ): Promise<Result<ListLlmCostOverridesResponse>> {
   return request(() => {
-    const query = toWire({
-      filter: req.filter,
-      page: req.page,
-    }, schemas.listLlmCostOverridesQueryParams)
+    const query = toWire(
+      {
+        filter: req.filter,
+        page: req.page,
+      },
+      schemas.listLlmCostOverridesQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listLlmCostOverridesQueryParamsWire, query)
     }
@@ -176,7 +193,12 @@ export function deleteLlmCostOverride(
     if (client._options.validate) {
       assertValid(schemas.deleteLlmCostOverridePathParamsWire, pathParams)
     }
-    const path = `openmeter/llm-cost/overrides/${(() => { if (pathParams.priceId === undefined) { throw new Error('missing path parameter: priceId') } return encodeURIComponent(String(pathParams.priceId)) })()}`
+    const path = `openmeter/llm-cost/overrides/${(() => {
+      if (pathParams.priceId === undefined) {
+        throw new Error('missing path parameter: priceId')
+      }
+      return encodeURIComponent(String(pathParams.priceId))
+    })()}`
     await http(client).delete(path, options)
   })
 }

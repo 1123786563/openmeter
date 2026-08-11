@@ -218,7 +218,8 @@ interface CreditReservationEndpoints
 
 @route("/credit-charges")
 @tag(Shared.BillingTag)
-interface CreditChargeEndpoints extends CreditReservations.CreditChargeOperations {}
+interface CreditChargeEndpoints
+  extends CreditReservations.CreditChargeOperations {}
 
 /**
  * The system account access token is meant for automations and integrations that

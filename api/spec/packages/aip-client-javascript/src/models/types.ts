@@ -29,7 +29,7 @@ export interface SortQuery {
   /** The attribute to sort by. */
   by: string
   /** The sort order. `asc` for ascending, `desc` for descending. */
-  order: "asc" | "desc"
+  order: 'asc' | 'desc'
 }
 
 /** Event validation errors. */
@@ -178,13 +178,13 @@ export interface ChargeFlatFeeDiscounts {
 /** Free price. */
 export interface PriceFree {
   /** The type of the price. */
-  type: "free"
+  type: 'free'
 }
 
 /** The entitlement template of a static entitlement. */
 export interface RateCardStaticEntitlement {
   /** The type of the entitlement template. */
-  type: "static"
+  type: 'static'
   /**
    * The entitlement config as a JSON object. Returned when checking entitlement
    * access; useful for configuring fine-grained access settings implemented in your
@@ -196,7 +196,7 @@ export interface RateCardStaticEntitlement {
 /** The entitlement template of a boolean entitlement. */
 export interface RateCardBooleanEntitlement {
   /** The type of the entitlement template. */
-  type: "boolean"
+  type: 'boolean'
 }
 
 /**
@@ -211,7 +211,7 @@ export type UpdateLabels = Record<string, string>
 /** Model for installing an app from the catalog with an API key. */
 export interface InstallAppStripeWithApiKey {
   /** Type of the app. */
-  type: "stripe"
+  type: 'stripe'
   /** Name of the app. */
   name: string
   /**
@@ -226,7 +226,7 @@ export interface InstallAppStripeWithApiKey {
 /** Base model for installing an app from the catalog. */
 export interface InstallAppSandbox {
   /** Type of the app. */
-  type: "sandbox"
+  type: 'sandbox'
   /** Name of the app. */
   name: string
   /**
@@ -239,7 +239,7 @@ export interface InstallAppSandbox {
 /** Base model for installing an app from the catalog. */
 export interface InstallAppExternalInvoicing {
   /** Type of the app. */
-  type: "external_invoicing"
+  type: 'external_invoicing'
   /** Name of the app. */
   name: string
   /**
@@ -255,7 +255,7 @@ export interface InstallAppExternalInvoicing {
  */
 export interface WorkflowCollectionAlignmentSubscription {
   /** The type of alignment. */
-  type: "subscription"
+  type: 'subscription'
 }
 
 /**
@@ -264,7 +264,7 @@ export interface WorkflowCollectionAlignmentSubscription {
  */
 export interface WorkflowPaymentChargeAutomaticallySettings {
   /** The collection method for the invoice. */
-  collectionMethod: "charge_automatically"
+  collectionMethod: 'charge_automatically'
 }
 
 /**
@@ -273,7 +273,7 @@ export interface WorkflowPaymentChargeAutomaticallySettings {
  */
 export interface WorkflowPaymentSendInvoiceSettings {
   /** The collection method for the invoice. */
-  collectionMethod: "send_invoice"
+  collectionMethod: 'send_invoice'
   /**
    * The period after which the invoice is due. With some payment solutions it's only
    * applicable for manual collection method.
@@ -337,7 +337,7 @@ export interface UpdateBillingInvoiceWorkflowInvoicingSettings {
  */
 export interface UpdateBillingWorkflowPaymentChargeAutomaticallySettings {
   /** The collection method for the invoice. */
-  collectionMethod: "charge_automatically"
+  collectionMethod: 'charge_automatically'
 }
 
 /**
@@ -346,7 +346,7 @@ export interface UpdateBillingWorkflowPaymentChargeAutomaticallySettings {
  */
 export interface UpdateBillingWorkflowPaymentSendInvoiceSettings {
   /** The collection method for the invoice. */
-  collectionMethod: "send_invoice"
+  collectionMethod: 'send_invoice'
   /**
    * The period after which the invoice is due. With some payment solutions it's only
    * applicable for manual collection method.
@@ -357,7 +357,7 @@ export interface UpdateBillingWorkflowPaymentSendInvoiceSettings {
 /** Free price. */
 export interface UpdatePriceFree {
   /** The type of the price. */
-  type: "free"
+  type: 'free'
 }
 
 /** LLM Provider */
@@ -525,9 +525,9 @@ export type PublicLabels = Record<string, string>
  */
 export interface SystemAccountAccessToken {
   /** Http authentication */
-  type: "http"
+  type: 'http'
   /** bearer auth scheme */
-  scheme: "Bearer"
+  scheme: 'Bearer'
 }
 
 /**
@@ -536,9 +536,9 @@ export interface SystemAccountAccessToken {
  */
 export interface PersonalAccessToken {
   /** Http authentication */
-  type: "http"
+  type: 'http'
   /** bearer auth scheme */
-  scheme: "Bearer"
+  scheme: 'Bearer'
 }
 
 /**
@@ -547,9 +547,9 @@ export interface PersonalAccessToken {
  */
 export interface KonnectAccessToken {
   /** Http authentication */
-  type: "http"
+  type: 'http'
   /** bearer auth scheme */
-  scheme: "Bearer"
+  scheme: 'Bearer'
 }
 
 /** Meter update request. */
@@ -594,7 +594,7 @@ export interface AppCustomerDataExternalInvoicing {
 /** Currency describes a currency supported by the billing system. */
 export interface CurrencyFiat {
   /** The type of the currency. */
-  type: "fiat"
+  type: 'fiat'
   /**
    * The name of the currency. It should be a human-readable string that represents
    * the name of the currency, such as "US Dollar" or "Euro".
@@ -670,7 +670,7 @@ export interface CurrencyAmount {
 /** Flat price. */
 export interface PriceFlat {
   /** The type of the price. */
-  type: "flat"
+  type: 'flat'
   /** The amount of the flat price. */
   amount: string
 }
@@ -683,7 +683,7 @@ export interface PriceFlat {
  */
 export interface PriceUnit {
   /** The type of the price. */
-  type: "unit"
+  type: 'unit'
   /** The amount of the unit price. */
   amount: string
 }
@@ -742,7 +742,7 @@ export interface InvoiceLineCreditsApplied {
 /** Flat price. */
 export interface UpdatePriceFlat {
   /** The type of the price. */
-  type: "flat"
+  type: 'flat'
   /** The amount of the flat price. */
   amount: string
 }
@@ -755,7 +755,7 @@ export interface UpdatePriceFlat {
  */
 export interface UpdatePriceUnit {
   /** The type of the price. */
-  type: "unit"
+  type: 'unit'
   /** The amount of the unit price. */
   amount: string
 }
@@ -775,7 +775,7 @@ export interface UpdateDiscounts {
 /** A fixed per-unit cost amount. */
 export interface FeatureManualUnitCost {
   /** The type discriminator for manual unit cost. */
-  type: "manual"
+  type: 'manual'
   /** Fixed per-unit cost amount in USD. */
   amount: string
 }
@@ -989,7 +989,7 @@ export interface Event {
    * Content type of the CloudEvents data value. Only the value "application/json" is
    * allowed over HTTP.
    */
-  datacontenttype?: "application/json" | null
+  datacontenttype?: 'application/json' | null
   /** Identifies the schema that data adheres to. */
   dataschema?: string | null
   /**
@@ -1366,7 +1366,29 @@ export interface InvalidParameterStandard {
   /** The name of the field that failed validation. */
   field: string
   /** The validation rule that was violated. */
-  rule?: "required" | "is_array" | "is_base64" | "is_boolean" | "is_date_time" | "is_integer" | "is_null" | "is_number" | "is_object" | "is_string" | "is_uuid" | "is_fqdn" | "is_arn" | "unknown_property" | "missing_reference" | "is_label" | "matches_regex" | "invalid" | "is_supported_network_availability_zone_list" | "is_supported_network_cidr_block" | "is_supported_provider_region" | "type"
+  rule?:
+    | 'required'
+    | 'is_array'
+    | 'is_base64'
+    | 'is_boolean'
+    | 'is_date_time'
+    | 'is_integer'
+    | 'is_null'
+    | 'is_number'
+    | 'is_object'
+    | 'is_string'
+    | 'is_uuid'
+    | 'is_fqdn'
+    | 'is_arn'
+    | 'unknown_property'
+    | 'missing_reference'
+    | 'is_label'
+    | 'matches_regex'
+    | 'invalid'
+    | 'is_supported_network_availability_zone_list'
+    | 'is_supported_network_cidr_block'
+    | 'is_supported_provider_region'
+    | 'type'
   /** The part of the request the field came from (e.g. `body`, `query`). */
   source?: string
   /** A human readable explanation of why the field failed validation. */
@@ -1378,7 +1400,14 @@ export interface InvalidParameterMinimumLength {
   /** The name of the field that failed validation. */
   field: string
   /** The minimum validation rule that was violated. */
-  rule: "min_length" | "min_digits" | "min_lowercase" | "min_uppercase" | "min_symbols" | "min_items" | "min"
+  rule:
+    | 'min_length'
+    | 'min_digits'
+    | 'min_lowercase'
+    | 'min_uppercase'
+    | 'min_symbols'
+    | 'min_items'
+    | 'min'
   /** The minimum allowed value or length. */
   minimum: number
   /** The part of the request the field came from (e.g. `body`, `query`). */
@@ -1392,7 +1421,7 @@ export interface InvalidParameterMaximumLength {
   /** The name of the field that failed validation. */
   field: string
   /** The maximum validation rule that was violated. */
-  rule: "max_length" | "max_items" | "max"
+  rule: 'max_length' | 'max_items' | 'max'
   /** The maximum allowed value or length. */
   maximum: number
   /** The part of the request the field came from (e.g. `body`, `query`). */
@@ -1406,7 +1435,7 @@ export interface InvalidParameterChoiceItem {
   /** The name of the field that failed validation. */
   field: string
   /** The enum validation rule that was violated. */
-  rule: "enum"
+  rule: 'enum'
   /** A human readable explanation of why the field failed validation. */
   reason: string
   /** The allowed choices for the field. */
@@ -1420,7 +1449,7 @@ export interface InvalidParameterDependentItem {
   /** The name of the field that failed validation. */
   field: string
   /** The dependent-fields validation rule that was violated. */
-  rule: "dependent_fields"
+  rule: 'dependent_fields'
   /** A human readable explanation of why the field failed validation. */
   reason: string
   /** The fields that this field depends on. */
@@ -1430,64 +1459,40 @@ export interface InvalidParameterDependentItem {
 }
 
 /** Unauthorized. */
-export interface Unauthorized extends BaseError {
-
-}
+export interface Unauthorized extends BaseError {}
 
 /** Forbidden. */
-export interface Forbidden extends BaseError {
-
-}
+export interface Forbidden extends BaseError {}
 
 /** Not Found. */
-export interface NotFound extends BaseError {
-
-}
+export interface NotFound extends BaseError {}
 
 /** Gone. */
-export interface Gone extends BaseError {
-
-}
+export interface Gone extends BaseError {}
 
 /** Conflict. */
-export interface Conflict extends BaseError {
-
-}
+export interface Conflict extends BaseError {}
 
 /** Payload Too Large. */
-export interface PayloadTooLarge extends BaseError {
-
-}
+export interface PayloadTooLarge extends BaseError {}
 
 /** Internal Server Error. */
-export interface Internal extends BaseError {
-
-}
+export interface Internal extends BaseError {}
 
 /** Unsupported Media Type. */
-export interface UnsupportedMediaType extends BaseError {
-
-}
+export interface UnsupportedMediaType extends BaseError {}
 
 /** Unprocessable Content. */
-export interface UnprocessableContent extends BaseError {
-
-}
+export interface UnprocessableContent extends BaseError {}
 
 /** Too Many Requests. */
-export interface TooManyRequests extends BaseError {
-
-}
+export interface TooManyRequests extends BaseError {}
 
 /** Not Implemented. */
-export interface NotImplemented extends BaseError {
-
-}
+export interface NotImplemented extends BaseError {}
 
 /** Not Available. */
-export interface NotAvailable extends BaseError {
-
-}
+export interface NotAvailable extends BaseError {}
 
 /** Filters for the credit grant. */
 export interface CreateCreditGrantFilters {
@@ -1762,25 +1767,25 @@ export interface AppStripeCreateCheckoutSessionCustomerUpdate {
    *
    * Defaults to "never".
    */
-  address: "auto" | "never"
+  address: 'auto' | 'never'
   /**
    * Whether to save the customer name to customer.name.
    *
    * Defaults to "never".
    */
-  name: "auto" | "never"
+  name: 'auto' | 'never'
   /**
    * Whether to save shipping information to customer.shipping.
    *
    * Defaults to "never".
    */
-  shipping: "auto" | "never"
+  shipping: 'auto' | 'never'
 }
 
 /** Payment method reuse agreement configuration. */
 export interface AppStripeCreateCheckoutSessionConsentCollectionPaymentMethodReuseAgreement {
   /** Position and visibility of the payment method reuse agreement. */
-  position?: "auto" | "hidden"
+  position?: 'auto' | 'hidden'
 }
 
 /** Tax ID collection configuration for checkout sessions. */
@@ -1796,7 +1801,7 @@ export interface AppStripeCreateCheckoutSessionTaxIdCollection {
    *
    * Defaults to "never".
    */
-  required: "if_supported" | "never"
+  required: 'if_supported' | 'never'
 }
 
 /**
@@ -1851,7 +1856,7 @@ export interface AppStripeCreateCheckoutSessionResult {
    *
    * Currently only "setup" mode is supported for collecting payment methods.
    */
-  mode: "setup"
+  mode: 'setup'
   /** The cancel URL where customers are redirected if they cancel. */
   cancelUrl?: string
   /** The success URL where customers are redirected after completion. */
@@ -1876,7 +1881,7 @@ export interface CustomerStripeCreateCustomerPortalSessionRequest {
 /** Entitlement access result. */
 export interface EntitlementAccessResult {
   /** The type of the entitlement. */
-  type: "metered" | "static" | "boolean"
+  type: 'metered' | 'static' | 'boolean'
   /** The feature key of the entitlement. */
   featureKey: string
   /**
@@ -1911,13 +1916,13 @@ export interface CreateCreditGrantPurchase {
    *
    * Defaults to `on_creation`.
    */
-  availabilityPolicy: "on_creation"
+  availabilityPolicy: 'on_creation'
 }
 
 /** The entitlement template of a metered entitlement. */
 export interface RateCardMeteredEntitlement {
   /** The type of the entitlement template. */
-  type: "metered"
+  type: 'metered'
   /**
    * If soft limit is true, the subject can use the feature even if the entitlement
    * is exhausted; access remains granted.
@@ -1967,9 +1972,9 @@ export interface CreditGrantPurchase {
    *
    * Defaults to `on_creation`.
    */
-  availabilityPolicy: "on_creation"
+  availabilityPolicy: 'on_creation'
   /** Current payment settlement status. */
-  settlementStatus?: "pending" | "authorized" | "settled"
+  settlementStatus?: 'pending' | 'authorized' | 'settled'
 }
 
 /**
@@ -1978,13 +1983,13 @@ export interface CreditGrantPurchase {
  */
 export interface UpdateCreditGrantExternalSettlementRequest {
   /** The new payment settlement status. */
-  status: "pending" | "authorized" | "settled"
+  status: 'pending' | 'authorized' | 'settled'
 }
 
 /** Filter options for listing credit grants. */
 export interface ListCreditGrantsParamsFilter {
   /** Filter credit grants by status. */
-  status?: "pending" | "active" | "expired" | "voided"
+  status?: 'pending' | 'active' | 'expired' | 'voided'
   /** Filter credit grants by currency. */
   currency?: string
   /** Filter credit grants by key. */
@@ -2036,7 +2041,7 @@ export interface VoidCreditGrantRequest {
    * authorization, settlement, payment intents, or external collection state. If
    * payment later completes, the original invoiced amount may still be collected.
    */
-  paymentAdjustment: "none"
+  paymentAdjustment: 'none'
 }
 
 /** Subscription create request. */
@@ -2051,7 +2056,7 @@ export interface SubscriptionCreate {
    * invoiced.
    * - `credit_only`: Usage is settled exclusively against credits.
    */
-  settlementMode?: "credit_then_invoice" | "credit_only"
+  settlementMode?: 'credit_then_invoice' | 'credit_only'
   /** The customer to create the subscription for. */
   customer: { id?: string; key?: string }
   /** The plan reference of the subscription. */
@@ -2074,7 +2079,7 @@ export interface SubscriptionCreate {
 /** The proration configuration of the rate card. */
 export interface RateCardProrationConfiguration {
   /** The proration mode of the rate card. */
-  mode: "no_proration" | "prorate_prices"
+  mode: 'no_proration' | 'prorate_prices'
 }
 
 /** Subscription. */
@@ -2102,7 +2107,7 @@ export interface Subscription {
    */
   billingAnchor: Date
   /** The status of the subscription. */
-  status: "active" | "inactive" | "canceled" | "scheduled"
+  status: 'active' | 'inactive' | 'canceled' | 'scheduled'
   /**
    * Settlement mode for billing.
    *
@@ -2112,7 +2117,7 @@ export interface Subscription {
    * invoiced.
    * - `credit_only`: Usage is settled exclusively against credits.
    */
-  settlementMode?: "credit_then_invoice" | "credit_only"
+  settlementMode?: 'credit_then_invoice' | 'credit_only'
 }
 
 /**
@@ -2141,7 +2146,7 @@ export interface Subscription {
  */
 export interface UnitConfig {
   /** The arithmetic operation to apply to the raw metered quantity. */
-  operation: "divide" | "multiply"
+  operation: 'divide' | 'multiply'
   /**
    * The factor used in the conversion operation.
    *
@@ -2157,7 +2162,7 @@ export interface UnitConfig {
    * Defaults to none (no rounding). Entitlement checks always use the precise
    * (unrounded) value.
    */
-  rounding: "ceiling" | "floor" | "half_up" | "none"
+  rounding: 'ceiling' | 'floor' | 'half_up' | 'none'
   /**
    * The number of decimal places to retain after rounding.
    *
@@ -2177,7 +2182,7 @@ export interface UnitConfig {
 /** Mapping of app types to tax codes. */
 export interface TaxCodeAppMapping {
   /** The app type that the tax code is associated with. */
-  appType: "sandbox" | "stripe" | "external_invoicing"
+  appType: 'sandbox' | 'stripe' | 'external_invoicing'
   /** Tax code. */
   taxCode: string
 }
@@ -2185,7 +2190,12 @@ export interface TaxCodeAppMapping {
 /** App capability describes a function that an App can perform. */
 export interface AppCapability {
   /** Type of the capability. */
-  type: "report_usage" | "report_events" | "calculate_tax" | "invoice_customers" | "collect_payments"
+  type:
+    | 'report_usage'
+    | 'report_events'
+    | 'calculate_tax'
+    | 'invoice_customers'
+    | 'collect_payments'
   /** Key of the capability. */
   key: string
   /** Name of the capability. */
@@ -2210,7 +2220,7 @@ export interface UpdateAppStripeRequest {
   description?: string
   labels?: UpdateLabels
   /** The app type. */
-  type: "stripe"
+  type: 'stripe'
   /** The Stripe secret API key used to authenticate API requests. */
   secretApiKey?: string
 }
@@ -2231,7 +2241,7 @@ export interface UpdateAppSandboxRequest {
   description?: string
   labels?: UpdateLabels
   /** The app type. */
-  type: "sandbox"
+  type: 'sandbox'
 }
 
 /** AppExternalInvoicing update request. */
@@ -2250,7 +2260,7 @@ export interface UpdateAppExternalInvoicingRequest {
   description?: string
   labels?: UpdateLabels
   /** The app type. */
-  type: "external_invoicing"
+  type: 'external_invoicing'
   /**
    * Enable draft synchronization hook.
    *
@@ -2304,7 +2314,7 @@ export interface WorkflowInvoicingSettings {
   /** Should progressive billing be allowed for this workflow? */
   progressiveBilling: boolean
   /** Controls how subscription-ending shortened service periods are billed. */
-  subscriptionEndProrationMode: "bill_full_period" | "bill_actual_period"
+  subscriptionEndProrationMode: 'bill_full_period' | 'bill_actual_period'
 }
 
 /**
@@ -2322,7 +2332,7 @@ export interface InvoiceValidationIssue {
   /** Additional structured context. */
   attributes?: Record<string, unknown>
   /** Severity of the validation issue. */
-  severity: "critical" | "warning"
+  severity: 'critical' | 'warning'
   /**
    * JSON path to the field that caused this validation issue, if applicable.
    *
@@ -2355,7 +2365,7 @@ export interface InvoiceLineAmountDiscount {
   /** Unique identifier for the discount. */
   id: string
   /** The reason this discount was applied. */
-  reason: "maximum_spend" | "ratecard_percentage" | "ratecard_usage"
+  reason: 'maximum_spend' | 'ratecard_percentage' | 'ratecard_usage'
   /** Optional human-readable description of the discount. */
   description?: string
   /** External identifiers for this discount. */
@@ -2369,7 +2379,7 @@ export interface InvoiceLineUsageDiscount {
   /** Unique identifier for the discount. */
   id: string
   /** The reason this discount was applied. */
-  reason: "maximum_spend" | "ratecard_percentage" | "ratecard_usage"
+  reason: 'maximum_spend' | 'ratecard_percentage' | 'ratecard_usage'
   /** Optional human-readable description of the discount. */
   description?: string
   /** External identifiers for this discount. */
@@ -2383,7 +2393,7 @@ export interface InvoiceLineBaseDiscount {
   /** Unique identifier for the discount. */
   id: string
   /** The reason this discount was applied. */
-  reason: "maximum_spend" | "ratecard_percentage" | "ratecard_usage"
+  reason: 'maximum_spend' | 'ratecard_percentage' | 'ratecard_usage'
   /** Optional human-readable description of the discount. */
   description?: string
   /** External identifiers for this discount. */
@@ -2392,7 +2402,7 @@ export interface InvoiceLineBaseDiscount {
 
 /** Filter options for listing currencies. */
 export interface ListCurrenciesParamsFilter {
-  type?: "fiat" | "custom"
+  type?: 'fiat' | 'custom'
   code?: StringFieldFilter
 }
 
@@ -2412,7 +2422,12 @@ export interface GovernanceQueryRequest {
 /** Reason a feature is not accessible to a customer. */
 export interface GovernanceFeatureAccessReason {
   /** Machine-readable error code. */
-  code: "unknown" | "usage_limit_reached" | "feature_unavailable" | "feature_not_found" | "no_credit_available"
+  code:
+    | 'unknown'
+    | 'usage_limit_reached'
+    | 'feature_unavailable'
+    | 'feature_not_found'
+    | 'no_credit_available'
   /** Human-readable description of the error. */
   message: string
   /** Additional structured context. */
@@ -2422,7 +2437,7 @@ export interface GovernanceFeatureAccessReason {
 /** Query error within a partially successful governance query response. */
 export interface GovernanceQueryError {
   /** Machine-readable error code. */
-  code: "unknown" | "customer_not_found"
+  code: 'unknown' | 'customer_not_found'
   /** Human-readable description of the error. */
   message: string
   /** Additional structured context. */
@@ -2470,7 +2485,7 @@ export interface AiUsageUsageBatchCreate {
   /** Rate package version snapshot used for settlement. */
   ratePackageVersion: string
   /** Billing mode for this batch. */
-  billingMode: "component" | "bundle"
+  billingMode: 'component' | 'bundle'
   /**
    * Whether model resources are platform-managed. Set to `false` for
    * bring-your-own-key (BYOK) models.
@@ -2490,7 +2505,7 @@ export interface AiUsageCreditTransaction {
   /** When the transaction was booked. */
   bookedAt: Date
   /** The type of credit movement. */
-  type: "funded" | "consumed" | "expired" | "voided"
+  type: 'funded' | 'consumed' | 'expired' | 'voided'
   /** Signed credit amount. Positive adds balance, negative reduces it. */
   amount: bigint
   /** Available balance before this transaction. */
@@ -2508,7 +2523,7 @@ export interface AiUsageCreditTransaction {
  */
 export interface CommerceWalletBucket {
   /** The funding source of this bucket. */
-  source: "plan" | "gift" | "recharge" | "enterprise_receivable"
+  source: 'plan' | 'gift' | 'recharge' | 'enterprise_receivable'
   /** Credits currently available for consumption. */
   availableCredits: bigint
   /** When this bucket's credits expire. Omitted if the bucket does not expire. */
@@ -2534,7 +2549,7 @@ export interface CommerceLedgerProvenance {
    */
   priority: number
   /** The credit source that funded this transaction. */
-  source: "plan" | "gift" | "recharge" | "enterprise_receivable"
+  source: 'plan' | 'gift' | 'recharge' | 'enterprise_receivable'
 }
 
 /**
@@ -2645,7 +2660,7 @@ export interface CommerceCheckoutSessionCreate {
   /** Client-generated idempotency key for the checkout attempt. */
   idempotencyKey: string
   /** The payment channel to use for this checkout. */
-  provider: "wechat" | "alipay" | "offline"
+  provider: 'wechat' | 'alipay' | 'offline'
   /** For offline payments: the external reference (e.g. bank transfer number). */
   externalReference?: string
 }
@@ -2657,9 +2672,9 @@ export interface CommerceCheckoutSession {
   /** The order this checkout session belongs to. */
   orderId: string
   /** The payment channel for this attempt. */
-  provider: "wechat" | "alipay" | "offline"
+  provider: 'wechat' | 'alipay' | 'offline'
   /** Current payment attempt status. */
-  status: "created" | "pending" | "succeeded" | "failed" | "closed"
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'closed'
   /** Provider-specific payment URL or QR code payload (e.g. WeChat code_url). */
   paymentUrl?: string
   /** External provider order identifier. */
@@ -2684,7 +2699,7 @@ export interface CommercePaymentFact {
   /** The checkout session associated with this payment. */
   checkoutSessionId: string
   /** The payment channel that processed this payment. */
-  provider: "wechat" | "alipay" | "offline"
+  provider: 'wechat' | 'alipay' | 'offline'
   /** Confirmed amount in fen. */
   amountFen: bigint
   /** Currency of the payment. */
@@ -2694,7 +2709,7 @@ export interface CommercePaymentFact {
   /** External provider order identifier. */
   providerOrderId: string
   /** Current status of the payment attempt. */
-  status: "created" | "pending" | "succeeded" | "failed" | "closed"
+  status: 'created' | 'pending' | 'succeeded' | 'failed' | 'closed'
   /** When the payment fact was created. */
   createdAt: Date
   /** When the payment was confirmed by the provider. */
@@ -2718,9 +2733,14 @@ export interface CommerceRefund {
   creditsReversed: bigint
   reason: string
   /** The payment channel that will process the refund. */
-  provider: "wechat" | "alipay" | "offline"
+  provider: 'wechat' | 'alipay' | 'offline'
   /** Current refund status. */
-  status: "pending_fence" | "provider_processing" | "ledger_reversing" | "fulfilled" | "failed"
+  status:
+    | 'pending_fence'
+    | 'provider_processing'
+    | 'ledger_reversing'
+    | 'fulfilled'
+    | 'failed'
   /** External provider refund identifier. */
   providerRefundId?: string
   /** Human-readable business tracking number. */
@@ -2756,7 +2776,7 @@ export interface CommerceReceivablePeriod {
   /** Currency for this period. */
   currency: string
   /** Current settlement status. */
-  status: "open" | "closed" | "partially_paid" | "paid" | "overdue"
+  status: 'open' | 'closed' | 'partially_paid' | 'paid' | 'overdue'
   /** When the period was created. */
   createdAt: Date
   /** When the period was closed or settled. */
@@ -2846,7 +2866,7 @@ export interface CreateCreditAdjustmentRequest {
 /** Filter options for listing credit transactions. */
 export interface ListCreditTransactionsParamsFilter {
   /** Filter credit transactions by type. */
-  type?: "funded" | "consumed" | "expired" | "voided"
+  type?: 'funded' | 'consumed' | 'expired' | 'voided'
   /** Filter credit transactions by currency. */
   currency?: BillingCurrencyCode
   /**
@@ -2883,7 +2903,7 @@ export interface CreditTransaction {
   /** The date and time the transaction was booked. */
   bookedAt: Date
   /** The type of credit transaction. */
-  type: "funded" | "consumed" | "expired" | "voided"
+  type: 'funded' | 'consumed' | 'expired' | 'voided'
   /** Currency of the balance affected by the transaction. */
   currency: BillingCurrencyCode
   /**
@@ -2970,7 +2990,7 @@ export interface UpdatePriceTier {
  */
 export interface FeatureLlmUnitCost {
   /** The type discriminator for LLM unit cost. */
-  type: "llm"
+  type: 'llm'
   /**
    * Meter group-by property that holds the LLM provider. Use this when the meter has
    * a group-by dimension for provider. Mutually exclusive with `provider`.
@@ -3001,7 +3021,14 @@ export interface FeatureLlmUnitCost {
    * (e.g., only input tokens). `request` is an alias for `input`, `response` is an
    * alias for `output`. Mutually exclusive with `token_type_property`.
    */
-  tokenType?: "input" | "output" | "cache_read" | "cache_write" | "reasoning" | "request" | "response"
+  tokenType?:
+    | 'input'
+    | 'output'
+    | 'cache_read'
+    | 'cache_write'
+    | 'reasoning'
+    | 'request'
+    | 'response'
   /**
    * Resolved per-token pricing from the LLM cost database. Populated in responses
    * when the provider and model can be determined, either from static values or from
@@ -3026,7 +3053,7 @@ export interface LlmCostPrice {
   /** Currency code (currently always "USD"). */
   currency: string
   /** Where this price came from. */
-  source: "manual" | "system"
+  source: 'manual' | 'system'
   /** When this price becomes effective. */
   effectiveFrom: Date
   /** When this price expires. Omitted when the price is currently effective. */
@@ -3102,7 +3129,7 @@ export interface ListAddonsParamsFilter {
  */
 export interface CreateCreditGrantTaxConfig {
   /** Tax behavior applied to the invoice line item. */
-  behavior?: "inclusive" | "exclusive"
+  behavior?: 'inclusive' | 'exclusive'
   /** Tax code applied to the invoice line item. */
   taxCode?: CreateResourceReference
 }
@@ -3115,7 +3142,7 @@ export interface CreateCreditGrantTaxConfig {
  */
 export interface CreditGrantTaxConfig {
   /** Tax behavior applied to the invoice line item. */
-  behavior?: "inclusive" | "exclusive"
+  behavior?: 'inclusive' | 'exclusive'
   /** Tax code applied to the invoice line item. */
   taxCode?: TaxCodeReference
 }
@@ -3128,7 +3155,7 @@ export interface TaxConfig {
    * If not specified the billing profile is used to determine the tax behavior. If
    * not specified in the billing profile, the provider's default behavior is used.
    */
-  behavior?: "inclusive" | "exclusive"
+  behavior?: 'inclusive' | 'exclusive'
   /** Stripe tax config. */
   stripe?: TaxConfigStripe
   /** External invoicing tax config. */
@@ -3147,7 +3174,7 @@ export interface TaxConfig {
 
 /** The tax config of the rate card. */
 export interface RateCardTaxConfig {
-  behavior?: "inclusive" | "exclusive"
+  behavior?: 'inclusive' | 'exclusive'
   code: TaxCodeReference
 }
 
@@ -3267,7 +3294,7 @@ export interface InvoiceWorkflowAppsReferences {
 
 /** The tax config of the rate card. */
 export interface UpdateRateCardTaxConfig {
-  behavior?: "inclusive" | "exclusive"
+  behavior?: 'inclusive' | 'exclusive'
   code: UpdateResourceReference
 }
 
@@ -3281,7 +3308,7 @@ export interface CommerceOrderCreate {
   /** The billing customer placing the order. */
   billingCustomerId: string
   /** The business type of the order. */
-  kind: "plan_purchase" | "subscription_renewal" | "wallet_top_up"
+  kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
   /**
    * For `plan_purchase` or `subscription_renewal`: the plan and billing period being
    * purchased.
@@ -3300,7 +3327,7 @@ export interface CommerceOrder {
   /** The idempotency key from the create request. */
   idempotencyKey: string
   billingCustomerId: string
-  kind: "plan_purchase" | "subscription_renewal" | "wallet_top_up"
+  kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
   plan?: CommercePlanRef
   rechargeProductId?: string
   currency: string
@@ -3309,7 +3336,16 @@ export interface CommerceOrder {
   /** Credits that will be granted on fulfillment (for top-up and plan orders). */
   credits?: bigint
   /** Current lifecycle status. */
-  status: "created" | "awaiting_payment" | "paid" | "fulfilled" | "cancelled" | "expired" | "refund_pending" | "partially_refunded" | "refunded"
+  status:
+    | 'created'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'fulfilled'
+    | 'cancelled'
+    | 'expired'
+    | 'refund_pending'
+    | 'partially_refunded'
+    | 'refunded'
   /** Human-readable business tracking number shown to the customer. */
   businessTrackingNumber?: string
   /** When the order was created. */
@@ -3367,7 +3403,17 @@ export interface ResourceFilters {
 /** Field filters with all supported types. */
 export interface FieldFilters {
   boolean?: boolean | { eq: boolean }
-  numeric?: number | { eq?: number; neq?: number; oeq?: number[]; lt?: number; lte?: number; gt?: number; gte?: number }
+  numeric?:
+    | number
+    | {
+        eq?: number
+        neq?: number
+        oeq?: number[]
+        lt?: number
+        lte?: number
+        gt?: number
+        gte?: number
+      }
   string?: StringFieldFilter
   stringExact?: StringFieldFilterExact
   ulid?: UlidFieldFilter
@@ -3402,7 +3448,7 @@ export interface MeterQueryResult {
 /** Describes custom currency. */
 export interface CurrencyCustom {
   /** The type of the currency. */
-  type: "custom"
+  type: 'custom'
   /**
    * The name of the currency. It should be a human-readable string that represents
    * the name of the currency, such as "US Dollar" or "Euro".
@@ -3631,13 +3677,13 @@ export interface AppStripeCreateCheckoutSessionConsentCollection {
    * Only available to US merchants. When set to "auto", Checkout determines whether
    * to show the option based on the customer's locale.
    */
-  promotions?: "auto" | "none"
+  promotions?: 'auto' | 'none'
   /**
    * Requires customers to accept terms of service before payment.
    *
    * Requires a valid terms of service URL in your Stripe Dashboard settings.
    */
-  termsOfService?: "none" | "required"
+  termsOfService?: 'none' | 'required'
 }
 
 /** List customer entitlement access response data. */
@@ -3652,7 +3698,7 @@ export interface ListCustomerEntitlementAccessResponseData {
  */
 export interface WorkflowCollectionAlignmentAnchored {
   /** The type of alignment. */
-  type: "anchored"
+  type: 'anchored'
   /** The recurring period for the alignment. */
   recurringPeriod: RecurringPeriod
 }
@@ -3730,7 +3776,7 @@ export interface SubscriptionChange {
    * invoiced.
    * - `credit_only`: Usage is settled exclusively against credits.
    */
-  settlementMode?: "credit_then_invoice" | "credit_only"
+  settlementMode?: 'credit_then_invoice' | 'credit_only'
   /** The customer to create the subscription for. */
   customer: { id?: string; key?: string }
   /** The plan reference of the subscription. */
@@ -3868,7 +3914,7 @@ export interface UpsertTaxCodeRequest {
  */
 export interface AppCatalogItem {
   /** Type of the app. */
-  type: "sandbox" | "stripe" | "external_invoicing"
+  type: 'sandbox' | 'stripe' | 'external_invoicing'
   /** Name of the app. */
   name: string
   /** Description of the app. */
@@ -3876,7 +3922,7 @@ export interface AppCatalogItem {
   /** Capabilities of the app. */
   capabilities: AppCapability[]
   /** Available install methods of the app. */
-  installMethods: ("with_oauth2" | "with_api_key" | "no_credentials_required")[]
+  installMethods: ('with_oauth2' | 'with_api_key' | 'no_credentials_required')[]
 }
 
 /**
@@ -3962,7 +4008,7 @@ export interface CommerceWalletTransaction {
   /** Public identifier of the transaction. */
   id: string
   /** The type of credit movement. */
-  kind: "funded" | "consumed" | "expired" | "refunded" | "adjusted"
+  kind: 'funded' | 'consumed' | 'expired' | 'refunded' | 'adjusted'
   /** Signed credit amount. Positive adds balance, negative reduces it. */
   amount: bigint
   /** Immutable ledger provenance linking this movement to its grant and source. */
@@ -4084,7 +4130,7 @@ export interface AiUsageRatingSnapshot {
  */
 export interface PriceGraduated {
   /** The type of the price. */
-  type: "graduated"
+  type: 'graduated'
   /** The tiers of the graduated price. At least one tier is required. */
   tiers: PriceTier[]
 }
@@ -4100,7 +4146,7 @@ export interface PriceGraduated {
  */
 export interface PriceVolume {
   /** The type of the price. */
-  type: "volume"
+  type: 'volume'
   /** The tiers of the volume price. At least one tier is required. */
   tiers: PriceTier[]
 }
@@ -4116,7 +4162,7 @@ export interface PriceVolume {
  */
 export interface UpdatePriceGraduated {
   /** The type of the price. */
-  type: "graduated"
+  type: 'graduated'
   /** The tiers of the graduated price. At least one tier is required. */
   tiers: UpdatePriceTier[]
 }
@@ -4132,7 +4178,7 @@ export interface UpdatePriceGraduated {
  */
 export interface UpdatePriceVolume {
   /** The type of the price. */
-  type: "volume"
+  type: 'volume'
   /** The tiers of the volume price. At least one tier is required. */
   tiers: UpdatePriceTier[]
 }
@@ -4159,7 +4205,7 @@ export interface CreateCreditGrantRequest {
   description?: string
   labels?: CreateLabels
   /** Funding method of the grant. */
-  fundingMethod: "none" | "invoice" | "external"
+  fundingMethod: 'none' | 'invoice' | 'external'
   /** The currency of the granted credits. */
   currency: CreateCurrencyCode
   /** Granted credit amount. */
@@ -4228,7 +4274,7 @@ export interface CreditGrant {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** Funding method of the grant. */
-  fundingMethod: "none" | "invoice" | "external"
+  fundingMethod: 'none' | 'invoice' | 'external'
   /** The currency of the granted credits. */
   currency: BillingCurrencyCode
   /** Granted credit amount. */
@@ -4272,7 +4318,7 @@ export interface CreditGrant {
   /** Timestamp when the grant was voided. */
   voidedAt?: Date
   /** Current lifecycle status of the grant. */
-  status: "pending" | "active" | "expired" | "voided"
+  status: 'pending' | 'active' | 'expired' | 'voided'
 }
 
 /** Flat fee charge create request. */
@@ -4291,7 +4337,7 @@ export interface CreateChargeFlatFeeRequest {
   description?: string
   labels?: Labels
   /** The type of the charge. */
-  type: "flat_fee"
+  type: 'flat_fee'
   /** The currency of the charge. */
   currency: string
   /** The timestamp when the charge is intended to be invoiced. */
@@ -4301,7 +4347,7 @@ export interface CreateChargeFlatFeeRequest {
   /** Unique reference ID of the charge. */
   uniqueReferenceId?: string
   /** Settlement mode of the charge. */
-  settlementMode: "credit_then_invoice" | "credit_only"
+  settlementMode: 'credit_then_invoice' | 'credit_only'
   /** Tax configuration of the charge. */
   taxConfig?: TaxConfig
   /** Payment term of the flat fee charge. */
@@ -4461,7 +4507,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptions {
    * Defaults to auto, which only collects the address when necessary for tax
    * calculation.
    */
-  billingAddressCollection: "auto" | "required"
+  billingAddressCollection: 'auto' | 'required'
   /**
    * URL to redirect customers who cancel the checkout session.
    *
@@ -4524,7 +4570,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptions {
    * "hosted" displays a Stripe-hosted page. "embedded" integrates directly into your
    * app. Defaults to "hosted".
    */
-  uiMode: "embedded" | "hosted"
+  uiMode: 'embedded' | 'hosted'
   /**
    * List of payment method types to enable (e.g., "card", "us_bank_account").
    *
@@ -4537,7 +4583,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptions {
    * Controls when to redirect users after completion. See:
    * https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
    */
-  redirectOnCompletion?: "always" | "if_required" | "never"
+  redirectOnCompletion?: 'always' | 'if_required' | 'never'
   /** Configuration for collecting tax IDs during checkout. */
   taxIdCollection?: AppStripeCreateCheckoutSessionTaxIdCollection
 }
@@ -4571,11 +4617,11 @@ export interface AppStripe {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** The app type. */
-  type: "stripe"
+  type: 'stripe'
   /** The app catalog definition that this installed app is based on. */
   definition: AppCatalogItem
   /** Status of the app connection. */
-  status: "ready" | "unauthorized"
+  status: 'ready' | 'unauthorized'
   /** The Stripe account ID associated with the connected Stripe account. */
   accountId: string
   /** Indicates whether the app is connected to a live Stripe account. */
@@ -4607,11 +4653,11 @@ export interface AppSandbox {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** The app type. */
-  type: "sandbox"
+  type: 'sandbox'
   /** The app catalog definition that this installed app is based on. */
   definition: AppCatalogItem
   /** Status of the app connection. */
-  status: "ready" | "unauthorized"
+  status: 'ready' | 'unauthorized'
 }
 
 /**
@@ -4655,11 +4701,11 @@ export interface AppExternalInvoicing {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** The app type. */
-  type: "external_invoicing"
+  type: 'external_invoicing'
   /** The app catalog definition that this installed app is based on. */
   definition: AppCatalogItem
   /** Status of the app connection. */
-  status: "ready" | "unauthorized"
+  status: 'ready' | 'unauthorized'
   /**
    * Enable draft synchronization hook.
    *
@@ -4741,7 +4787,7 @@ export interface InvoiceDetailedLine {
   /** Aggregated financial totals for the detailed line. */
   totals: Totals
   /** The cost category of this detailed line. */
-  category: "regular" | "commitment"
+  category: 'regular' | 'commitment'
   /** Discounts applied to this detailed line. */
   discounts?: InvoiceLineDiscounts
   /** Credit applied to this detailed line. */
@@ -4828,12 +4874,12 @@ export interface AiUsageUsageBatch {
   reservationId: string
   reservationCeilingCredits: bigint
   ratePackageVersion: string
-  billingMode: "component" | "bundle"
+  billingMode: 'component' | 'bundle'
   providerManaged: boolean
   /** The consumed line items with resolved pricing. */
   lines: AiUsageUsageLine[]
   /** Settlement status. */
-  status: "settled" | "corrected"
+  status: 'settled' | 'corrected'
   /**
    * Total integer Credit charge for the batch, after applying the reservation
    * ceiling.
@@ -4851,7 +4897,7 @@ export interface AiUsageUsageBatch {
  */
 export interface AiUsageBatchSettlementResult {
   batchId: string
-  status: "settled" | "corrected"
+  status: 'settled' | 'corrected'
   totalCredits: bigint
   ratingSnapshots: AiUsageRatingSnapshot[]
   ledgerEntries: AiUsageLedgerEntryRef[]
@@ -5077,14 +5123,14 @@ export interface ChargeFlatFee {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** The type of the charge. */
-  type: "flat_fee"
+  type: 'flat_fee'
   /** The customer owning the charge. */
   customer: BillingCustomerReference
   /**
    * Indicates whether the charge lifecycle is controlled by OpenMeter or manually
    * overridden by the API user.
    */
-  lifecycleController: "system" | "manual"
+  lifecycleController: 'system' | 'manual'
   /**
    * The subscription that originated the charge, when the charge was created from a
    * subscription item.
@@ -5093,7 +5139,7 @@ export interface ChargeFlatFee {
   /** The currency of the charge. */
   currency: string
   /** The lifecycle status of the charge. */
-  status: "created" | "active" | "final" | "deleted"
+  status: 'created' | 'active' | 'final' | 'deleted'
   /** The timestamp when the charge is intended to be invoiced. */
   invoiceAt: Date
   /** The effective service period covered by the charge. */
@@ -5110,7 +5156,7 @@ export interface ChargeFlatFee {
   /** Unique reference ID of the charge. */
   uniqueReferenceId?: string
   /** Settlement mode of the charge. */
-  settlementMode: "credit_then_invoice" | "credit_only"
+  settlementMode: 'credit_then_invoice' | 'credit_only'
   /** Tax configuration of the charge. */
   taxConfig?: TaxConfig
   /** Payment term of the flat fee charge. */
@@ -5186,7 +5232,7 @@ export interface CreateChargeUsageBasedRequest {
   description?: string
   labels?: Labels
   /** The type of the charge. */
-  type: "usage_based"
+  type: 'usage_based'
   /** The currency of the charge. */
   currency: string
   /** The timestamp when the charge is intended to be invoiced. */
@@ -5196,7 +5242,7 @@ export interface CreateChargeUsageBasedRequest {
   /** Unique reference ID of the charge. */
   uniqueReferenceId?: string
   /** Settlement mode of the charge. */
-  settlementMode: "credit_then_invoice" | "credit_only"
+  settlementMode: 'credit_then_invoice' | 'credit_only'
   /** Tax configuration of the charge. */
   taxConfig?: TaxConfig
   /** Discounts applied to the usage-based charge. */
@@ -5329,7 +5375,13 @@ export interface AppPagePaginatedResponse {
 /** Response of the app install. */
 export interface BillingInstallAppResponse {
   app: App
-  defaultForCapabilityTypes: ("report_usage" | "report_events" | "calculate_tax" | "invoice_customers" | "collect_payments")[]
+  defaultForCapabilityTypes: (
+    | 'report_usage'
+    | 'report_events'
+    | 'calculate_tax'
+    | 'invoice_customers'
+    | 'collect_payments'
+  )[]
 }
 
 /** Applications used by a billing profile. */
@@ -5365,14 +5417,14 @@ export interface ChargeUsageBased {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** The type of the charge. */
-  type: "usage_based"
+  type: 'usage_based'
   /** The customer owning the charge. */
   customer: BillingCustomerReference
   /**
    * Indicates whether the charge lifecycle is controlled by OpenMeter or manually
    * overridden by the API user.
    */
-  lifecycleController: "system" | "manual"
+  lifecycleController: 'system' | 'manual'
   /**
    * The subscription that originated the charge, when the charge was created from a
    * subscription item.
@@ -5381,7 +5433,7 @@ export interface ChargeUsageBased {
   /** The currency of the charge. */
   currency: string
   /** The lifecycle status of the charge. */
-  status: "created" | "active" | "final" | "deleted"
+  status: 'created' | 'active' | 'final' | 'deleted'
   /** The timestamp when the charge is intended to be invoiced. */
   invoiceAt: Date
   /** The effective service period covered by the charge. */
@@ -5398,7 +5450,7 @@ export interface ChargeUsageBased {
   /** Unique reference ID of the charge. */
   uniqueReferenceId?: string
   /** Settlement mode of the charge. */
-  settlementMode: "credit_then_invoice" | "credit_only"
+  settlementMode: 'credit_then_invoice' | 'credit_only'
   /** Tax configuration of the charge. */
   taxConfig?: TaxConfig
   /** Discounts applied to the usage-based charge. */
@@ -5487,7 +5539,7 @@ export interface Addon {
   /** Version of the add-on. Incremented when the add-on is updated. */
   version: number
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The currency code of the add-on. */
   currency: BillingCurrencyCode
   /**
@@ -5508,7 +5560,7 @@ export interface Addon {
    * `now < effective_to`).
    * - `archived`: `effective_to <= now`.
    */
-  status: "draft" | "active" | "archived"
+  status: 'draft' | 'active' | 'archived'
   /** The rate cards of the add-on. */
   rateCards: RateCard[]
   /** List of validation errors. */
@@ -5537,7 +5589,7 @@ export interface CreateAddonRequest {
    */
   key: string
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The currency code of the add-on. */
   currency: BillingCurrencyCode
   /** The rate cards of the add-on. */
@@ -5560,7 +5612,7 @@ export interface UpsertAddonRequest {
   description?: string
   labels?: Labels
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The rate cards of the add-on. */
   rateCards: RateCard[]
 }
@@ -5601,12 +5653,12 @@ export interface InvoiceStandardLine {
    */
   id?: string
   /** The type of charge this line item represents. */
-  type: "standard_line"
+  type: 'standard_line'
   /**
    * Indicates whether this line item's lifecycle is controlled by OpenMeter or
    * manually overridden by the API user.
    */
-  lifecycleController: "system" | "manual"
+  lifecycleController: 'system' | 'manual'
   /**
    * The service period covered by this invoice, spanning the earliest line start to
    * the latest line end across all of its lines.
@@ -5667,7 +5719,7 @@ export interface UpdateInvoiceStandardLine {
    */
   id?: string
   /** The type of charge this line item represents. */
-  type: "standard_line"
+  type: 'standard_line'
   /**
    * The service period covered by this invoice, spanning the earliest line start to
    * the latest line end across all of its lines.
@@ -5871,7 +5923,7 @@ export interface Plan {
    * `now < effective_to`).
    * - `archived`: `effective_to <= now`.
    */
-  status: "draft" | "active" | "archived" | "scheduled"
+  status: 'draft' | 'active' | 'archived' | 'scheduled'
   /**
    * The plan phases define the pricing ramp for a subscription. A phase switch
    * occurs only at the end of a billing period. At least one phase is required.
@@ -5886,7 +5938,7 @@ export interface Plan {
    * invoiced.
    * - `credit_only`: Usage is settled exclusively against credits.
    */
-  settlementMode: "credit_then_invoice" | "credit_only"
+  settlementMode: 'credit_then_invoice' | 'credit_only'
   /**
    * List of validation errors in `draft` state that prevent the plan from being
    * published.
@@ -6029,9 +6081,17 @@ export interface InvoiceStandard {
   /** External identifiers assigned to this invoice by third-party systems. */
   externalReferences?: InvoiceExternalReferences
   /** Discriminator field identifying this as a standard invoice. */
-  type: "standard"
+  type: 'standard'
   /** Current lifecycle status of the invoice. */
-  status: "draft" | "issuing" | "issued" | "payment_processing" | "overdue" | "paid" | "uncollectible" | "voided"
+  status:
+    | 'draft'
+    | 'issuing'
+    | 'issued'
+    | 'payment_processing'
+    | 'overdue'
+    | 'paid'
+    | 'uncollectible'
+    | 'voided'
   /** Detailed status information including available actions and workflow state. */
   statusDetails: InvoiceStatusDetails
   /** Timestamp when the invoice was issued to the customer. */
@@ -6081,7 +6141,7 @@ export interface UpdateInvoiceStandardRequest {
   /** Snapshot of the customer's information at the time the invoice was issued. */
   customer: UpdateInvoiceCustomer
   /** Discriminator field identifying this as a standard invoice. */
-  type: "standard"
+  type: 'standard'
   /** Workflow configuration snapshot captured at invoice creation time. */
   workflow: UpdateInvoiceWorkflowSettings
   /**
@@ -6106,25 +6166,40 @@ export interface InvoicePagePaginatedResponse {
  * Filters on the given string field value by either exact or fuzzy match. All
  * properties are optional; provide exactly one to specify the comparison.
  */
-export type StringFieldFilter = string | { eq?: string; neq?: string; contains?: string; ocontains?: string[]; oeq?: string[]; gt?: string; gte?: string; lt?: string; lte?: string; exists?: boolean }
+export type StringFieldFilter =
+  | string
+  | {
+      eq?: string
+      neq?: string
+      contains?: string
+      ocontains?: string[]
+      oeq?: string[]
+      gt?: string
+      gte?: string
+      lt?: string
+      lte?: string
+      exists?: boolean
+    }
 
 /** The aggregation type to use for the meter. */
-export type MeterAggregation = "sum" | "count" | "unique_count" | "avg" | "min" | "max" | "latest"
+export type MeterAggregation =
+  'sum' | 'count' | 'unique_count' | 'avg' | 'min' | 'max' | 'latest'
 
 /**
  * The granularity of the time grouping. Time durations are specified in ISO 8601
  * format.
  */
-export type MeterQueryGranularity = "PT1M" | "PT1H" | "P1D" | "P1M"
+export type MeterQueryGranularity = 'PT1M' | 'PT1H' | 'P1D' | 'P1M'
 
 /**
  * Filters on the given string field value by exact match. All properties are
  * optional; provide exactly one to specify the comparison.
  */
-export type StringFieldFilterExact = string | { eq?: string; oeq?: string[]; neq?: string }
+export type StringFieldFilterExact =
+  string | { eq?: string; oeq?: string[]; neq?: string }
 
 /** The payment term of a flat price. */
-export type PricePaymentTerm = "in_advance" | "in_arrears"
+export type PricePaymentTerm = 'in_advance' | 'in_arrears'
 
 /** Fiat or custom currency code. */
 export type BillingCurrencyCode = string | string
@@ -6136,41 +6211,59 @@ export type CreateCurrencyCode = string | string
  * Filters on the given ULID field value by exact match. All properties are
  * optional; provide exactly one to specify the comparison.
  */
-export type UlidFieldFilter = string | { eq?: string; oeq?: string[]; neq?: string }
+export type UlidFieldFilter =
+  string | { eq?: string; oeq?: string[]; neq?: string }
 
 /**
  * Filters on the given datetime (RFC-3339) field value. All properties are
  * optional; provide exactly one to specify the comparison.
  */
-export type DateTimeFieldFilter = Date | { eq?: Date; lt?: Date; lte?: Date; gt?: Date; gte?: Date }
+export type DateTimeFieldFilter =
+  Date | { eq?: Date; lt?: Date; lte?: Date; gt?: Date; gte?: Date }
 
 /**
  * Subscription edit timing defined when the changes should take effect. If the
  * provided configuration is not supported by the subscription, an error will be
  * returned.
  */
-export type SubscriptionEditTiming = "immediate" | "next_billing_cycle" | Date
+export type SubscriptionEditTiming = 'immediate' | 'next_billing_cycle' | Date
 
 /** Request to install an app from the catalog. */
-export type InstallAppRequest = InstallAppStripeWithApiKey | InstallAppSandbox | InstallAppExternalInvoicing
+export type InstallAppRequest =
+  InstallAppStripeWithApiKey | InstallAppSandbox | InstallAppExternalInvoicing
 
 /** Payment settings for a billing workflow. */
-export type WorkflowPaymentSettings = WorkflowPaymentChargeAutomaticallySettings | WorkflowPaymentSendInvoiceSettings
+export type WorkflowPaymentSettings =
+  | WorkflowPaymentChargeAutomaticallySettings
+  | WorkflowPaymentSendInvoiceSettings
 
 /** Payment settings for a billing workflow. */
-export type UpdateBillingWorkflowPaymentSettings = UpdateBillingWorkflowPaymentChargeAutomaticallySettings | UpdateBillingWorkflowPaymentSendInvoiceSettings
+export type UpdateBillingWorkflowPaymentSettings =
+  | UpdateBillingWorkflowPaymentChargeAutomaticallySettings
+  | UpdateBillingWorkflowPaymentSendInvoiceSettings
 
 /** A parameter that failed validation. */
-export type InvalidParameter = InvalidParameterStandard | InvalidParameterMinimumLength | InvalidParameterMaximumLength | InvalidParameterChoiceItem | InvalidParameterDependentItem
+export type InvalidParameter =
+  | InvalidParameterStandard
+  | InvalidParameterMinimumLength
+  | InvalidParameterMaximumLength
+  | InvalidParameterChoiceItem
+  | InvalidParameterDependentItem
 
 /**
  * Entitlement template configured on a rate card. The feature is taken from the
  * rate card itself, so it is omitted here.
  */
-export type RateCardEntitlement = RateCardMeteredEntitlement | RateCardStaticEntitlement | RateCardBooleanEntitlement
+export type RateCardEntitlement =
+  | RateCardMeteredEntitlement
+  | RateCardStaticEntitlement
+  | RateCardBooleanEntitlement
 
 /** Request to update an installed app. */
-export type UpdateAppRequest = UpdateAppStripeRequest | UpdateAppSandboxRequest | UpdateAppExternalInvoicingRequest
+export type UpdateAppRequest =
+  | UpdateAppStripeRequest
+  | UpdateAppSandboxRequest
+  | UpdateAppExternalInvoicingRequest
 
 /**
  * Per-unit cost configuration for a feature. Either a fixed manual amount or a
@@ -6188,19 +6281,27 @@ export type Currency = CurrencyFiat | CurrencyCustom
  * time the a subscription period starts (for in advance items) or ends (for in
  * arrears items).
  */
-export type WorkflowCollectionAlignment = WorkflowCollectionAlignmentSubscription | WorkflowCollectionAlignmentAnchored
+export type WorkflowCollectionAlignment =
+  WorkflowCollectionAlignmentSubscription | WorkflowCollectionAlignmentAnchored
 
 /** Price. */
-export type Price = PriceFree | PriceFlat | PriceUnit | PriceGraduated | PriceVolume
+export type Price =
+  PriceFree | PriceFlat | PriceUnit | PriceGraduated | PriceVolume
 
 /** Price. */
-export type UpdatePrice = UpdatePriceFree | UpdatePriceFlat | UpdatePriceUnit | UpdatePriceGraduated | UpdatePriceVolume
+export type UpdatePrice =
+  | UpdatePriceFree
+  | UpdatePriceFlat
+  | UpdatePriceUnit
+  | UpdatePriceGraduated
+  | UpdatePriceVolume
 
 /** Installed application. */
 export type App = AppStripe | AppSandbox | AppExternalInvoicing
 
 /** Customer charge. */
-export type CreateChargeRequest = CreateChargeFlatFeeRequest | CreateChargeUsageBasedRequest
+export type CreateChargeRequest =
+  CreateChargeFlatFeeRequest | CreateChargeUsageBasedRequest
 
 /** Customer charge. */
 export type Charge = ChargeFlatFee | ChargeUsageBased
@@ -6245,7 +6346,7 @@ export interface SortQueryInput {
   /** The attribute to sort by. */
   by: string
   /** The sort order. `asc` for ascending, `desc` for descending. */
-  order?: "asc" | "desc"
+  order?: 'asc' | 'desc'
 }
 
 /** Standard error response. */
@@ -6272,7 +6373,7 @@ export interface BaseErrorInput {
  */
 export interface WorkflowPaymentSendInvoiceSettingsInput {
   /** The collection method for the invoice. */
-  collectionMethod: "send_invoice"
+  collectionMethod: 'send_invoice'
   /**
    * The period after which the invoice is due. With some payment solutions it's only
    * applicable for manual collection method.
@@ -6316,7 +6417,7 @@ export interface UpdateBillingInvoiceWorkflowInvoicingSettingsInput {
  */
 export interface UpdateBillingWorkflowPaymentSendInvoiceSettingsInput {
   /** The collection method for the invoice. */
-  collectionMethod: "send_invoice"
+  collectionMethod: 'send_invoice'
   /**
    * The period after which the invoice is due. With some payment solutions it's only
    * applicable for manual collection method.
@@ -6341,7 +6442,7 @@ export interface EventInput {
    * Content type of the CloudEvents data value. Only the value "application/json" is
    * allowed over HTTP.
    */
-  datacontenttype?: "application/json" | null
+  datacontenttype?: 'application/json' | null
   /** Identifies the schema that data adheres to. */
   dataschema?: string | null
   /**
@@ -6356,64 +6457,40 @@ export interface EventInput {
 }
 
 /** Unauthorized. */
-export interface UnauthorizedInput extends BaseErrorInput {
-
-}
+export interface UnauthorizedInput extends BaseErrorInput {}
 
 /** Forbidden. */
-export interface ForbiddenInput extends BaseErrorInput {
-
-}
+export interface ForbiddenInput extends BaseErrorInput {}
 
 /** Not Found. */
-export interface NotFoundInput extends BaseErrorInput {
-
-}
+export interface NotFoundInput extends BaseErrorInput {}
 
 /** Gone. */
-export interface GoneInput extends BaseErrorInput {
-
-}
+export interface GoneInput extends BaseErrorInput {}
 
 /** Conflict. */
-export interface ConflictInput extends BaseErrorInput {
-
-}
+export interface ConflictInput extends BaseErrorInput {}
 
 /** Payload Too Large. */
-export interface PayloadTooLargeInput extends BaseErrorInput {
-
-}
+export interface PayloadTooLargeInput extends BaseErrorInput {}
 
 /** Internal Server Error. */
-export interface InternalInput extends BaseErrorInput {
-
-}
+export interface InternalInput extends BaseErrorInput {}
 
 /** Unsupported Media Type. */
-export interface UnsupportedMediaTypeInput extends BaseErrorInput {
-
-}
+export interface UnsupportedMediaTypeInput extends BaseErrorInput {}
 
 /** Unprocessable Content. */
-export interface UnprocessableContentInput extends BaseErrorInput {
-
-}
+export interface UnprocessableContentInput extends BaseErrorInput {}
 
 /** Too Many Requests. */
-export interface TooManyRequestsInput extends BaseErrorInput {
-
-}
+export interface TooManyRequestsInput extends BaseErrorInput {}
 
 /** Not Implemented. */
-export interface NotImplementedInput extends BaseErrorInput {
-
-}
+export interface NotImplementedInput extends BaseErrorInput {}
 
 /** Not Available. */
-export interface NotAvailableInput extends BaseErrorInput {
-
-}
+export interface NotAvailableInput extends BaseErrorInput {}
 
 /** Controls which customer fields can be updated by the checkout session. */
 export interface AppStripeCreateCheckoutSessionCustomerUpdateInput {
@@ -6422,19 +6499,19 @@ export interface AppStripeCreateCheckoutSessionCustomerUpdateInput {
    *
    * Defaults to "never".
    */
-  address?: "auto" | "never"
+  address?: 'auto' | 'never'
   /**
    * Whether to save the customer name to customer.name.
    *
    * Defaults to "never".
    */
-  name?: "auto" | "never"
+  name?: 'auto' | 'never'
   /**
    * Whether to save shipping information to customer.shipping.
    *
    * Defaults to "never".
    */
-  shipping?: "auto" | "never"
+  shipping?: 'auto' | 'never'
 }
 
 /** Tax ID collection configuration for checkout sessions. */
@@ -6450,7 +6527,7 @@ export interface AppStripeCreateCheckoutSessionTaxIdCollectionInput {
    *
    * Defaults to "never".
    */
-  required?: "if_supported" | "never"
+  required?: 'if_supported' | 'never'
 }
 
 /** Purchase and payment terms of the grant. */
@@ -6473,13 +6550,13 @@ export interface CreateCreditGrantPurchaseInput {
    *
    * Defaults to `on_creation`.
    */
-  availabilityPolicy?: "on_creation"
+  availabilityPolicy?: 'on_creation'
 }
 
 /** The entitlement template of a metered entitlement. */
 export interface RateCardMeteredEntitlementInput {
   /** The type of the entitlement template. */
-  type: "metered"
+  type: 'metered'
   /**
    * If soft limit is true, the subject can use the feature even if the entitlement
    * is exhausted; access remains granted.
@@ -6521,9 +6598,9 @@ export interface CreditGrantPurchaseInput {
    *
    * Defaults to `on_creation`.
    */
-  availabilityPolicy?: "on_creation"
+  availabilityPolicy?: 'on_creation'
   /** Current payment settlement status. */
-  settlementStatus?: "pending" | "authorized" | "settled"
+  settlementStatus?: 'pending' | 'authorized' | 'settled'
 }
 
 /** Request body for voiding a credit grant. */
@@ -6535,7 +6612,7 @@ export interface VoidCreditGrantRequestInput {
    * authorization, settlement, payment intents, or external collection state. If
    * payment later completes, the original invoiced amount may still be collected.
    */
-  paymentAdjustment?: "none"
+  paymentAdjustment?: 'none'
 }
 
 /**
@@ -6564,7 +6641,7 @@ export interface VoidCreditGrantRequestInput {
  */
 export interface UnitConfigInput {
   /** The arithmetic operation to apply to the raw metered quantity. */
-  operation: "divide" | "multiply"
+  operation: 'divide' | 'multiply'
   /**
    * The factor used in the conversion operation.
    *
@@ -6580,7 +6657,7 @@ export interface UnitConfigInput {
    * Defaults to none (no rounding). Entitlement checks always use the precise
    * (unrounded) value.
    */
-  rounding?: "ceiling" | "floor" | "half_up" | "none"
+  rounding?: 'ceiling' | 'floor' | 'half_up' | 'none'
   /**
    * The number of decimal places to retain after rounding.
    *
@@ -6606,7 +6683,7 @@ export interface WorkflowInvoicingSettingsInput {
   /** Should progressive billing be allowed for this workflow? */
   progressiveBilling?: boolean
   /** Controls how subscription-ending shortened service periods are billed. */
-  subscriptionEndProrationMode?: "bill_full_period" | "bill_actual_period"
+  subscriptionEndProrationMode?: 'bill_full_period' | 'bill_actual_period'
 }
 
 /** Query to evaluate feature access for a list of customers. */
@@ -6710,7 +6787,7 @@ export interface CreateCreditGrantRequestInput {
   description?: string
   labels?: CreateLabels
   /** Funding method of the grant. */
-  fundingMethod: "none" | "invoice" | "external"
+  fundingMethod: 'none' | 'invoice' | 'external'
   /** The currency of the granted credits. */
   currency: CreateCurrencyCode
   /** Granted credit amount. */
@@ -6779,7 +6856,7 @@ export interface CreditGrantInput {
   /** An ISO-8601 timestamp representation of entity deletion date. */
   deletedAt?: Date
   /** Funding method of the grant. */
-  fundingMethod: "none" | "invoice" | "external"
+  fundingMethod: 'none' | 'invoice' | 'external'
   /** The currency of the granted credits. */
   currency: BillingCurrencyCode
   /** Granted credit amount. */
@@ -6823,7 +6900,7 @@ export interface CreditGrantInput {
   /** Timestamp when the grant was voided. */
   voidedAt?: Date
   /** Current lifecycle status of the grant. */
-  status: "pending" | "active" | "expired" | "voided"
+  status: 'pending' | 'active' | 'expired' | 'voided'
 }
 
 /** Tax settings for a billing workflow. */
@@ -6893,7 +6970,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptionsInput {
    * Defaults to auto, which only collects the address when necessary for tax
    * calculation.
    */
-  billingAddressCollection?: "auto" | "required"
+  billingAddressCollection?: 'auto' | 'required'
   /**
    * URL to redirect customers who cancel the checkout session.
    *
@@ -6956,7 +7033,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptionsInput {
    * "hosted" displays a Stripe-hosted page. "embedded" integrates directly into your
    * app. Defaults to "hosted".
    */
-  uiMode?: "embedded" | "hosted"
+  uiMode?: 'embedded' | 'hosted'
   /**
    * List of payment method types to enable (e.g., "card", "us_bank_account").
    *
@@ -6969,7 +7046,7 @@ export interface AppStripeCreateCheckoutSessionRequestOptionsInput {
    * Controls when to redirect users after completion. See:
    * https://docs.stripe.com/payments/checkout/custom-success-page?payment-ui=embedded-form
    */
-  redirectOnCompletion?: "always" | "if_required" | "never"
+  redirectOnCompletion?: 'always' | 'if_required' | 'never'
   /** Configuration for collecting tax IDs during checkout. */
   taxIdCollection?: AppStripeCreateCheckoutSessionTaxIdCollectionInput
 }
@@ -7023,7 +7100,7 @@ export interface InvoiceDetailedLineInput {
   /** Aggregated financial totals for the detailed line. */
   totals: Totals
   /** The cost category of this detailed line. */
-  category?: "regular" | "commitment"
+  category?: 'regular' | 'commitment'
   /** Discounts applied to this detailed line. */
   discounts?: InvoiceLineDiscounts
   /** Credit applied to this detailed line. */
@@ -7256,7 +7333,7 @@ export interface AddonInput {
   /** Version of the add-on. Incremented when the add-on is updated. */
   version?: number
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The currency code of the add-on. */
   currency: BillingCurrencyCode
   /**
@@ -7277,7 +7354,7 @@ export interface AddonInput {
    * `now < effective_to`).
    * - `archived`: `effective_to <= now`.
    */
-  status: "draft" | "active" | "archived"
+  status: 'draft' | 'active' | 'archived'
   /** The rate cards of the add-on. */
   rateCards: RateCardInput[]
   /** List of validation errors. */
@@ -7306,7 +7383,7 @@ export interface CreateAddonRequestInput {
    */
   key: string
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The currency code of the add-on. */
   currency: BillingCurrencyCode
   /** The rate cards of the add-on. */
@@ -7329,7 +7406,7 @@ export interface UpsertAddonRequestInput {
   description?: string
   labels?: Labels
   /** The InstanceType of the add-ons. Can be "single" or "multiple". */
-  instanceType: "single" | "multiple"
+  instanceType: 'single' | 'multiple'
   /** The rate cards of the add-on. */
   rateCards: RateCardInput[]
 }
@@ -7370,12 +7447,12 @@ export interface InvoiceStandardLineInput {
    */
   id?: string
   /** The type of charge this line item represents. */
-  type: "standard_line"
+  type: 'standard_line'
   /**
    * Indicates whether this line item's lifecycle is controlled by OpenMeter or
    * manually overridden by the API user.
    */
-  lifecycleController: "system" | "manual"
+  lifecycleController: 'system' | 'manual'
   /**
    * The service period covered by this invoice, spanning the earliest line start to
    * the latest line end across all of its lines.
@@ -7597,7 +7674,7 @@ export interface PlanInput {
    * `now < effective_to`).
    * - `archived`: `effective_to <= now`.
    */
-  status: "draft" | "active" | "archived" | "scheduled"
+  status: 'draft' | 'active' | 'archived' | 'scheduled'
   /**
    * The plan phases define the pricing ramp for a subscription. A phase switch
    * occurs only at the end of a billing period. At least one phase is required.
@@ -7612,7 +7689,7 @@ export interface PlanInput {
    * invoiced.
    * - `credit_only`: Usage is settled exclusively against credits.
    */
-  settlementMode?: "credit_then_invoice" | "credit_only"
+  settlementMode?: 'credit_then_invoice' | 'credit_only'
   /**
    * List of validation errors in `draft` state that prevent the plan from being
    * published.
@@ -7749,9 +7826,17 @@ export interface InvoiceStandardInput {
   /** External identifiers assigned to this invoice by third-party systems. */
   externalReferences?: InvoiceExternalReferences
   /** Discriminator field identifying this as a standard invoice. */
-  type: "standard"
+  type: 'standard'
   /** Current lifecycle status of the invoice. */
-  status: "draft" | "issuing" | "issued" | "payment_processing" | "overdue" | "paid" | "uncollectible" | "voided"
+  status:
+    | 'draft'
+    | 'issuing'
+    | 'issued'
+    | 'payment_processing'
+    | 'overdue'
+    | 'paid'
+    | 'uncollectible'
+    | 'voided'
   /** Detailed status information including available actions and workflow state. */
   statusDetails: InvoiceStatusDetails
   /** Timestamp when the invoice was issued to the customer. */
@@ -7801,7 +7886,7 @@ export interface UpdateInvoiceStandardRequestInput {
   /** Snapshot of the customer's information at the time the invoice was issued. */
   customer: UpdateInvoiceCustomer
   /** Discriminator field identifying this as a standard invoice. */
-  type: "standard"
+  type: 'standard'
   /** Workflow configuration snapshot captured at invoice creation time. */
   workflow: UpdateInvoiceWorkflowSettingsInput
   /**
@@ -7823,16 +7908,23 @@ export interface InvoicePagePaginatedResponseInput {
 }
 
 /** Payment settings for a billing workflow. */
-export type WorkflowPaymentSettingsInput = WorkflowPaymentChargeAutomaticallySettings | WorkflowPaymentSendInvoiceSettingsInput
+export type WorkflowPaymentSettingsInput =
+  | WorkflowPaymentChargeAutomaticallySettings
+  | WorkflowPaymentSendInvoiceSettingsInput
 
 /** Payment settings for a billing workflow. */
-export type UpdateBillingWorkflowPaymentSettingsInput = UpdateBillingWorkflowPaymentChargeAutomaticallySettings | UpdateBillingWorkflowPaymentSendInvoiceSettingsInput
+export type UpdateBillingWorkflowPaymentSettingsInput =
+  | UpdateBillingWorkflowPaymentChargeAutomaticallySettings
+  | UpdateBillingWorkflowPaymentSendInvoiceSettingsInput
 
 /**
  * Entitlement template configured on a rate card. The feature is taken from the
  * rate card itself, so it is omitted here.
  */
-export type RateCardEntitlementInput = RateCardMeteredEntitlementInput | RateCardStaticEntitlement | RateCardBooleanEntitlement
+export type RateCardEntitlementInput =
+  | RateCardMeteredEntitlementInput
+  | RateCardStaticEntitlement
+  | RateCardBooleanEntitlement
 
 /**
  * A top-level line item on an invoice.

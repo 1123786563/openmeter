@@ -18,7 +18,11 @@ export { AIUsage } from './sdk/aiUsage.js'
 export { Commerce } from './sdk/commerce.js'
 export { Client } from './core.js'
 export { HTTPError } from './models/errors.js'
-export { ValidationError, DepthLimitExceededError, UnsafeIntegerError } from './lib/wire.js'
+export {
+  ValidationError,
+  DepthLimitExceededError,
+  UnsafeIntegerError,
+} from './lib/wire.js'
 export type { AcceptDateStrings, DateString } from './lib/wire.js'
 export { PaginationLimitExceededError } from './lib/paginate.js'
 

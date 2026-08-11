@@ -4,7 +4,13 @@ import { type Client, http } from '../core.js'
 import { type Result, type RequestOptions } from '../lib/types.js'
 import { request } from '../lib/request.js'
 import { toURLSearchParams, encodeSort } from '../lib/encodings.js'
-import { toWire, toPathWire, fromWire, assertValid, toSnakeCase } from '../lib/wire.js'
+import {
+  toWire,
+  toPathWire,
+  fromWire,
+  assertValid,
+  toSnakeCase,
+} from '../lib/wire.js'
 import * as schemas from '../models/schemas.js'
 import type {
   ListInvoicesRequest,
@@ -45,11 +51,14 @@ export function listInvoices(
     if (client._options.validate && req.sort !== undefined) {
       assertValid(schemas.listInvoicesQueryParams.shape.sort, req.sort)
     }
-    const query = toWire({
-      page: req.page,
-      sort: encodeSort(req.sort, toSnakeCase),
-      filter: req.filter,
-    }, schemas.listInvoicesQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+        sort: encodeSort(req.sort, toSnakeCase),
+        filter: req.filter,
+      },
+      schemas.listInvoicesQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listInvoicesQueryParamsWire, query)
     }
@@ -91,7 +100,12 @@ export function getInvoice(
     if (client._options.validate) {
       assertValid(schemas.getInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -132,7 +146,12 @@ export function updateInvoice(
     if (client._options.validate) {
       assertValid(schemas.updateInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}`
     const body = toWire(req.body, schemas.updateInvoiceBody)
     if (client._options.validate) {
       assertValid(schemas.updateInvoiceBodyWire, body)
@@ -174,7 +193,12 @@ export function deleteInvoice(
     if (client._options.validate) {
       assertValid(schemas.deleteInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}`
     await http(client).delete(path, options)
   })
 }
@@ -205,7 +229,12 @@ export function advanceInvoice(
     if (client._options.validate) {
       assertValid(schemas.advanceInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}/advance`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}/advance`
     return http(client)
       .post(path, options)
       .json()
@@ -250,7 +279,12 @@ export function approveInvoice(
     if (client._options.validate) {
       assertValid(schemas.approveInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}/approve`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}/approve`
     return http(client)
       .post(path, options)
       .json()
@@ -290,7 +324,12 @@ export function retryInvoice(
     if (client._options.validate) {
       assertValid(schemas.retryInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}/retry`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}/retry`
     return http(client)
       .post(path, options)
       .json()
@@ -331,7 +370,12 @@ export function snapshotQuantitiesInvoice(
     if (client._options.validate) {
       assertValid(schemas.snapshotQuantitiesInvoicePathParamsWire, pathParams)
     }
-    const path = `openmeter/billing/invoices/${(() => { if (pathParams.invoiceId === undefined) { throw new Error('missing path parameter: invoiceId') } return encodeURIComponent(String(pathParams.invoiceId)) })()}/snapshot-quantities`
+    const path = `openmeter/billing/invoices/${(() => {
+      if (pathParams.invoiceId === undefined) {
+        throw new Error('missing path parameter: invoiceId')
+      }
+      return encodeURIComponent(String(pathParams.invoiceId))
+    })()}/snapshot-quantities`
     return http(client)
       .post(path, options)
       .json()

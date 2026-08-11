@@ -36,9 +36,12 @@ export function listApps(
   options?: RequestOptions,
 ): Promise<Result<ListAppsResponse>> {
   return request(() => {
-    const query = toWire({
-      page: req.page,
-    }, schemas.listAppsQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+      },
+      schemas.listAppsQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listAppsQueryParamsWire, query)
     }
@@ -77,7 +80,12 @@ export function getApp(
     if (client._options.validate) {
       assertValid(schemas.getAppPathParamsWire, pathParams)
     }
-    const path = `openmeter/apps/${(() => { if (pathParams.appId === undefined) { throw new Error('missing path parameter: appId') } return encodeURIComponent(String(pathParams.appId)) })()}`
+    const path = `openmeter/apps/${(() => {
+      if (pathParams.appId === undefined) {
+        throw new Error('missing path parameter: appId')
+      }
+      return encodeURIComponent(String(pathParams.appId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -112,7 +120,12 @@ export function uninstallApp(
     if (client._options.validate) {
       assertValid(schemas.uninstallAppPathParamsWire, pathParams)
     }
-    const path = `openmeter/apps/${(() => { if (pathParams.appId === undefined) { throw new Error('missing path parameter: appId') } return encodeURIComponent(String(pathParams.appId)) })()}`
+    const path = `openmeter/apps/${(() => {
+      if (pathParams.appId === undefined) {
+        throw new Error('missing path parameter: appId')
+      }
+      return encodeURIComponent(String(pathParams.appId))
+    })()}`
     await http(client).delete(path, options)
   })
 }
@@ -139,7 +152,12 @@ export function updateApp(
     if (client._options.validate) {
       assertValid(schemas.updateAppPathParamsWire, pathParams)
     }
-    const path = `openmeter/apps/${(() => { if (pathParams.appId === undefined) { throw new Error('missing path parameter: appId') } return encodeURIComponent(String(pathParams.appId)) })()}`
+    const path = `openmeter/apps/${(() => {
+      if (pathParams.appId === undefined) {
+        throw new Error('missing path parameter: appId')
+      }
+      return encodeURIComponent(String(pathParams.appId))
+    })()}`
     const body = toWire(req.body, schemas.updateAppBody)
     if (client._options.validate) {
       assertValid(schemas.updateAppBodyWire, body)
@@ -169,9 +187,12 @@ export function listAppCatalog(
   options?: RequestOptions,
 ): Promise<Result<ListAppCatalogResponse>> {
   return request(() => {
-    const query = toWire({
-      page: req.page,
-    }, schemas.listAppCatalogQueryParams)
+    const query = toWire(
+      {
+        page: req.page,
+      },
+      schemas.listAppCatalogQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listAppCatalogQueryParamsWire, query)
     }
@@ -210,7 +231,12 @@ export function getAppCatalogItem(
     if (client._options.validate) {
       assertValid(schemas.getAppCatalogItemPathParamsWire, pathParams)
     }
-    const path = `openmeter/app-catalog/${(() => { if (pathParams.appType === undefined) { throw new Error('missing path parameter: appType') } return encodeURIComponent(String(pathParams.appType)) })()}`
+    const path = `openmeter/app-catalog/${(() => {
+      if (pathParams.appType === undefined) {
+        throw new Error('missing path parameter: appType')
+      }
+      return encodeURIComponent(String(pathParams.appType))
+    })()}`
     return http(client)
       .get(path, options)
       .json()

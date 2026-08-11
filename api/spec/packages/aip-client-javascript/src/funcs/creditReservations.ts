@@ -71,7 +71,12 @@ export function getCreditReservation(
     if (client._options.validate) {
       assertValid(schemas.getCreditReservationPathParamsWire, pathParams)
     }
-    const path = `credit-reservations/${(() => { if (pathParams.reservationId === undefined) { throw new Error('missing path parameter: reservationId') } return encodeURIComponent(String(pathParams.reservationId)) })()}`
+    const path = `credit-reservations/${(() => {
+      if (pathParams.reservationId === undefined) {
+        throw new Error('missing path parameter: reservationId')
+      }
+      return encodeURIComponent(String(pathParams.reservationId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -104,7 +109,12 @@ export function executeCreditReservation(
     if (client._options.validate) {
       assertValid(schemas.executeCreditReservationPathParamsWire, pathParams)
     }
-    const path = `credit-reservations/${(() => { if (pathParams.reservationId === undefined) { throw new Error('missing path parameter: reservationId') } return encodeURIComponent(String(pathParams.reservationId)) })()}/execute`
+    const path = `credit-reservations/${(() => {
+      if (pathParams.reservationId === undefined) {
+        throw new Error('missing path parameter: reservationId')
+      }
+      return encodeURIComponent(String(pathParams.reservationId))
+    })()}/execute`
     const body = toWire(req.body, schemas.executeCreditReservationBody)
     if (client._options.validate) {
       assertValid(schemas.executeCreditReservationBodyWire, body)
@@ -141,7 +151,12 @@ export function settleCreditReservation(
     if (client._options.validate) {
       assertValid(schemas.settleCreditReservationPathParamsWire, pathParams)
     }
-    const path = `credit-reservations/${(() => { if (pathParams.reservationId === undefined) { throw new Error('missing path parameter: reservationId') } return encodeURIComponent(String(pathParams.reservationId)) })()}/settle`
+    const path = `credit-reservations/${(() => {
+      if (pathParams.reservationId === undefined) {
+        throw new Error('missing path parameter: reservationId')
+      }
+      return encodeURIComponent(String(pathParams.reservationId))
+    })()}/settle`
     const body = toWire(req.body, schemas.settleCreditReservationBody)
     if (client._options.validate) {
       assertValid(schemas.settleCreditReservationBodyWire, body)
@@ -178,7 +193,12 @@ export function releaseCreditReservation(
     if (client._options.validate) {
       assertValid(schemas.releaseCreditReservationPathParamsWire, pathParams)
     }
-    const path = `credit-reservations/${(() => { if (pathParams.reservationId === undefined) { throw new Error('missing path parameter: reservationId') } return encodeURIComponent(String(pathParams.reservationId)) })()}/release`
+    const path = `credit-reservations/${(() => {
+      if (pathParams.reservationId === undefined) {
+        throw new Error('missing path parameter: reservationId')
+      }
+      return encodeURIComponent(String(pathParams.reservationId))
+    })()}/release`
     const body = toWire(req.body, schemas.releaseCreditReservationBody)
     if (client._options.validate) {
       assertValid(schemas.releaseCreditReservationBodyWire, body)
@@ -210,12 +230,23 @@ export function markCreditReservationUnknown(
       reservationId: req.reservationId,
     }
     const pathParams = client._options.validate
-      ? toPathWire(pathParamsInput, schemas.markCreditReservationUnknownPathParams)
+      ? toPathWire(
+          pathParamsInput,
+          schemas.markCreditReservationUnknownPathParams,
+        )
       : pathParamsInput
     if (client._options.validate) {
-      assertValid(schemas.markCreditReservationUnknownPathParamsWire, pathParams)
+      assertValid(
+        schemas.markCreditReservationUnknownPathParamsWire,
+        pathParams,
+      )
     }
-    const path = `credit-reservations/${(() => { if (pathParams.reservationId === undefined) { throw new Error('missing path parameter: reservationId') } return encodeURIComponent(String(pathParams.reservationId)) })()}/unknown`
+    const path = `credit-reservations/${(() => {
+      if (pathParams.reservationId === undefined) {
+        throw new Error('missing path parameter: reservationId')
+      }
+      return encodeURIComponent(String(pathParams.reservationId))
+    })()}/unknown`
     const body = toWire(req.body, schemas.markCreditReservationUnknownBody)
     if (client._options.validate) {
       assertValid(schemas.markCreditReservationUnknownBodyWire, body)
@@ -279,7 +310,12 @@ export function reverseCreditCharge(
     if (client._options.validate) {
       assertValid(schemas.reverseCreditChargePathParamsWire, pathParams)
     }
-    const path = `credit-charges/${(() => { if (pathParams.chargeId === undefined) { throw new Error('missing path parameter: chargeId') } return encodeURIComponent(String(pathParams.chargeId)) })()}/reverse`
+    const path = `credit-charges/${(() => {
+      if (pathParams.chargeId === undefined) {
+        throw new Error('missing path parameter: chargeId')
+      }
+      return encodeURIComponent(String(pathParams.chargeId))
+    })()}/reverse`
     const body = toWire(req.body, schemas.reverseCreditChargeBody)
     if (client._options.validate) {
       assertValid(schemas.reverseCreditChargeBodyWire, body)

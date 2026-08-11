@@ -41,10 +41,18 @@ export function listPlanAddons(
     if (client._options.validate) {
       assertValid(schemas.listPlanAddonsPathParamsWire, pathParams)
     }
-    const path = `openmeter/plans/${(() => { if (pathParams.planId === undefined) { throw new Error('missing path parameter: planId') } return encodeURIComponent(String(pathParams.planId)) })()}/addons`
-    const query = toWire({
-      page: req.page,
-    }, schemas.listPlanAddonsQueryParams)
+    const path = `openmeter/plans/${(() => {
+      if (pathParams.planId === undefined) {
+        throw new Error('missing path parameter: planId')
+      }
+      return encodeURIComponent(String(pathParams.planId))
+    })()}/addons`
+    const query = toWire(
+      {
+        page: req.page,
+      },
+      schemas.listPlanAddonsQueryParams,
+    )
     if (client._options.validate) {
       assertValid(schemas.listPlanAddonsQueryParamsWire, query)
     }
@@ -83,7 +91,12 @@ export function createPlanAddon(
     if (client._options.validate) {
       assertValid(schemas.createPlanAddonPathParamsWire, pathParams)
     }
-    const path = `openmeter/plans/${(() => { if (pathParams.planId === undefined) { throw new Error('missing path parameter: planId') } return encodeURIComponent(String(pathParams.planId)) })()}/addons`
+    const path = `openmeter/plans/${(() => {
+      if (pathParams.planId === undefined) {
+        throw new Error('missing path parameter: planId')
+      }
+      return encodeURIComponent(String(pathParams.planId))
+    })()}/addons`
     const body = toWire(req.body, schemas.createPlanAddonBody)
     if (client._options.validate) {
       assertValid(schemas.createPlanAddonBodyWire, body)
@@ -123,7 +136,17 @@ export function getPlanAddon(
     if (client._options.validate) {
       assertValid(schemas.getPlanAddonPathParamsWire, pathParams)
     }
-    const path = `openmeter/plans/${(() => { if (pathParams.planId === undefined) { throw new Error('missing path parameter: planId') } return encodeURIComponent(String(pathParams.planId)) })()}/addons/${(() => { if (pathParams.planAddonId === undefined) { throw new Error('missing path parameter: planAddonId') } return encodeURIComponent(String(pathParams.planAddonId)) })()}`
+    const path = `openmeter/plans/${(() => {
+      if (pathParams.planId === undefined) {
+        throw new Error('missing path parameter: planId')
+      }
+      return encodeURIComponent(String(pathParams.planId))
+    })()}/addons/${(() => {
+      if (pathParams.planAddonId === undefined) {
+        throw new Error('missing path parameter: planAddonId')
+      }
+      return encodeURIComponent(String(pathParams.planAddonId))
+    })()}`
     return http(client)
       .get(path, options)
       .json()
@@ -159,7 +182,17 @@ export function updatePlanAddon(
     if (client._options.validate) {
       assertValid(schemas.updatePlanAddonPathParamsWire, pathParams)
     }
-    const path = `openmeter/plans/${(() => { if (pathParams.planId === undefined) { throw new Error('missing path parameter: planId') } return encodeURIComponent(String(pathParams.planId)) })()}/addons/${(() => { if (pathParams.planAddonId === undefined) { throw new Error('missing path parameter: planAddonId') } return encodeURIComponent(String(pathParams.planAddonId)) })()}`
+    const path = `openmeter/plans/${(() => {
+      if (pathParams.planId === undefined) {
+        throw new Error('missing path parameter: planId')
+      }
+      return encodeURIComponent(String(pathParams.planId))
+    })()}/addons/${(() => {
+      if (pathParams.planAddonId === undefined) {
+        throw new Error('missing path parameter: planAddonId')
+      }
+      return encodeURIComponent(String(pathParams.planAddonId))
+    })()}`
     const body = toWire(req.body, schemas.updatePlanAddonBody)
     if (client._options.validate) {
       assertValid(schemas.updatePlanAddonBodyWire, body)
@@ -199,7 +232,17 @@ export function deletePlanAddon(
     if (client._options.validate) {
       assertValid(schemas.deletePlanAddonPathParamsWire, pathParams)
     }
-    const path = `openmeter/plans/${(() => { if (pathParams.planId === undefined) { throw new Error('missing path parameter: planId') } return encodeURIComponent(String(pathParams.planId)) })()}/addons/${(() => { if (pathParams.planAddonId === undefined) { throw new Error('missing path parameter: planAddonId') } return encodeURIComponent(String(pathParams.planAddonId)) })()}`
+    const path = `openmeter/plans/${(() => {
+      if (pathParams.planId === undefined) {
+        throw new Error('missing path parameter: planId')
+      }
+      return encodeURIComponent(String(pathParams.planId))
+    })()}/addons/${(() => {
+      if (pathParams.planAddonId === undefined) {
+        throw new Error('missing path parameter: planAddonId')
+      }
+      return encodeURIComponent(String(pathParams.planAddonId))
+    })()}`
     await http(client).delete(path, options)
   })
 }
