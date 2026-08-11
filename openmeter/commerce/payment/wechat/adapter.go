@@ -253,7 +253,7 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
 		return payment.PaymentFact{}, err
 	}
-	callbackTime, err := a.validateCallbackTime(headers.Get("Wechatpay-Timestamp"))
+	callbackTime, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp"))
 	if err != nil {
 		return payment.PaymentFact{}, err
 	}
@@ -265,6 +265,9 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 	if strings.TrimSpace(envelope.ID) == "" {
 		return payment.PaymentFact{}, fmt.Errorf("%w: notification ID is required", payment.ErrPermanentProviderProtocol)
 	}
+	if envelope.EventType != "TRANSACTION.SUCCESS" || envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "transaction" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: notification context does not describe a transaction success", payment.ErrPermanentProviderProtocol)
+	}
 	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
 	if err != nil {
 		return payment.PaymentFact{}, err
@@ -275,6 +278,9 @@ func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body 
 	}
 	if err := a.validateTransaction(resource); err != nil {
 		return payment.PaymentFact{}, err
+	}
+	if resource.TradeState != "SUCCESS" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: transaction success notification has non-success state", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(plaintext)
 	if err != nil {
@@ -388,7 +394,7 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
 		return payment.RefundFact{}, err
 	}
-	callbackTime, err := a.validateCallbackTime(headers.Get("Wechatpay-Timestamp"))
+	callbackTime, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp"))
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
@@ -396,16 +402,43 @@ func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header,
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund notification", payment.ErrPermanentProviderProtocol)
 	}
+	if strings.TrimSpace(envelope.ID) == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund notification ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	if envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "refund" {
+		return payment.RefundFact{}, fmt.Errorf("%w: notification context does not describe a refund", payment.ErrPermanentProviderProtocol)
+	}
 	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
 	if err != nil {
 		return payment.RefundFact{}, err
 	}
-	var resource refund
-	if err := json.Unmarshal(plaintext, &resource); err != nil {
+	var notificationResource refundNotificationResource
+	if err := json.Unmarshal(plaintext, &notificationResource); err != nil {
 		return payment.RefundFact{}, fmt.Errorf("%w: invalid decrypted refund", payment.ErrPermanentProviderProtocol)
+	}
+	if notificationResource.MchID != a.merchantID {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund merchant ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if strings.TrimSpace(notificationResource.TransactionID) == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund transaction ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	resource := refund{
+		RefundID:    notificationResource.RefundID,
+		OutRefundNo: notificationResource.OutRefundNo,
+		OutTradeNo:  notificationResource.OutTradeNo,
+		Status:      notificationResource.RefundStatus,
+		SuccessTime: notificationResource.SuccessTime,
+		Amount: refundAmount{
+			Refund:   notificationResource.Amount.Refund,
+			Total:    notificationResource.Amount.Total,
+			Currency: "CNY",
+		},
 	}
 	if err := validateRefund(resource, "", ""); err != nil {
 		return payment.RefundFact{}, err
+	}
+	if resource.Status == "PROCESSING" || envelope.EventType != "REFUND."+resource.Status {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund notification event type does not match status", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(plaintext)
 	if err != nil {
@@ -481,13 +514,18 @@ func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string
 	if value.Amount.Currency != "CNY" {
 		return fmt.Errorf("%w: refund currency must be CNY", payment.ErrPermanentProviderProtocol)
 	}
+	switch value.Status {
+	case "SUCCESS", "PROCESSING", "CLOSED", "ABNORMAL":
+	default:
+		return fmt.Errorf("%w: refund status is invalid", payment.ErrPermanentProviderProtocol)
+	}
 	return nil
 }
 
-func (a *Adapter) validateCallbackTime(timestamp string) (time.Time, error) {
+func (a *Adapter) validateSignatureTime(timestamp string) (time.Time, error) {
 	seconds, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("%w: invalid callback timestamp", payment.ErrInvalidSignature)
+		return time.Time{}, fmt.Errorf("%w: invalid Wechatpay timestamp", payment.ErrInvalidSignature)
 	}
 	callbackTime := time.Unix(seconds, 0)
 	difference := a.now().Sub(callbackTime)
@@ -495,7 +533,7 @@ func (a *Adapter) validateCallbackTime(timestamp string) (time.Time, error) {
 		difference = -difference
 	}
 	if difference > a.callbackMaxAge {
-		return time.Time{}, fmt.Errorf("%w: callback timestamp is outside the accepted window", payment.ErrInvalidSignature)
+		return time.Time{}, fmt.Errorf("%w: Wechatpay timestamp is outside the accepted window", payment.ErrInvalidSignature)
 	}
 	return callbackTime, nil
 }

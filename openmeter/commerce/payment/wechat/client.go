@@ -69,6 +69,9 @@ func (a *Adapter) doJSON(ctx context.Context, method, path string, query url.Val
 		if err := a.verifyHTTPMessage(ctx, response.Header, responseBody); err != nil {
 			return nil, permanentProviderError(operation, response.StatusCode, "", err)
 		}
+		if _, err := a.validateSignatureTime(response.Header.Get("Wechatpay-Timestamp")); err != nil {
+			return nil, permanentProviderError(operation, response.StatusCode, "", err)
+		}
 		if responseValue != nil {
 			if err := json.Unmarshal(responseBody, responseValue); err != nil {
 				return nil, permanentProviderError(operation, response.StatusCode, "", fmt.Errorf("invalid JSON response: %w", payment.ErrPermanentProviderProtocol))

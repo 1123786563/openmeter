@@ -68,6 +68,24 @@ type refund struct {
 	Amount      refundAmount `json:"amount"`
 }
 
+type refundNotificationResource struct {
+	MchID         string                   `json:"mchid"`
+	OutTradeNo    string                   `json:"out_trade_no"`
+	TransactionID string                   `json:"transaction_id"`
+	OutRefundNo   string                   `json:"out_refund_no"`
+	RefundID      string                   `json:"refund_id"`
+	RefundStatus  string                   `json:"refund_status"`
+	SuccessTime   string                   `json:"success_time"`
+	Amount        refundNotificationAmount `json:"amount"`
+}
+
+type refundNotificationAmount struct {
+	Refund      int64 `json:"refund"`
+	Total       int64 `json:"total"`
+	PayerRefund int64 `json:"payer_refund"`
+	PayerTotal  int64 `json:"payer_total"`
+}
+
 type wechatErrorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
