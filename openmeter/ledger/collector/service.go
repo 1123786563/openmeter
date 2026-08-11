@@ -44,11 +44,9 @@ var (
 //  4. Stable ledger cursor: deterministic tie-break on sub-account + source
 //     charge ID for reproducible ordering across retries.
 //
-// This ordering satisfies the AI usage settlement burn-order contract:
-// plan -> promotional -> paid_top_up -> enterprise_receivable.
-//
-// The aiusage/settlement package delegates all source selection to the
-// collector and does not scan grant balances independently.
+// Credit Reservation and Charge callers delegate source selection to the
+// collector and provide an explicit receivable limit when enterprise credit
+// may cover a prepaid shortfall.
 
 type Config struct {
 	Ledger        ledger.Ledger

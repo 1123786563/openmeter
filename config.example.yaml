@@ -290,17 +290,3 @@ notification:
 #       appMappings:
 #         - appType: stripe
 #           taxCode: "txcd_00000000"
-
-# ai_usage configures the AI Usage billing subsystem. When enabled, the API
-# process exposes /ai-usage-batches and runtime authorization endpoints and
-# starts the outbox relay worker. Requires signing key, Credit stack, and
-# PostgreSQL adapter.
-# ai_usage:
-#   enabled: false
-#   signing:
-#     current_key_id: ""
-#     current_seed: ""
-#   authorization_ttl: "5m"
-#   worker:
-#     lease_duration: "30s"
-#     batch_size: 50

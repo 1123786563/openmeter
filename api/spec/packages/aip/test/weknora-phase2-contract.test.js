@@ -93,27 +93,6 @@ describe('WeKnora Phase 2 commerce contract', () => {
         )
       }
     })
-
-    it('preserves all five Phase 1 routes unchanged', () => {
-      const spec = compileAIP()
-      assert.ok(spec.paths['/ai-usage-batches'].post, 'POST /ai-usage-batches')
-      assert.ok(
-        spec.paths['/ai-usage-batches/{batchId}'].get,
-        'GET /ai-usage-batches/{batchId}',
-      )
-      assert.ok(
-        spec.paths['/customers/{customerId}/runtime-authorization'].get,
-        'GET runtime-authorization',
-      )
-      assert.ok(
-        spec.paths['/customers/{customerId}/credit-balance'].get,
-        'GET credit-balance',
-      )
-      assert.ok(
-        spec.paths['/customers/{customerId}/credit-transactions'].get,
-        'GET credit-transactions',
-      )
-    })
   })
 
   describe('order plan references', () => {

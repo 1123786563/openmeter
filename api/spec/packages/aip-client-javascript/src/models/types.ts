@@ -408,50 +408,6 @@ export interface GovernanceQueryRequestFeatures {
   keys: string[]
 }
 
-/** One billable resource line within a usage batch creation request. */
-export interface AiUsageUsageLineCreate {
-  /**
-   * Resource code identifying the billable resource type.
-   *
-   * Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
-   * `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
-   * `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
-   * `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
-   * `mcp_tool_calls`, `web_searches`, `agent_runs`.
-   */
-  resourceCode: string
-  /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */
-  quantity: bigint
-  /**
-   * LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
-   * resources.
-   */
-  provider?: string
-  /**
-   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
-   * provider-managed resources.
-   */
-  model?: string
-  /** Optional resource-specific pricing dimensions (e.g. region, tier). */
-  pricingDimensions?: Record<string, string>
-  /**
-   * Stable zero-based position used for deterministic ceiling allocation when the
-   * batch total exceeds the reservation ceiling.
-   */
-  canonicalLineIndex: number
-}
-
-/** Query parameters for the runtime authorization endpoint. */
-export interface AiUsageRuntimeAuthorizationQuery {
-  /**
-   * The subject or tenant key that will produce the usage. Required to check the
-   * tenant's sequence watermark and reservation status.
-   */
-  subjectKey?: string
-  /** The reservation ID to check the ceiling against. */
-  reservationId?: string
-}
-
 export interface CreditResourceLine {
   featureKey: string
   resourceCode: string
@@ -996,13 +952,6 @@ export interface CommercePlanRef {
   planVersion: string
 }
 
-/** A reference to a credit grant that was burned during settlement. */
-export interface AiUsageLedgerEntryRef {
-  grantId: string
-  amount: bigint
-  priority: number
-}
-
 /** A lightweight reference to a subscription, embedded in order responses. */
 export interface CommerceSubscriptionRef {
   subscriptionId: string
@@ -1231,74 +1180,6 @@ export interface FeatureCostQueryRow {
    * reserved dimensions.
    */
   dimensions: Record<string, string>
-}
-
-/**
- * Runtime authorization decision for a customer's AI usage.
- *
- * Returned before processing a usage batch to indicate whether the customer is
- * authorized to consume AI resources, along with their current credit balance and
- * reservation ceiling.
- */
-export interface AiUsageRuntimeAuthorization {
-  /**
-   * The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`).
-   * Clients can use this to detect contract changes.
-   */
-  contractVersion: string
-  /** The timestamp of the authorization check. */
-  retrievedAt: Date
-  /** Whether the customer is authorized to consume AI resources. */
-  authorized: boolean
-  /** Available integer Credit balance for AI consumption. */
-  availableCredits: bigint
-  /**
-   * The reservation ceiling in Credits, if a reservation is active. When set, usage
-   * is capped at this amount per reservation period.
-   */
-  reservationCeilingCredits?: bigint
-  /**
-   * The highest continuously covered tenant sequence number, used for watermark
-   * tracking.
-   */
-  coveredTenantSeq: bigint
-  /** The reason authorization was denied, when `authorized` is `false`. */
-  denialReason?: string
-  /**
-   * Canonical JSON payload for consumer-side verification. The raw bytes of
-   * the canonicalized authorization object, used to derive the SHA-256 hash
-   * and verify the signature.
-   */
-  canonicalPayload?: Record<string, unknown>
-  /** SHA-256 hash of the canonical payload, hex-encoded. */
-  canonicalSha256?: string
-  /** The key ID used to sign the authorization. */
-  keyId?: string
-  /** Base64-encoded signature over the canonical payload. */
-  signature?: string
-  /** The snapshot version for watermark tracking. */
-  snapshotVersion?: bigint
-  /** The subject or tenant key this authorization applies to. */
-  subjectKey?: string
-  /** The timestamp until which this authorization is valid. */
-  validUntil?: Date
-}
-
-/**
- * Integer credit balance for AI usage, scoped to a single currency.
- *
- * Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed
- * 64-bit integers to avoid floating-point rounding in settlement.
- */
-export interface AiUsageCreditBalance {
-  /** The timestamp of the balance retrieval. */
-  retrievedAt: Date
-  /** Credits available for immediate consumption. */
-  availableCredits: bigint
-  /** Credits that have been booked on the ledger. */
-  settledCredits: bigint
-  /** Credits granted but not yet written to the ledger. */
-  pendingCredits: bigint
 }
 
 export interface CreditReservationExecute {
@@ -2496,74 +2377,6 @@ export interface GovernanceQueryError {
   customer?: string
 }
 
-/**
- * Request body for submitting a Canonical AI Usage Batch.
- *
- * A batch represents one business action (a chat turn, an agent run, etc.) and is
- * the atomic unit of AI billing settlement.
- */
-export interface AiUsageUsageBatchCreate {
-  /**
-   * Client-generated idempotency key. Replaying the same key with the same
-   * `payload_hash` returns the stored result with HTTP 200. A replay with a
-   * different `payload_hash` for the same key returns HTTP 409.
-   */
-  idempotencyKey: string
-  /**
-   * SHA-256 hex digest of the canonical request body, used for idempotency
-   * verification.
-   */
-  payloadHash: string
-  /** The billing customer (payer) in OpenMeter. */
-  billingCustomerId: string
-  /** The subject or tenant key that produced the usage. */
-  subjectKey: string
-  /**
-   * Monotonic per-tenant sequence number for watermark tracking. Must be strictly
-   * increasing within a tenant.
-   */
-  tenantSeq: bigint
-  /** When the business action occurred. Used for rate package version resolution. */
-  occurredAt: Date
-  /** Links to the WeKnora runtime reservation, if any. */
-  reservationId: string
-  /**
-   * Caps the total Credit charge for this batch. The platform absorbs any excess
-   * above the ceiling.
-   */
-  reservationCeilingCredits: bigint
-  /** Rate package version snapshot used for settlement. */
-  ratePackageVersion: string
-  /** Billing mode for this batch. */
-  billingMode: 'component' | 'bundle'
-  /**
-   * Whether model resources are platform-managed. Set to `false` for
-   * bring-your-own-key (BYOK) models.
-   */
-  providerManaged: boolean
-  /**
-   * The individual resource consumption entries. Must contain at least one line for
-   * `component` billing mode.
-   */
-  lines: AiUsageUsageLineCreate[]
-}
-
-/** An immutable credit movement on the AI Usage integer credit ledger. */
-export interface AiUsageCreditTransaction {
-  /** Unique identifier of the transaction. */
-  id: string
-  /** When the transaction was booked. */
-  bookedAt: Date
-  /** The type of credit movement. */
-  type: 'funded' | 'consumed' | 'expired' | 'voided'
-  /** Signed credit amount. Positive adds balance, negative reduces it. */
-  amount: bigint
-  /** Available balance before this transaction. */
-  availableBalanceBefore: bigint
-  /** Available balance after this transaction. */
-  availableBalanceAfter: bigint
-}
-
 export interface CreditReservationCreate {
   id: string
   customerId: string
@@ -3035,20 +2848,6 @@ export interface CreditTransaction {
   amount: string
   /** The available balance before and after the transaction. */
   availableBalance: { before: string; after: string }
-}
-
-/** The provider cost snapshot for a rated line (typically in USD). */
-export interface AiUsageCostSnapshot {
-  currency: BillingCurrencyCode
-  amount: string
-  source: string
-}
-
-/** The customer-facing sales price snapshot (typically in CNY for display). */
-export interface AiUsageSalesSnapshot {
-  currency: BillingCurrencyCode
-  amount: string
-  rateCardVersion: string
 }
 
 /**
@@ -4116,12 +3915,6 @@ export interface GovernanceFeatureAccess {
   reason?: GovernanceFeatureAccessReason
 }
 
-/** Cursor paginated response. */
-export interface AiCreditTransactionPaginatedResponse {
-  data: AiUsageCreditTransaction[]
-  meta: CursorMeta
-}
-
 /**
  * An immutable credit movement on the Wallet, projected from the Credit Ledger.
  * Every transaction carries immutable ledger provenance and a timestamp.
@@ -4186,59 +3979,6 @@ export interface CreditBalances {
 export interface CreditTransactionPaginatedResponse {
   data: CreditTransaction[]
   meta: CursorMeta
-}
-
-/**
- * A rated usage line returned in a settled batch, with resolved cost and sales
- * snapshots.
- */
-export interface AiUsageUsageLine {
-  /**
-   * Resource code identifying the billable resource type.
-   *
-   * Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
-   * `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
-   * `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
-   * `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
-   * `mcp_tool_calls`, `web_searches`, `agent_runs`.
-   */
-  resourceCode: string
-  /** Raw consumption quantity (tokens, calls, seconds, pages, or images). */
-  quantity: bigint
-  /**
-   * LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
-   * resources.
-   */
-  provider?: string
-  /**
-   * Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
-   * provider-managed resources.
-   */
-  model?: string
-  /** Optional resource-specific pricing dimensions (e.g. region, tier). */
-  pricingDimensions?: Record<string, string>
-  /**
-   * Stable zero-based position used for deterministic ceiling allocation when the
-   * batch total exceeds the reservation ceiling.
-   */
-  canonicalLineIndex: number
-  /** Integer Credit charge for this line. */
-  credits: bigint
-  /** Provider cost snapshot. Omitted for BYOK resources (cost is zero). */
-  costSnapshot?: AiUsageCostSnapshot
-  /** Customer sales price snapshot. */
-  salesSnapshot?: AiUsageSalesSnapshot
-}
-
-/**
- * A rating snapshot captures the cost and sales price resolution for one line item
- * within a settled batch.
- */
-export interface AiUsageRatingSnapshot {
-  resourceCode: string
-  costSnapshot: AiUsageCostSnapshot
-  salesSnapshot: AiUsageSalesSnapshot
-  credits: bigint
 }
 
 /**
@@ -4979,51 +4719,6 @@ export interface CommerceWallet {
   transactions?: CommerceWalletTransaction[]
   /** When the wallet was retrieved. */
   retrievedAt: Date
-}
-
-/** A settled AI Usage Batch with its rating and settlement results. */
-export interface AiUsageUsageBatch {
-  /** Unique identifier of the batch. */
-  id: string
-  /** The idempotency key from the create request. */
-  idempotencyKey: string
-  /** SHA-256 hex digest of the canonical request body. */
-  payloadHash: string
-  billingCustomerId: string
-  subjectKey: string
-  tenantSeq: bigint
-  occurredAt: Date
-  reservationId: string
-  reservationCeilingCredits: bigint
-  ratePackageVersion: string
-  billingMode: 'component' | 'bundle'
-  providerManaged: boolean
-  /** The consumed line items with resolved pricing. */
-  lines: AiUsageUsageLine[]
-  /** Settlement status. */
-  status: 'settled' | 'corrected'
-  /**
-   * Total integer Credit charge for the batch, after applying the reservation
-   * ceiling.
-   */
-  totalCredits: bigint
-  /** The highest continuously covered tenant sequence number after settlement. */
-  coveredTenantSeq: bigint
-  /** Creation timestamp. */
-  createdAt: Date
-}
-
-/**
- * Settlement result for a batch, including the ledger entries burned and the
- * watermark advancement.
- */
-export interface AiUsageBatchSettlementResult {
-  batchId: string
-  status: 'settled' | 'corrected'
-  totalCredits: bigint
-  ratingSnapshots: AiUsageRatingSnapshot[]
-  ledgerEntries: AiUsageLedgerEntryRef[]
-  coveredTenantSeq: bigint
 }
 
 /** A capability or billable dimension offered by a provider. */

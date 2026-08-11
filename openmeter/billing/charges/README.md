@@ -163,29 +163,3 @@ This is a charge-domain contract, not end-to-end support: current ledger-backed
 charge adapters reject custom currencies. Enabling them spans ledger route
 identity and persistence, charge realization, settlement rounding, corrections,
 balance queries, and historical migration.
-
-## Receivable Allocation Path (AI Usage)
-
-When AI usage settlement calls `collector.CollectToAccrued` with
-`SettlementMode = CreditOnly`, a prepaid-wallet shortfall issues an
-advance-backed receivable only after the charge adapter resolved and supplied
-an active enterprise allowance. Without an allowance the collector rejects the
-shortfall before writing the ledger group:
-
-1. The shortfall is issued as a customer receivable via
-   `IssueCustomerReceivableTemplate`.
-2. The advance is immediately transferred to accrued via
-   `TransferCustomerFBOAdvanceToAccruedTemplate`.
-3. The resulting `creditrealization.CreateAllocationInput` is tagged with
-   `LineageOriginKindAdvance` in its annotations.
-4. The settlement service maps this to an `aiusage.Allocation` with
-   `FundingSource = enterprise_receivable`.
-
-When a `ReceivableHardLimit` is set on the settlement input, the settlement
-service checks the collected amount against the charged amount and rejects
-with `ErrCreditLimitExceeded` if the receivable portion exceeds the remaining
-explicit limit.
-
-Corrections of advance-backed allocations unwind both the collection
-transaction and the companion receivable issue, keeping the receivable
-obligation consistent with the reversed usage.

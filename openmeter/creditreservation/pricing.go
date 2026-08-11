@@ -260,11 +260,44 @@ func viewCurrency(view subscription.SubscriptionView, card productcatalog.RateCa
 }
 
 func (r *catalogPriceResolver) resolveCreditCurrency(ctx context.Context, namespace string, ref currencies.CurrencyReference) (currencies.CurrencyReference, error) {
-	// Accept the currency from the rate card / subscription as-is.
-	// Plans use standard ISO 4217 codes (e.g. USD); the prepaid grant
-	// and FBO balance are in the same currency, so no custom-currency
-	// resolution is needed.
-	return ref, nil
+	if ref.GetCode() != creditCurrencyCode || !ref.IsCustom() {
+		return currencies.CurrencyReference{}, fmt.Errorf("%w: got %s", ErrCreditCurrencyRequired, ref.GetCode())
+	}
+
+	code := ref.GetCode().String()
+	customCurrencyType := currencyx.CurrencyTypeCustom
+	listed, err := r.currencies.ListCurrencies(ctx, currencies.ListCurrenciesInput{
+		Namespace:    namespace,
+		CurrencyType: &customCurrencyType,
+		Code:         &filter.FilterString{Eq: &code},
+	})
+	if err != nil {
+		return currencies.CurrencyReference{}, fmt.Errorf("resolve CREDIT currency: %w", err)
+	}
+
+	var match *currencies.Currency
+	for index := range listed.Items {
+		currency := &listed.Items[index]
+		if currency.IsDeleted() || currency.GetCode() != creditCurrencyCode {
+			continue
+		}
+		if ref.CustomCurrencyID != nil && currency.ID != *ref.CustomCurrencyID {
+			continue
+		}
+		if match != nil {
+			return currencies.CurrencyReference{}, fmt.Errorf("%w: multiple managed CREDIT currencies", ErrCreditCurrencyRequired)
+		}
+		match = currency
+	}
+	if match == nil {
+		return currencies.CurrencyReference{}, fmt.Errorf("%w: managed CREDIT currency was not resolved", ErrCreditCurrencyRequired)
+	}
+
+	resolved, err := ref.WithCurrency(match)
+	if err != nil {
+		return currencies.CurrencyReference{}, fmt.Errorf("%w: %v", ErrCreditCurrencyRequired, err)
+	}
+	return resolved, nil
 }
 
 func creditsFor(quantity int64, meta productcatalog.RateCardMeta) (int64, error) {

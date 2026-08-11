@@ -1,23 +1,89 @@
 package server
 
-import "github.com/go-chi/chi/v5"
+import "net/http"
 
-// registerCreditReservationRoutes mounts the unstable reservation lifecycle
-// outside the generated router until the v3 OpenAPI generation can complete.
-// The configuration gate keeps the routes absent (rather than merely returning
-// an error) when credit reservations are disabled.
-func (s *Server) registerCreditReservationRoutes(r chi.Router) {
-	if !s.Credits.Enabled || !s.Credits.ReservationsEnabled || !s.CreditReservation.Enabled || s.creditReservationsHandler == nil {
+func (s *Server) creditReservationsEnabled() bool {
+	return s.Config != nil &&
+		s.Credits.Enabled &&
+		s.Credits.ReservationsEnabled &&
+		s.CreditReservation.Enabled &&
+		s.creditReservationsHandler != nil
+}
+
+func (s *Server) CreateCreditReservation(w http.ResponseWriter, r *http.Request) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
 		return
 	}
 
-	// Register routes without trailing slashes to match SDK client paths.
-	r.Post("/credit-reservations", s.creditReservationsHandler.Reserve())
-	r.Get("/credit-reservations/{reservationId}", s.creditReservationsHandler.Get())
-	r.Post("/credit-reservations/{reservationId}/execute", s.creditReservationsHandler.Execute())
-	r.Post("/credit-reservations/{reservationId}/settle", s.creditReservationsHandler.Settle())
-	r.Post("/credit-reservations/{reservationId}/release", s.creditReservationsHandler.Release())
-	r.Post("/credit-reservations/{reservationId}/unknown", s.creditReservationsHandler.Unknown())
-	r.Post("/credit-charges", s.creditReservationsHandler.Charge())
-	r.Post("/credit-charges/{chargeId}/reverse", s.creditReservationsHandler.ReverseCharge())
+	s.creditReservationsHandler.Reserve().ServeHTTP(w, r)
+}
+
+func (s *Server) GetCreditReservation(w http.ResponseWriter, r *http.Request, reservationID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("reservationId", reservationID)
+	s.creditReservationsHandler.Get().ServeHTTP(w, r)
+}
+
+func (s *Server) ExecuteCreditReservation(w http.ResponseWriter, r *http.Request, reservationID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("reservationId", reservationID)
+	s.creditReservationsHandler.Execute().ServeHTTP(w, r)
+}
+
+func (s *Server) SettleCreditReservation(w http.ResponseWriter, r *http.Request, reservationID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("reservationId", reservationID)
+	s.creditReservationsHandler.Settle().ServeHTTP(w, r)
+}
+
+func (s *Server) ReleaseCreditReservation(w http.ResponseWriter, r *http.Request, reservationID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("reservationId", reservationID)
+	s.creditReservationsHandler.Release().ServeHTTP(w, r)
+}
+
+func (s *Server) MarkCreditReservationUnknown(w http.ResponseWriter, r *http.Request, reservationID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("reservationId", reservationID)
+	s.creditReservationsHandler.Unknown().ServeHTTP(w, r)
+}
+
+func (s *Server) CreateCreditCharge(w http.ResponseWriter, r *http.Request) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	s.creditReservationsHandler.Charge().ServeHTTP(w, r)
+}
+
+func (s *Server) ReverseCreditCharge(w http.ResponseWriter, r *http.Request, chargeID string) {
+	if !s.creditReservationsEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.SetPathValue("chargeId", chargeID)
+	s.creditReservationsHandler.ReverseCharge().ServeHTTP(w, r)
 }

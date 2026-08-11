@@ -5,7 +5,7 @@
 - `GET /api/v3/openmeter/events` 与 `GET /api/v2/events` 归一化为 `GET /events`
 - v3 覆盖时优先保留：如发现同方法同归一化路径存在 v3 实现，优先保留 v3，不再保留 v1/v2。
 
-最终接口数：252（v3：119，v1：119，v2：14）
+最终接口数：247（v3：114，v1：119，v2：14）
 
 ## 目录
 - [版本 v3](#v3)
@@ -1301,74 +1301,10 @@ filter[meter_id][oeq]=<id>
 
 ### system（系统）
 
-#### POST /ai-usage-batches
-- version：v3
-- operationId：create-ai-usage-batch
-- 摘要：Submit an AI usage batch
-- 说明：Submit a Canonical AI Usage Batch for settlement.
 
-The first submit for a given `idempotency_key` returns HTTP 201 with the settled
-batch. An identical replay (same `idempotency_key` and `payload_hash`) returns
-HTTP 200 with the stored result. A replay with the same `idempotency_key` but a
-different `payload_hash` returns HTTP 409.
-- 参数：
-- 无
-- 请求体：
-- required: 是
-- application/json：#/components/schemas/AIUsageUsageBatchCreate
-- 响应码：200、201、400、401、403、404、409
 
-#### GET /ai-usage-batches/{batchId}
-- version：v3
-- operationId：get-ai-usage-batch
-- 摘要：Get an AI usage batch
-- 说明：Retrieve a settled AI Usage Batch by its ID.
-- 参数：
-- path 参数 **batchId**（必填：是）：#/components/schemas/ULID，—
-- 请求体：
-- 无
-- 响应码：200、400、401、403、404
 
-#### GET /customers/{customerId}/credit-balance
-- version：v3
-- operationId：get-ai-usage-credit-balance
-- 摘要：Get AI usage credit balance
-- 说明：Get a customer's credit balance for AI usage. Returns the same balance model as
-the OpenMeter Credits endpoint but scoped to the AI Usage route.
-- 参数：
-- path 参数 **customerId**（必填：是）：#/components/schemas/ULID，—
-- query 参数 **timestamp**（必填：否）：#/components/schemas/DateTime，Return the credit balance as of this timestamp. Defaults to now.
-- 请求体：
-- 无
-- 响应码：200、400、401、403、404
 
-#### GET /customers/{customerId}/credit-transactions
-- version：v3
-- operationId：list-ai-usage-credit-transactions
-- 摘要：List AI usage credit transactions
-- 说明：List credit transactions for a customer's AI usage. Returns the same transaction
-model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
-- 参数：
-- path 参数 **customerId**（必填：是）：#/components/schemas/ULID，—
-- query 参数 **page**（必填：否）：#/components/schemas/CursorPaginationQueryPage，—
-- 请求体：
-- 无
-- 响应码：200、400、401、403、404
-
-#### GET /customers/{customerId}/runtime-authorization
-- version：v3
-- operationId：get-customer-runtime-authorization
-- 摘要：Get runtime authorization
-- 说明：Check whether a customer is authorized to consume AI resources.
-
-Returns the current integer credit balance, reservation ceiling, and the covered
-tenant sequence watermark.
-- 参数：
-- path 参数 **customerId**（必填：是）：#/components/schemas/ULID，—
-- query 参数 **filter**（必填：否）：#/components/schemas/AIUsageRuntimeAuthorizationQuery，Filter the authorization check by subject and reservation.
-- 请求体：
-- 无
-- 响应码：200、400、401、403、404
 
 #### GET /openmeter/currencies
 - version：v3

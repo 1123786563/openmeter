@@ -45,13 +45,8 @@ const DefaultsDescription = "Organization-level default configuration.";
 const GovernanceTag = "OpenMeter Governance";
 const GovernanceDescription = "Governance evaluation of customers to check their feature access.";
 
-const AIUsageTag = "AI Usage";
-const AIUsageDescription = "Canonical AI usage batch settlement, signed runtime authorization, and integer Credit balance for WeKnora Standard SaaS integration.";
-
 const CommerceTag = "Commerce";
 const CommerceDescription = "Wallet aggregation, recharge catalog, orders, checkout, payments (WeChat/Alipay), refunds, and enterprise monthly settlement for WeKnora Standard SaaS.";
-
-const AIUsageContractVersion = "weknora-billing-p1-v1";
 
 // The functionality should be considered unstable.
 const UnstableExtension = "x-unstable";

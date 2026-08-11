@@ -486,7 +486,6 @@ func (s *Server) RegisterRoutes(r chi.Router) error {
 			ErrorHandlerFunc: apierrors.NewV3ErrorHandlerFunc(s.ErrorHandler),
 		})
 
-		s.registerCreditReservationRoutes(r)
 	})
 
 	return nil
@@ -508,26 +507,4 @@ func buildResponseValidationRouteFilter(cfg config.ResponseValidationConfig) fun
 		v, _ := route.Operation.Extensions["x-unstable"].(bool)
 		return v
 	}
-}
-
-// --- AI Usage (removed subsystem — returns Not Found) ---
-
-func (s *Server) CreateAiUsageBatch(w http.ResponseWriter, r *http.Request) {
-	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-}
-
-func (s *Server) GetAiUsageBatch(w http.ResponseWriter, r *http.Request, batchId api.ULID) {
-	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-}
-
-func (s *Server) GetAiUsageCreditBalance(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetAiUsageCreditBalanceParams) {
-	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-}
-
-func (s *Server) ListAiUsageCreditTransactions(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.ListAiUsageCreditTransactionsParams) {
-	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
-}
-
-func (s *Server) GetCustomerRuntimeAuthorization(w http.ResponseWriter, r *http.Request, customerId api.ULID, params api.GetCustomerRuntimeAuthorizationParams) {
-	apierrors.NewNotFoundError(r.Context(), nil, "ai usage").HandleAPIError(w, r)
 }

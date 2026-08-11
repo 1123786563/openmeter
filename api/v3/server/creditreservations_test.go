@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/require"
 
 	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
@@ -27,9 +26,6 @@ func TestCreditReservationRoutesReachHandlerWhenEnabled(t *testing.T) {
 		Config:                    &Config{Credits: config.CreditsConfiguration{Enabled: true, ReservationsEnabled: true}, CreditReservation: config.CreditReservationConfiguration{Enabled: true}},
 		creditReservationsHandler: creditreservationshandler.New(func(context.Context) (string, error) { return "acme", nil }, service),
 	}
-	r := chi.NewRouter()
-	s.registerCreditReservationRoutes(r)
-
 	req := httptest.NewRequest(http.MethodPost, "/credit-reservations", strings.NewReader(`{
 		"id":"reserve-1","customer_id":"customer-1","subject_id":"subject-1","client_call_id":"call-1","operation":"completion",
 		"idempotency_key":"reserve-key","payload_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -38,7 +34,7 @@ func TestCreditReservationRoutesReachHandlerWhenEnabled(t *testing.T) {
 	}`))
 	rec := httptest.NewRecorder()
 
-	r.ServeHTTP(rec, req)
+	s.CreateCreditReservation(rec, req)
 
 	require.Equal(t, http.StatusCreated, rec.Code)
 }
@@ -53,9 +49,6 @@ func TestCreditChargeRouteReachesHandlerWithoutTrailingSlash(t *testing.T) {
 		Config:                    &Config{Credits: config.CreditsConfiguration{Enabled: true, ReservationsEnabled: true}, CreditReservation: config.CreditReservationConfiguration{Enabled: true}},
 		creditReservationsHandler: creditreservationshandler.New(func(context.Context) (string, error) { return "acme", nil }, service),
 	}
-	r := chi.NewRouter()
-	s.registerCreditReservationRoutes(r)
-
 	req := httptest.NewRequest(http.MethodPost, "/credit-charges", strings.NewReader(`{
 		"id":"charge-1","customer_id":"customer-1","subject_id":"subject-1","operation":"completion",
 		"idempotency_key":"charge-key","payload_hash":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -64,27 +57,23 @@ func TestCreditChargeRouteReachesHandlerWithoutTrailingSlash(t *testing.T) {
 	}`))
 	rec := httptest.NewRecorder()
 
-	r.ServeHTTP(rec, req)
+	s.CreateCreditCharge(rec, req)
 
 	require.Equal(t, http.StatusCreated, rec.Code)
 }
 
-func TestCreditReservationRoutesAreAbsentWhenReservationFeatureDisabled(t *testing.T) {
+func TestCreditReservationReturnsNotFoundWhenReservationFeatureDisabled(t *testing.T) {
 	s := Server{
 		Config:                    &Config{Credits: config.CreditsConfiguration{Enabled: true, ReservationsEnabled: false}, CreditReservation: config.CreditReservationConfiguration{Enabled: true}},
 		creditReservationsHandler: creditreservationshandler.New(func(context.Context) (string, error) { return "acme", nil }, creditReservationRouteService{}),
 	}
-	r := chi.NewRouter()
-	s.registerCreditReservationRoutes(r)
-
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/credit-reservations/", nil))
+	s.CreateCreditReservation(rec, httptest.NewRequest(http.MethodPost, "/credit-reservations", nil))
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
 
-func TestCreditReservationRoutesAreAbsentWhenReservationConfigurationDisabled(t *testing.T) {
-	r := chi.NewRouter()
+func TestCreditReservationReturnsNotFoundWhenReservationConfigurationDisabled(t *testing.T) {
 	s := &Server{
 		Config: &Config{Credits: config.CreditsConfiguration{Enabled: true, ReservationsEnabled: true}},
 		creditReservationsHandler: creditreservationshandler.New(
@@ -92,10 +81,8 @@ func TestCreditReservationRoutesAreAbsentWhenReservationConfigurationDisabled(t 
 			creditReservationRouteService{},
 		),
 	}
-	s.registerCreditReservationRoutes(r)
-
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/credit-reservations", nil))
+	s.CreateCreditReservation(rec, httptest.NewRequest(http.MethodPost, "/credit-reservations", nil))
 
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }

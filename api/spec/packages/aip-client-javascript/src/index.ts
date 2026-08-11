@@ -14,7 +14,6 @@ export { Plans } from './sdk/plans.js'
 export { Addons } from './sdk/addons.js'
 export { PlanAddons } from './sdk/planAddons.js'
 export { Defaults } from './sdk/defaults.js'
-export { AIUsage } from './sdk/aiUsage.js'
 export { CreditReservations } from './sdk/creditReservations.js'
 export { Commerce } from './sdk/commerce.js'
 export { Client } from './core.js'
@@ -58,7 +57,6 @@ export type * from './models/operations/addons.js'
 export type * from './models/operations/planAddons.js'
 export type * from './models/operations/defaults.js'
 export type * from './models/operations/governance.js'
-export type * from './models/operations/aiUsage.js'
 export type * from './models/operations/creditReservations.js'
 export type * from './models/operations/commerce.js'
 
@@ -100,8 +98,6 @@ export type {
   ProductCatalogValidationError,
   GovernanceQueryRequestCustomers,
   GovernanceQueryRequestFeatures,
-  AiUsageUsageLineCreate,
-  AiUsageRuntimeAuthorizationQuery,
   CreditResourceLine,
   CreditCurrency,
   CreditRatedLine,
@@ -152,7 +148,6 @@ export type {
   UpdateResourceReference,
   CommerceOrderCreatePlanRef,
   CommercePlanRef,
-  AiUsageLedgerEntryRef,
   CommerceSubscriptionRef,
   Event,
   MeterQueryRow,
@@ -162,8 +157,6 @@ export type {
   UpdateClosedPeriod,
   CostBasis,
   FeatureCostQueryRow,
-  AiUsageRuntimeAuthorization,
-  AiUsageCreditBalance,
   CreditReservationExecute,
   CreditChargeReverse,
   CommerceExternalInvoiceUpdate,
@@ -237,8 +230,6 @@ export type {
   GovernanceQueryRequest,
   GovernanceFeatureAccessReason,
   GovernanceQueryError,
-  AiUsageUsageBatchCreate,
-  AiUsageCreditTransaction,
   CreditReservationCreate,
   CreditReservationSettle,
   CreditChargeCreate,
@@ -263,8 +254,6 @@ export type {
   CreditBalance,
   ListCreditTransactionsParamsFilter,
   CreditTransaction,
-  AiUsageCostSnapshot,
-  AiUsageSalesSnapshot,
   PriceTier,
   ChargeTotals,
   UpdatePriceTier,
@@ -319,7 +308,6 @@ export type {
   InvoiceLineDiscounts,
   UpdateBillingInvoiceWorkflow,
   GovernanceFeatureAccess,
-  AiCreditTransactionPaginatedResponse,
   CommerceWalletTransaction,
   CommerceRechargeProductList,
   ReceivablePeriodPaginatedResponse,
@@ -327,8 +315,6 @@ export type {
   UpsertCustomerBillingDataRequest,
   CreditBalances,
   CreditTransactionPaginatedResponse,
-  AiUsageUsageLine,
-  AiUsageRatingSnapshot,
   PriceGraduated,
   PriceVolume,
   UpdatePriceGraduated,
@@ -356,8 +342,6 @@ export type {
   UpdateInvoiceWorkflowSettings,
   GovernanceQueryResult,
   CommerceWallet,
-  AiUsageUsageBatch,
-  AiUsageBatchSettlementResult,
   Feature,
   CreditGrantPagePaginatedResponse,
   CurrencyPagePaginatedResponse,

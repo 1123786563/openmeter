@@ -343,16 +343,6 @@ seed: ## Seed OpenMeter with test data
 	$(call print-target)
 	benthos -c etc/seed/seed.yaml
 
-.PHONY: weknora-ai-billing-p1-acceptance
-weknora-ai-billing-p1-acceptance: ## Phase 1 AI billing acceptance gate (spec, SDK, build, vet, integration + E2E)
-	$(call print-target)
-	$(MAKE) -C api/spec test
-	$(MAKE) test-go-sdk
-	go build ./...
-	go vet ./...
-	POSTGRES_HOST=127.0.0.1 go test -tags=dynamic -count=1 ./openmeter/aiusage/... ./api/v3/handlers/aiusage/...
-	go test -C e2e -count=1 -run '^TestV3AIUsage' ./
-
 .PHONY: credit-reservation-v2-acceptance
 credit-reservation-v2-acceptance: ## Credit Reservation v2 live acceptance gate (fails when infrastructure is unavailable)
 	$(call print-target)

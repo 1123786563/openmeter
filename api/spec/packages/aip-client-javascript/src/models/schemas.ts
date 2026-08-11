@@ -1142,93 +1142,6 @@ export const governanceQueryErrorCode = z
   .enum(['unknown', 'customer_not_found'])
   .describe('Error code for a governance query failure.')
 
-export const aiUsageBillingMode = z
-  .enum(['component', 'bundle'])
-
-  .describe(
-    'Determines how a usage batch is charged. - `component`: Per-resource pricing; each line item is rated individually. - `bundle`: Flat ceiling charge; no per-resource breakdown.',
-  )
-
-export const aiUsageUsageLineCreate = z
-  .object({
-    resourceCode: z
-      .string()
-
-      .describe(
-        'Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`.',
-      ),
-    quantity: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Raw consumption quantity (tokens, calls, seconds, pages, or images).',
-      ),
-    provider: z
-      .string()
-      .optional()
-
-      .describe(
-        'LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed resources.',
-      ),
-    model: z
-      .string()
-      .optional()
-
-      .describe(
-        'Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for provider-managed resources.',
-      ),
-    pricingDimensions: z
-      .record(z.string(), z.string())
-      .optional()
-
-      .describe(
-        'Optional resource-specific pricing dimensions (e.g. region, tier).',
-      ),
-    canonicalLineIndex: z
-      .number()
-      .int()
-      .gte(-2147483648)
-      .lte(2147483647)
-
-      .describe(
-        'Stable zero-based position used for deterministic ceiling allocation when the batch total exceeds the reservation ceiling.',
-      ),
-  })
-
-  .describe('One billable resource line within a usage batch creation request.')
-
-export const aiUsageBatchStatus = z
-  .enum(['settled', 'corrected'])
-
-  .describe(
-    'Settlement status of a usage batch. - `settled`: Batch processed and credits deducted successfully. - `corrected`: Batch reprocessed via a correction or compensation entry.',
-  )
-
-export const aiUsageRuntimeAuthorizationQuery = z
-  .object({
-    subjectKey: z
-      .string()
-      .optional()
-
-      .describe(
-        "The subject or tenant key that will produce the usage. Required to check the tenant's sequence watermark and reservation status.",
-      ),
-    reservationId: z
-      .string()
-      .optional()
-      .describe('The reservation ID to check the ceiling against.'),
-  })
-  .describe('Query parameters for the runtime authorization endpoint.')
-
-export const aiUsageCreditTransactionType = z
-  .enum(['funded', 'consumed', 'expired', 'voided'])
-
-  .describe(
-    'The type of a credit movement on the AI Usage integer credit ledger.',
-  )
-
 export const creditResourceLine = z.object({
   featureKey: z.string(),
   resourceCode: z.string(),
@@ -1609,20 +1522,6 @@ export const collectionMethod = z
 export const featureUnitCostType = z
   .enum(['llm', 'manual'])
   .describe('The type of unit cost.')
-
-export const aiUsageErrorCode = z
-  .enum([
-    'idempotency_conflict',
-    'rate_missing',
-    'resource_unknown',
-    'credit_insufficient',
-    'credit_limit_exceeded',
-    'reservation_ceiling_exceeded',
-  ])
-
-  .describe(
-    'Machine-readable error codes specific to AI Usage billing. These codes appear in the `error_code` field of RFC-7807 problem responses returned by AI Usage endpoints.',
-  )
 
 export const systemAccountAccessToken = z
   .object({
@@ -2133,17 +2032,6 @@ export const commercePlanRef = z
     'A lightweight reference to a plan in the product catalog, embedded in order and catalog responses without duplicating the full plan definition.',
   )
 
-export const aiUsageLedgerEntryRef = z
-  .object({
-    grantId: ulid,
-    amount: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    priority: z.number().int().gte(-2147483648).lte(2147483647),
-  })
-  .describe('A reference to a credit grant that was burned during settlement.')
-
 export const commerceSubscriptionRef = z
   .object({
     subscriptionId: ulid,
@@ -2368,107 +2256,6 @@ export const featureCostQueryRow = z
       ),
   })
   .describe('A row in the result of a feature cost query.')
-
-export const aiUsageRuntimeAuthorization = z
-  .object({
-    contractVersion: z
-      .string()
-
-      .describe(
-        'The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`). Clients can use this to detect contract changes.',
-      ),
-    retrievedAt: dateTime,
-    authorized: z
-      .boolean()
-      .describe('Whether the customer is authorized to consume AI resources.'),
-    availableCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available integer Credit balance for AI consumption.'),
-    reservationCeilingCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .optional()
-
-      .describe(
-        'The reservation ceiling in Credits, if a reservation is active. When set, usage is capped at this amount per reservation period.',
-      ),
-    coveredTenantSeq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'The highest continuously covered tenant sequence number, used for watermark tracking.',
-      ),
-    denialReason: z
-      .string()
-      .optional()
-
-      .describe(
-        'The reason authorization was denied, when `authorized` is `false`.',
-      ),
-    canonicalPayload: z
-      .record(z.string(), z.unknown())
-      .optional()
-
-      .describe(
-        'Canonical JSON payload for consumer-side verification. The raw bytes of the canonicalized authorization object, used to derive the SHA-256 hash and verify the signature.',
-      ),
-    canonicalSha256: z
-      .string()
-      .optional()
-      .describe('SHA-256 hash of the canonical payload, hex-encoded.'),
-    keyId: z
-      .string()
-      .optional()
-      .describe('The key ID used to sign the authorization.'),
-    signature: z
-      .string()
-      .optional()
-      .describe('Base64-encoded signature over the canonical payload.'),
-    snapshotVersion: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .optional()
-      .describe('The snapshot version for watermark tracking.'),
-    subjectKey: z
-      .string()
-      .optional()
-      .describe('The subject or tenant key this authorization applies to.'),
-    validUntil: dateTime.optional(),
-  })
-
-  .describe(
-    "Runtime authorization decision for a customer's AI usage. Returned before processing a usage batch to indicate whether the customer is authorized to consume AI resources, along with their current credit balance and reservation ceiling.",
-  )
-
-export const aiUsageCreditBalance = z
-  .object({
-    retrievedAt: dateTime,
-    availableCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits available for immediate consumption.'),
-    settledCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits that have been booked on the ledger.'),
-    pendingCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits granted but not yet written to the ledger.'),
-  })
-
-  .describe(
-    'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
-  )
 
 export const creditReservationExecute = z.object({
   idempotencyKey: z.string(),
@@ -3636,96 +3423,6 @@ export const governanceQueryError = z
     'Query error within a partially successful governance query response.',
   )
 
-export const aiUsageUsageBatchCreate = z
-  .object({
-    idempotencyKey: z
-      .string()
-
-      .describe(
-        'Client-generated idempotency key. Replaying the same key with the same `payload_hash` returns the stored result with HTTP 200. A replay with a different `payload_hash` for the same key returns HTTP 409.',
-      ),
-    payloadHash: z
-      .string()
-
-      .describe(
-        'SHA-256 hex digest of the canonical request body, used for idempotency verification.',
-      ),
-    billingCustomerId: ulid,
-    subjectKey: z
-      .string()
-      .describe('The subject or tenant key that produced the usage.'),
-    tenantSeq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Monotonic per-tenant sequence number for watermark tracking. Must be strictly increasing within a tenant.',
-      ),
-    occurredAt: dateTime,
-    reservationId: z
-      .string()
-      .describe('Links to the WeKnora runtime reservation, if any.'),
-    reservationCeilingCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Caps the total Credit charge for this batch. The platform absorbs any excess above the ceiling.',
-      ),
-    ratePackageVersion: z
-      .string()
-      .describe('Rate package version snapshot used for settlement.'),
-    billingMode: aiUsageBillingMode,
-    providerManaged: z
-      .boolean()
-
-      .describe(
-        'Whether model resources are platform-managed. Set to `false` for bring-your-own-key (BYOK) models.',
-      ),
-    lines: z
-      .array(aiUsageUsageLineCreate)
-      .min(1)
-
-      .describe(
-        'The individual resource consumption entries. Must contain at least one line for `component` billing mode.',
-      ),
-  })
-
-  .describe(
-    'Request body for submitting a Canonical AI Usage Batch. A batch represents one business action (a chat turn, an agent run, etc.) and is the atomic unit of AI billing settlement.',
-  )
-
-export const aiUsageCreditTransaction = z
-  .object({
-    id: ulid,
-    bookedAt: dateTime,
-    type: aiUsageCreditTransactionType,
-    amount: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Signed credit amount. Positive adds balance, negative reduces it.',
-      ),
-    availableBalanceBefore: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available balance before this transaction.'),
-    availableBalanceAfter: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available balance after this transaction.'),
-  })
-
-  .describe(
-    'An immutable credit movement on the AI Usage integer credit ledger.',
-  )
-
 export const creditReservationCreate = z.object({
   id: z.string(),
   customerId: z.string(),
@@ -4187,25 +3884,6 @@ export const creditTransaction = z
 
   .describe(
     "A credit transaction represents a single credit movement on the customer's balance. Credit transactions are immutable.",
-  )
-
-export const aiUsageCostSnapshot = z
-  .object({
-    currency: billingCurrencyCode,
-    amount: numeric,
-    source: z.string(),
-  })
-  .describe('The provider cost snapshot for a rated line (typically in USD).')
-
-export const aiUsageSalesSnapshot = z
-  .object({
-    currency: billingCurrencyCode,
-    amount: numeric,
-    rateCardVersion: z.string(),
-  })
-
-  .describe(
-    'The customer-facing sales price snapshot (typically in CNY for display).',
   )
 
 export const priceTier = z
@@ -5195,13 +4873,6 @@ export const governanceFeatureAccess = z
   })
   .describe('Access status for a single feature.')
 
-export const aiCreditTransactionPaginatedResponse = z
-  .object({
-    data: z.array(aiUsageCreditTransaction),
-    meta: cursorMeta,
-  })
-  .describe('Cursor paginated response.')
-
 export const commerceWalletTransaction = z
   .object({
     id: ulid,
@@ -5262,80 +4933,6 @@ export const creditTransactionPaginatedResponse = z
     meta: cursorMeta,
   })
   .describe('Cursor paginated response.')
-
-export const aiUsageUsageLine = z
-  .object({
-    resourceCode: z
-      .string()
-
-      .describe(
-        'Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`.',
-      ),
-    quantity: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Raw consumption quantity (tokens, calls, seconds, pages, or images).',
-      ),
-    provider: z
-      .string()
-      .optional()
-
-      .describe(
-        'LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed resources.',
-      ),
-    model: z
-      .string()
-      .optional()
-
-      .describe(
-        'Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for provider-managed resources.',
-      ),
-    pricingDimensions: z
-      .record(z.string(), z.string())
-      .optional()
-
-      .describe(
-        'Optional resource-specific pricing dimensions (e.g. region, tier).',
-      ),
-    canonicalLineIndex: z
-      .number()
-      .int()
-      .gte(-2147483648)
-      .lte(2147483647)
-
-      .describe(
-        'Stable zero-based position used for deterministic ceiling allocation when the batch total exceeds the reservation ceiling.',
-      ),
-    credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Integer Credit charge for this line.'),
-    costSnapshot: aiUsageCostSnapshot.optional(),
-    salesSnapshot: aiUsageSalesSnapshot.optional(),
-  })
-
-  .describe(
-    'A rated usage line returned in a settled batch, with resolved cost and sales snapshots.',
-  )
-
-export const aiUsageRatingSnapshot = z
-  .object({
-    resourceCode: z.string(),
-    costSnapshot: aiUsageCostSnapshot,
-    salesSnapshot: aiUsageSalesSnapshot,
-    credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-  })
-
-  .describe(
-    'A rating snapshot captures the cost and sales price resolution for one line item within a settled batch.',
-  )
 
 export const priceGraduated = z
   .object({
@@ -5972,74 +5569,6 @@ export const commerceWallet = z
 
   .describe(
     'The aggregate Wallet view for a customer, combining all credit buckets and recent transactions.',
-  )
-
-export const aiUsageUsageBatch = z
-  .object({
-    id: ulid,
-    idempotencyKey: z
-      .string()
-      .describe('The idempotency key from the create request.'),
-    payloadHash: z
-      .string()
-      .describe('SHA-256 hex digest of the canonical request body.'),
-    billingCustomerId: ulid,
-    subjectKey: z.string(),
-    tenantSeq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    occurredAt: dateTime,
-    reservationId: z.string(),
-    reservationCeilingCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    ratePackageVersion: z.string(),
-    billingMode: aiUsageBillingMode,
-    providerManaged: z.boolean(),
-    lines: z
-      .array(aiUsageUsageLine)
-      .describe('The consumed line items with resolved pricing.'),
-    status: aiUsageBatchStatus,
-    totalCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Total integer Credit charge for the batch, after applying the reservation ceiling.',
-      ),
-    coveredTenantSeq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'The highest continuously covered tenant sequence number after settlement.',
-      ),
-    createdAt: dateTime,
-  })
-  .describe('A settled AI Usage Batch with its rating and settlement results.')
-
-export const aiUsageBatchSettlementResult = z
-  .object({
-    batchId: ulid,
-    status: aiUsageBatchStatus,
-    totalCredits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    ratingSnapshots: z.array(aiUsageRatingSnapshot),
-    ledgerEntries: z.array(aiUsageLedgerEntryRef),
-    coveredTenantSeq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-  })
-
-  .describe(
-    'Settlement result for a batch, including the ledger entries burned and the watermark advancement.',
   )
 
 export const price = z
@@ -8039,50 +7568,6 @@ export const queryGovernanceAccessBody = governanceQueryRequest
 
 export const queryGovernanceAccessResponse = governanceQueryResponse
 
-export const createAiUsageBatchBody = aiUsageUsageBatchCreate
-
-export const createAiUsageBatchResponse = aiUsageUsageBatch
-
-export const getAiUsageBatchPathParams = z.object({
-  batchId: ulid,
-})
-
-export const getAiUsageBatchResponse = aiUsageUsageBatch
-
-export const getCustomerRuntimeAuthorizationPathParams = z.object({
-  customerId: ulid,
-})
-
-export const getCustomerRuntimeAuthorizationQueryParams = z.object({
-  filter: aiUsageRuntimeAuthorizationQuery.optional(),
-})
-
-export const getCustomerRuntimeAuthorizationResponse =
-  aiUsageRuntimeAuthorization
-
-export const getAiUsageCreditBalancePathParams = z.object({
-  customerId: ulid,
-})
-
-export const getAiUsageCreditBalanceQueryParams = z.object({
-  timestamp: dateTime.optional(),
-})
-
-export const getAiUsageCreditBalanceResponse = aiUsageCreditBalance
-
-export const listAiUsageCreditTransactionsPathParams = z.object({
-  customerId: ulid,
-})
-
-export const listAiUsageCreditTransactionsQueryParams = z.object({
-  page: cursorPaginationQueryPage.optional(),
-})
-
-export const listAiUsageCreditTransactionsResponse = z.object({
-  data: z.array(aiUsageCreditTransaction),
-  meta: cursorMeta,
-})
-
 export const createCreditReservationBody = creditReservationCreate
 
 export const createCreditReservationResponse = creditReservation
@@ -9353,93 +8838,6 @@ export const governanceQueryErrorCodeWire = z
   .enum(['unknown', 'customer_not_found'])
   .describe('Error code for a governance query failure.')
 
-export const aiUsageBillingModeWire = z
-  .enum(['component', 'bundle'])
-
-  .describe(
-    'Determines how a usage batch is charged. - `component`: Per-resource pricing; each line item is rated individually. - `bundle`: Flat ceiling charge; no per-resource breakdown.',
-  )
-
-export const aiUsageUsageLineCreateWire = z
-  .strictObject({
-    resource_code: z
-      .string()
-
-      .describe(
-        'Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`.',
-      ),
-    quantity: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Raw consumption quantity (tokens, calls, seconds, pages, or images).',
-      ),
-    provider: z
-      .string()
-      .optional()
-
-      .describe(
-        'LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed resources.',
-      ),
-    model: z
-      .string()
-      .optional()
-
-      .describe(
-        'Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for provider-managed resources.',
-      ),
-    pricing_dimensions: z
-      .record(z.string(), z.string())
-      .optional()
-
-      .describe(
-        'Optional resource-specific pricing dimensions (e.g. region, tier).',
-      ),
-    canonical_line_index: z
-      .number()
-      .int()
-      .gte(-2147483648)
-      .lte(2147483647)
-
-      .describe(
-        'Stable zero-based position used for deterministic ceiling allocation when the batch total exceeds the reservation ceiling.',
-      ),
-  })
-
-  .describe('One billable resource line within a usage batch creation request.')
-
-export const aiUsageBatchStatusWire = z
-  .enum(['settled', 'corrected'])
-
-  .describe(
-    'Settlement status of a usage batch. - `settled`: Batch processed and credits deducted successfully. - `corrected`: Batch reprocessed via a correction or compensation entry.',
-  )
-
-export const aiUsageRuntimeAuthorizationQueryWire = z
-  .strictObject({
-    subject_key: z
-      .string()
-      .optional()
-
-      .describe(
-        "The subject or tenant key that will produce the usage. Required to check the tenant's sequence watermark and reservation status.",
-      ),
-    reservation_id: z
-      .string()
-      .optional()
-      .describe('The reservation ID to check the ceiling against.'),
-  })
-  .describe('Query parameters for the runtime authorization endpoint.')
-
-export const aiUsageCreditTransactionTypeWire = z
-  .enum(['funded', 'consumed', 'expired', 'voided'])
-
-  .describe(
-    'The type of a credit movement on the AI Usage integer credit ledger.',
-  )
-
 export const creditResourceLineWire = z.strictObject({
   feature_key: z.string(),
   resource_code: z.string(),
@@ -9820,20 +9218,6 @@ export const collectionMethodWire = z
 export const featureUnitCostTypeWire = z
   .enum(['llm', 'manual'])
   .describe('The type of unit cost.')
-
-export const aiUsageErrorCodeWire = z
-  .enum([
-    'idempotency_conflict',
-    'rate_missing',
-    'resource_unknown',
-    'credit_insufficient',
-    'credit_limit_exceeded',
-    'reservation_ceiling_exceeded',
-  ])
-
-  .describe(
-    'Machine-readable error codes specific to AI Usage billing. These codes appear in the `error_code` field of RFC-7807 problem responses returned by AI Usage endpoints.',
-  )
 
 export const systemAccountAccessTokenWire = z
   .strictObject({
@@ -10344,17 +9728,6 @@ export const commercePlanRefWire = z
     'A lightweight reference to a plan in the product catalog, embedded in order and catalog responses without duplicating the full plan definition.',
   )
 
-export const aiUsageLedgerEntryRefWire = z
-  .strictObject({
-    grant_id: ulidWire,
-    amount: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    priority: z.number().int().gte(-2147483648).lte(2147483647),
-  })
-  .describe('A reference to a credit grant that was burned during settlement.')
-
 export const commerceSubscriptionRefWire = z
   .strictObject({
     subscription_id: ulidWire,
@@ -10578,107 +9951,6 @@ export const featureCostQueryRowWire = z
       ),
   })
   .describe('A row in the result of a feature cost query.')
-
-export const aiUsageRuntimeAuthorizationWire = z
-  .strictObject({
-    contract_version: z
-      .string()
-
-      .describe(
-        'The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`). Clients can use this to detect contract changes.',
-      ),
-    retrieved_at: dateTimeWire,
-    authorized: z
-      .boolean()
-      .describe('Whether the customer is authorized to consume AI resources.'),
-    available_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available integer Credit balance for AI consumption.'),
-    reservation_ceiling_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .optional()
-
-      .describe(
-        'The reservation ceiling in Credits, if a reservation is active. When set, usage is capped at this amount per reservation period.',
-      ),
-    covered_tenant_seq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'The highest continuously covered tenant sequence number, used for watermark tracking.',
-      ),
-    denial_reason: z
-      .string()
-      .optional()
-
-      .describe(
-        'The reason authorization was denied, when `authorized` is `false`.',
-      ),
-    canonical_payload: z
-      .record(z.string(), z.unknown())
-      .optional()
-
-      .describe(
-        'Canonical JSON payload for consumer-side verification. The raw bytes of the canonicalized authorization object, used to derive the SHA-256 hash and verify the signature.',
-      ),
-    canonical_sha256: z
-      .string()
-      .optional()
-      .describe('SHA-256 hash of the canonical payload, hex-encoded.'),
-    key_id: z
-      .string()
-      .optional()
-      .describe('The key ID used to sign the authorization.'),
-    signature: z
-      .string()
-      .optional()
-      .describe('Base64-encoded signature over the canonical payload.'),
-    snapshot_version: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .optional()
-      .describe('The snapshot version for watermark tracking.'),
-    subject_key: z
-      .string()
-      .optional()
-      .describe('The subject or tenant key this authorization applies to.'),
-    valid_until: dateTimeWire.optional(),
-  })
-
-  .describe(
-    "Runtime authorization decision for a customer's AI usage. Returned before processing a usage batch to indicate whether the customer is authorized to consume AI resources, along with their current credit balance and reservation ceiling.",
-  )
-
-export const aiUsageCreditBalanceWire = z
-  .strictObject({
-    retrieved_at: dateTimeWire,
-    available_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits available for immediate consumption.'),
-    settled_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits that have been booked on the ledger.'),
-    pending_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Credits granted but not yet written to the ledger.'),
-  })
-
-  .describe(
-    'Integer credit balance for AI usage, scoped to a single currency. Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed 64-bit integers to avoid floating-point rounding in settlement.',
-  )
 
 export const creditReservationExecuteWire = z.strictObject({
   idempotency_key: z.string(),
@@ -11831,96 +11103,6 @@ export const governanceQueryErrorWire = z
     'Query error within a partially successful governance query response.',
   )
 
-export const aiUsageUsageBatchCreateWire = z
-  .strictObject({
-    idempotency_key: z
-      .string()
-
-      .describe(
-        'Client-generated idempotency key. Replaying the same key with the same `payload_hash` returns the stored result with HTTP 200. A replay with a different `payload_hash` for the same key returns HTTP 409.',
-      ),
-    payload_hash: z
-      .string()
-
-      .describe(
-        'SHA-256 hex digest of the canonical request body, used for idempotency verification.',
-      ),
-    billing_customer_id: ulidWire,
-    subject_key: z
-      .string()
-      .describe('The subject or tenant key that produced the usage.'),
-    tenant_seq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Monotonic per-tenant sequence number for watermark tracking. Must be strictly increasing within a tenant.',
-      ),
-    occurred_at: dateTimeWire,
-    reservation_id: z
-      .string()
-      .describe('Links to the WeKnora runtime reservation, if any.'),
-    reservation_ceiling_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Caps the total Credit charge for this batch. The platform absorbs any excess above the ceiling.',
-      ),
-    rate_package_version: z
-      .string()
-      .describe('Rate package version snapshot used for settlement.'),
-    billing_mode: aiUsageBillingModeWire,
-    provider_managed: z
-      .boolean()
-
-      .describe(
-        'Whether model resources are platform-managed. Set to `false` for bring-your-own-key (BYOK) models.',
-      ),
-    lines: z
-      .array(aiUsageUsageLineCreateWire)
-      .min(1)
-
-      .describe(
-        'The individual resource consumption entries. Must contain at least one line for `component` billing mode.',
-      ),
-  })
-
-  .describe(
-    'Request body for submitting a Canonical AI Usage Batch. A batch represents one business action (a chat turn, an agent run, etc.) and is the atomic unit of AI billing settlement.',
-  )
-
-export const aiUsageCreditTransactionWire = z
-  .strictObject({
-    id: ulidWire,
-    booked_at: dateTimeWire,
-    type: aiUsageCreditTransactionTypeWire,
-    amount: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Signed credit amount. Positive adds balance, negative reduces it.',
-      ),
-    available_balance_before: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available balance before this transaction.'),
-    available_balance_after: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Available balance after this transaction.'),
-  })
-
-  .describe(
-    'An immutable credit movement on the AI Usage integer credit ledger.',
-  )
-
 export const creditReservationCreateWire = z.strictObject({
   id: z.string(),
   customer_id: z.string(),
@@ -12384,25 +11566,6 @@ export const creditTransactionWire = z
 
   .describe(
     "A credit transaction represents a single credit movement on the customer's balance. Credit transactions are immutable.",
-  )
-
-export const aiUsageCostSnapshotWire = z
-  .strictObject({
-    currency: billingCurrencyCodeWire,
-    amount: numericWire,
-    source: z.string(),
-  })
-  .describe('The provider cost snapshot for a rated line (typically in USD).')
-
-export const aiUsageSalesSnapshotWire = z
-  .strictObject({
-    currency: billingCurrencyCodeWire,
-    amount: numericWire,
-    rate_card_version: z.string(),
-  })
-
-  .describe(
-    'The customer-facing sales price snapshot (typically in CNY for display).',
   )
 
 export const priceTierWire = z
@@ -13394,13 +12557,6 @@ export const governanceFeatureAccessWire = z
   })
   .describe('Access status for a single feature.')
 
-export const aiCreditTransactionPaginatedResponseWire = z
-  .strictObject({
-    data: z.array(aiUsageCreditTransactionWire),
-    meta: cursorMetaWire,
-  })
-  .describe('Cursor paginated response.')
-
 export const commerceWalletTransactionWire = z
   .strictObject({
     id: ulidWire,
@@ -13463,80 +12619,6 @@ export const creditTransactionPaginatedResponseWire = z
     meta: cursorMetaWire,
   })
   .describe('Cursor paginated response.')
-
-export const aiUsageUsageLineWire = z
-  .strictObject({
-    resource_code: z
-      .string()
-
-      .describe(
-        'Resource code identifying the billable resource type. Valid codes include: `llm_input_tokens`, `llm_output_tokens`, `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`, `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`, `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`, `mcp_tool_calls`, `web_searches`, `agent_runs`.',
-      ),
-    quantity: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Raw consumption quantity (tokens, calls, seconds, pages, or images).',
-      ),
-    provider: z
-      .string()
-      .optional()
-
-      .describe(
-        'LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed resources.',
-      ),
-    model: z
-      .string()
-      .optional()
-
-      .describe(
-        'Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for provider-managed resources.',
-      ),
-    pricing_dimensions: z
-      .record(z.string(), z.string())
-      .optional()
-
-      .describe(
-        'Optional resource-specific pricing dimensions (e.g. region, tier).',
-      ),
-    canonical_line_index: z
-      .number()
-      .int()
-      .gte(-2147483648)
-      .lte(2147483647)
-
-      .describe(
-        'Stable zero-based position used for deterministic ceiling allocation when the batch total exceeds the reservation ceiling.',
-      ),
-    credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-      .describe('Integer Credit charge for this line.'),
-    cost_snapshot: aiUsageCostSnapshotWire.optional(),
-    sales_snapshot: aiUsageSalesSnapshotWire.optional(),
-  })
-
-  .describe(
-    'A rated usage line returned in a settled batch, with resolved cost and sales snapshots.',
-  )
-
-export const aiUsageRatingSnapshotWire = z
-  .strictObject({
-    resource_code: z.string(),
-    cost_snapshot: aiUsageCostSnapshotWire,
-    sales_snapshot: aiUsageSalesSnapshotWire,
-    credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-  })
-
-  .describe(
-    'A rating snapshot captures the cost and sales price resolution for one line item within a settled batch.',
-  )
 
 export const priceGraduatedWire = z
   .strictObject({
@@ -14171,74 +13253,6 @@ export const commerceWalletWire = z
 
   .describe(
     'The aggregate Wallet view for a customer, combining all credit buckets and recent transactions.',
-  )
-
-export const aiUsageUsageBatchWire = z
-  .strictObject({
-    id: ulidWire,
-    idempotency_key: z
-      .string()
-      .describe('The idempotency key from the create request.'),
-    payload_hash: z
-      .string()
-      .describe('SHA-256 hex digest of the canonical request body.'),
-    billing_customer_id: ulidWire,
-    subject_key: z.string(),
-    tenant_seq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    occurred_at: dateTimeWire,
-    reservation_id: z.string(),
-    reservation_ceiling_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    rate_package_version: z.string(),
-    billing_mode: aiUsageBillingModeWire,
-    provider_managed: z.boolean(),
-    lines: z
-      .array(aiUsageUsageLineWire)
-      .describe('The consumed line items with resolved pricing.'),
-    status: aiUsageBatchStatusWire,
-    total_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'Total integer Credit charge for the batch, after applying the reservation ceiling.',
-      ),
-    covered_tenant_seq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n)
-
-      .describe(
-        'The highest continuously covered tenant sequence number after settlement.',
-      ),
-    created_at: dateTimeWire,
-  })
-  .describe('A settled AI Usage Batch with its rating and settlement results.')
-
-export const aiUsageBatchSettlementResultWire = z
-  .strictObject({
-    batch_id: ulidWire,
-    status: aiUsageBatchStatusWire,
-    total_credits: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-    rating_snapshots: z.array(aiUsageRatingSnapshotWire),
-    ledger_entries: z.array(aiUsageLedgerEntryRefWire),
-    covered_tenant_seq: z.coerce
-      .bigint()
-      .gte(-9223372036854775808n)
-      .lte(9223372036854775807n),
-  })
-
-  .describe(
-    'Settlement result for a batch, including the ledger entries burned and the watermark advancement.',
   )
 
 export const priceWire = z
@@ -16315,50 +15329,6 @@ export const queryGovernanceAccessQueryParamsWire = z.object({
 export const queryGovernanceAccessBodyWire = governanceQueryRequestWire
 
 export const queryGovernanceAccessResponseWire = governanceQueryResponseWire
-
-export const createAiUsageBatchBodyWire = aiUsageUsageBatchCreateWire
-
-export const createAiUsageBatchResponseWire = aiUsageUsageBatchWire
-
-export const getAiUsageBatchPathParamsWire = z.object({
-  batchId: ulidWire,
-})
-
-export const getAiUsageBatchResponseWire = aiUsageUsageBatchWire
-
-export const getCustomerRuntimeAuthorizationPathParamsWire = z.object({
-  customerId: ulidWire,
-})
-
-export const getCustomerRuntimeAuthorizationQueryParamsWire = z.object({
-  filter: aiUsageRuntimeAuthorizationQueryWire.optional(),
-})
-
-export const getCustomerRuntimeAuthorizationResponseWire =
-  aiUsageRuntimeAuthorizationWire
-
-export const getAiUsageCreditBalancePathParamsWire = z.object({
-  customerId: ulidWire,
-})
-
-export const getAiUsageCreditBalanceQueryParamsWire = z.object({
-  timestamp: dateTimeWire.optional(),
-})
-
-export const getAiUsageCreditBalanceResponseWire = aiUsageCreditBalanceWire
-
-export const listAiUsageCreditTransactionsPathParamsWire = z.object({
-  customerId: ulidWire,
-})
-
-export const listAiUsageCreditTransactionsQueryParamsWire = z.object({
-  page: cursorPaginationQueryPageWire.optional(),
-})
-
-export const listAiUsageCreditTransactionsResponseWire = z.strictObject({
-  data: z.array(aiUsageCreditTransactionWire),
-  meta: cursorMetaWire,
-})
 
 export const createCreditReservationBodyWire = creditReservationCreateWire
 

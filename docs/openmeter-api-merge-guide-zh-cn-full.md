@@ -8,44 +8,10 @@
   - v1/v2 中 `deprecated: true` 标记的接口被视为已过期，剔除。
   - `method + 归一化路径` 命中 v3 的接口视为已转移，剔除。
   - 归一化路径：去除 `/api/v1`、`/api/v2`、`/api/v3`、`/openmeter`，并把路径参数统一为 `/{*}`。
-- 统计：v3 共 119 个接口；v1 共 139，v2 共 14；过期 20；已转移 57；待合并 76（v1：63，v2：13）。
+- 统计：v3 共 114 个接口；v1 共 139，v2 共 14；过期 20；已转移 57；待合并 76（v1：63，v2：13）。
 
 ## 一、v3 全量接口（按领域）
 
-### AI 使用批次（ai-usage-batches，共 2 个）
-- **`POST /ai-usage-batches`**
-  - 版本：v3
-  - operationId：create-ai-usage-batch
-  - 中文说明：提交AI使用批次
-  - 标签：AI Usage
-  - 参数：
-    - 无
-  - 请求体：
-    - required：是
-    - application/json: #/components/schemas/AIUsageUsageBatchCreate
-  - 响应：
-    - 200：使用批次响应。
-    - 201：创建使用批次响应。
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-    - 409：—
-- **`GET /ai-usage-batches/{batchId}`**
-  - 版本：v3
-  - operationId：get-ai-usage-batch
-  - 中文说明：获取AI使用批次
-  - 标签：AI Usage
-  - 参数：
-    - path `batchId`（必填：是）：#/components/schemas/ULID；—
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：使用批次响应。
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
 
 ### LLM 成本（llm-cost，共 5 个）
 - **`GET /openmeter/llm-cost/overrides`**
@@ -501,7 +467,7 @@ filter[meter_id][oeq]=<id>
     - 403：—
     - 404：—
 
-### 客户（customers，共 28 个）
+### 客户（customers，共 25 个）
 - **`GET /openmeter/customers`**
   - 版本：v3
   - operationId：list-customers
@@ -720,38 +686,6 @@ filter[meter_id][oeq]=<id>
     - 400：—
     - 401：—
     - 403：—
-- **`GET /customers/{customerId}/credit-balance`**
-  - 版本：v3
-  - operationId：get-ai-usage-credit-balance
-  - 中文说明：获取AI使用积分余额
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；—
-    - query `timestamp`（必填：否）：#/components/schemas/DateTime；返回截至此时间戳的贷方余额。默认为现在。
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：AICreditBalance响应。
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-- **`GET /customers/{customerId}/credit-transactions`**
-  - 版本：v3
-  - operationId：list-ai-usage-credit-transactions
-  - 中文说明：列出AI使用信用交易
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；—
-    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；—
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：光标分页响应。
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
 - **`POST /openmeter/customers/{customerId}/credits/adjustments`**
   - 版本：v3
   - operationId：create-credit-adjustment
@@ -950,22 +884,6 @@ filter[meter_id][oeq]=<id>
     - application/json: #/components/schemas/CommerceExternalInvoiceUpdate
   - 响应：
     - 200：ExternalInvoice已更新响应。
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-- **`GET /customers/{customerId}/runtime-authorization`**
-  - 版本：v3
-  - operationId：get-customer-runtime-authorization
-  - 中文说明：获取运行时授权
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；—
-    - query `filter`（必填：否）：#/components/schemas/AIUsageRuntimeAuthorizationQuery；按主题和预订筛选授权检查。
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：RuntimeAuthorization响应。
     - 400：—
     - 401：—
     - 403：—

@@ -127,7 +127,6 @@ effect — the ledger effect was committed in the original transaction.
 ## Dependencies
 
 - Phase 1 Credit Ledger (grants, settlement, collector)
-- Phase 1 AI Usage Runtime Authorization
 - Ent (PostgreSQL) for persistence
 - `pkg/clock` for all time operations
 

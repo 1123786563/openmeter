@@ -157,4 +157,4 @@ sqlite3 "$WEKNORA_SQLITE_RESTORE_DB" 'PRAGMA integrity_check; PRAGMA foreign_key
 - [ ] 已创建并验证 WeKnora PostgreSQL/SQLite 删除前备份
 - [ ] 回滚负责人明确接受删除后只能 roll-forward
 
-删除门通过后，按外键依赖顺序删除旧 `ai_usage_*` 表、旧 API/Worker 和 WeKnora 旧 Runtime Journal 热路径。保留历史迁移和原生 Ledger、Credit Grant、Purchase、Customer、支付记录。
+删除门通过后应用 `20260811000100_drop_legacy_ai_usage`，由该向前迁移按外键依赖顺序删除旧 `ai_usage_*` 表和旧枚举；旧 API/Worker 与 WeKnora Runtime Journal 热路径随同发布删除。此前的 AIUsage 历史迁移必须保留，原生 Ledger、Credit Grant、Purchase、Customer、支付记录不得删除。

@@ -16,7 +16,6 @@ import "./productcatalog/index.tsp";
 import "./defaults/index.tsp";
 import "./governance/index.tsp";
 import "./invoices/index.tsp";
-import "./aiusage/index.tsp";
 import "./commerce/index.tsp";
 import "./creditreservations/index.tsp";
 
@@ -73,7 +72,6 @@ using TypeSpec.OpenAPI;
   Shared.GovernanceTag,
   #{ description: Shared.GovernanceDescription }
 )
-@tagMetadata(Shared.AIUsageTag, #{ description: Shared.AIUsageDescription })
 @tagMetadata(Shared.CommerceTag, #{ description: Shared.CommerceDescription })
 namespace OpenMeter;
 
@@ -219,25 +217,6 @@ interface OrganizationDefaultTaxCodesEndpoints
 @route("/openmeter/governance")
 @tag(Shared.GovernanceTag)
 interface GovernanceEndpoints extends Governance.GovernanceOperations {}
-
-@route("/ai-usage-batches")
-@tag(Shared.AIUsageTag)
-interface AIUsageBatchEndpoints extends AIUsage.AIUsageBatchOperations {}
-
-@route("/customers/{customerId}/runtime-authorization")
-@tag(Shared.AIUsageTag)
-interface CustomerRuntimeAuthorizationEndpoints
-  extends AIUsage.RuntimeAuthorizationOperations {}
-
-@route("/customers/{customerId}/credit-balance")
-@tag(Shared.AIUsageTag)
-interface AIUsageCustomerCreditBalanceEndpoints
-  extends AIUsage.CreditBalanceOperations {}
-
-@route("/customers/{customerId}/credit-transactions")
-@tag(Shared.AIUsageTag)
-interface AIUsageCustomerCreditTransactionEndpoints
-  extends AIUsage.CreditTransactionOperations {}
 
 @route("/credit-reservations")
 @tag(Shared.BillingTag)

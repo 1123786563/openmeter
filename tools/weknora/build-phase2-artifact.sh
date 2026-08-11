@@ -4,9 +4,9 @@
 #
 # This script:
 #   1. Refuses a dirty git tree.
-#   2. Runs Phase 1 regression tests.
+#   2. Runs Credit Reservation v2 regression tests.
 #   3. Runs Phase 2 acceptance tests (commerce + handlers, -race).
-#   4. Embeds P1/P2 OpenAPI checksums and contract versions in /contract/manifest.json.
+#   4. Embeds Reservation v2/Phase 2 OpenAPI checksums and contract versions in /contract/manifest.json.
 #   5. Builds the committed Dockerfile.
 #   6. Records the immutable image digest.
 #   7. Generates an SBOM (Syft).
@@ -40,13 +40,13 @@ COMMIT_SHA="$(git rev-parse HEAD)"
 log "Building from commit: $COMMIT_SHA"
 
 # ---------------------------------------------------------------------------
-# Step 2: Phase 1 regression
+# Step 2: Credit Reservation v2 regression
 # ---------------------------------------------------------------------------
-log "Running Phase 1 regression tests..."
-if ! go test ./openmeter/aiusage/... -race -count=1; then
-    fail "Phase 1 regression tests failed."
+log "Running Credit Reservation v2 regression tests..."
+if ! go test ./openmeter/creditreservation/... ./api/v3/handlers/creditreservations/... -race -count=1; then
+    fail "Credit Reservation v2 regression tests failed."
 fi
-log "Phase 1 regression passed."
+log "Credit Reservation v2 regression passed."
 
 # ---------------------------------------------------------------------------
 # Step 3: Phase 2 acceptance
@@ -61,7 +61,7 @@ log "Phase 2 acceptance passed."
 # Step 4: OpenAPI checksums + contract manifest
 # ---------------------------------------------------------------------------
 log "Computing OpenAPI checksums..."
-P1_CHECKSUM="$(shasum -a 256 api/v3/openapi.yaml | cut -d' ' -f1)"
+RESERVATION_V2_CHECKSUM="$(shasum -a 256 api/v3/openapi.yaml | cut -d' ' -f1)"
 # P2 checksum covers the spec plus Phase 2 commerce contract additions
 CONTRACT_EVENTS="order.updated payment.settled payment.failed refund.updated invoice.updated subscription.updated"
 P2_CHECKSUM="$(printf '%s %s' "$(cat api/v3/openapi.yaml)" "$CONTRACT_EVENTS" | shasum -a 256 | cut -d' ' -f1)"
@@ -73,7 +73,7 @@ cat > "$MANIFEST_FILE" <<EOF
   "commit": "$COMMIT_SHA",
   "contract_version": "$CONTRACT_VERSION",
   "openapi": {
-    "p1_checksum": "$P1_CHECKSUM",
+    "reservation_v2_checksum": "$RESERVATION_V2_CHECKSUM",
     "p2_checksum": "$P2_CHECKSUM"
   },
   "events": [
@@ -164,7 +164,7 @@ cat > "$EVIDENCE_FILE" <<EOF
 
 | Spec | SHA-256 |
 |------|---------|
-| Phase 1 | \`$P1_CHECKSUM\` |
+| Credit Reservation v2 | \`$RESERVATION_V2_CHECKSUM\` |
 | Phase 2 | \`$P2_CHECKSUM\` |
 
 ## Image
@@ -178,7 +178,7 @@ cat > "$EVIDENCE_FILE" <<EOF
 
 | Suite | Status |
 |-------|--------|
-| Phase 1 regression (aiusage -race) | PASS |
+| Credit Reservation v2 regression | PASS |
 | Phase 2 acceptance (commerce + handlers -race) | PASS |
 
 ## Approved Events

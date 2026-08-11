@@ -28,8 +28,6 @@ servers:
 tags:
   - name: Commerce
     description: Wallet aggregation, recharge catalog, orders, checkout, payments (WeChat/Alipay), refunds, and enterprise monthly settlement for WeKnora Standard SaaS.
-  - name: AI Usage
-    description: Canonical AI usage batch settlement, signed runtime authorization, and integer Credit balance for WeKnora Standard SaaS integration.
   - name: OpenMeter Governance
     description: Governance evaluation of customers to check their feature access.
   - name: OpenMeter Defaults
@@ -59,78 +57,6 @@ tags:
   - name: Meters
     description: Meters specify how to aggregate events for billing and analytics purposes. Meters can be configured with multiple aggregation methods and groupings. Multiple meters can be created for the same event type, enabling flexible metering scenarios.
 paths:
-  /ai-usage-batches:
-    post:
-      operationId: create-ai-usage-batch
-      summary: Submit an AI usage batch
-      description: |-
-        Submit a Canonical AI Usage Batch for settlement.
-
-        The first submit for a given `idempotency_key` returns HTTP 201 with the settled
-        batch. An identical replay (same `idempotency_key` and `payload_hash`) returns
-        HTTP 200 with the stored result. A replay with the same `idempotency_key` but a
-        different `payload_hash` returns HTTP 409.
-      responses:
-        '200':
-          description: UsageBatch response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIUsageUsageBatch'
-        '201':
-          description: UsageBatch created response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIUsageUsageBatch'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-      tags:
-        - AI Usage
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AIUsageUsageBatchCreate'
-      x-unstable: true
-  /ai-usage-batches/{batchId}:
-    get:
-      operationId: get-ai-usage-batch
-      summary: Get an AI usage batch
-      description: Retrieve a settled AI Usage Batch by its ID.
-      parameters:
-        - name: batchId
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/ULID'
-      responses:
-        '200':
-          description: UsageBatch response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIUsageUsageBatch'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      tags:
-        - AI Usage
-      x-unstable: true
   /checkout-sessions/{sessionId}:
     get:
       operationId: get-checkout-session
@@ -162,76 +88,323 @@ paths:
       tags:
         - Commerce
       x-unstable: true
-  /customers/{customerId}/credit-balance:
-    get:
-      operationId: get-ai-usage-credit-balance
-      summary: Get AI usage credit balance
-      description: |-
-        Get a customer's credit balance for AI usage. Returns the same balance model as
-        the OpenMeter Credits endpoint but scoped to the AI Usage route.
-      parameters:
-        - name: customerId
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/ULID'
-        - name: timestamp
-          in: query
-          required: false
-          description: Return the credit balance as of this timestamp. Defaults to now.
-          schema:
-            $ref: '#/components/schemas/DateTime'
-          explode: false
-          style: form
+  /credit-charges:
+    post:
+      operationId: create-credit-charge
+      summary: Create and settle a direct credit charge
       responses:
-        '200':
-          description: AICreditBalance response.
+        '201':
+          description: Charge created response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AIUsageCreditBalance'
+                $ref: '#/components/schemas/CreditCharge'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       tags:
-        - AI Usage
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditChargeCreate'
       x-unstable: true
-  /customers/{customerId}/credit-transactions:
-    get:
-      operationId: list-ai-usage-credit-transactions
-      summary: List AI usage credit transactions
-      description: |-
-        List credit transactions for a customer's AI usage. Returns the same transaction
-        model as the OpenMeter Credits endpoint but scoped to the AI Usage route.
+  /credit-charges/{chargeId}/reverse:
+    post:
+      operationId: reverse-credit-charge
+      summary: Reverse a direct credit charge
       parameters:
-        - name: customerId
+        - name: chargeId
           in: path
           required: true
           schema:
-            $ref: '#/components/schemas/ULID'
-        - $ref: '#/components/parameters/CursorPaginationQuery'
+            type: string
       responses:
         '200':
-          description: Cursor paginated response.
+          description: Charge updated response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AICreditTransactionPaginatedResponse'
+                $ref: '#/components/schemas/CreditCharge'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       tags:
-        - AI Usage
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditChargeReverse'
+      x-unstable: true
+  /credit-reservations:
+    post:
+      operationId: create-credit-reservation
+      summary: Create a credit reservation
+      responses:
+        '201':
+          description: Reservation created response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditReservationCreate'
+      x-unstable: true
+  /credit-reservations/{reservationId}:
+    get:
+      operationId: get-credit-reservation
+      summary: Get a credit reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      x-unstable: true
+  /credit-reservations/{reservationId}/execute:
+    post:
+      operationId: execute-credit-reservation
+      summary: Start executing a credit reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation updated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditReservationExecute'
+      x-unstable: true
+  /credit-reservations/{reservationId}/release:
+    post:
+      operationId: release-credit-reservation
+      summary: Release a credit reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation updated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditReservationRelease'
+      x-unstable: true
+  /credit-reservations/{reservationId}/settle:
+    post:
+      operationId: settle-credit-reservation
+      summary: Settle a credit reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation updated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditReservationSettle'
+      x-unstable: true
+  /credit-reservations/{reservationId}/unknown:
+    post:
+      operationId: mark-credit-reservation-unknown
+      summary: Mark a credit reservation as unknown
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reservation updated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditReservation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Client error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/CreditBalanceInsufficient'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - OpenMeter Billing Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreditReservationUnknown'
       x-unstable: true
   /customers/{customerId}/offline-payments:
     post:
@@ -340,46 +513,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CommerceExternalInvoiceUpdate'
-      x-unstable: true
-  /customers/{customerId}/runtime-authorization:
-    get:
-      operationId: get-customer-runtime-authorization
-      summary: Get runtime authorization
-      description: |-
-        Check whether a customer is authorized to consume AI resources.
-
-        Returns the current integer credit balance, reservation ceiling, and the covered
-        tenant sequence watermark.
-      parameters:
-        - name: customerId
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/ULID'
-        - name: filter
-          in: query
-          required: false
-          description: Filter the authorization check by subject and reservation.
-          schema:
-            $ref: '#/components/schemas/AIUsageRuntimeAuthorizationQuery'
-          style: deepObject
-      responses:
-        '200':
-          description: RuntimeAuthorization response.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AIUsageRuntimeAuthorization'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      tags:
-        - AI Usage
       x-unstable: true
   /customers/{customerId}/wallet:
     get:
@@ -1362,7 +1495,6 @@ paths:
     post:
       operationId: create-customer
       summary: Create customer
-      description: Create a customer.
       responses:
         '201':
           description: Customer created response.
@@ -1387,7 +1519,6 @@ paths:
     get:
       operationId: list-customers
       summary: List customers
-      description: List customers.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: sort
@@ -1435,7 +1566,6 @@ paths:
     get:
       operationId: get-customer
       summary: Get customer
-      description: Get customer by ID.
       parameters:
         - name: customerId
           in: path
@@ -1462,7 +1592,6 @@ paths:
     put:
       operationId: upsert-customer
       summary: Upsert customer
-      description: Upsert a customer.
       parameters:
         - name: customerId
           in: path
@@ -1497,7 +1626,6 @@ paths:
     delete:
       operationId: delete-customer
       summary: Delete customer
-      description: Delete a customer.
       parameters:
         - name: customerId
           in: path
@@ -1521,7 +1649,6 @@ paths:
     get:
       operationId: get-customer-billing
       summary: Get customer billing data
-      description: Get customer billing data.
       parameters:
         - name: customerId
           in: path
@@ -1548,7 +1675,6 @@ paths:
     put:
       operationId: update-customer-billing
       summary: Update customer billing data
-      description: Update customer billing data.
       parameters:
         - name: customerId
           in: path
@@ -1584,7 +1710,6 @@ paths:
     put:
       operationId: update-customer-billing-app-data
       summary: Update customer billing app data
-      description: Update customer billing app data.
       parameters:
         - name: customerId
           in: path
@@ -2151,7 +2276,6 @@ paths:
     get:
       operationId: list-customer-entitlement-access
       summary: List customer entitlement access
-      description: List customer entitlement access records.
       parameters:
         - name: customerId
           in: path
@@ -2179,7 +2303,6 @@ paths:
     get:
       operationId: get-organization-default-tax-codes
       summary: Get organization default tax codes
-      description: Get organization default tax codes.
       responses:
         '200':
           description: OrganizationDefaultTaxCodes response.
@@ -2201,7 +2324,6 @@ paths:
     put:
       operationId: update-organization-default-tax-codes
       summary: Update organization default tax codes
-      description: Update organization default tax codes.
       responses:
         '200':
           description: OrganizationDefaultTaxCodes upsert response.
@@ -3459,7 +3581,6 @@ paths:
     post:
       operationId: create-subscription
       summary: Create subscription
-      description: Create a subscription.
       responses:
         '201':
           description: Subscription created response.
@@ -3488,7 +3609,6 @@ paths:
     get:
       operationId: list-subscriptions
       summary: List subscriptions
-      description: List subscriptions.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: sort
@@ -3535,7 +3655,6 @@ paths:
     get:
       operationId: get-subscription
       summary: Get subscription
-      description: Get subscription details.
       parameters:
         - name: subscriptionId
           in: path
@@ -3787,7 +3906,6 @@ paths:
     post:
       operationId: create-tax-code
       summary: Create tax code
-      description: Create a tax code.
       responses:
         '201':
           description: TaxCode created response.
@@ -3813,7 +3931,6 @@ paths:
     get:
       operationId: list-tax-codes
       summary: List tax codes
-      description: List tax codes.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: include_deleted
@@ -3844,7 +3961,6 @@ paths:
     get:
       operationId: get-tax-code
       summary: Get tax code
-      description: Get tax code by ID.
       parameters:
         - name: taxCodeId
           in: path
@@ -3872,7 +3988,6 @@ paths:
     put:
       operationId: upsert-tax-code
       summary: Upsert tax code
-      description: Upsert a tax code.
       parameters:
         - name: taxCodeId
           in: path
@@ -3908,7 +4023,6 @@ paths:
     delete:
       operationId: delete-tax-code
       summary: Delete tax code
-      description: Delete a tax code.
       parameters:
         - name: taxCodeId
           in: path
@@ -4044,8 +4158,8 @@ paths:
       responses:
         '200':
           description: |-
-            Successful Alipay callback response. Alipay requires a plain-text success
-            token and retries when the response body differs from exactly "success".
+            Successful Alipay callback response. Alipay requires a plain-text success token
+            and retries when the response body differs from exactly "success".
           content:
             text/plain:
               schema:
@@ -4081,8 +4195,8 @@ paths:
       responses:
         '204':
           description: |-
-            Successful WeChat Pay callback response. WeChat treats an empty 204 response
-            as the native acknowledgment and will retry any response with a body.
+            Successful WeChat Pay callback response. WeChat treats an empty 204 response as
+            the native acknowledgment and will retry any response with a body.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -4218,511 +4332,6 @@ components:
         additionalProperties: false
       style: deepObject
   schemas:
-    AICreditTransactionPaginatedResponse:
-      type: object
-      required:
-        - data
-        - meta
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AIUsageCreditTransaction'
-        meta:
-          $ref: '#/components/schemas/CursorMeta'
-      additionalProperties: false
-      description: Cursor paginated response.
-    AIUsageBatchStatus:
-      type: string
-      enum:
-        - settled
-        - corrected
-      description: |-
-        Settlement status of a usage batch.
-
-        - `settled`: Batch processed and credits deducted successfully.
-        - `corrected`: Batch reprocessed via a correction or compensation entry.
-    AIUsageBillingMode:
-      type: string
-      enum:
-        - component
-        - bundle
-      description: |-
-        Determines how a usage batch is charged.
-
-        - `component`: Per-resource pricing; each line item is rated individually.
-        - `bundle`: Flat ceiling charge; no per-resource breakdown.
-    AIUsageCostSnapshot:
-      type: object
-      required:
-        - currency
-        - amount
-        - source
-      properties:
-        currency:
-          $ref: '#/components/schemas/BillingCurrencyCode'
-        amount:
-          $ref: '#/components/schemas/Numeric'
-        source:
-          type: string
-      additionalProperties: false
-      description: The provider cost snapshot for a rated line (typically in USD).
-    AIUsageCreditBalance:
-      type: object
-      required:
-        - retrieved_at
-        - available_credits
-        - settled_credits
-        - pending_credits
-      properties:
-        retrieved_at:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: The timestamp of the balance retrieval.
-          readOnly: true
-        available_credits:
-          type: integer
-          format: int64
-          description: Credits available for immediate consumption.
-        settled_credits:
-          type: integer
-          format: int64
-          description: Credits that have been booked on the ledger.
-        pending_credits:
-          type: integer
-          format: int64
-          description: Credits granted but not yet written to the ledger.
-      additionalProperties: false
-      description: |-
-        Integer credit balance for AI usage, scoped to a single currency.
-
-        Unlike the OpenMeter Credits decimal balance, AI Usage tracks credits as signed
-        64-bit integers to avoid floating-point rounding in settlement.
-    AIUsageCreditTransaction:
-      type: object
-      required:
-        - id
-        - booked_at
-        - type
-        - amount
-        - available_balance_before
-        - available_balance_after
-      properties:
-        id:
-          allOf:
-            - $ref: '#/components/schemas/ULID'
-          description: Unique identifier of the transaction.
-          readOnly: true
-        booked_at:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: When the transaction was booked.
-          readOnly: true
-        type:
-          allOf:
-            - $ref: '#/components/schemas/AIUsageCreditTransactionType'
-          description: The type of credit movement.
-          readOnly: true
-        amount:
-          type: integer
-          format: int64
-          description: Signed credit amount. Positive adds balance, negative reduces it.
-          readOnly: true
-        available_balance_before:
-          type: integer
-          format: int64
-          description: Available balance before this transaction.
-          readOnly: true
-        available_balance_after:
-          type: integer
-          format: int64
-          description: Available balance after this transaction.
-          readOnly: true
-      additionalProperties: false
-      description: An immutable credit movement on the AI Usage integer credit ledger.
-    AIUsageCreditTransactionType:
-      type: string
-      enum:
-        - funded
-        - consumed
-        - expired
-        - voided
-      description: The type of a credit movement on the AI Usage integer credit ledger.
-    AIUsageRuntimeAuthorization:
-      type: object
-      required:
-        - contract_version
-        - retrieved_at
-        - authorized
-        - available_credits
-        - covered_tenant_seq
-      properties:
-        contract_version:
-          type: string
-          description: |-
-            The frozen Phase 1 contract version string (currently `weknora-billing-p1-v1`).
-            Clients can use this to detect contract changes.
-        retrieved_at:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: The timestamp of the authorization check.
-          readOnly: true
-        authorized:
-          type: boolean
-          description: Whether the customer is authorized to consume AI resources.
-        available_credits:
-          type: integer
-          format: int64
-          description: Available integer Credit balance for AI consumption.
-        reservation_ceiling_credits:
-          type: integer
-          format: int64
-          description: |-
-            The reservation ceiling in Credits, if a reservation is active. When set, usage
-            is capped at this amount per reservation period.
-        covered_tenant_seq:
-          type: integer
-          format: int64
-          description: |-
-            The highest continuously covered tenant sequence number, used for watermark
-            tracking.
-        denial_reason:
-          type: string
-          description: The reason authorization was denied, when `authorized` is `false`.
-        canonical_payload:
-          type: object
-          additionalProperties: {}
-          description: |-
-            Canonical JSON payload for consumer-side verification. The raw bytes of
-            the canonicalized authorization object, used to derive the SHA-256 hash
-            and verify the signature.
-          x-go-type-skip-optional-pointer: true
-          x-go-type: json.RawMessage
-          x-go-name: CanonicalPayload
-        canonical_sha256:
-          type: string
-          description: SHA-256 hash of the canonical payload, hex-encoded.
-          x-go-type-skip-optional-pointer: true
-          x-go-name: CanonicalSHA256
-        key_id:
-          type: string
-          description: The key ID used to sign the authorization.
-          x-go-type-skip-optional-pointer: true
-          x-go-name: KeyID
-        signature:
-          type: string
-          description: Base64-encoded signature over the canonical payload.
-          x-go-type-skip-optional-pointer: true
-        snapshot_version:
-          type: integer
-          format: int64
-          description: The snapshot version for watermark tracking.
-          x-go-type-skip-optional-pointer: true
-        subject_key:
-          type: string
-          description: The subject or tenant key this authorization applies to.
-          x-go-type-skip-optional-pointer: true
-        valid_until:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: The timestamp until which this authorization is valid.
-      additionalProperties: false
-      description: |-
-        Runtime authorization decision for a customer's AI usage.
-
-        Returned before processing a usage batch to indicate whether the customer is
-        authorized to consume AI resources, along with their current credit balance and
-        reservation ceiling.
-    AIUsageRuntimeAuthorizationQuery:
-      type: object
-      properties:
-        subject_key:
-          type: string
-          description: |-
-            The subject or tenant key that will produce the usage. Required to check the
-            tenant's sequence watermark and reservation status.
-        reservation_id:
-          type: string
-          description: The reservation ID to check the ceiling against.
-      additionalProperties: false
-      description: Query parameters for the runtime authorization endpoint.
-    AIUsageSalesSnapshot:
-      type: object
-      required:
-        - currency
-        - amount
-        - rate_card_version
-      properties:
-        currency:
-          $ref: '#/components/schemas/BillingCurrencyCode'
-        amount:
-          $ref: '#/components/schemas/Numeric'
-        rate_card_version:
-          type: string
-      additionalProperties: false
-      description: The customer-facing sales price snapshot (typically in CNY for display).
-    AIUsageUsageBatch:
-      type: object
-      required:
-        - id
-        - idempotency_key
-        - payload_hash
-        - billing_customer_id
-        - subject_key
-        - tenant_seq
-        - occurred_at
-        - reservation_id
-        - reservation_ceiling_credits
-        - rate_package_version
-        - billing_mode
-        - provider_managed
-        - lines
-        - status
-        - total_credits
-        - covered_tenant_seq
-        - created_at
-      properties:
-        id:
-          allOf:
-            - $ref: '#/components/schemas/ULID'
-          description: Unique identifier of the batch.
-          readOnly: true
-        idempotency_key:
-          type: string
-          description: The idempotency key from the create request.
-        payload_hash:
-          type: string
-          description: SHA-256 hex digest of the canonical request body.
-        billing_customer_id:
-          $ref: '#/components/schemas/ULID'
-        subject_key:
-          type: string
-        tenant_seq:
-          type: integer
-          format: int64
-        occurred_at:
-          $ref: '#/components/schemas/DateTime'
-        reservation_id:
-          type: string
-        reservation_ceiling_credits:
-          type: integer
-          format: int64
-        rate_package_version:
-          type: string
-        billing_mode:
-          $ref: '#/components/schemas/AIUsageBillingMode'
-        provider_managed:
-          type: boolean
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/AIUsageUsageLine'
-          description: The consumed line items with resolved pricing.
-        status:
-          allOf:
-            - $ref: '#/components/schemas/AIUsageBatchStatus'
-          description: Settlement status.
-        total_credits:
-          type: integer
-          format: int64
-          description: |-
-            Total integer Credit charge for the batch, after applying the reservation
-            ceiling.
-        covered_tenant_seq:
-          type: integer
-          format: int64
-          description: The highest continuously covered tenant sequence number after settlement.
-        created_at:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: Creation timestamp.
-          readOnly: true
-      additionalProperties: false
-      description: A settled AI Usage Batch with its rating and settlement results.
-    AIUsageUsageBatchCreate:
-      type: object
-      required:
-        - idempotency_key
-        - payload_hash
-        - billing_customer_id
-        - subject_key
-        - tenant_seq
-        - occurred_at
-        - reservation_id
-        - reservation_ceiling_credits
-        - rate_package_version
-        - billing_mode
-        - provider_managed
-        - lines
-      properties:
-        idempotency_key:
-          type: string
-          description: |-
-            Client-generated idempotency key. Replaying the same key with the same
-            `payload_hash` returns the stored result with HTTP 200. A replay with a
-            different `payload_hash` for the same key returns HTTP 409.
-        payload_hash:
-          type: string
-          description: |-
-            SHA-256 hex digest of the canonical request body, used for idempotency
-            verification.
-        billing_customer_id:
-          allOf:
-            - $ref: '#/components/schemas/ULID'
-          description: The billing customer (payer) in OpenMeter.
-        subject_key:
-          type: string
-          description: The subject or tenant key that produced the usage.
-        tenant_seq:
-          type: integer
-          format: int64
-          description: |-
-            Monotonic per-tenant sequence number for watermark tracking. Must be strictly
-            increasing within a tenant.
-        occurred_at:
-          allOf:
-            - $ref: '#/components/schemas/DateTime'
-          description: When the business action occurred. Used for rate package version resolution.
-        reservation_id:
-          type: string
-          description: Links to the WeKnora runtime reservation, if any.
-        reservation_ceiling_credits:
-          type: integer
-          format: int64
-          description: |-
-            Caps the total Credit charge for this batch. The platform absorbs any excess
-            above the ceiling.
-        rate_package_version:
-          type: string
-          description: Rate package version snapshot used for settlement.
-        billing_mode:
-          allOf:
-            - $ref: '#/components/schemas/AIUsageBillingMode'
-          description: Billing mode for this batch.
-        provider_managed:
-          type: boolean
-          description: |-
-            Whether model resources are platform-managed. Set to `false` for
-            bring-your-own-key (BYOK) models.
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/AIUsageUsageLineCreate'
-          minItems: 1
-          description: |-
-            The individual resource consumption entries. Must contain at least one line for
-            `component` billing mode.
-      additionalProperties: false
-      description: |-
-        Request body for submitting a Canonical AI Usage Batch.
-
-        A batch represents one business action (a chat turn, an agent run, etc.) and is
-        the atomic unit of AI billing settlement.
-    AIUsageUsageLine:
-      type: object
-      required:
-        - resource_code
-        - quantity
-        - canonical_line_index
-        - credits
-      properties:
-        resource_code:
-          type: string
-          description: |-
-            Resource code identifying the billable resource type.
-
-            Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
-            `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
-            `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
-            `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
-            `mcp_tool_calls`, `web_searches`, `agent_runs`.
-        quantity:
-          type: integer
-          format: int64
-          description: Raw consumption quantity (tokens, calls, seconds, pages, or images).
-          example: 1500
-        provider:
-          type: string
-          description: |-
-            LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
-            resources.
-        model:
-          type: string
-          description: |-
-            Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
-            provider-managed resources.
-        pricing_dimensions:
-          type: object
-          additionalProperties:
-            type: string
-          description: Optional resource-specific pricing dimensions (e.g. region, tier).
-        canonical_line_index:
-          type: integer
-          format: int32
-          description: |-
-            Stable zero-based position used for deterministic ceiling allocation when the
-            batch total exceeds the reservation ceiling.
-        credits:
-          type: integer
-          format: int64
-          description: Integer Credit charge for this line.
-        cost_snapshot:
-          allOf:
-            - $ref: '#/components/schemas/AIUsageCostSnapshot'
-          description: Provider cost snapshot. Omitted for BYOK resources (cost is zero).
-        sales_snapshot:
-          allOf:
-            - $ref: '#/components/schemas/AIUsageSalesSnapshot'
-          description: Customer sales price snapshot.
-      additionalProperties: false
-      description: |-
-        A rated usage line returned in a settled batch, with resolved cost and sales
-        snapshots.
-    AIUsageUsageLineCreate:
-      type: object
-      required:
-        - resource_code
-        - quantity
-        - canonical_line_index
-      properties:
-        resource_code:
-          type: string
-          description: |-
-            Resource code identifying the billable resource type.
-
-            Valid codes include: `llm_input_tokens`, `llm_output_tokens`,
-            `llm_cache_read_tokens`, `llm_cache_write_tokens`, `llm_reasoning_tokens`,
-            `embedding_tokens`, `rerank_calls`, `vlm_input_tokens`, `vlm_output_tokens`,
-            `vlm_images`, `asr_milliseconds`, `rag_queries`, `doc_parse_pages`,
-            `mcp_tool_calls`, `web_searches`, `agent_runs`.
-        quantity:
-          type: integer
-          format: int64
-          description: Raw consumption quantity (tokens, calls, seconds, pages, or images).
-          example: 1500
-        provider:
-          type: string
-          description: |-
-            LLM provider (e.g. `openai`, `anthropic`). Required for provider-managed
-            resources.
-        model:
-          type: string
-          description: |-
-            Canonical model identifier (e.g. `gpt-4o`, `claude-3-5-sonnet`). Required for
-            provider-managed resources.
-        pricing_dimensions:
-          type: object
-          additionalProperties:
-            type: string
-          description: Optional resource-specific pricing dimensions (e.g. region, tier).
-        canonical_line_index:
-          type: integer
-          format: int32
-          description: |-
-            Stable zero-based position used for deterministic ceiling allocation when the
-            batch total exceeds the reservation ceiling.
-      additionalProperties: false
-      description: One billable resource line within a usage batch creation request.
     Addon:
       type: object
       required:
@@ -4953,6 +4562,43 @@ components:
           $ref: '#/components/schemas/PaginatedMeta'
       additionalProperties: false
       description: Page paginated response.
+    BaseError:
+      type: object
+      required:
+        - type
+        - status
+        - title
+        - detail
+        - instance
+      properties:
+        type:
+          type: string
+          description: Type contains a URI that identifies the problem type.
+          example: about:blank
+          default: about:blank
+          readOnly: true
+        status:
+          type: integer
+          description: |-
+            The HTTP status code generated by the origin server for this occurrence of the
+            problem.
+          example: 400
+          readOnly: true
+        title:
+          type: string
+          description: A a short, human-readable summary of the problem type.
+          example: Bad Request
+          readOnly: true
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem.
+          example: The request body must be a JSON object.
+        instance:
+          type: string
+          description: A URI reference that identifies the specific occurrence of the problem.
+          readOnly: true
+      additionalProperties: {}
+      description: Standard error response.
     BillingApp:
       type: object
       oneOf:
@@ -12022,6 +11668,117 @@ components:
       additionalProperties: false
       description: The credit balance by currency.
       title: Credit balance
+    CreditBalanceInsufficient:
+      type: object
+      properties:
+        type: {}
+        status: {}
+        title: {}
+        detail: {}
+        instance: {}
+      additionalProperties: false
+      allOf:
+        - $ref: '#/components/schemas/BaseError'
+    CreditCharge:
+      type: object
+      required:
+        - id
+        - customer_id
+        - reservation_id
+        - currency
+        - rate_version
+        - lines
+        - total_credits
+        - state
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        reservation_id:
+          type: string
+        currency:
+          $ref: '#/components/schemas/CreditCurrency'
+        rate_version:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditRatedLine'
+        total_credits:
+          type: integer
+          format: int64
+        state:
+          type: string
+      additionalProperties: false
+    CreditChargeCreate:
+      type: object
+      required:
+        - id
+        - customer_id
+        - subject_id
+        - operation
+        - idempotency_key
+        - payload_hash
+        - lines
+        - booked_at
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        subject_id:
+          type: string
+        operation:
+          type: string
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditResourceLine'
+        booked_at:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+    CreditChargeReverse:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+        - reversed_at
+      properties:
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        reversed_at:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+    CreditCurrency:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+        custom_currency_id:
+          type: string
+      additionalProperties: false
+    CreditFundingSplit:
+      type: object
+      required:
+        - prepaid_hold
+        - enterprise_hold
+      properties:
+        prepaid_hold:
+          type: integer
+          format: int64
+        enterprise_hold:
+          type: integer
+          format: int64
+      additionalProperties: false
     CreditGrantPagePaginatedResponse:
       type: object
       required:
@@ -12036,6 +11793,217 @@ components:
           $ref: '#/components/schemas/PaginatedMeta'
       additionalProperties: false
       description: Page paginated response.
+    CreditRatedLine:
+      type: object
+      required:
+        - feature_key
+        - resource_code
+        - quantity
+        - rate_card_key
+        - rate_version
+        - credits
+      properties:
+        feature_key:
+          type: string
+        resource_code:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+        provider:
+          type: string
+        model:
+          type: string
+        dimensions:
+          type: object
+          additionalProperties:
+            type: string
+        rate_card_key:
+          type: string
+        rate_version:
+          type: string
+        credits:
+          type: integer
+          format: int64
+      additionalProperties: false
+    CreditReservation:
+      type: object
+      required:
+        - id
+        - customer_id
+        - currency
+        - state
+        - rate_version
+        - lines
+        - ceiling_credits
+        - settled_credits
+        - funding
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        currency:
+          $ref: '#/components/schemas/CreditCurrency'
+        state:
+          $ref: '#/components/schemas/CreditReservationState'
+        rate_version:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditRatedLine'
+        ceiling_credits:
+          type: integer
+          format: int64
+        settled_credits:
+          type: integer
+          format: int64
+        expires_at:
+          $ref: '#/components/schemas/DateTime'
+        execution_deadline:
+          $ref: '#/components/schemas/DateTime'
+        funding:
+          $ref: '#/components/schemas/CreditFundingSplit'
+      additionalProperties: false
+    CreditReservationCreate:
+      type: object
+      required:
+        - id
+        - customer_id
+        - subject_id
+        - client_call_id
+        - operation
+        - idempotency_key
+        - payload_hash
+        - lines
+        - authorization_expires_at
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        subject_id:
+          type: string
+        client_call_id:
+          type: string
+        operation:
+          type: string
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditResourceLine'
+        authorization_expires_at:
+          $ref: '#/components/schemas/DateTime'
+        provider:
+          type: string
+        model:
+          type: string
+        request_id:
+          type: string
+      additionalProperties: false
+    CreditReservationEvidenceKind:
+      type: string
+      enum:
+        - not_sent
+        - provider_confirmed_not_executed
+    CreditReservationExecute:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+        - execution_deadline
+      properties:
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        execution_deadline:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+    CreditReservationRelease:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+        - evidence_kind
+      properties:
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        evidence_kind:
+          $ref: '#/components/schemas/CreditReservationEvidenceKind'
+        evidence_reference:
+          type: string
+      additionalProperties: false
+    CreditReservationSettle:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+        - actual_lines
+        - settled_at
+      properties:
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+        actual_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreditResourceLine'
+        settled_at:
+          $ref: '#/components/schemas/DateTime'
+      additionalProperties: false
+    CreditReservationState:
+      type: string
+      enum:
+        - active
+        - executing
+        - settled
+        - released
+        - unknown
+        - expired
+        - manual_review
+    CreditReservationUnknown:
+      type: object
+      required:
+        - idempotency_key
+        - payload_hash
+      properties:
+        idempotency_key:
+          type: string
+        payload_hash:
+          type: string
+      additionalProperties: false
+    CreditResourceLine:
+      type: object
+      required:
+        - feature_key
+        - resource_code
+        - quantity
+      properties:
+        feature_key:
+          type: string
+        resource_code:
+          type: string
+        quantity:
+          type: integer
+          format: int64
+        provider:
+          type: string
+        model:
+          type: string
+        dimensions:
+          type: object
+          additionalProperties:
+            type: string
+      additionalProperties: false
     CreditTransactionPaginatedResponse:
       type: object
       required:
@@ -12620,6 +12588,208 @@ components:
           $ref: '#/components/schemas/CursorMeta'
       additionalProperties: false
       description: Cursor paginated response.
+    InvalidParameter:
+      anyOf:
+        - $ref: '#/components/schemas/InvalidParameterStandard'
+        - $ref: '#/components/schemas/InvalidParameterMinimumLength'
+        - $ref: '#/components/schemas/InvalidParameterMaximumLength'
+        - $ref: '#/components/schemas/InvalidParameterChoiceItem'
+        - $ref: '#/components/schemas/InvalidParameterDependentItem'
+      description: A parameter that failed validation.
+    InvalidParameterChoiceItem:
+      type: object
+      required:
+        - field
+        - rule
+        - reason
+        - choices
+      properties:
+        field:
+          type: string
+          description: The name of the field that failed validation.
+          readOnly: true
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/InvalidParameterChoiceRule'
+          description: The enum validation rule that was violated.
+        reason:
+          type: string
+          description: A human readable explanation of why the field failed validation.
+          readOnly: true
+        choices:
+          type: array
+          items: {}
+          minItems: 1
+          description: The allowed choices for the field.
+          readOnly: true
+        source:
+          type: string
+          description: The part of the request the field came from (e.g. `body`, `query`).
+      additionalProperties: false
+      description: A parameter whose value was not one of the allowed choices.
+    InvalidParameterChoiceRule:
+      type: string
+      enum:
+        - enum
+      description: The enum validation rule.
+    InvalidParameterDependentItem:
+      type: object
+      required:
+        - field
+        - rule
+        - reason
+        - dependents
+      properties:
+        field:
+          type: string
+          description: The name of the field that failed validation.
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/InvalidParameterDependentRule'
+          description: The dependent-fields validation rule that was violated.
+        reason:
+          type: string
+          description: A human readable explanation of why the field failed validation.
+        dependents:
+          type: array
+          items: {}
+          description: The fields that this field depends on.
+        source:
+          type: string
+          description: The part of the request the field came from (e.g. `body`, `query`).
+      additionalProperties: false
+      description: A parameter that failed a dependent-fields validation rule.
+    InvalidParameterDependentRule:
+      type: string
+      enum:
+        - dependent_fields
+      description: The dependent-fields validation rule.
+    InvalidParameterMaximumLength:
+      type: object
+      required:
+        - field
+        - rule
+        - maximum
+        - reason
+      properties:
+        field:
+          type: string
+          description: The name of the field that failed validation.
+          readOnly: true
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/InvalidParameterMaximumRule'
+          description: The maximum validation rule that was violated.
+        maximum:
+          type: integer
+          description: The maximum allowed value or length.
+        source:
+          type: string
+          description: The part of the request the field came from (e.g. `body`, `query`).
+        reason:
+          type: string
+          description: A human readable explanation of why the field failed validation.
+          readOnly: true
+      additionalProperties: false
+      description: A parameter that failed a maximum-length (or maximum-value) validation rule.
+    InvalidParameterMaximumRule:
+      type: string
+      enum:
+        - max_length
+        - max_items
+        - max
+      description: Maximum-length (or maximum-value) validation rules.
+    InvalidParameterMinimumLength:
+      type: object
+      required:
+        - field
+        - rule
+        - minimum
+        - reason
+      properties:
+        field:
+          type: string
+          description: The name of the field that failed validation.
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/InvalidParameterMinimumRule'
+          description: The minimum validation rule that was violated.
+        minimum:
+          type: integer
+          description: The minimum allowed value or length.
+        source:
+          type: string
+          description: The part of the request the field came from (e.g. `body`, `query`).
+        reason:
+          type: string
+          description: A human readable explanation of why the field failed validation.
+      additionalProperties: false
+      description: A parameter that failed a minimum-length (or minimum-value) validation rule.
+    InvalidParameterMinimumRule:
+      type: string
+      enum:
+        - min_length
+        - min_digits
+        - min_lowercase
+        - min_uppercase
+        - min_symbols
+        - min_items
+        - min
+      description: Minimum-length (or minimum-value) validation rules.
+    InvalidParameterStandard:
+      type: object
+      required:
+        - field
+        - reason
+      properties:
+        field:
+          type: string
+          description: The name of the field that failed validation.
+          readOnly: true
+        rule:
+          allOf:
+            - $ref: '#/components/schemas/InvalidRules'
+          description: The validation rule that was violated.
+        source:
+          type: string
+          description: The part of the request the field came from (e.g. `body`, `query`).
+        reason:
+          type: string
+          description: A human readable explanation of why the field failed validation.
+      additionalProperties: false
+      description: A parameter that failed a standard validation rule.
+    InvalidParameters:
+      type: array
+      items:
+        $ref: '#/components/schemas/InvalidParameter'
+      minItems: 1
+      description: The list of parameters that failed validation.
+    InvalidRules:
+      type: string
+      enum:
+        - required
+        - is_array
+        - is_base64
+        - is_boolean
+        - is_date_time
+        - is_integer
+        - is_null
+        - is_number
+        - is_object
+        - is_string
+        - is_uuid
+        - is_fqdn
+        - is_arn
+        - unknown_property
+        - missing_reference
+        - is_label
+        - matches_regex
+        - invalid
+        - is_supported_network_availability_zone_list
+        - is_supported_network_cidr_block
+        - is_supported_provider_region
+        - type
+      description: The validation rule that a parameter failed.
     InvoicePagePaginatedResponse:
       type: object
       required:
@@ -15214,7 +15384,7 @@ components:
           default: none
       additionalProperties: false
       description: Request body for voiding a credit grant.
-    BaseError:
+    BaseError-2:
       type: object
       title: Error
       description: standard error
@@ -15256,7 +15426,7 @@ components:
             what went wrong. Enclose variable values in square brackets. Should be
             provided as "Sentence case" for direct use in the UI.
           readOnly: true
-    InvalidRules:
+    InvalidRules-2:
       description: invalid parameters rules
       type: string
       readOnly: true
@@ -15284,7 +15454,7 @@ components:
         - is_supported_network_cidr_block
         - is_supported_provider_region
         - type
-    InvalidParameterStandard:
+    InvalidParameterStandard-2:
       type: object
       additionalProperties: false
       properties:
@@ -15293,7 +15463,7 @@ components:
           example: name
           readOnly: true
         rule:
-          $ref: '#/components/schemas/InvalidRules'
+          $ref: '#/components/schemas/InvalidRules-2'
         source:
           type: string
           example: body
@@ -15304,7 +15474,7 @@ components:
       required:
         - field
         - reason
-    InvalidParameterMinimumLength:
+    InvalidParameterMinimumLength-2:
       type: object
       additionalProperties: false
       properties:
@@ -15340,7 +15510,7 @@ components:
         - reason
         - rule
         - minimum
-    InvalidParameterMaximumLength:
+    InvalidParameterMaximumLength-2:
       type: object
       additionalProperties: false
       properties:
@@ -15372,7 +15542,7 @@ components:
         - reason
         - rule
         - maximum
-    InvalidParameterChoiceItem:
+    InvalidParameterChoiceItem-2:
       type: object
       additionalProperties: false
       properties:
@@ -15406,7 +15576,7 @@ components:
         - reason
         - rule
         - choices
-    InvalidParameterDependentItem:
+    InvalidParameterDependentItem-2:
       type: object
       additionalProperties: false
       properties:
@@ -15439,7 +15609,7 @@ components:
         - rule
         - reason
         - dependents
-    InvalidParameters:
+    InvalidParameters-2:
       type: array
       nullable: false
       uniqueItems: true
@@ -15447,23 +15617,23 @@ components:
       description: invalid parameters
       items:
         oneOf:
-          - $ref: '#/components/schemas/InvalidParameterStandard'
-          - $ref: '#/components/schemas/InvalidParameterMinimumLength'
-          - $ref: '#/components/schemas/InvalidParameterMaximumLength'
-          - $ref: '#/components/schemas/InvalidParameterChoiceItem'
-          - $ref: '#/components/schemas/InvalidParameterDependentItem'
+          - $ref: '#/components/schemas/InvalidParameterStandard-2'
+          - $ref: '#/components/schemas/InvalidParameterMinimumLength-2'
+          - $ref: '#/components/schemas/InvalidParameterMaximumLength-2'
+          - $ref: '#/components/schemas/InvalidParameterChoiceItem-2'
+          - $ref: '#/components/schemas/InvalidParameterDependentItem-2'
     BadRequestError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           required:
             - invalid_parameters
           properties:
             invalid_parameters:
-              $ref: '#/components/schemas/InvalidParameters'
+              $ref: '#/components/schemas/InvalidParameters-2'
     UnauthorizedError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15478,7 +15648,7 @@ components:
               example: Invalid credentials
     ForbiddenError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15493,7 +15663,7 @@ components:
               example: Forbidden
     NotFoundError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15508,7 +15678,7 @@ components:
               example: Not found
     ConflictError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15614,7 +15784,7 @@ components:
         - page
     GoneError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15629,7 +15799,7 @@ components:
               example: Gone
     PayloadTooLargeError:
       allOf:
-        - $ref: '#/components/schemas/BaseError'
+        - $ref: '#/components/schemas/BaseError-2'
         - type: object
           properties:
             status:
@@ -15699,7 +15869,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: '#/components/schemas/BaseError'
+            $ref: '#/components/schemas/BaseError-2'
   examples:
     UnauthorizedExample:
       value:

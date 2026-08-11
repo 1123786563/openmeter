@@ -8,7 +8,7 @@
   - v1/v2 中 `deprecated: true` 的接口直接视为过期，不纳入待合并。
   - v1/v2 与 v3 的接口若命中“`method + 归一化路径`”则视为已转移，不再重复。
   - 归一化路径：移除 `/api/v1`、`/api/v2`、`/api/v3`、`/openmeter` 前缀；将路径参数统一为 `/{*}`。
-- 统计：v3 共 119 个接口；v1 共 139 个，v2 共 14 个；v1/v2 过期 20 个；已转移 57 个；待合并 76 个（v1：63，v2：13）。
+- 统计：v3 共 114 个接口；v1 共 139 个，v2 共 14 个；v1/v2 过期 20 个；已转移 57 个；待合并 76 个（v1：63，v2：13）。
 
 ## 一、v3 全量接口（按领域）
 
@@ -139,42 +139,6 @@ suffix is used to specify a descending order.
     - 403：—
     - 404：—
 
-### AI 使用批次（ai-usage-batches，共 2 个）
-- **`POST /ai-usage-batches`**
-  - 版本：v3
-  - operationId：create-ai-usage-batch
-  - 中文说明：执行Submit an AI usage batch
-  - 原始摘要：Submit an AI usage batch
-  - 标签：AI Usage
-  - 参数：
-    - 无
-  - 请求体：
-    - required：是
-    - application/json: #/components/schemas/AIUsageUsageBatchCreate
-  - 响应：
-    - 200：UsageBatch response.
-    - 201：UsageBatch created response.
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-    - 409：—
-- **`GET /ai-usage-batches/{batchId}`**
-  - 版本：v3
-  - operationId：get-ai-usage-batch
-  - 中文说明：获取AI 使用批次
-  - 原始摘要：Get an AI usage batch
-  - 标签：AI Usage
-  - 参数：
-    - path `batchId`（必填：是）：#/components/schemas/ULID；未提供
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：UsageBatch response.
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
 
 ### 应用目录（app-catalog，共 3 个）
 - **`GET /openmeter/app-catalog`**
@@ -553,7 +517,7 @@ filter[fiat_code]=USD
     - 401：—
     - 403：—
 
-### 客户（customers，共 28 个）
+### 客户（customers，共 25 个）
 - **`GET /openmeter/customers`**
   - 版本：v3
   - operationId：list-customers
@@ -784,40 +748,6 @@ Supported values are:
     - 400：—
     - 401：—
     - 403：—
-- **`GET /customers/{customerId}/credit-balance`**
-  - 版本：v3
-  - operationId：get-ai-usage-credit-balance
-  - 中文说明：获取客户
-  - 原始摘要：Get AI usage credit balance
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
-    - query `timestamp`（必填：否）：#/components/schemas/DateTime；Return the credit balance as of this timestamp. Defaults to now.
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：AICreditBalance response.
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-- **`GET /customers/{customerId}/credit-transactions`**
-  - 版本：v3
-  - operationId：list-ai-usage-credit-transactions
-  - 中文说明：查询客户
-  - 原始摘要：List AI usage credit transactions
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
-    - query `page`（必填：否）：#/components/schemas/CursorPaginationQueryPage；未提供
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：Cursor paginated response.
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
 - **`POST /openmeter/customers/{customerId}/credits/adjustments`**
   - 版本：v3
   - operationId：create-credit-adjustment
@@ -1028,23 +958,6 @@ live charge impacts are only available for current balances.
     - application/json: #/components/schemas/CommerceExternalInvoiceUpdate
   - 响应：
     - 200：ExternalInvoice updated response.
-    - 400：—
-    - 401：—
-    - 403：—
-    - 404：—
-- **`GET /customers/{customerId}/runtime-authorization`**
-  - 版本：v3
-  - operationId：get-customer-runtime-authorization
-  - 中文说明：获取客户
-  - 原始摘要：Get runtime authorization
-  - 标签：AI Usage
-  - 参数：
-    - path `customerId`（必填：是）：#/components/schemas/ULID；未提供
-    - query `filter`（必填：否）：#/components/schemas/AIUsageRuntimeAuthorizationQuery；Filter the authorization check by subject and reservation.
-  - 请求体：
-    - 无
-  - 响应：
-    - 200：RuntimeAuthorization response.
     - 400：—
     - 401：—
     - 403：—
