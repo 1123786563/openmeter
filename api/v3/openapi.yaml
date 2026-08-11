@@ -1362,6 +1362,7 @@ paths:
     post:
       operationId: create-customer
       summary: Create customer
+      description: Create a customer.
       responses:
         '201':
           description: Customer created response.
@@ -1386,6 +1387,7 @@ paths:
     get:
       operationId: list-customers
       summary: List customers
+      description: List customers.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: sort
@@ -1433,6 +1435,7 @@ paths:
     get:
       operationId: get-customer
       summary: Get customer
+      description: Get customer by ID.
       parameters:
         - name: customerId
           in: path
@@ -1459,6 +1462,7 @@ paths:
     put:
       operationId: upsert-customer
       summary: Upsert customer
+      description: Upsert a customer.
       parameters:
         - name: customerId
           in: path
@@ -1493,6 +1497,7 @@ paths:
     delete:
       operationId: delete-customer
       summary: Delete customer
+      description: Delete a customer.
       parameters:
         - name: customerId
           in: path
@@ -1516,6 +1521,7 @@ paths:
     get:
       operationId: get-customer-billing
       summary: Get customer billing data
+      description: Get customer billing data.
       parameters:
         - name: customerId
           in: path
@@ -1542,6 +1548,7 @@ paths:
     put:
       operationId: update-customer-billing
       summary: Update customer billing data
+      description: Update customer billing data.
       parameters:
         - name: customerId
           in: path
@@ -1577,6 +1584,7 @@ paths:
     put:
       operationId: update-customer-billing-app-data
       summary: Update customer billing app data
+      description: Update customer billing app data.
       parameters:
         - name: customerId
           in: path
@@ -2143,6 +2151,7 @@ paths:
     get:
       operationId: list-customer-entitlement-access
       summary: List customer entitlement access
+      description: List customer entitlement access records.
       parameters:
         - name: customerId
           in: path
@@ -2170,6 +2179,7 @@ paths:
     get:
       operationId: get-organization-default-tax-codes
       summary: Get organization default tax codes
+      description: Get organization default tax codes.
       responses:
         '200':
           description: OrganizationDefaultTaxCodes response.
@@ -2191,6 +2201,7 @@ paths:
     put:
       operationId: update-organization-default-tax-codes
       summary: Update organization default tax codes
+      description: Update organization default tax codes.
       responses:
         '200':
           description: OrganizationDefaultTaxCodes upsert response.
@@ -3448,6 +3459,7 @@ paths:
     post:
       operationId: create-subscription
       summary: Create subscription
+      description: Create a subscription.
       responses:
         '201':
           description: Subscription created response.
@@ -3476,6 +3488,7 @@ paths:
     get:
       operationId: list-subscriptions
       summary: List subscriptions
+      description: List subscriptions.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: sort
@@ -3522,6 +3535,7 @@ paths:
     get:
       operationId: get-subscription
       summary: Get subscription
+      description: Get subscription details.
       parameters:
         - name: subscriptionId
           in: path
@@ -3773,6 +3787,7 @@ paths:
     post:
       operationId: create-tax-code
       summary: Create tax code
+      description: Create a tax code.
       responses:
         '201':
           description: TaxCode created response.
@@ -3798,6 +3813,7 @@ paths:
     get:
       operationId: list-tax-codes
       summary: List tax codes
+      description: List tax codes.
       parameters:
         - $ref: '#/components/parameters/PagePaginationQuery'
         - name: include_deleted
@@ -3828,6 +3844,7 @@ paths:
     get:
       operationId: get-tax-code
       summary: Get tax code
+      description: Get tax code by ID.
       parameters:
         - name: taxCodeId
           in: path
@@ -3855,6 +3872,7 @@ paths:
     put:
       operationId: upsert-tax-code
       summary: Upsert tax code
+      description: Upsert a tax code.
       parameters:
         - name: taxCodeId
           in: path
@@ -3890,6 +3908,7 @@ paths:
     delete:
       operationId: delete-tax-code
       summary: Delete tax code
+      description: Delete a tax code.
       parameters:
         - name: taxCodeId
           in: path

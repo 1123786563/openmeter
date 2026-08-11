@@ -668,6 +668,7 @@ paths:
     post:
       operationId: appCustomInvoicingDraftSynchronized
       summary: Submit draft synchronization results
+      description: Submit draft synchronization results for a custom invoicing invoice.
       parameters:
         - name: invoiceId
           in: path
@@ -733,6 +734,7 @@ paths:
     post:
       operationId: appCustomInvoicingIssuingSynchronized
       summary: Submit issuing synchronization results
+      description: Submit issuing synchronization results for a custom invoicing invoice.
       parameters:
         - name: invoiceId
           in: path
@@ -798,6 +800,7 @@ paths:
     post:
       operationId: appCustomInvoicingUpdatePaymentStatus
       summary: Update payment status
+      description: Update the payment status for a custom invoicing invoice.
       parameters:
         - name: invoiceId
           in: path
@@ -5906,6 +5909,7 @@ paths:
             maxLength: 64
             pattern: ^[a-z0-9]+(?:_[a-z0-9]+)*$|^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$
       summary: Query meter
+      description: Query meter usage data.
       responses:
         '200':
           description: The request has succeeded.
@@ -6635,6 +6639,7 @@ paths:
     post:
       operationId: resendNotificationEvent
       summary: Re-send notification event
+      description: Re-send a notification event.
       parameters:
         - name: eventId
           in: path
@@ -9728,6 +9733,7 @@ paths:
     post:
       operationId: createSubscription
       summary: Create subscription
+      description: Create a subscription.
       responses:
         '201':
           description: The request has succeeded and a new resource has been created as a result.
@@ -9797,6 +9803,7 @@ paths:
     get:
       operationId: getSubscription
       summary: Get subscription
+      description: Get subscription details.
       parameters:
         - name: subscriptionId
           in: path

@@ -1,7 +1,7 @@
 extends: [[spectral:oas, recommended]]
 rules:
   info-contact: off
-  operation-description: off
+
 
   # Disabled due to TypeSpec conversion
   oas3-valid-schema-example: off
