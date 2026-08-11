@@ -502,6 +502,22 @@ func TestComplete(t *testing.T) {
 				featuregate.FeatureFlag("om_ff_credits_enabled"): "credits",
 			},
 		},
+		Commerce: CommerceConfiguration{
+			Enabled: false,
+			Payment: CommercePaymentConfiguration{
+				HTTPTimeout:       10 * time.Second,
+				MaxResponseBytes:  1024 * 1024,
+				PendingStaleAfter: 30 * time.Second,
+				WeChat: WeChatPaymentConfiguration{
+					BaseURL:                "https://api.mch.weixin.qq.com",
+					PlatformPublicKeyFiles: map[string]string{},
+					CallbackMaxAge:         5 * time.Minute,
+				},
+				Alipay: AlipayPaymentConfiguration{
+					GatewayURL: "https://openapi.alipay.com/gateway.do",
+				},
+			},
+		},
 	}
 
 	assert.Equal(t, expected, actual)
