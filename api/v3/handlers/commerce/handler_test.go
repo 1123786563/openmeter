@@ -940,31 +940,33 @@ func TestWechatCallback_NilPayment_501(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Payment callback transient error test (Important #3)
+// Payment callback error provenance
 // ---------------------------------------------------------------------------
 
-func TestPaymentCallback_TxRunnerError_500(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: errors.New("paid TxRunner: database connection lost")},
-	})
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusInternalServerError)
-}
+func TestPaymentCallbackErrorClassification(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+	}{
+		{name: "unknown provider order from production repository", err: commerce.ErrPaymentAttemptNotFound, wantStatus: http.StatusBadRequest},
+		{name: "unknown provider order from payment repository", err: payment.ErrPaymentAttemptNotFound, wantStatus: http.StatusBadRequest},
+		{name: "paid transition wraps missing order", err: fmt.Errorf("%w: payment: paid transition: %w", payment.ErrRetryableCallback, commerce.ErrOrderNotFound), wantStatus: http.StatusInternalServerError},
+		{name: "retryable provenance wins over deterministic sentinel", err: fmt.Errorf("%w: paid transition: %w", payment.ErrRetryableCallback, payment.ErrPaymentAttemptNotFound), wantStatus: http.StatusInternalServerError},
+		{name: "paid transition database failure", err: errors.New("paid TxRunner: database connection lost"), wantStatus: http.StatusInternalServerError},
+		{name: "wrapped context cancellation", err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled), wantStatus: http.StatusInternalServerError},
+		{name: "wrapped deadline exceeded", err: fmt.Errorf("payment database timed out: %w", context.DeadlineExceeded), wantStatus: http.StatusInternalServerError},
+		{name: "non-whitelisted payment validation issue", err: payment.ErrPaymentNotVerified, wantStatus: http.StatusInternalServerError},
+		{name: "non-whitelisted commerce validation issue", err: commerce.ErrOrderIdempotencyConflict, wantStatus: http.StatusInternalServerError},
+	}
 
-func TestPaymentCallback_WrappedContextCanceledTransientError_500(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled)},
-	})
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusInternalServerError)
-}
-
-func TestPaymentCallback_WrappedDeadlineExceededTransientError_500(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: fmt.Errorf("payment database timed out: %w", context.DeadlineExceeded)},
-	})
-	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusInternalServerError)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Payment: &mockPayment{err: tt.err}})
+			rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+			requireProblemResponse(t, rr, tt.wantStatus)
+		})
+	}
 }
 
 func TestPaymentCallback_SignatureRejection_400(t *testing.T) {

@@ -476,7 +476,11 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	// Locate the attempt by namespace + provider + provider order ID.
 	attempt, err := s.attempts.GetAttemptByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: locate attempt by provider order %s in namespace %s: %w", pf.ProviderOrderID, namespace, err)
+		wrapped := fmt.Errorf("payment: locate attempt by provider order %s in namespace %s: %w", pf.ProviderOrderID, namespace, err)
+		if errors.Is(err, commerce.ErrPaymentAttemptNotFound) || errors.Is(err, ErrPaymentAttemptNotFound) {
+			return CallbackResult{}, wrapped
+		}
+		return CallbackResult{}, markRetryableCallback(wrapped)
 	}
 
 	// Dedup by raw hash: if we've already seen this exact callback, return
@@ -487,7 +491,7 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
 		}
 		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
-			return CallbackResult{}, fmt.Errorf("payment: look up fact by raw hash: %w", err)
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: look up fact by raw hash: %w", err))
 		}
 	}
 
@@ -498,14 +502,14 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
 		}
 		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
-			return CallbackResult{}, fmt.Errorf("payment: look up fact by provider event: %w", err)
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: look up fact by provider event: %w", err))
 		}
 	}
 
 	// Check for contradictory success facts on the same provider order.
 	existingFacts, err := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: list facts by provider order: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: list facts by provider order: %w", err))
 	}
 	if err := checkContradiction(existingFacts, pf); err != nil {
 		return CallbackResult{}, err
@@ -541,7 +545,7 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 		// Record the fact but don't transition. The order stays in its current state.
 		saved, _, err := s.facts.InsertFact(ctx, record)
 		if err != nil {
-			return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: insert payment fact: %w", err))
 		}
 		return CallbackResult{Attempt: attempt, Fact: saved}, nil
 	}
@@ -556,14 +560,14 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 		},
 	})
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: paid transition: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: paid transition: %w", err))
 	}
 	if result.Fact == nil {
-		return CallbackResult{}, errors.New("payment: paid transition returned no payment fact")
+		return CallbackResult{}, markRetryableCallback(errors.New("payment: paid transition returned no payment fact"))
 	}
 	attempt, err = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt after paid transition: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: reload payment attempt after paid transition: %w", err))
 	}
 
 	return CallbackResult{Attempt: attempt, Fact: result.Fact, AlreadyPaid: result.AlreadyPaid}, nil
@@ -584,13 +588,20 @@ func (s *service) resultForExistingFact(
 	}
 	current, err := s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt for existing fact: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: reload payment attempt for existing fact: %w", err))
 	}
 	return CallbackResult{
 		Attempt:     current,
 		Fact:        fact,
 		AlreadyPaid: current.Status == AttemptStatusSucceeded,
 	}, nil
+}
+
+func markRetryableCallback(err error) error {
+	if err == nil || errors.Is(err, ErrRetryableCallback) {
+		return err
+	}
+	return fmt.Errorf("%w: %w", ErrRetryableCallback, err)
 }
 
 // existingPaymentFactMatches prevents a raw-hash or provider-event collision

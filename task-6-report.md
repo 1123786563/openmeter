@@ -90,3 +90,70 @@ Direct OpenAPI assertions passed:
 - The complete aggregate `make update-openapi` target could not finish because of the host's legacy Python SDK emitter requirement. The Task 6 AIP generator, bundle, v3 server generation, handler tests, and nested v3 client tests all completed successfully.
 - Full repository tests and live provider callbacks were outside Task 6's focused scope and were not run.
 - Residual risk is limited to the aggregate legacy generator environment; the changed v3 callback contract and generated artifacts were verified directly.
+
+## Fix Round 1
+
+### Result
+
+- Removed the callback handler's generic `ValidationIssue`/commerce-status fallback. Callback failures now use an explicit deterministic whitelist: signature, provider protocol, payment fact mismatch/contradiction, and both payment-attempt-not-found sentinels return `400`; every unknown error defaults to retryable `500`.
+- Added `payment.ErrRetryableCallback` provenance and applied it to unexpected attempt/fact repository failures, non-success fact inserts, all `PaidTxRunner` failures, missing transaction results, and post-transition/replay reload failures. The handler checks this marker before legal-replay or deterministic mapping, so a transaction failure wrapping `commerce.ErrOrderNotFound` cannot become `404`.
+- Preserved provider-native legal replay acknowledgments: WeChat remains empty `204`; Alipay remains `200 text/plain; charset=utf-8` with body exactly `success`.
+- TypeSpec/OpenAPI/generated outputs were not modified because the public contract did not change.
+
+### TDD evidence
+
+Red before implementation:
+
+```text
+GOWORK=off go test ./api/v3/handlers/commerce -run '^TestPaymentCallbackErrorClassification$' -count=1
+unknown provider order from production repository: expected 400, got 500
+unknown provider order from payment repository: expected 400, got 404
+paid transition wraps missing order: expected 500, got 404
+non-whitelisted payment validation issue: expected 500, got 402
+non-whitelisted commerce validation issue: expected 500, got 409
+
+GOWORK=off go test ./openmeter/commerce/payment -run 'TestApplyPaymentFact_(PaidTransitionFailureIsRetryable|AttemptLookupErrorProvenance|FactLookupFailureIsRetryable|InsertAndReloadFailuresAreRetryable)' -count=1
+build failed: undefined: ErrRetryableCallback
+```
+
+Green after implementation:
+
+```text
+GOWORK=off go test ./openmeter/commerce/payment -run 'TestApplyPaymentFact_(PaidTransitionFailureIsRetryable|AttemptLookupErrorProvenance|FactLookupFailureIsRetryable|InsertAndReloadFailuresAreRetryable)' -count=1
+ok github.com/openmeterio/openmeter/openmeter/commerce/payment
+
+GOWORK=off go test ./api/v3/handlers/commerce -run '^(TestPaymentCallbackErrorClassification|TestPaymentCallbackLegalReplayUsesProviderSuccessAck)$' -count=1
+ok github.com/openmeterio/openmeter/api/v3/handlers/commerce
+```
+
+The table-driven handler coverage includes unknown provider orders, a marked paid-transition failure wrapping `commerce.ErrOrderNotFound`, retryable provenance wrapping a deterministic sentinel, generic database failures, wrapped cancellation/deadline errors, non-whitelisted validation issues, and both legal replay sentinels for both providers.
+
+### Verification
+
+```text
+GOWORK=off go test ./api/v3 ./api/v3/handlers/commerce ./openmeter/commerce ./openmeter/commerce/payment/... ./openmeter/commerce/refund -count=1
+PASS (all seven packages)
+
+GOWORK=off go test -C api/v3/client ./... -count=1
+PASS
+
+GOWORK=off go test -race ./api/v3/handlers/commerce ./openmeter/commerce/payment ./openmeter/commerce/payment/wechat ./openmeter/commerce/payment/alipay -count=1
+PASS (all four packages)
+
+GOWORK=off go vet ./api/v3/handlers/commerce ./openmeter/commerce/payment/...
+PASS
+
+git diff --check
+PASS
+
+git diff --exit-code ac78622 -- api/spec api/v3/openapi.yaml api/v3/api.gen.go api/v3/client
+PASS (no TypeSpec/OpenAPI/generated-client drift)
+```
+
+Direct inspection confirms the callback OpenAPI responses remain Alipay `200` and WeChat `204`, plus `400`, inherited `401/403`, `413`, and `500`; no `402`, `404`, or `409` callback response is declared.
+
+### Not verified and risk
+
+- Live WeChat/Alipay delivery was not exercised; verification is focused on service/handler behavior and generated-contract consistency.
+- The aggregate legacy generator was not rerun because this round has no contract change and the prior report documents the host Python fallback blocker. The checked-in TypeSpec/OpenAPI/server/client artifacts have no diff from the reviewed Task 6 commit.
+- Remaining risk is limited to unexercised live provider retry timing; the production typed error paths and callback response classifications are covered by focused tests.

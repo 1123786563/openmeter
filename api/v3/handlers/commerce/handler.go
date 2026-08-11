@@ -577,6 +577,12 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 		_, cbErr := h.svc.Payment.HandleCallback(ctx, ns, provider, r.Header, body)
 		if cbErr != nil {
 			h.logger.WarnContext(ctx, "commerce: payment callback error", "provider", provider, "error", cbErr)
+			// Storage and paid-transition failures retain their retryable
+			// provenance even if they wrap a deterministic domain sentinel.
+			if errors.Is(cbErr, payment.ErrRetryableCallback) {
+				writeCallbackRetryableError(ctx, w)
+				return
+			}
 			if isSuccessfulCallbackError(cbErr) {
 				writeCallbackSuccess(w, provider)
 				return
@@ -631,32 +637,23 @@ func isSuccessfulCallbackError(err error) bool {
 		errors.Is(err, payment.ErrFulfillmentAlreadyDone)
 }
 
-// callbackErrorStatus returns a 4xx status for deterministic callback errors.
-// Non-deterministic errors return 500 so the provider retries them.
+// callbackErrorStatus uses an explicit callback-contract whitelist. Generic
+// commerce status mapping is intentionally not used because callback storage
+// failures can wrap domain sentinels whose ordinary API status is not valid for
+// a provider callback.
 func callbackErrorStatus(err error) int {
 	switch {
+	case errors.Is(err, payment.ErrRetryableCallback):
+		return http.StatusInternalServerError
 	case errors.Is(err, payment.ErrInvalidSignature),
 		errors.Is(err, payment.ErrPaymentFactMismatch),
-		errors.Is(err, payment.ErrContradictoryPaymentFact):
+		errors.Is(err, payment.ErrContradictoryPaymentFact),
+		errors.Is(err, payment.ErrPermanentProviderProtocol),
+		errors.Is(err, payment.ErrPaymentAttemptNotFound),
+		errors.Is(err, commerce.ErrPaymentAttemptNotFound):
 		return http.StatusBadRequest
-	case errors.Is(err, payment.ErrPermanentProviderProtocol):
-		return http.StatusBadRequest
-	}
-
-	var vi models.ValidationIssue
-	if !errors.As(err, &vi) {
-		return http.StatusInternalServerError
-	}
-
-	switch vi.Code() {
-	case payment.ErrCodePaymentAttemptNotFound:
-		return http.StatusNotFound
-	case payment.ErrCodePaymentNotVerified:
-		return http.StatusPaymentRequired
-	case payment.ErrCodeFulfillmentFailed:
-		return http.StatusInternalServerError
 	default:
-		return httpStatusForIssue(vi)
+		return http.StatusInternalServerError
 	}
 }
 
@@ -664,6 +661,9 @@ func callbackErrorStatus(err error) int {
 // transient and should cause the provider to retry. It is retained as a small
 // helper for callers/tests that need to inspect the retry classification.
 func isRetryableCallbackError(err error) bool {
+	if errors.Is(err, payment.ErrRetryableCallback) {
+		return true
+	}
 	if isSuccessfulCallbackError(err) {
 		return false
 	}

@@ -19,10 +19,12 @@ import (
 // --- Mock implementations ---
 
 type mockAttemptRepo struct {
-	mu       sync.Mutex
-	attempts map[string]*PaymentAttempt
-	byIdem   map[string]string
-	updateN  atomic.Int64
+	mu                    sync.Mutex
+	attempts              map[string]*PaymentAttempt
+	byIdem                map[string]string
+	getAttemptErr         error
+	getByProviderOrderErr error
+	updateN               atomic.Int64
 }
 
 func newMockAttemptRepo() *mockAttemptRepo {
@@ -49,6 +51,9 @@ func (m *mockAttemptRepo) CreateAttempt(_ context.Context, a PaymentAttempt) (*P
 func (m *mockAttemptRepo) GetAttempt(_ context.Context, namespace, id string) (*PaymentAttempt, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getAttemptErr != nil {
+		return nil, m.getAttemptErr
+	}
 	a, ok := m.attempts[id]
 	if !ok || a.Namespace != namespace {
 		return nil, ErrPaymentAttemptNotFound
@@ -71,6 +76,9 @@ func (m *mockAttemptRepo) GetAttemptByIdempotencyKey(_ context.Context, namespac
 func (m *mockAttemptRepo) GetAttemptByProviderOrder(_ context.Context, namespace string, provider Provider, providerOrderID string) (*PaymentAttempt, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getByProviderOrderErr != nil {
+		return nil, m.getByProviderOrderErr
+	}
 	for _, a := range m.attempts {
 		if (namespace == "" || a.Namespace == namespace) && a.Provider == provider && a.ProviderOrderID == providerOrderID {
 			cp := *a
@@ -118,6 +126,7 @@ type mockFactRepo struct {
 	getByRawHashErr  error
 	getByEventErr    error
 	getByProviderErr error
+	insertErr        error
 	insertN          atomic.Int64
 }
 
@@ -133,6 +142,9 @@ func (m *mockFactRepo) InsertFact(_ context.Context, f PaymentFactRecord) (*Paym
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.insertN.Add(1)
+	if m.insertErr != nil {
+		return nil, false, m.insertErr
+	}
 
 	// Dedup by raw hash.
 	if id, ok := m.byRawHash[f.Namespace+"/"+f.RawHash]; ok {
@@ -411,11 +423,12 @@ func TestApplyPaymentFact_PaidTransitionFailureIsRetryable(t *testing.T) {
 		}, nil
 	}
 	h.attempts.updateN.Store(0)
+	txErr := fmt.Errorf("lock order: %w", commerce.ErrOrderNotFound)
 	svc, err := New(Config{
 		Attempts: h.attempts,
 		Facts:    h.facts,
 		Orders:   h.orders,
-		TxRunner: failingPaidTxRunner{err: errors.New("database unavailable")},
+		TxRunner: failingPaidTxRunner{err: txErr},
 		Providers: map[Provider]ProviderAdapter{
 			ProviderWeChat: h.provider,
 		},
@@ -423,9 +436,41 @@ func TestApplyPaymentFact_PaidTransitionFailureIsRetryable(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
-	require.ErrorContains(t, err, "database unavailable")
+	require.ErrorIs(t, err, ErrRetryableCallback)
+	require.ErrorIs(t, err, commerce.ErrOrderNotFound)
 	require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
 	require.Zero(t, h.attempts.updateN.Load())
+}
+
+func TestApplyPaymentFact_AttemptLookupErrorProvenance(t *testing.T) {
+	tests := []struct {
+		name          string
+		repositoryErr error
+		wantRetryable bool
+	}{
+		{name: "production unknown provider order", repositoryErr: commerce.ErrPaymentAttemptNotFound},
+		{name: "payment unknown provider order", repositoryErr: ErrPaymentAttemptNotFound},
+		{name: "repository unavailable", repositoryErr: errors.New("attempt repository unavailable"), wantRetryable: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			h.attempts.getByProviderOrderErr = tt.repositoryErr
+			h.provider.verifyFn = func(_ context.Context, _ http.Header, _ []byte) (PaymentFact, error) {
+				return PaymentFact{Provider: ProviderWeChat, ProviderOrderID: "unknown-provider-order", Success: true}, nil
+			}
+
+			_, err := h.svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
+
+			require.ErrorIs(t, err, tt.repositoryErr)
+			if tt.wantRetryable {
+				require.ErrorIs(t, err, ErrRetryableCallback)
+			} else {
+				require.NotErrorIs(t, err, ErrRetryableCallback)
+			}
+		})
+	}
 }
 
 func TestApplyPaymentFact_FactLookupFailureIsRetryable(t *testing.T) {
@@ -475,10 +520,56 @@ func TestApplyPaymentFact_FactLookupFailureIsRetryable(t *testing.T) {
 
 			_, err := h.svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
 			require.ErrorIs(t, err, repoErr)
+			require.ErrorIs(t, err, ErrRetryableCallback)
 			require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
 			require.Zero(t, h.attempts.updateN.Load())
 		})
 	}
+}
+
+func TestApplyPaymentFact_InsertAndReloadFailuresAreRetryable(t *testing.T) {
+	t.Run("insert non-success fact", func(t *testing.T) {
+		h := newTestHarness(t)
+		_, _ = h.setupPaidOrder("default", "customer-1", "order-1", "provider-order-1", 100)
+		repoErr := errors.New("insert fact unavailable")
+		h.facts.insertErr = repoErr
+		h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+			return PaymentFact{
+				Provider:        ProviderWeChat,
+				ProviderOrderID: "provider-order-1",
+				AmountMinor:     100,
+				Currency:        "CNY",
+				RawHash:         HashRawBody(body),
+			}, nil
+		}
+
+		_, err := h.svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
+
+		require.ErrorIs(t, err, repoErr)
+		require.ErrorIs(t, err, ErrRetryableCallback)
+	})
+
+	t.Run("reload after paid transition", func(t *testing.T) {
+		h := newTestHarness(t)
+		_, _ = h.setupPaidOrder("default", "customer-1", "order-1", "provider-order-1", 100)
+		repoErr := errors.New("reload attempt unavailable")
+		h.attempts.getAttemptErr = repoErr
+		h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+			return PaymentFact{
+				Provider:        ProviderWeChat,
+				ProviderOrderID: "provider-order-1",
+				AmountMinor:     100,
+				Currency:        "CNY",
+				Success:         true,
+				RawHash:         HashRawBody(body),
+			}, nil
+		}
+
+		_, err := h.svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
+
+		require.ErrorIs(t, err, repoErr)
+		require.ErrorIs(t, err, ErrRetryableCallback)
+	})
 }
 
 // TestHandleCallbackValidPayment verifies the happy path: valid callback moves
