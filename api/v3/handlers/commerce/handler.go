@@ -1037,6 +1037,6 @@ func toDatePtr(t *time.Time) *api.DateTime {
 	if t == nil {
 		return nil
 	}
-	v := api.DateTime(*t)
+	v := *t
 	return &v
 }

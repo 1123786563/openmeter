@@ -420,7 +420,7 @@ func TestOrderStateMachineTransitions(t *testing.T) {
 	}
 
 	// paid -> fulfilled
-	o, err = svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusFulfilled)
+	_, err = svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusFulfilled)
 	if err != nil {
 		t.Fatalf("paid -> fulfilled: %v", err)
 	}
@@ -432,7 +432,7 @@ func TestOrderStateMachineTransitions(t *testing.T) {
 	}
 
 	// fulfilled -> refund_pending
-	o, err = svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusRefundPending)
+	_, err = svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusRefundPending)
 	if err != nil {
 		t.Fatalf("fulfilled -> refund_pending: %v", err)
 	}
@@ -500,10 +500,10 @@ func TestOrderCancellation(t *testing.T) {
 	})
 	o, err := svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusCancelled)
 	if err != nil {
-		t.Fatalf("created -> cancelled: %v", err)
+		t.Fatalf("created -> canceled: %v", err)
 	}
 	if o.Status != commerce.OrderStatusCancelled {
-		t.Fatalf("status = %s, want cancelled", o.Status)
+		t.Fatalf("status = %s, want canceled", o.Status)
 	}
 
 	// Cancel from awaiting_payment.
@@ -511,13 +511,13 @@ func TestOrderCancellation(t *testing.T) {
 		Namespace: "ns", CustomerID: "cust", Kind: commerce.OrderKindWalletTopUp,
 		IdempotencyKey: "idem-cancel-2", Currency: "CNY", ProductIDs: []string{"p1"},
 	})
-	svc.TransitionStatus(context.Background(), "ns", order2.ID, commerce.OrderStatusAwaitingPayment)
+	_, _ = svc.TransitionStatus(context.Background(), "ns", order2.ID, commerce.OrderStatusAwaitingPayment)
 	o2, err := svc.TransitionStatus(context.Background(), "ns", order2.ID, commerce.OrderStatusCancelled)
 	if err != nil {
-		t.Fatalf("awaiting_payment -> cancelled: %v", err)
+		t.Fatalf("awaiting_payment -> canceled: %v", err)
 	}
 	if o2.Status != commerce.OrderStatusCancelled {
-		t.Fatalf("status = %s, want cancelled", o2.Status)
+		t.Fatalf("status = %s, want canceled", o2.Status)
 	}
 }
 
@@ -605,7 +605,7 @@ func TestConcurrentStatusTransitions(t *testing.T) {
 		Namespace: "ns", CustomerID: "cust", Kind: commerce.OrderKindWalletTopUp,
 		IdempotencyKey: "idem-conc", Currency: "CNY", ProductIDs: []string{"p1"},
 	})
-	svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusAwaitingPayment)
+	_, _ = svc.TransitionStatus(context.Background(), "ns", order.ID, commerce.OrderStatusAwaitingPayment)
 
 	var wg sync.WaitGroup
 	var successCount atomic.Int64

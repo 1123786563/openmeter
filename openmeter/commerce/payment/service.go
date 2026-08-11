@@ -380,11 +380,11 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 	}
 
 	// Store provider IDs and transition to pending.
-	updated, err := s.attempts.SetProviderIDs(ctx, namespace, attemptID, fact.ProviderOrderID, fact.ProviderPaymentID, fact.QRCodeURL)
+	_, err = s.attempts.SetProviderIDs(ctx, namespace, attemptID, fact.ProviderOrderID, fact.ProviderPaymentID, fact.QRCodeURL)
 	if err != nil {
 		return CheckoutResult{}, err
 	}
-	updated, err = s.attempts.UpdateAttemptStatus(ctx, namespace, attemptID, AttemptStatusCreated, AttemptStatusPending)
+	updated, err := s.attempts.UpdateAttemptStatus(ctx, namespace, attemptID, AttemptStatusCreated, AttemptStatusPending)
 	if err != nil {
 		return CheckoutResult{}, err
 	}

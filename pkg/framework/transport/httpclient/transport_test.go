@@ -63,7 +63,10 @@ func TestLoggingTransport_TransportError(t *testing.T) {
 	var buf bytes.Buffer
 	client := &http.Client{Transport: NewLoggingTransport(http.DefaultTransport, newTestLogger(&buf))}
 
-	_, err := client.Get(server.URL)
+	resp, err := client.Get(server.URL)
+	if resp != nil {
+		resp.Body.Close()
+	}
 	if err == nil {
 		t.Fatal("expected a transport error")
 	}

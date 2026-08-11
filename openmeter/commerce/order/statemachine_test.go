@@ -25,20 +25,20 @@ func TestValidTransitions(t *testing.T) {
 		{"partially_refunded -> refunded", commerce.OrderStatusPartiallyRefunded, commerce.OrderStatusRefunded, true},
 
 		// Cancellation from early states
-		{"created -> cancelled", commerce.OrderStatusCreated, commerce.OrderStatusCancelled, true},
-		{"awaiting_payment -> cancelled", commerce.OrderStatusAwaitingPayment, commerce.OrderStatusCancelled, true},
+		{"created -> canceled", commerce.OrderStatusCreated, commerce.OrderStatusCancelled, true},
+		{"awaiting_payment -> canceled", commerce.OrderStatusAwaitingPayment, commerce.OrderStatusCancelled, true},
 		{"created -> expired", commerce.OrderStatusCreated, commerce.OrderStatusExpired, true},
 		{"awaiting_payment -> expired", commerce.OrderStatusAwaitingPayment, commerce.OrderStatusExpired, true},
 
 		// Invalid transitions
 		{"created -> paid (skip payment)", commerce.OrderStatusCreated, commerce.OrderStatusPaid, false},
 		{"created -> fulfilled (skip everything)", commerce.OrderStatusCreated, commerce.OrderStatusFulfilled, false},
-		{"paid -> cancelled (too late)", commerce.OrderStatusPaid, commerce.OrderStatusCancelled, false},
+		{"paid -> canceled (too late)", commerce.OrderStatusPaid, commerce.OrderStatusCancelled, false},
 		{"paid does not imply fulfilled", commerce.OrderStatusPaid, commerce.OrderStatusPaid, false},
 		{"fulfilled cannot return to paid", commerce.OrderStatusFulfilled, commerce.OrderStatusPaid, false},
-		{"fulfilled -> cancelled", commerce.OrderStatusFulfilled, commerce.OrderStatusCancelled, false},
+		{"fulfilled -> canceled", commerce.OrderStatusFulfilled, commerce.OrderStatusCancelled, false},
 		{"refunded is terminal", commerce.OrderStatusRefunded, commerce.OrderStatusPaid, false},
-		{"cancelled is terminal", commerce.OrderStatusCancelled, commerce.OrderStatusCreated, false},
+		{"canceled is terminal", commerce.OrderStatusCancelled, commerce.OrderStatusCreated, false},
 		{"expired is terminal", commerce.OrderStatusExpired, commerce.OrderStatusAwaitingPayment, false},
 	}
 

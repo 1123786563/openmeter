@@ -333,7 +333,7 @@ func (s *service) ProcessOne(ctx context.Context, namespace, fulfillmentID strin
 	}
 
 	// I3: Guard — the order must be in paid or fulfilled state. An order in any
-	// other state (created, awaiting_payment, cancelled) is not ready for
+	// other state (created, awaiting_payment, canceled) is not ready for
 	// fulfillment.
 	if order.Status != commerce.OrderStatusPaid && order.Status != commerce.OrderStatusFulfilled {
 		s.markFailed(ctx, namespace, fulfillmentID, fmt.Sprintf("order status is %s, expected paid", order.Status))

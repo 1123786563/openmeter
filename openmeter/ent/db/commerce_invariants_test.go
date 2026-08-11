@@ -3,9 +3,9 @@ package db_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
-	"os"
 	"testing"
 	"time"
 

@@ -319,7 +319,7 @@ func DescribeTransitionTable() string {
 	var sb strings.Builder
 	for from, dests := range ValidTransitions {
 		for to := range dests {
-			sb.WriteString(fmt.Sprintf("%s -> %s\n", from, to))
+			fmt.Fprintf(&sb, "%s -> %s\n", from, to)
 		}
 	}
 	return sb.String()

@@ -122,7 +122,7 @@ func newTestAdapter(t *testing.T, gatewayURL string, keys testKeys) *Adapter {
 		NotifyURL:        "https://merchant.example/alipay/notify",
 		Now:              func() time.Time { return testNow },
 		MaxResponseBytes: 1 << 20,
-		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Logger:           slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)
 	return adapter
@@ -559,7 +559,7 @@ func TestGatewayRejectsTamperedAndOversizedResponses(t *testing.T) {
 			}},
 			Client: &http.Client{Timeout: time.Second}, GatewayURL: server.URL, AppID: "ali-app",
 			SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify", Now: time.Now,
-			MaxResponseBytes: 256, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+			MaxResponseBytes: 256, Logger: slog.New(slog.DiscardHandler),
 		})
 		require.NoError(t, err)
 		_, err = adapter.QueryPayment(t.Context(), "01ORDER")
@@ -631,7 +631,7 @@ func TestGatewayTransportTimeoutIsRetryableAndPreservesCause(t *testing.T) {
 		},
 		GatewayURL: "https://openapi.alipay.test/gateway.do", AppID: "ali-app", SellerID: "ali-seller",
 		NotifyURL: "https://merchant.example/notify", Now: time.Now, MaxResponseBytes: 1024,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Logger: slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)
 
@@ -672,7 +672,7 @@ func TestNewRequiresProductionDependenciesAndIdentity(t *testing.T) {
 		}},
 		Client: &http.Client{Timeout: time.Second}, GatewayURL: "https://openapi.alipay.com/gateway.do",
 		AppID: "ali-app", SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify",
-		Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.DiscardHandler),
 	}
 	adapter, err := New(valid)
 	require.NoError(t, err)
@@ -718,7 +718,7 @@ func TestNewRejectsMalformedConfiguredKeyMaterial(t *testing.T) {
 			Secrets: &payment.StaticSecretProvider{Secrets: secrets},
 			Client:  &http.Client{Timeout: time.Second}, GatewayURL: "https://openapi.alipay.com/gateway.do",
 			AppID: "ali-app", SellerID: "ali-seller", NotifyURL: "https://merchant.example/notify",
-			Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+			Now: time.Now, MaxResponseBytes: 1024, Logger: slog.New(slog.DiscardHandler),
 		}
 	}
 

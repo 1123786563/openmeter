@@ -566,7 +566,7 @@ func TestProcessPendingProcessesAll(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		orderID := fmt.Sprintf("order-batch-%d", i)
 		h.addPaidOrder("ns", orderID, "cust", int64(100*(i+1)), commerce.OrderKindWalletTopUp)
-		h.svc.RequestFulfillment(context.Background(), "ns", orderID)
+		_, _ = h.svc.RequestFulfillment(context.Background(), "ns", orderID)
 	}
 
 	count, err := h.svc.ProcessPending(context.Background(), "ns", 10)
@@ -726,7 +726,7 @@ func TestCrashAfterCreditGrant(t *testing.T) {
 	})
 
 	// Process: the grantor crashes after granting credits, before fulfillment is marked.
-	_, err = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
 	if err == nil {
 		t.Fatal("first process should crash")
 	}
@@ -805,11 +805,7 @@ func TestMarkFulfilledFailureDoesNotPanic(t *testing.T) {
 	})
 
 	// This should NOT panic — it should return an error after reloading.
-	_, err = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
-	if err == nil {
-		// The reload might find the record in processing state, which would
-		// return an error. Either way, no panic.
-	}
+	_, _ = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	// The key assertion is that we got here without panicking.
 }

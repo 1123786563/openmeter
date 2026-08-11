@@ -90,7 +90,7 @@ func newTestAdapter(t *testing.T, baseURL string, keys testKeys) *Adapter {
 		Now:                      func() time.Time { return time.Unix(testNowUnix, 0) },
 		CallbackMaxAge:           5 * time.Minute,
 		MaxResponseBytes:         1 << 20,
-		Logger:                   slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Logger:                   slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)
 	return adapter
@@ -624,7 +624,7 @@ func TestNewRequiresProductionDependencies(t *testing.T) {
 		AppID: "wx-app", MerchantID: "wx-mch", MerchantSerial: "serial",
 		NotifyURL: "https://merchant.example/notify", RefundNotifyURL: "https://merchant.example/refund",
 		Now: time.Now, CallbackMaxAge: 5 * time.Minute, MaxResponseBytes: 1024,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Logger: slog.New(slog.DiscardHandler),
 	}
 	_, err := New(valid)
 	require.NoError(t, err)
@@ -669,7 +669,7 @@ func TestNewRejectsMalformedConfiguredKeyMaterial(t *testing.T) {
 			AppID: "wx-app", MerchantID: "wx-mch", MerchantSerial: "merchant-serial",
 			NotifyURL: "https://merchant.example/notify", RefundNotifyURL: "https://merchant.example/refund",
 			Now: time.Now, CallbackMaxAge: 5 * time.Minute, MaxResponseBytes: 1024,
-			Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+			Logger: slog.New(slog.DiscardHandler),
 		}
 	}
 

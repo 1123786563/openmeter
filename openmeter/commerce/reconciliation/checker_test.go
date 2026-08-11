@@ -20,24 +20,31 @@ type mockProbe struct {
 func (m *mockProbe) ListPaidOrdersWithoutFulfillment(context.Context, string, time.Duration) ([]StaleOrder, error) {
 	return m.stale, nil
 }
+
 func (m *mockProbe) ListFulfilledOrdersWithoutGrant(context.Context, string) ([]FulfilledOrder, error) {
 	return m.fulfilled, nil
 }
+
 func (m *mockProbe) ListProviderSuccessWithoutFact(context.Context, string) ([]ProviderSuccessGap, error) {
 	return m.provGaps, nil
 }
+
 func (m *mockProbe) ListRefundFactsWithoutFence(context.Context, string) ([]RefundFactGap, error) {
 	return m.refundGaps, nil
 }
+
 func (m *mockProbe) ListWalletLedgerMismatches(context.Context, string) ([]WalletMismatch, error) {
 	return m.walletDrift, nil
 }
+
 func (m *mockProbe) ListClosedReceivableRangeChanges(context.Context, string) ([]ReceivableRangeDrift, error) {
 	return m.receivable, nil
 }
+
 func (m *mockProbe) ListUnknownEventTypes(context.Context, string) ([]UnknownEvent, error) {
 	return m.unknown, nil
 }
+
 func (m *mockProbe) ListEventIdMismatches(context.Context, string) ([]EventIdMismatch, error) {
 	return m.mismatches, nil
 }

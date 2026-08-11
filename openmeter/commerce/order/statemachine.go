@@ -12,8 +12,8 @@ import (
 // ValidTransitions defines the order state machine. Each entry maps a source
 // status to the set of statuses it may transition to.
 //
-//	created           -> awaiting_payment | cancelled | expired
-//	awaiting_payment  -> paid | cancelled | expired
+//	created           -> awaiting_payment | canceled | expired
+//	awaiting_payment  -> paid | canceled | expired
 //	paid              -> fulfilled
 //	fulfilled         -> refund_pending
 //	refund_pending    -> partially_refunded | refunded

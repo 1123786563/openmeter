@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	decimal "github.com/alpacahq/alpacadecimal"
+	"github.com/stretchr/testify/require"
+
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMapReservationReloadsRateSnapshotAndActualLines(t *testing.T) {

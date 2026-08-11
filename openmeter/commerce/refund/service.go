@@ -292,12 +292,14 @@ type PublishSnapshotInput struct {
 // Errors
 // ---------------------------------------------------------------------------
 
-var ErrInvalidRefundTransition = errors.New("refund: invalid status transition")
-var ErrRefundNotFound = errors.New("refund: not found")
-var ErrOrderNotRefundable = errors.New("refund: order is not refundable")
-var ErrInsufficientRefundable = errors.New("refund: insufficient refundable credit")
-var ErrFenceTimeout = errors.New("refund: fence establishment timed out")
-var ErrProviderRefundFailed = errors.New("refund: provider returned failure")
+var (
+	ErrInvalidRefundTransition = errors.New("refund: invalid status transition")
+	ErrRefundNotFound          = errors.New("refund: not found")
+	ErrOrderNotRefundable      = errors.New("refund: order is not refundable")
+	ErrInsufficientRefundable  = errors.New("refund: insufficient refundable credit")
+	ErrFenceTimeout            = errors.New("refund: fence establishment timed out")
+	ErrProviderRefundFailed    = errors.New("refund: provider returned failure")
+)
 
 // ---------------------------------------------------------------------------
 // Service

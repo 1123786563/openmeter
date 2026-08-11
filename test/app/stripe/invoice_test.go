@@ -26,6 +26,7 @@ import (
 	chargestestutils "github.com/openmeterio/openmeter/openmeter/billing/charges/testutils"
 	creditgrant "github.com/openmeterio/openmeter/openmeter/billing/creditgrant"
 	creditgrantservice "github.com/openmeterio/openmeter/openmeter/billing/creditgrant/service"
+	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	enttx "github.com/openmeterio/openmeter/openmeter/ent/tx"
 	ledgerbreakage "github.com/openmeterio/openmeter/openmeter/ledger/breakage"
@@ -148,9 +149,9 @@ func (s *StripeInvoiceTestSuite) SetupSuite() {
 		FeatureService:        s.FeatureService,
 		StreamingConnector:    s.MockStreamingConnector,
 		TaxCodeService:        s.TaxCodeService,
-		FlatFeeHandler:        ledgerchargeadapter.NewFlatFeeHandler(ledgerDeps.HistoricalLedger, transactions.ResolverDependencies{AccountService: ledgerDeps.ResolversService, AccountCatalog: ledgerDeps.AccountService, BalanceQuerier: ledgerDeps.HistoricalLedger}, collectorService),
+		FlatFeeHandler:        ledgerchargeadapter.NewFlatFeeHandler(ledgerDeps.HistoricalLedger, transactions.ResolverDependencies{AccountService: ledgerDeps.ResolversService, AccountCatalog: ledgerDeps.AccountService, BalanceQuerier: ledgerDeps.HistoricalLedger}, collectorService, creditlimit.NoopAllowanceResolver{}),
 		CreditPurchaseHandler: creditPurchaseHandler,
-		UsageBasedHandler:     ledgerchargeadapter.NewUsageBasedHandler(ledgerDeps.HistoricalLedger, transactions.ResolverDependencies{AccountService: ledgerDeps.ResolversService, AccountCatalog: ledgerDeps.AccountService, BalanceQuerier: ledgerDeps.HistoricalLedger}, collectorService),
+		UsageBasedHandler:     ledgerchargeadapter.NewUsageBasedHandler(ledgerDeps.HistoricalLedger, transactions.ResolverDependencies{AccountService: ledgerDeps.ResolversService, AccountCatalog: ledgerDeps.AccountService, BalanceQuerier: ledgerDeps.HistoricalLedger}, collectorService, creditlimit.NoopAllowanceResolver{}),
 	})
 	s.Require().NoError(err, "failed to initialize charges service")
 	s.Charges = chargeStack.ChargesService

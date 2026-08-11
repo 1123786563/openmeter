@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 )
 
 // lifecycleMetrics keeps reservation telemetry bounded: only fixed operation,
@@ -43,6 +44,7 @@ func newLifecycleMetrics(meter metric.Meter) (lifecycleMetrics, error) {
 func (m lifecycleMetrics) command(ctx context.Context, operation, outcome string) {
 	m.commands.Add(ctx, 1, metric.WithAttributes(attribute.String("operation", operation), attribute.String("outcome", outcome)))
 }
+
 func (m lifecycleMetrics) transition(ctx context.Context, state string) {
 	m.transitions.Add(ctx, 1, metric.WithAttributes(attribute.String("state", state)))
 }

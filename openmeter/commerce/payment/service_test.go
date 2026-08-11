@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/pkg/models"
-	"github.com/stretchr/testify/require"
 )
 
 // --- Mock implementations ---
@@ -295,7 +296,7 @@ func (r *mockPaidTxRunner) RunPaidTransition(ctx context.Context, in PaidTransit
 		return PaidTransitionResult{}, err
 	}
 	if attempt.Status == AttemptStatusPending {
-		attempt, err = r.attempts.UpdateAttemptStatus(ctx, in.Namespace, attempt.ID, AttemptStatusPending, AttemptStatusSucceeded)
+		_, err = r.attempts.UpdateAttemptStatus(ctx, in.Namespace, attempt.ID, AttemptStatusPending, AttemptStatusSucceeded)
 		if err != nil {
 			return PaidTransitionResult{}, err
 		}

@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/metric"
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"time"
 
 	decimal "github.com/alpacahq/alpacadecimal"
+	"go.opentelemetry.io/otel/metric"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"

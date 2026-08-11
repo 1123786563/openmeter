@@ -9,6 +9,7 @@ import (
 	"time"
 
 	decimal "github.com/alpacahq/alpacadecimal"
+
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 )

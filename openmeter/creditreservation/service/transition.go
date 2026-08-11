@@ -110,11 +110,12 @@ func (s *service) SweepExpired(ctx context.Context, now time.Time, limit int) (c
 		if err != nil {
 			return result, err
 		}
-		if target == creditreservation.ReservationStateExpired {
+		switch target {
+		case creditreservation.ReservationStateExpired:
 			result.Expired++
-		} else if target == creditreservation.ReservationStateUnknown {
+		case creditreservation.ReservationStateUnknown:
 			result.Unknown++
-		} else {
+		default:
 			result.ManualReview++
 		}
 		s.metrics.transition(ctx, string(target))

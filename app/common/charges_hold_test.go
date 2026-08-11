@@ -10,11 +10,11 @@ import (
 )
 
 func TestActiveHoldReaderForCreditsPhaseGate(t *testing.T) {
-	reader, err := activeHoldReaderForCredits(config.CreditsConfiguration{})
+	reader, err := activeHoldReaderForCredits(nil, config.CreditsConfiguration{})
 	require.NoError(t, err)
 	require.IsType(t, creditlimit.NoActiveHoldReader{}, reader)
 
-	reader, err = activeHoldReaderForCredits(config.CreditsConfiguration{ReservationsEnabled: true})
+	reader, err = activeHoldReaderForCredits(nil, config.CreditsConfiguration{ReservationsEnabled: true})
 	require.Nil(t, reader)
 	require.ErrorContains(t, err, "durable active hold reader")
 }

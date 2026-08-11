@@ -72,8 +72,10 @@ type txAdapter struct {
 	customerID customer.CustomerID
 }
 
-var _ Adapter = (*adapter)(nil)
-var _ TxAdapter = (*txAdapter)(nil)
+var (
+	_ Adapter   = (*adapter)(nil)
+	_ TxAdapter = (*txAdapter)(nil)
+)
 
 func New(config Config) (Adapter, error) {
 	if err := config.Validate(); err != nil {

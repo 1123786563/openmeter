@@ -1455,7 +1455,7 @@ func TestProcessOneProviderDefinitiveFailureReleasesFence(t *testing.T) {
 	}
 
 	// First: submit -> provider_processing.
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	// Second: query -> definitive failure -> failed + release fence.
 	result, err := h.svc.ProcessOne(context.Background(), "ns", rec.ID)
@@ -1625,7 +1625,7 @@ func TestProviderMoneyUnderRefundFails(t *testing.T) {
 	}
 
 	// First: submit -> provider_processing.
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	// Second: query returns success with insufficient money -> should fail.
 	result, err := h.svc.ProcessOne(context.Background(), "ns", rec.ID)
@@ -1671,7 +1671,7 @@ func TestProviderMoneyMatchesSucceeds(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 	result, err := h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 	if err != nil {
 		t.Fatalf("expected success: %v", err)
@@ -1800,7 +1800,7 @@ func TestApplyRefundCallbackIdempotent(t *testing.T) {
 		Namespace: "ns", OrderID: "order-cb-idem", CustomerID: "cust",
 		AmountCents: 0, Currency: "CNY", IdempotencyKey: "idem-cb-idem",
 	})
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	callbackFact := payment.RefundFact{
 		Provider:         payment.ProviderWeChat,
@@ -1851,7 +1851,7 @@ func TestApplyRefundCallbackDefinitiveFailure(t *testing.T) {
 		Namespace: "ns", OrderID: "order-cb-fail", CustomerID: "cust",
 		AmountCents: 0, Currency: "CNY", IdempotencyKey: "idem-cb-fail",
 	})
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	// Callback with definitive failure.
 	callbackFact := payment.RefundFact{
@@ -1892,7 +1892,7 @@ func TestApplyRefundCallbackMoneyMismatch(t *testing.T) {
 		Namespace: "ns", OrderID: "order-cb-money", CustomerID: "cust",
 		AmountCents: 0, Currency: "CNY", IdempotencyKey: "idem-cb-money",
 	})
-	h.svc.ProcessOne(context.Background(), "ns", rec.ID)
+	_, _ = h.svc.ProcessOne(context.Background(), "ns", rec.ID)
 
 	// Callback with insufficient money.
 	callbackFact := payment.RefundFact{
@@ -1917,8 +1917,10 @@ func TestApplyRefundCallbackMoneyMismatch(t *testing.T) {
 }
 
 // Compile-time check that mockProvider satisfies interfaces.
-var _ ProviderRefunder = (*mockProvider)(nil)
-var _ RefundCallbackVerifier = (*mockProvider)(nil)
+var (
+	_ ProviderRefunder       = (*mockProvider)(nil)
+	_ RefundCallbackVerifier = (*mockProvider)(nil)
+)
 
 // Stub to satisfy RefundCallbackVerifier on mockProvider for compile-time check.
 func (p *mockProvider) VerifyRefundCallback(_ context.Context, _ http.Header, _ []byte) (payment.RefundFact, error) {

@@ -194,6 +194,7 @@ func (m *memoryAdapter) WithCustomerLock(ctx context.Context, _ customer.Custome
 	defer m.mu.Unlock()
 	return fn(memoryTx{m})
 }
+
 func (m *memoryAdapter) GetReservation(_ context.Context, id models.NamespacedID) (creditreservation.Reservation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -203,9 +204,11 @@ func (m *memoryAdapter) GetReservation(_ context.Context, id models.NamespacedID
 	}
 	return row, nil
 }
+
 func (m *memoryAdapter) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("not found")
 }
+
 func (m *memoryAdapter) ListExpiredReservations(_ context.Context, now, unknownBefore time.Time, limit int) ([]creditreservation.Reservation, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -236,6 +239,7 @@ func (t memoryTx) GetReservation(_ context.Context, id models.NamespacedID) (cre
 	}
 	return row, nil
 }
+
 func (t memoryTx) GetReservationByCommand(_ context.Context, _ string, key string) (creditreservation.Reservation, bool, error) {
 	for _, row := range t.m.rows {
 		if row.CommandIdentity.IdempotencyKey == key {
@@ -244,15 +248,19 @@ func (t memoryTx) GetReservationByCommand(_ context.Context, _ string, key strin
 	}
 	return creditreservation.Reservation{}, false, nil
 }
+
 func (t memoryTx) GetChargeByCommand(context.Context, string, string) (creditreservation.Charge, bool, error) {
 	return creditreservation.Charge{}, false, nil
 }
+
 func (t memoryTx) GetCharge(context.Context, models.NamespacedID) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("not found")
 }
+
 func (t memoryTx) ReverseCharge(context.Context, models.NamespacedID, creditreservation.CommandIdentity, string) (creditreservation.Charge, error) {
 	return creditreservation.Charge{}, fmt.Errorf("unused")
 }
+
 func (t memoryTx) ActivePrepaidHold(_ context.Context, _ currencies.CurrencyReference, _ string) (int64, error) {
 	var held int64
 	for _, row := range t.m.rows {
@@ -270,6 +278,7 @@ func (t memoryTx) EstablishRefundFence(context.Context, string) (creditreservati
 	t.m.fenced = true
 	return creditreservation.FenceResult{Sequence: t.m.sequence, Established: true}, nil
 }
+
 func (t memoryTx) ReleaseRefundFence(_ context.Context, _ string, sequence string) error {
 	if sequence != t.m.sequence {
 		return creditreservation.ErrFenceSequenceConflict
@@ -277,6 +286,7 @@ func (t memoryTx) ReleaseRefundFence(_ context.Context, _ string, sequence strin
 	t.m.fenced = false
 	return nil
 }
+
 func (t memoryTx) CreateReservation(_ context.Context, input reservationadapter.CreateReservationInput) (creditreservation.Reservation, bool, error) {
 	if row, ok := t.m.rows[input.Reservation.ID]; ok {
 		return row, false, nil
@@ -284,6 +294,7 @@ func (t memoryTx) CreateReservation(_ context.Context, input reservationadapter.
 	t.m.rows[input.Reservation.ID] = input.Reservation
 	return input.Reservation, true, nil
 }
+
 func (t memoryTx) UpdateReservation(_ context.Context, input reservationadapter.UpdateReservationInput) (creditreservation.Reservation, error) {
 	row, ok := t.m.rows[input.ID.ID]
 	if !ok {
@@ -320,9 +331,11 @@ func (t memoryTx) UpdateReservation(_ context.Context, input reservationadapter.
 	t.m.rows[row.ID] = row
 	return row, nil
 }
+
 func (t memoryTx) CreateCharge(context.Context, reservationadapter.CreateChargeInput) (creditreservation.Charge, bool, error) {
 	return creditreservation.Charge{}, false, fmt.Errorf("unused")
 }
+
 func (t memoryTx) AppendUsageEvent(_ context.Context, event creditreservation.UsageEvent) error {
 	t.m.outbox++
 	t.m.events = append(t.m.events, event)

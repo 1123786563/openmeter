@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+	"github.com/stretchr/testify/require"
 
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
@@ -14,7 +15,6 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPaidTransitionConcurrent(t *testing.T) {

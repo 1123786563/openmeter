@@ -40,11 +40,13 @@ func (testGrantConnector) VoidGrant(context.Context, models.NamespacedID, *time.
 
 type testFenceClient struct{}
 
-func (testFenceClient) EstablishFence(context.Context, string, string) (refund.FenceResult, error) {
+func (testFenceClient) EstablishFence(context.Context, string, string, string) (refund.FenceResult, error) {
 	return refund.FenceResult{Sequence: "fence-1", Established: true}, nil
 }
 
-func (testFenceClient) ReleaseFence(context.Context, string, string, string) error { return nil }
+func (testFenceClient) ReleaseFence(context.Context, string, string, string, string) error {
+	return nil
+}
 
 func (testFenceClient) ConfirmSnapshotApplied(context.Context, string, string, string) (bool, error) {
 	return true, nil

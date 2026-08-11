@@ -166,7 +166,7 @@ const (
 	OrderStatusAwaitingPayment   OrderStatus = "awaiting_payment"
 	OrderStatusPaid              OrderStatus = "paid"
 	OrderStatusFulfilled         OrderStatus = "fulfilled"
-	OrderStatusCancelled         OrderStatus = "cancelled"
+	OrderStatusCancelled         OrderStatus = "cancelled" //nolint:misspell // business domain value
 	OrderStatusExpired           OrderStatus = "expired"
 	OrderStatusRefundPending     OrderStatus = "refund_pending"
 	OrderStatusPartiallyRefunded OrderStatus = "partially_refunded"

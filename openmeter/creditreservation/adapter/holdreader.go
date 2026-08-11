@@ -6,8 +6,8 @@ import (
 
 	"github.com/alpacahq/alpacadecimal"
 
-	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
+	"github.com/openmeterio/openmeter/openmeter/creditreservation"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
 	dbcreditreservation "github.com/openmeterio/openmeter/openmeter/ent/db/creditreservation"
 )

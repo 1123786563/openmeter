@@ -6,7 +6,6 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
-
 	"github.com/oklog/ulid/v2"
 
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"
@@ -44,7 +43,7 @@ func (CommerceOrder) Fields() []ent.Field {
 			Values("plan_purchase", "subscription_renewal", "wallet_top_up").
 			Immutable(),
 		field.Enum("status").
-			Values("created", "awaiting_payment", "paid", "fulfilled", "cancelled", "expired", "refund_pending", "partially_refunded", "refunded").
+			Values("created", "awaiting_payment", "paid", "fulfilled", "cancelled", "expired", "refund_pending", "partially_refunded", "refunded"). //nolint:misspell
 			Default("created"),
 		field.Int64("total_cents").Min(0).Immutable(),
 		field.String("currency").Default("CNY").Immutable(),

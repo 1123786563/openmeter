@@ -191,7 +191,6 @@ func (c Configuration) Validate() error {
 		}
 	}
 
-
 	if err := c.UnitConfig.Validate(); err != nil {
 		errs = append(errs, errorsx.WithPrefix(err, "unitConfig"))
 	}

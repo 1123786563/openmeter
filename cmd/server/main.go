@@ -17,16 +17,16 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
-	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
+	"github.com/openmeterio/openmeter/openmeter/creditreservation"
+	reservationadapter "github.com/openmeterio/openmeter/openmeter/creditreservation/adapter"
+	reservationservice "github.com/openmeterio/openmeter/openmeter/creditreservation/service"
 	"github.com/openmeterio/openmeter/openmeter/debug"
 	"github.com/openmeterio/openmeter/openmeter/ingest/kafkaingest"
 	"github.com/openmeterio/openmeter/openmeter/namespace"
 	"github.com/openmeterio/openmeter/openmeter/namespace/namespacedriver"
-	reservationadapter "github.com/openmeterio/openmeter/openmeter/creditreservation/adapter"
-	"github.com/openmeterio/openmeter/openmeter/creditreservation"
-	reservationservice "github.com/openmeterio/openmeter/openmeter/creditreservation/service"
 	"github.com/openmeterio/openmeter/openmeter/server"
 	"github.com/openmeterio/openmeter/openmeter/server/router"
 	"github.com/openmeterio/openmeter/pkg/errorsx"
@@ -270,12 +270,12 @@ func main() {
 			StreamingConnector:          app.StreamingConnector,
 			FeatureGate:                 app.FeatureGate,
 		},
-		RouterHooks:         lo.FromPtr(app.RouterHooks),
-		PostAuthMiddlewares: app.PostAuthMiddlewares,
-		ResponseValidation:  conf.Server.ResponseValidation,
-		ClientIPMiddleware:  pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
-		CommerceHandler:            commerceWiring.Handler,
-		CreditReservationsHandler:   creditReservationsHandler,
+		RouterHooks:               lo.FromPtr(app.RouterHooks),
+		PostAuthMiddlewares:       app.PostAuthMiddlewares,
+		ResponseValidation:        conf.Server.ResponseValidation,
+		ClientIPMiddleware:        pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
+		CommerceHandler:           commerceWiring.Handler,
+		CreditReservationsHandler: creditReservationsHandler,
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
@@ -396,8 +396,6 @@ func main() {
 
 		group.Add(terminationCheckerRun, terminationCheckerShutdown)
 	}
-
-
 
 	// Commerce worker lifecycle
 	{

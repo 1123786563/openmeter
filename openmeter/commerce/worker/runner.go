@@ -130,7 +130,7 @@ func (r *Runner) IsRunning() bool {
 	return r.running
 }
 
-// run is the main poll loop. It exits when ctx is cancelled or Stop is called.
+// run is the main poll loop. It exits when ctx is canceled or Stop is called.
 func (r *Runner) run(ctx context.Context) {
 	defer close(r.doneCh)
 
@@ -140,7 +140,7 @@ func (r *Runner) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			r.logger.DebugContext(ctx, "runner stopped: context cancelled")
+			r.logger.DebugContext(ctx, "runner stopped: context canceled")
 			return
 		case <-r.stopCh:
 			r.logger.DebugContext(ctx, "runner stopped: stop signal")

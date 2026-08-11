@@ -20,7 +20,7 @@ import (
 )
 
 func ptrULID(value string) *api.ULID {
-	id := api.ULID(value)
+	id := value
 	return &id
 }
 
@@ -49,10 +49,12 @@ type mockCatalog struct {
 func (m *mockCatalog) CreateProduct(_ context.Context, _ commerce.CreateProductInput) (*commerce.Product, error) {
 	return m.product, m.err
 }
+
 func (m *mockCatalog) GetProduct(_ context.Context, _, id string) (*commerce.Product, error) {
 	m.lastRequestedProductID = id
 	return m.product, m.err
 }
+
 func (m *mockCatalog) GetProductBySKU(_ context.Context, _, sku string) (*commerce.Product, error) {
 	m.lastRequestedSKU = sku
 	if m.productBySKU != nil {
@@ -60,9 +62,11 @@ func (m *mockCatalog) GetProductBySKU(_ context.Context, _, sku string) (*commer
 	}
 	return m.product, m.err
 }
+
 func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, _ bool) ([]commerce.Product, error) {
 	return m.products, m.err
 }
+
 func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductInput) (*commerce.Product, error) {
 	return m.product, m.err
 }
@@ -79,9 +83,11 @@ func (m *mockOrders) CreateOrder(_ context.Context, input commerce.CreateOrderIn
 	m.lastInput = input
 	return m.order, m.created, m.err
 }
+
 func (m *mockOrders) GetOrder(_ context.Context, _, _ string) (*commerce.Order, error) {
 	return m.order, m.err
 }
+
 func (m *mockOrders) TransitionStatus(_ context.Context, _, _ string, _ commerce.OrderStatus) (*commerce.Order, error) {
 	return m.order, m.err
 }
@@ -94,15 +100,19 @@ type mockPayment struct {
 func (m *mockPayment) CreateAttempt(_ context.Context, _ payment.CreateAttemptInput) (*payment.PaymentAttempt, bool, error) {
 	return m.attempt, false, m.err
 }
+
 func (m *mockPayment) GetAttempt(_ context.Context, _, _ string) (*payment.PaymentAttempt, error) {
 	return m.attempt, m.err
 }
+
 func (m *mockPayment) InitiateCheckout(_ context.Context, _, _ string) (payment.CheckoutResult, error) {
 	return payment.CheckoutResult{Attempt: m.attempt}, m.err
 }
+
 func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, _ []byte) (payment.CallbackResult, error) {
 	return payment.CallbackResult{}, m.err
 }
+
 func (m *mockPayment) ConfirmPayment(_ context.Context, _, _ string) (payment.CallbackResult, error) {
 	return payment.CallbackResult{}, m.err
 }
@@ -116,12 +126,15 @@ type mockRefund struct {
 func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput) (*refund.RefundRequest, bool, error) {
 	return m.rec, m.created, m.err
 }
+
 func (m *mockRefund) GetRefund(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
 	return m.rec, m.err
 }
+
 func (m *mockRefund) ProcessOne(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
 	return m.rec, m.err
 }
+
 func (m *mockRefund) ApplyRefundCallback(_ context.Context, _ string, _ payment.RefundFact) (*refund.RefundRequest, error) {
 	return m.rec, m.err
 }
@@ -683,7 +696,7 @@ func TestListReceivablePeriods_Success(t *testing.T) {
 
 func TestUpdateExternalInvoice_Success(t *testing.T) {
 	h := testHandler(Services{})
-	issuedAt := api.DateTime(time.Now().UTC())
+	issuedAt := time.Now().UTC()
 	body := api.CommerceExternalInvoiceUpdate{
 		InvoiceNumber:  "INV-001",
 		IdempotencyKey: "idem-inv-1",

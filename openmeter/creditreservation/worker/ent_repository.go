@@ -65,10 +65,12 @@ func (r *EntRepository) MarkPublished(ctx context.Context, owner, id string) err
 	}
 	return nil
 }
+
 func (r *EntRepository) Release(ctx context.Context, owner, id string) error {
 	_, err := r.db.CreditReservationOutbox.Update().Where(creditreservationoutbox.IDEQ(id), creditreservationoutbox.OwnerEQ(owner), creditreservationoutbox.PublishedEQ(false)).SetOwner("").ClearLeasedUntil().Save(ctx)
 	return err
 }
+
 func (r *EntRepository) MarkDeadLetter(ctx context.Context, owner, id, reason string) error {
 	affected, err := r.db.CreditReservationOutbox.Update().Where(creditreservationoutbox.IDEQ(id), creditreservationoutbox.OwnerEQ(owner), creditreservationoutbox.PublishedEQ(false)).SetDeadLettered(true).SetDeadLetterReason(reason).SetOwner("").ClearLeasedUntil().Save(ctx)
 	if err != nil {

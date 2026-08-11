@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"entgo.io/ent/dialect/sql"
 	entsql "entgo.io/ent/dialect/sql"
 
 	"github.com/openmeterio/openmeter/openmeter/currencies"
@@ -39,7 +38,7 @@ func (a *adapter) GetActive(ctx context.Context, input GetActiveInput) (*Limit, 
 			customercreditlimit.EffectiveFromLTE(input.AsOf),
 			customercreditlimit.Or(customercreditlimit.EffectiveToIsNil(), customercreditlimit.EffectiveToGT(input.AsOf)),
 		).
-		Order(customercreditlimit.ByEffectiveFrom(sql.OrderDesc())).
+		Order(customercreditlimit.ByEffectiveFrom(entsql.OrderDesc())).
 		First(ctx)
 	if entdb.IsNotFound(err) {
 		return nil, nil
@@ -65,7 +64,7 @@ func (a *adapter) Create(ctx context.Context, input CreateInput) (*Limit, error)
 	if err != nil {
 		return nil, fmt.Errorf("begin customer limit transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.BillingCustomerLock.Query().Where(
 		billingcustomerlock.Namespace(input.Namespace), billingcustomerlock.CustomerID(input.CustomerID),
 	).ForUpdate().First(ctx); err != nil {

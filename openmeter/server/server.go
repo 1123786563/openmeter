@@ -76,7 +76,7 @@ type Config struct {
 
 	// CommerceHandler is the optional Phase 2 commerce handler. When nil,
 	// commerce routes return 501 Not Implemented.
-	CommerceHandler commercehandler.Handler
+	CommerceHandler           commercehandler.Handler
 	CreditReservationsHandler creditreservationshandler.Handler
 }
 

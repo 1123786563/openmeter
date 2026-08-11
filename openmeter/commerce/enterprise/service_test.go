@@ -738,13 +738,16 @@ func TestRecordPaymentRequiresAllFields(t *testing.T) {
 	}{
 		{"missing bank reference", RecordPaymentInput{
 			Namespace: "ns", PeriodID: closed.ID, AmountMinor: 1000, Currency: "CNY",
-			Payer: "p", ReceivedAt: clock.Now(), EvidenceHash: "h", ConfirmedBy: "finance-admin", FinanceAdminProof: "t"}},
+			Payer: "p", ReceivedAt: clock.Now(), EvidenceHash: "h", ConfirmedBy: "finance-admin", FinanceAdminProof: "t",
+		}},
 		{"missing payer", RecordPaymentInput{
 			Namespace: "ns", PeriodID: closed.ID, AmountMinor: 1000, Currency: "CNY",
-			BankReference: "b", ReceivedAt: clock.Now(), EvidenceHash: "h", ConfirmedBy: "finance-admin", FinanceAdminProof: "t"}},
+			BankReference: "b", ReceivedAt: clock.Now(), EvidenceHash: "h", ConfirmedBy: "finance-admin", FinanceAdminProof: "t",
+		}},
 		{"missing evidence hash", RecordPaymentInput{
 			Namespace: "ns", PeriodID: closed.ID, AmountMinor: 1000, Currency: "CNY",
-			BankReference: "b", Payer: "p", ReceivedAt: clock.Now(), ConfirmedBy: "finance-admin", FinanceAdminProof: "t"}},
+			BankReference: "b", Payer: "p", ReceivedAt: clock.Now(), ConfirmedBy: "finance-admin", FinanceAdminProof: "t",
+		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1392,7 +1395,7 @@ func TestCollectionTimerIndependentFromAccrual(t *testing.T) {
 	// Open a new period and accrue usage — this bumps UpdatedAt but must NOT
 	// reset CollectionStateEnteredAt.
 	clock.FreezeTime(base.Add(2*time.Hour + 30*time.Minute))
-	h.svc.EnsureOpenPeriod(context.Background(), "ns", acc.ID)
+	_, _ = h.svc.EnsureOpenPeriod(context.Background(), "ns", acc.ID)
 	if _, err := h.svc.AccrueUsage(context.Background(), AccrueUsageInput{
 		Namespace: "ns", CustomerID: "cust", Nonce: auth.Nonce,
 		Credits: 10, RateMinor: 10,

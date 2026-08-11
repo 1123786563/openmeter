@@ -64,18 +64,23 @@ type noopAdapter struct{}
 func (noopAdapter) Identity(context.Context) (ProviderIdentity, error) {
 	return ProviderIdentity{MerchantID: "merchant", ApplicationID: "application"}, nil
 }
+
 func (noopAdapter) CreateQRCode(context.Context, CheckoutInput) (CheckoutFact, error) {
 	return CheckoutFact{}, nil
 }
+
 func (noopAdapter) VerifyCallback(context.Context, http.Header, []byte) (PaymentFact, error) {
 	return PaymentFact{}, nil
 }
+
 func (noopAdapter) QueryPayment(context.Context, string) (PaymentFact, error) {
 	return PaymentFact{}, nil
 }
+
 func (noopAdapter) Refund(context.Context, RefundInput) (RefundSubmission, error) {
 	return RefundSubmission{}, nil
 }
+
 func (noopAdapter) QueryRefund(context.Context, RefundQueryInput) (RefundFact, error) {
 	return RefundFact{}, nil
 }
