@@ -151,19 +151,6 @@ func (m *mockRepo) SetFence(_ context.Context, namespace, id, fenceSequence stri
 	return &cp, nil
 }
 
-func (m *mockRepo) SetSnapshot(_ context.Context, namespace, id, snapshotVersion string) (*RefundRequest, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	r, ok := m.refunds[id]
-	if !ok || r.Namespace != namespace {
-		return nil, ErrRefundNotFound
-	}
-	r.SnapshotVersion = snapshotVersion
-	r.UpdatedAt = time.Now()
-	cp := *r
-	return &cp, nil
-}
-
 func (m *mockRepo) MarkFailed(_ context.Context, namespace, id, reason string) (*RefundRequest, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -335,12 +322,13 @@ func (o *mockOrders) addFulfilledOrder(namespace, orderID, customerID string, am
 type mockFenceClient struct {
 	mu       sync.Mutex
 	locks    map[string]*sync.Mutex // per-customer fence lock
+	repo     *mockRepo
 	released atomic.Int64
 	failNext atomic.Bool
 }
 
-func newMockFenceClient() *mockFenceClient {
-	return &mockFenceClient{locks: make(map[string]*sync.Mutex)}
+func newMockFenceClient(repo *mockRepo) *mockFenceClient {
+	return &mockFenceClient{locks: make(map[string]*sync.Mutex), repo: repo}
 }
 
 func (f *mockFenceClient) getLock(customerID string) *sync.Mutex {
@@ -354,22 +342,24 @@ func (f *mockFenceClient) getLock(customerID string) *sync.Mutex {
 	return l
 }
 
-func (f *mockFenceClient) EstablishFence(_ context.Context, _ string, customerID, _ string) (FenceResult, error) {
+func (f *mockFenceClient) EstablishFence(ctx context.Context, namespace, customerID, refundID string) (FenceResult, error) {
 	if f.failNext.Swap(false) {
 		return FenceResult{}, ErrFenceTimeout
 	}
-	f.getLock(customerID).Lock()
-	return FenceResult{Sequence: "fence-" + customerID, Established: true}, nil
+	lock := f.getLock(customerID)
+	lock.Lock()
+	sequence := "fence-" + customerID
+	if _, err := f.repo.SetFence(ctx, namespace, refundID, sequence); err != nil {
+		lock.Unlock()
+		return FenceResult{}, err
+	}
+	return FenceResult{Sequence: sequence, Established: true}, nil
 }
 
 func (f *mockFenceClient) ReleaseFence(_ context.Context, _ string, customerID, _, _ string) error {
 	f.getLock(customerID).Unlock()
 	f.released.Add(1)
 	return nil
-}
-
-func (f *mockFenceClient) ConfirmSnapshotApplied(_ context.Context, _ string, _ string, _ string) (bool, error) {
-	return true, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -465,42 +455,27 @@ func (r mockProviderResolver) ResolveProviderForOrder(context.Context, string, s
 }
 
 // ---------------------------------------------------------------------------
-// Mock: SnapshotPublisher
-// ---------------------------------------------------------------------------
-
-type mockSnapshotPublisher struct {
-	count atomic.Int64
-}
-
-func (m *mockSnapshotPublisher) PublishSnapshot(_ context.Context, _ PublishSnapshotInput) (string, error) {
-	m.count.Add(1)
-	return fmt.Sprintf("snap-%d", m.count.Load()), nil
-}
-
-// ---------------------------------------------------------------------------
 // Test harness
 // ---------------------------------------------------------------------------
 
 type testHarness struct {
-	svc       Service
-	repo      *mockRepo
-	wallet    *mockWallet
-	orders    *mockOrders
-	fence     *mockFenceClient
-	reverser  *mockReverser
-	provider  *mockProvider
-	snapshots *mockSnapshotPublisher
+	svc      Service
+	repo     *mockRepo
+	wallet   *mockWallet
+	orders   *mockOrders
+	fence    *mockFenceClient
+	reverser *mockReverser
+	provider *mockProvider
 }
 
 func newTestHarness(t *testing.T) *testHarness {
 	t.Helper()
 	wallet := newMockWallet()
 	orders := newMockOrders()
-	fence := newMockFenceClient()
 	reverser := newMockReverser()
 	provider := newMockProvider(payment.ProviderWeChat)
-	snapshots := &mockSnapshotPublisher{}
 	repo := newMockRepo(wallet)
+	fence := newMockFenceClient(repo)
 
 	svc, err := New(Config{
 		Repo:      repo,
@@ -509,14 +484,13 @@ func newTestHarness(t *testing.T) *testHarness {
 		Fence:     fence,
 		Reverser:  reverser,
 		Providers: map[payment.Provider]ProviderRefunder{payment.ProviderWeChat: provider},
-		Snapshots: snapshots,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return &testHarness{
 		svc: svc, repo: repo, wallet: wallet, orders: orders,
-		fence: fence, reverser: reverser, provider: provider, snapshots: snapshots,
+		fence: fence, reverser: reverser, provider: provider,
 	}
 }
 
@@ -1275,7 +1249,6 @@ func TestProcessOneInvalidResolverResultDoesNotFallBackToAnotherProvider(t *test
 					payment.ProviderWeChat: h.provider,
 				},
 				ProviderResolver: tt.resolver,
-				Snapshots:        h.snapshots,
 			})
 			require.NoError(t, err)
 
@@ -1367,7 +1340,6 @@ func TestProcessOneProviderSuccessStopsWhenFactPersistenceFails(t *testing.T) {
 	require.ErrorIs(t, err, wantErr)
 	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
 	require.Zero(t, h.reverser.totalReversed())
-	require.Zero(t, h.snapshots.count.Load())
 	require.Zero(t, h.fence.released.Load())
 }
 

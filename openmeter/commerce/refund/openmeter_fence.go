@@ -41,11 +41,4 @@ func (c OpenMeterFenceClient) ReleaseFence(ctx context.Context, namespace, custo
 	})
 }
 
-// ConfirmSnapshotApplied remains a wiring boundary until the ledger reversal
-// transaction group is exposed to this service. It deliberately returns false
-// rather than claiming that an external snapshot proves a local transaction.
-func (OpenMeterFenceClient) ConfirmSnapshotApplied(context.Context, string, string, string) (bool, error) {
-	return false, nil
-}
-
 var _ FenceClient = OpenMeterFenceClient{}

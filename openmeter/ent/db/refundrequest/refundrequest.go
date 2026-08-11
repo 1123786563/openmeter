@@ -53,8 +53,6 @@ const (
 	FieldProviderRefundID = "provider_refund_id"
 	// FieldFenceSequence holds the string denoting the fence_sequence field in the database.
 	FieldFenceSequence = "fence_sequence"
-	// FieldSnapshotVersion holds the string denoting the snapshot_version field in the database.
-	FieldSnapshotVersion = "snapshot_version"
 	// FieldFailureReason holds the string denoting the failure_reason field in the database.
 	FieldFailureReason = "failure_reason"
 	// EdgeOrder holds the string denoting the order edge name in mutations.
@@ -101,7 +99,6 @@ var Columns = []string{
 	FieldProviderName,
 	FieldProviderRefundID,
 	FieldFenceSequence,
-	FieldSnapshotVersion,
 	FieldFailureReason,
 }
 
@@ -148,8 +145,6 @@ var (
 	DefaultProviderRefundID string
 	// DefaultFenceSequence holds the default value on creation for the "fence_sequence" field.
 	DefaultFenceSequence string
-	// DefaultSnapshotVersion holds the default value on creation for the "snapshot_version" field.
-	DefaultSnapshotVersion string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 )
@@ -284,11 +279,6 @@ func ByProviderRefundID(opts ...sql.OrderTermOption) OrderOption {
 // ByFenceSequence orders the results by the fence_sequence field.
 func ByFenceSequence(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFenceSequence, opts...).ToFunc()
-}
-
-// BySnapshotVersion orders the results by the snapshot_version field.
-func BySnapshotVersion(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSnapshotVersion, opts...).ToFunc()
 }
 
 // ByFailureReason orders the results by the failure_reason field.

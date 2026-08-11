@@ -136,7 +136,6 @@ type RefundRequestWire struct {
 	ProviderName     string
 	ProviderRefundID string
 	FenceSequence    string
-	SnapshotVersion  string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -944,7 +943,6 @@ func mapEntRefundRequest(er *entdb.RefundRequest) *RefundRequestWire {
 		ProviderName:     er.ProviderName,
 		ProviderRefundID: er.ProviderRefundID,
 		FenceSequence:    er.FenceSequence,
-		SnapshotVersion:  er.SnapshotVersion,
 		CreatedAt:        er.CreatedAt,
 		UpdatedAt:        er.UpdatedAt,
 	}
@@ -1139,25 +1137,6 @@ func (a *EntAdapter) SetRefundFence(ctx context.Context, namespace, id, fenceSeq
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ent: set refund fence: %w", err)
-	}
-	if n == 0 {
-		return nil, fmt.Errorf("ent: refund not found: %s", id)
-	}
-	return a.GetRefundRequest(ctx, namespace, id)
-}
-
-// SetRefundSnapshot sets the snapshot version on a refund.
-func (a *EntAdapter) SetRefundSnapshot(ctx context.Context, namespace, id, snapshotVersion string) (*RefundRequestWire, error) {
-	n, err := a.db.RefundRequest.Update().
-		Where(
-			refundrequest.NamespaceEQ(namespace),
-			refundrequest.IDEQ(id),
-		).
-		SetSnapshotVersion(snapshotVersion).
-		SetUpdatedAt(time.Now()).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("ent: set refund snapshot: %w", err)
 	}
 	if n == 0 {
 		return nil, fmt.Errorf("ent: refund not found: %s", id)

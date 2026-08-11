@@ -56,8 +56,6 @@ type RefundRequest struct {
 	ProviderRefundID string `json:"provider_refund_id,omitempty"`
 	// FenceSequence holds the value of the "fence_sequence" field.
 	FenceSequence string `json:"fence_sequence,omitempty"`
-	// SnapshotVersion holds the value of the "snapshot_version" field.
-	SnapshotVersion string `json:"snapshot_version,omitempty"`
 	// FailureReason holds the value of the "failure_reason" field.
 	FailureReason *string `json:"failure_reason,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -104,7 +102,7 @@ func (*RefundRequest) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case refundrequest.FieldAmountCents, refundrequest.FieldCreditQuantum, refundrequest.FieldRefundQuantumFen, refundrequest.FieldReservedCredits, refundrequest.FieldRefundFen, refundrequest.FieldRemainderCredits:
 			values[i] = new(sql.NullInt64)
-		case refundrequest.FieldID, refundrequest.FieldNamespace, refundrequest.FieldCommerceOrderID, refundrequest.FieldCustomerID, refundrequest.FieldCurrency, refundrequest.FieldStatus, refundrequest.FieldReason, refundrequest.FieldIdempotencyKey, refundrequest.FieldProviderName, refundrequest.FieldProviderRefundID, refundrequest.FieldFenceSequence, refundrequest.FieldSnapshotVersion, refundrequest.FieldFailureReason:
+		case refundrequest.FieldID, refundrequest.FieldNamespace, refundrequest.FieldCommerceOrderID, refundrequest.FieldCustomerID, refundrequest.FieldCurrency, refundrequest.FieldStatus, refundrequest.FieldReason, refundrequest.FieldIdempotencyKey, refundrequest.FieldProviderName, refundrequest.FieldProviderRefundID, refundrequest.FieldFenceSequence, refundrequest.FieldFailureReason:
 			values[i] = new(sql.NullString)
 		case refundrequest.FieldCreatedAt, refundrequest.FieldUpdatedAt, refundrequest.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -245,12 +243,6 @@ func (_m *RefundRequest) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.FenceSequence = value.String
 			}
-		case refundrequest.FieldSnapshotVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field snapshot_version", values[i])
-			} else if value.Valid {
-				_m.SnapshotVersion = value.String
-			}
 		case refundrequest.FieldFailureReason:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field failure_reason", values[i])
@@ -364,9 +356,6 @@ func (_m *RefundRequest) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fence_sequence=")
 	builder.WriteString(_m.FenceSequence)
-	builder.WriteString(", ")
-	builder.WriteString("snapshot_version=")
-	builder.WriteString(_m.SnapshotVersion)
 	builder.WriteString(", ")
 	if v := _m.FailureReason; v != nil {
 		builder.WriteString("failure_reason=")

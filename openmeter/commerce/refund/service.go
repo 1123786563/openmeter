@@ -8,9 +8,8 @@
 //     unused paid Credit, validate the 10 Credit : 1 fen quantum, reserve the
 //     exact amount, move to provider_processing, and write the Provider Outbox.
 //  4. On verified Provider success: move to ledger_reversing, write the Credit
-//     Note, reverse only fenced Credit, persist the Refund Fact, publish a
-//     signed Runtime Authorization Snapshot, and mark fulfilled after WeKnora
-//     confirms the Snapshot version is applied. Then release the fence.
+//     Note, reverse only fenced Credit, persist the Refund Fact, mark fulfilled,
+//     and release the fence.
 //  5. On definitive failure: mark failed and release the fence.
 //  6. On unknown result: retain the fence and query the Provider.
 //
@@ -58,7 +57,7 @@ const (
 	// submitted to the provider, awaiting verified result.
 	RefundStatusProviderProcessing RefundStatus = "provider_processing"
 	// RefundStatusLedgerReversing: provider confirmed success, reversing fenced
-	// credit and writing the Credit Note + Snapshot.
+	// credit and writing the Credit Note.
 	RefundStatusLedgerReversing RefundStatus = "ledger_reversing"
 	// RefundStatusFulfilled: reversal complete, fence released.
 	RefundStatusFulfilled RefundStatus = "fulfilled"
@@ -107,9 +106,6 @@ type RefundRequest struct {
 
 	// Fence details (pending_fence onward).
 	FenceSequence string
-
-	// Snapshot (ledger_reversing onward).
-	SnapshotVersion string
 
 	// Failure detail.
 	FailureReason *string
@@ -161,7 +157,6 @@ type Repository interface {
 	SaveQuantum(ctx context.Context, namespace, id string, q QuantumReservation) (*RefundRequest, error)
 	SetProviderRefundID(ctx context.Context, namespace, id, providerName, providerRefundID string) (*RefundRequest, error)
 	SetFence(ctx context.Context, namespace, id, fenceSequence string) (*RefundRequest, error)
-	SetSnapshot(ctx context.Context, namespace, id, snapshotVersion string) (*RefundRequest, error)
 	MarkFailed(ctx context.Context, namespace, id, reason string) (*RefundRequest, error)
 
 	// ReserveCredits atomically locks the source allocation and previous refunds,
@@ -240,7 +235,6 @@ type FenceResult struct {
 type FenceClient interface {
 	EstablishFence(ctx context.Context, namespace, customerID, refundID string) (FenceResult, error)
 	ReleaseFence(ctx context.Context, namespace, customerID, refundID, fenceSequence string) error
-	ConfirmSnapshotApplied(ctx context.Context, namespace, customerID, snapshotVersion string) (bool, error)
 }
 
 // CreditReverser reverses fenced Credit from the customer's wallet.
@@ -274,18 +268,6 @@ type ProviderRefunder interface {
 // RefundCallbackVerifier verifies provider refund callbacks.
 type RefundCallbackVerifier interface {
 	VerifyRefundCallback(ctx context.Context, headers http.Header, body []byte) (payment.RefundFact, error)
-}
-
-// SnapshotPublisher publishes signed Runtime Authorization Snapshots.
-type SnapshotPublisher interface {
-	PublishSnapshot(ctx context.Context, in PublishSnapshotInput) (string, error)
-}
-
-// PublishSnapshotInput carries the context for a snapshot publication.
-type PublishSnapshotInput struct {
-	Namespace  string
-	CustomerID string
-	RefundID   string
 }
 
 // ---------------------------------------------------------------------------
@@ -329,7 +311,6 @@ type Config struct {
 	// (I5). If nil, lookupProvider falls back to the refund's ProviderName or,
 	// failing that, a deterministic first-key selection (no map iteration).
 	ProviderResolver ProviderResolver
-	Snapshots        SnapshotPublisher
 	Logger           *slog.Logger
 }
 
@@ -341,7 +322,6 @@ type service struct {
 	reverser  CreditReverser
 	providers map[payment.Provider]ProviderRefunder
 	pResolver ProviderResolver
-	snapshots SnapshotPublisher
 	logger    *slog.Logger
 }
 
@@ -368,7 +348,6 @@ func New(cfg Config) (Service, error) {
 		reverser:  cfg.Reverser,
 		providers: cfg.Providers,
 		pResolver: cfg.ProviderResolver,
-		snapshots: cfg.Snapshots,
 		logger:    logger,
 	}, nil
 }
@@ -651,7 +630,8 @@ func (s *service) handleProviderSuccess(ctx context.Context, rec *RefundRequest,
 	return s.processLedgerReversing(ctx, rec)
 }
 
-// processLedgerReversing reverses fenced credit, publishes snapshot, marks fulfilled.
+// processLedgerReversing reverses fenced credit, marks fulfilled, and releases
+// the fence.
 func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest) (*RefundRequest, error) {
 	// Step 4: Reverse only fenced Credit.
 	if s.reverser != nil {
@@ -665,37 +645,6 @@ func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest
 		})
 		if err != nil {
 			return rec, fmt.Errorf("refund: reverse credits: %w", err)
-		}
-	}
-
-	// Publish the signed Runtime Authorization Snapshot.
-	var snapshotVersion string
-	if s.snapshots != nil {
-		sv, err := s.snapshots.PublishSnapshot(ctx, PublishSnapshotInput{
-			Namespace:  rec.Namespace,
-			CustomerID: rec.CustomerID,
-			RefundID:   rec.ID,
-		})
-		if err != nil {
-			return rec, fmt.Errorf("refund: publish snapshot: %w", err)
-		}
-		snapshotVersion = sv
-		rec, err = s.repo.SetSnapshot(ctx, rec.Namespace, rec.ID, sv)
-		if err != nil {
-			return rec, fmt.Errorf("refund: set snapshot: %w", err)
-		}
-	}
-
-	// Wait for WeKnora to confirm the Snapshot version is applied before
-	// releasing the fence.
-	if s.fence != nil && snapshotVersion != "" {
-		applied, err := s.fence.ConfirmSnapshotApplied(ctx, rec.Namespace, rec.CustomerID, snapshotVersion)
-		if err != nil {
-			s.logger.WarnContext(ctx, "refund: confirm snapshot failed", "id", rec.ID, "error", err)
-			return rec, nil
-		}
-		if !applied {
-			return rec, nil
 		}
 	}
 
@@ -725,7 +674,7 @@ func (s *service) GetRefund(ctx context.Context, namespace, id string) (*RefundR
 //  1. Locates the refund by provider refund ID.
 //  2. Persists the fact (dedup on RawHash).
 //  3. If success: validates money, transitions to ledger_reversing, reverses
-//     credit, publishes snapshot, marks fulfilled, releases fence.
+//     credit, marks fulfilled, releases fence.
 //  4. If definitive failure: marks failed, releases fence.
 //  5. If unknown: retains fence and returns current state.
 func (s *service) ApplyRefundCallback(ctx context.Context, namespace string, fact payment.RefundFact) (*RefundRequest, error) {

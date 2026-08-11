@@ -6321,20 +6321,6 @@ func (u *RefundRequestUpdateOne) SetOrClearFenceSequence(value *string) *RefundR
 	return u.SetFenceSequence(*value)
 }
 
-func (u *RefundRequestUpdate) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdate {
-	if value == nil {
-		return u.ClearSnapshotVersion()
-	}
-	return u.SetSnapshotVersion(*value)
-}
-
-func (u *RefundRequestUpdateOne) SetOrClearSnapshotVersion(value *string) *RefundRequestUpdateOne {
-	if value == nil {
-		return u.ClearSnapshotVersion()
-	}
-	return u.SetSnapshotVersion(*value)
-}
-
 func (u *RefundRequestUpdate) SetOrClearFailureReason(value *string) *RefundRequestUpdate {
 	if value == nil {
 		return u.ClearFailureReason()

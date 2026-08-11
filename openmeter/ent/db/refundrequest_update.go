@@ -254,26 +254,6 @@ func (_u *RefundRequestUpdate) ClearFenceSequence() *RefundRequestUpdate {
 	return _u
 }
 
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (_u *RefundRequestUpdate) SetSnapshotVersion(v string) *RefundRequestUpdate {
-	_u.mutation.SetSnapshotVersion(v)
-	return _u
-}
-
-// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
-func (_u *RefundRequestUpdate) SetNillableSnapshotVersion(v *string) *RefundRequestUpdate {
-	if v != nil {
-		_u.SetSnapshotVersion(*v)
-	}
-	return _u
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (_u *RefundRequestUpdate) ClearSnapshotVersion() *RefundRequestUpdate {
-	_u.mutation.ClearSnapshotVersion()
-	return _u
-}
-
 // SetFailureReason sets the "failure_reason" field.
 func (_u *RefundRequestUpdate) SetFailureReason(v string) *RefundRequestUpdate {
 	_u.mutation.SetFailureReason(v)
@@ -461,12 +441,6 @@ func (_u *RefundRequestUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if _u.mutation.FenceSequenceCleared() {
 		_spec.ClearField(refundrequest.FieldFenceSequence, field.TypeString)
-	}
-	if value, ok := _u.mutation.SnapshotVersion(); ok {
-		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
-	}
-	if _u.mutation.SnapshotVersionCleared() {
-		_spec.ClearField(refundrequest.FieldSnapshotVersion, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailureReason(); ok {
 		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)
@@ -764,26 +738,6 @@ func (_u *RefundRequestUpdateOne) ClearFenceSequence() *RefundRequestUpdateOne {
 	return _u
 }
 
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (_u *RefundRequestUpdateOne) SetSnapshotVersion(v string) *RefundRequestUpdateOne {
-	_u.mutation.SetSnapshotVersion(v)
-	return _u
-}
-
-// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
-func (_u *RefundRequestUpdateOne) SetNillableSnapshotVersion(v *string) *RefundRequestUpdateOne {
-	if v != nil {
-		_u.SetSnapshotVersion(*v)
-	}
-	return _u
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (_u *RefundRequestUpdateOne) ClearSnapshotVersion() *RefundRequestUpdateOne {
-	_u.mutation.ClearSnapshotVersion()
-	return _u
-}
-
 // SetFailureReason sets the "failure_reason" field.
 func (_u *RefundRequestUpdateOne) SetFailureReason(v string) *RefundRequestUpdateOne {
 	_u.mutation.SetFailureReason(v)
@@ -1001,12 +955,6 @@ func (_u *RefundRequestUpdateOne) sqlSave(ctx context.Context) (_node *RefundReq
 	}
 	if _u.mutation.FenceSequenceCleared() {
 		_spec.ClearField(refundrequest.FieldFenceSequence, field.TypeString)
-	}
-	if value, ok := _u.mutation.SnapshotVersion(); ok {
-		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
-	}
-	if _u.mutation.SnapshotVersionCleared() {
-		_spec.ClearField(refundrequest.FieldSnapshotVersion, field.TypeString)
 	}
 	if value, ok := _u.mutation.FailureReason(); ok {
 		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)

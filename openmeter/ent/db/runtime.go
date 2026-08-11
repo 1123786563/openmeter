@@ -3765,10 +3765,6 @@ func init() {
 	refundrequestDescFenceSequence := refundrequestFields[14].Descriptor()
 	// refundrequest.DefaultFenceSequence holds the default value on creation for the fence_sequence field.
 	refundrequest.DefaultFenceSequence = refundrequestDescFenceSequence.Default.(string)
-	// refundrequestDescSnapshotVersion is the schema descriptor for snapshot_version field.
-	refundrequestDescSnapshotVersion := refundrequestFields[15].Descriptor()
-	// refundrequest.DefaultSnapshotVersion holds the default value on creation for the snapshot_version field.
-	refundrequest.DefaultSnapshotVersion = refundrequestDescSnapshotVersion.Default.(string)
 	// refundrequestDescID is the schema descriptor for id field.
 	refundrequestDescID := refundrequestMixinFields0[0].Descriptor()
 	// refundrequest.DefaultID holds the default value on creation for the id field.

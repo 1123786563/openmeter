@@ -132360,7 +132360,6 @@ type RefundRequestMutation struct {
 	provider_name         *string
 	provider_refund_id    *string
 	fence_sequence        *string
-	snapshot_version      *string
 	failure_reason        *string
 	clearedFields         map[string]struct{}
 	_order                *string
@@ -133346,55 +133345,6 @@ func (m *RefundRequestMutation) ResetFenceSequence() {
 	delete(m.clearedFields, refundrequest.FieldFenceSequence)
 }
 
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (m *RefundRequestMutation) SetSnapshotVersion(s string) {
-	m.snapshot_version = &s
-}
-
-// SnapshotVersion returns the value of the "snapshot_version" field in the mutation.
-func (m *RefundRequestMutation) SnapshotVersion() (r string, exists bool) {
-	v := m.snapshot_version
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSnapshotVersion returns the old "snapshot_version" field's value of the RefundRequest entity.
-// If the RefundRequest object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *RefundRequestMutation) OldSnapshotVersion(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSnapshotVersion is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSnapshotVersion requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSnapshotVersion: %w", err)
-	}
-	return oldValue.SnapshotVersion, nil
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (m *RefundRequestMutation) ClearSnapshotVersion() {
-	m.snapshot_version = nil
-	m.clearedFields[refundrequest.FieldSnapshotVersion] = struct{}{}
-}
-
-// SnapshotVersionCleared returns if the "snapshot_version" field was cleared in this mutation.
-func (m *RefundRequestMutation) SnapshotVersionCleared() bool {
-	_, ok := m.clearedFields[refundrequest.FieldSnapshotVersion]
-	return ok
-}
-
-// ResetSnapshotVersion resets all changes to the "snapshot_version" field.
-func (m *RefundRequestMutation) ResetSnapshotVersion() {
-	m.snapshot_version = nil
-	delete(m.clearedFields, refundrequest.FieldSnapshotVersion)
-}
-
 // SetFailureReason sets the "failure_reason" field.
 func (m *RefundRequestMutation) SetFailureReason(s string) {
 	m.failure_reason = &s
@@ -133572,7 +133522,7 @@ func (m *RefundRequestMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RefundRequestMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 20)
 	if m.namespace != nil {
 		fields = append(fields, refundrequest.FieldNamespace)
 	}
@@ -133630,9 +133580,6 @@ func (m *RefundRequestMutation) Fields() []string {
 	if m.fence_sequence != nil {
 		fields = append(fields, refundrequest.FieldFenceSequence)
 	}
-	if m.snapshot_version != nil {
-		fields = append(fields, refundrequest.FieldSnapshotVersion)
-	}
 	if m.failure_reason != nil {
 		fields = append(fields, refundrequest.FieldFailureReason)
 	}
@@ -133682,8 +133629,6 @@ func (m *RefundRequestMutation) Field(name string) (ent.Value, bool) {
 		return m.ProviderRefundID()
 	case refundrequest.FieldFenceSequence:
 		return m.FenceSequence()
-	case refundrequest.FieldSnapshotVersion:
-		return m.SnapshotVersion()
 	case refundrequest.FieldFailureReason:
 		return m.FailureReason()
 	}
@@ -133733,8 +133678,6 @@ func (m *RefundRequestMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldProviderRefundID(ctx)
 	case refundrequest.FieldFenceSequence:
 		return m.OldFenceSequence(ctx)
-	case refundrequest.FieldSnapshotVersion:
-		return m.OldSnapshotVersion(ctx)
 	case refundrequest.FieldFailureReason:
 		return m.OldFailureReason(ctx)
 	}
@@ -133879,13 +133822,6 @@ func (m *RefundRequestMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetFenceSequence(v)
 		return nil
-	case refundrequest.FieldSnapshotVersion:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSnapshotVersion(v)
-		return nil
 	case refundrequest.FieldFailureReason:
 		v, ok := value.(string)
 		if !ok {
@@ -134013,9 +133949,6 @@ func (m *RefundRequestMutation) ClearedFields() []string {
 	if m.FieldCleared(refundrequest.FieldFenceSequence) {
 		fields = append(fields, refundrequest.FieldFenceSequence)
 	}
-	if m.FieldCleared(refundrequest.FieldSnapshotVersion) {
-		fields = append(fields, refundrequest.FieldSnapshotVersion)
-	}
 	if m.FieldCleared(refundrequest.FieldFailureReason) {
 		fields = append(fields, refundrequest.FieldFailureReason)
 	}
@@ -134047,9 +133980,6 @@ func (m *RefundRequestMutation) ClearField(name string) error {
 		return nil
 	case refundrequest.FieldFenceSequence:
 		m.ClearFenceSequence()
-		return nil
-	case refundrequest.FieldSnapshotVersion:
-		m.ClearSnapshotVersion()
 		return nil
 	case refundrequest.FieldFailureReason:
 		m.ClearFailureReason()
@@ -134118,9 +134048,6 @@ func (m *RefundRequestMutation) ResetField(name string) error {
 		return nil
 	case refundrequest.FieldFenceSequence:
 		m.ResetFenceSequence()
-		return nil
-	case refundrequest.FieldSnapshotVersion:
-		m.ResetSnapshotVersion()
 		return nil
 	case refundrequest.FieldFailureReason:
 		m.ResetFailureReason()

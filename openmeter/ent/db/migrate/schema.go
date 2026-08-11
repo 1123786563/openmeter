@@ -6186,7 +6186,6 @@ var (
 		{Name: "provider_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "provider_refund_id", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "fence_sequence", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "snapshot_version", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
 		{Name: "commerce_order_id", Type: field.TypeString, SchemaType: map[string]string{"postgres": "char(26)"}},
 	}
@@ -6198,7 +6197,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "refund_requests_commerce_orders_refund_requests",
-				Columns:    []*schema.Column{RefundRequestsColumns[21]},
+				Columns:    []*schema.Column{RefundRequestsColumns[20]},
 				RefColumns: []*schema.Column{CommerceOrdersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -6222,7 +6221,7 @@ var (
 			{
 				Name:    "refundrequest_namespace_commerce_order_id",
 				Unique:  false,
-				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[21]},
+				Columns: []*schema.Column{RefundRequestsColumns[1], RefundRequestsColumns[20]},
 			},
 			{
 				Name:    "refundrequest_namespace_customer_id_status",

@@ -155,11 +155,6 @@ func FenceSequence(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldEQ(FieldFenceSequence, v))
 }
 
-// SnapshotVersion applies equality check predicate on the "snapshot_version" field. It's identical to SnapshotVersionEQ.
-func SnapshotVersion(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldEQ(FieldSnapshotVersion, v))
-}
-
 // FailureReason applies equality check predicate on the "failure_reason" field. It's identical to FailureReasonEQ.
 func FailureReason(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldEQ(FieldFailureReason, v))
@@ -1178,81 +1173,6 @@ func FenceSequenceEqualFold(v string) predicate.RefundRequest {
 // FenceSequenceContainsFold applies the ContainsFold predicate on the "fence_sequence" field.
 func FenceSequenceContainsFold(v string) predicate.RefundRequest {
 	return predicate.RefundRequest(sql.FieldContainsFold(FieldFenceSequence, v))
-}
-
-// SnapshotVersionEQ applies the EQ predicate on the "snapshot_version" field.
-func SnapshotVersionEQ(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldEQ(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionNEQ applies the NEQ predicate on the "snapshot_version" field.
-func SnapshotVersionNEQ(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldNEQ(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionIn applies the In predicate on the "snapshot_version" field.
-func SnapshotVersionIn(vs ...string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldIn(FieldSnapshotVersion, vs...))
-}
-
-// SnapshotVersionNotIn applies the NotIn predicate on the "snapshot_version" field.
-func SnapshotVersionNotIn(vs ...string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldNotIn(FieldSnapshotVersion, vs...))
-}
-
-// SnapshotVersionGT applies the GT predicate on the "snapshot_version" field.
-func SnapshotVersionGT(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldGT(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionGTE applies the GTE predicate on the "snapshot_version" field.
-func SnapshotVersionGTE(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldGTE(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionLT applies the LT predicate on the "snapshot_version" field.
-func SnapshotVersionLT(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldLT(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionLTE applies the LTE predicate on the "snapshot_version" field.
-func SnapshotVersionLTE(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldLTE(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionContains applies the Contains predicate on the "snapshot_version" field.
-func SnapshotVersionContains(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldContains(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionHasPrefix applies the HasPrefix predicate on the "snapshot_version" field.
-func SnapshotVersionHasPrefix(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldHasPrefix(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionHasSuffix applies the HasSuffix predicate on the "snapshot_version" field.
-func SnapshotVersionHasSuffix(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldHasSuffix(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionIsNil applies the IsNil predicate on the "snapshot_version" field.
-func SnapshotVersionIsNil() predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldIsNull(FieldSnapshotVersion))
-}
-
-// SnapshotVersionNotNil applies the NotNil predicate on the "snapshot_version" field.
-func SnapshotVersionNotNil() predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldNotNull(FieldSnapshotVersion))
-}
-
-// SnapshotVersionEqualFold applies the EqualFold predicate on the "snapshot_version" field.
-func SnapshotVersionEqualFold(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldEqualFold(FieldSnapshotVersion, v))
-}
-
-// SnapshotVersionContainsFold applies the ContainsFold predicate on the "snapshot_version" field.
-func SnapshotVersionContainsFold(v string) predicate.RefundRequest {
-	return predicate.RefundRequest(sql.FieldContainsFold(FieldSnapshotVersion, v))
 }
 
 // FailureReasonEQ applies the EQ predicate on the "failure_reason" field.

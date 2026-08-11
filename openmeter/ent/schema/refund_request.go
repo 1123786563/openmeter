@@ -58,9 +58,6 @@ func (RefundRequest) Fields() []ent.Field {
 		// Fence details.
 		field.String("fence_sequence").Optional().Default(""),
 
-		// Snapshot version.
-		field.String("snapshot_version").Optional().Default(""),
-
 		// Failure detail.
 		field.String("failure_reason").Optional().Nillable(),
 	}

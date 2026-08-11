@@ -251,20 +251,6 @@ func (_c *RefundRequestCreate) SetNillableFenceSequence(v *string) *RefundReques
 	return _c
 }
 
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (_c *RefundRequestCreate) SetSnapshotVersion(v string) *RefundRequestCreate {
-	_c.mutation.SetSnapshotVersion(v)
-	return _c
-}
-
-// SetNillableSnapshotVersion sets the "snapshot_version" field if the given value is not nil.
-func (_c *RefundRequestCreate) SetNillableSnapshotVersion(v *string) *RefundRequestCreate {
-	if v != nil {
-		_c.SetSnapshotVersion(*v)
-	}
-	return _c
-}
-
 // SetFailureReason sets the "failure_reason" field.
 func (_c *RefundRequestCreate) SetFailureReason(v string) *RefundRequestCreate {
 	_c.mutation.SetFailureReason(v)
@@ -401,10 +387,6 @@ func (_c *RefundRequestCreate) defaults() {
 	if _, ok := _c.mutation.FenceSequence(); !ok {
 		v := refundrequest.DefaultFenceSequence
 		_c.mutation.SetFenceSequence(v)
-	}
-	if _, ok := _c.mutation.SnapshotVersion(); !ok {
-		v := refundrequest.DefaultSnapshotVersion
-		_c.mutation.SetSnapshotVersion(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := refundrequest.DefaultID()
@@ -591,10 +573,6 @@ func (_c *RefundRequestCreate) createSpec() (*RefundRequest, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.FenceSequence(); ok {
 		_spec.SetField(refundrequest.FieldFenceSequence, field.TypeString, value)
 		_node.FenceSequence = value
-	}
-	if value, ok := _c.mutation.SnapshotVersion(); ok {
-		_spec.SetField(refundrequest.FieldSnapshotVersion, field.TypeString, value)
-		_node.SnapshotVersion = value
 	}
 	if value, ok := _c.mutation.FailureReason(); ok {
 		_spec.SetField(refundrequest.FieldFailureReason, field.TypeString, value)
@@ -886,24 +864,6 @@ func (u *RefundRequestUpsert) UpdateFenceSequence() *RefundRequestUpsert {
 // ClearFenceSequence clears the value of the "fence_sequence" field.
 func (u *RefundRequestUpsert) ClearFenceSequence() *RefundRequestUpsert {
 	u.SetNull(refundrequest.FieldFenceSequence)
-	return u
-}
-
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (u *RefundRequestUpsert) SetSnapshotVersion(v string) *RefundRequestUpsert {
-	u.Set(refundrequest.FieldSnapshotVersion, v)
-	return u
-}
-
-// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
-func (u *RefundRequestUpsert) UpdateSnapshotVersion() *RefundRequestUpsert {
-	u.SetExcluded(refundrequest.FieldSnapshotVersion)
-	return u
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (u *RefundRequestUpsert) ClearSnapshotVersion() *RefundRequestUpsert {
-	u.SetNull(refundrequest.FieldSnapshotVersion)
 	return u
 }
 
@@ -1229,27 +1189,6 @@ func (u *RefundRequestUpsertOne) UpdateFenceSequence() *RefundRequestUpsertOne {
 func (u *RefundRequestUpsertOne) ClearFenceSequence() *RefundRequestUpsertOne {
 	return u.Update(func(s *RefundRequestUpsert) {
 		s.ClearFenceSequence()
-	})
-}
-
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (u *RefundRequestUpsertOne) SetSnapshotVersion(v string) *RefundRequestUpsertOne {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.SetSnapshotVersion(v)
-	})
-}
-
-// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
-func (u *RefundRequestUpsertOne) UpdateSnapshotVersion() *RefundRequestUpsertOne {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.UpdateSnapshotVersion()
-	})
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (u *RefundRequestUpsertOne) ClearSnapshotVersion() *RefundRequestUpsertOne {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.ClearSnapshotVersion()
 	})
 }
 
@@ -1745,27 +1684,6 @@ func (u *RefundRequestUpsertBulk) UpdateFenceSequence() *RefundRequestUpsertBulk
 func (u *RefundRequestUpsertBulk) ClearFenceSequence() *RefundRequestUpsertBulk {
 	return u.Update(func(s *RefundRequestUpsert) {
 		s.ClearFenceSequence()
-	})
-}
-
-// SetSnapshotVersion sets the "snapshot_version" field.
-func (u *RefundRequestUpsertBulk) SetSnapshotVersion(v string) *RefundRequestUpsertBulk {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.SetSnapshotVersion(v)
-	})
-}
-
-// UpdateSnapshotVersion sets the "snapshot_version" field to the value that was provided on create.
-func (u *RefundRequestUpsertBulk) UpdateSnapshotVersion() *RefundRequestUpsertBulk {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.UpdateSnapshotVersion()
-	})
-}
-
-// ClearSnapshotVersion clears the value of the "snapshot_version" field.
-func (u *RefundRequestUpsertBulk) ClearSnapshotVersion() *RefundRequestUpsertBulk {
-	return u.Update(func(s *RefundRequestUpsert) {
-		s.ClearSnapshotVersion()
 	})
 }
 
