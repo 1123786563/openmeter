@@ -285,7 +285,7 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 		return existing, false, nil
 	}
 
-	identity, err := s.providerIdentity(ctx, in.Provider)
+	identity, err := s.providerIdentity(ctx, in.Provider, "identity")
 	if err != nil {
 		return nil, false, err
 	}
@@ -310,22 +310,30 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 	return s.attempts.CreateAttempt(ctx, attempt)
 }
 
-func (s *service) providerIdentity(ctx context.Context, providerName Provider) (ProviderIdentity, error) {
+func (s *service) providerAdapter(providerName Provider, operation string) (ProviderAdapter, error) {
 	provider, ok := s.providers[providerName]
 	if !ok || provider == nil {
-		return ProviderIdentity{}, &ProviderError{
+		return nil, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
 		}
+	}
+	return provider, nil
+}
+
+func (s *service) providerIdentity(ctx context.Context, providerName Provider, operation string) (ProviderIdentity, error) {
+	provider, err := s.providerAdapter(providerName, operation)
+	if err != nil {
+		return ProviderIdentity{}, err
 	}
 
 	identity, err := provider.Identity(ctx)
 	if err != nil {
 		return ProviderIdentity{}, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: %v", ErrPermanentProviderProtocol, err),
 		}
@@ -335,7 +343,7 @@ func (s *service) providerIdentity(ctx context.Context, providerName Provider) (
 	if identity.MerchantID == "" || identity.ApplicationID == "" {
 		return ProviderIdentity{}, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: merchant and application identity are required", ErrPermanentProviderProtocol),
 		}
@@ -357,9 +365,22 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 		return CheckoutResult{}, err
 	}
 
-	provider, ok := s.providers[attempt.Provider]
-	if !ok {
-		return CheckoutResult{}, fmt.Errorf("payment: provider %s not configured", attempt.Provider)
+	provider, err := s.providerAdapter(attempt.Provider, "checkout")
+	if err != nil {
+		return CheckoutResult{}, err
+	}
+	identity, err := s.providerIdentity(ctx, attempt.Provider, "checkout")
+	if err != nil {
+		return CheckoutResult{}, err
+	}
+	if attempt.ExpectedMerchantID == "" || attempt.ExpectedApplicationID == "" ||
+		identity.MerchantID != attempt.ExpectedMerchantID || identity.ApplicationID != attempt.ExpectedApplicationID {
+		return CheckoutResult{}, &ProviderError{
+			Provider:  attempt.Provider,
+			Operation: "checkout",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: configured provider identity does not match payment attempt snapshot", ErrPermanentProviderProtocol),
+		}
 	}
 
 	// Fetch order for the public ID and amount.
@@ -407,14 +428,9 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 // The namespace parameter scopes the attempt lookup. Payment callback URLs are
 // registered per-tenant, so the HTTP handler always knows the namespace.
 func (s *service) HandleCallback(ctx context.Context, namespace string, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error) {
-	provider, ok := s.providers[providerName]
-	if !ok {
-		return CallbackResult{}, &ProviderError{
-			Provider:  providerName,
-			Operation: "callback",
-			Kind:      ProviderErrorPermanent,
-			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
-		}
+	provider, err := s.providerAdapter(providerName, "callback")
+	if err != nil {
+		return CallbackResult{}, err
 	}
 
 	// Verify the signature — the adapter does this and extracts verified fields.
@@ -433,14 +449,9 @@ func (s *service) ConfirmPayment(ctx context.Context, namespace, attemptID strin
 		return CallbackResult{}, err
 	}
 
-	provider, ok := s.providers[attempt.Provider]
-	if !ok {
-		return CallbackResult{}, &ProviderError{
-			Provider:  attempt.Provider,
-			Operation: "confirm",
-			Kind:      ProviderErrorPermanent,
-			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
-		}
+	provider, err := s.providerAdapter(attempt.Provider, "confirm")
+	if err != nil {
+		return CallbackResult{}, err
 	}
 
 	if attempt.ProviderOrderID == "" {

@@ -750,20 +750,27 @@ func (a *EntAdapter) GetRefundRequestByIdempotencyKey(ctx context.Context, names
 	return mapEntRefundRequest(er), nil
 }
 
-func (a *EntAdapter) ListProviderProcessingRefundRequests(ctx context.Context, namespace string, limit int) ([]RefundRequestWire, error) {
+// ListProcessableRefundRequests returns every non-terminal refund state that
+// ProcessOne can advance. This includes initial submissions and crash recovery
+// after a provider success, not only provider-status polling.
+func (a *EntAdapter) ListProcessableRefundRequests(ctx context.Context, namespace string, limit int) ([]RefundRequestWire, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 100
 	}
 	requests, err := a.db.RefundRequest.Query().
 		Where(
 			refundrequest.NamespaceEQ(namespace),
-			refundrequest.StatusEQ(refundrequest.StatusProviderProcessing),
+			refundrequest.StatusIn(
+				refundrequest.StatusPendingFence,
+				refundrequest.StatusProviderProcessing,
+				refundrequest.StatusLedgerReversing,
+			),
 		).
 		Order(refundrequest.ByUpdatedAt(), refundrequest.ByID()).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("ent: list provider-processing refunds: %w", err)
+		return nil, fmt.Errorf("ent: list processable refunds: %w", err)
 	}
 	result := make([]RefundRequestWire, len(requests))
 	for i, request := range requests {

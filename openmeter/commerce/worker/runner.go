@@ -258,7 +258,7 @@ type CommerceWorkerDeps struct {
 	// Fulfillment processing: calls ProcessPending for all pending fulfillments.
 	Fulfillment fulfillmentProcessor
 
-	// Refund processing: polls providers for refunds in provider_processing.
+	// Refund processing: advances initial, provider-pending, and ledger-recovery states.
 	Refund refundProcessor
 
 	// Payment query recovery: confirms payment attempts stuck in pending.
@@ -282,10 +282,10 @@ type fulfillmentProcessor interface {
 	ProcessPending(ctx context.Context, namespace string, limit int) (int, error)
 }
 
-// refundProcessor drives refunds stuck in provider_processing. The runner
-// lists refunds that need provider polling and processes each one.
+// refundProcessor advances every non-terminal state handled by ProcessOne,
+// including initial submission, provider polling, and ledger recovery.
 type refundProcessor interface {
-	ListProviderProcessing(ctx context.Context, namespace string) ([]string, error)
+	ListProcessable(ctx context.Context, namespace string) ([]string, error)
 	ProcessOne(ctx context.Context, namespace, refundID string) error
 }
 
@@ -419,13 +419,13 @@ func RegisterCommerceWorkers(deps CommerceWorkerDeps) (*Manager, error) {
 	return mgr, nil
 }
 
-// processRefundBatch lists all refunds in provider_processing status and
-// processes each one. It continues after individual failures, then returns the
-// joined errors so the runner reports the incomplete batch and retries later.
+// processRefundBatch lists all processable refunds and advances each one. It
+// continues after individual failures, then returns the joined errors so the
+// runner reports the incomplete batch and retries later.
 func processRefundBatch(ctx context.Context, svc refundProcessor, namespace string) (int, error) {
-	ids, err := svc.ListProviderProcessing(ctx, namespace)
+	ids, err := svc.ListProcessable(ctx, namespace)
 	if err != nil {
-		return 0, fmt.Errorf("list provider-processing refunds: %w", err)
+		return 0, fmt.Errorf("list processable refunds: %w", err)
 	}
 	processed := 0
 	var processErrors []error

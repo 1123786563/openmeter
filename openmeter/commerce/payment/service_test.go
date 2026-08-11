@@ -1069,14 +1069,16 @@ func TestInitiateCheckout(t *testing.T) {
 		PublicID:     "PUB-10",
 	}
 	h.attempts.attempts["att-10"] = &PaymentAttempt{
-		ID:          "att-10",
-		Namespace:   "ns",
-		OrderID:     "order-10",
-		CustomerID:  "cust",
-		Provider:    ProviderWeChat,
-		Status:      AttemptStatusCreated,
-		AmountMinor: 100,
-		Currency:    "CNY",
+		ID:                    "att-10",
+		Namespace:             "ns",
+		OrderID:               "order-10",
+		CustomerID:            "cust",
+		Provider:              ProviderWeChat,
+		Status:                AttemptStatusCreated,
+		AmountMinor:           100,
+		Currency:              "CNY",
+		ExpectedMerchantID:    "merchant-1",
+		ExpectedApplicationID: "application-1",
 	}
 	h.attempts.byIdem["ns/cust/idem-10"] = "att-10"
 
@@ -1100,6 +1102,82 @@ func TestInitiateCheckout(t *testing.T) {
 	}
 	if result.Attempt.Status != AttemptStatusPending {
 		t.Errorf("status = %s, want pending", result.Attempt.Status)
+	}
+}
+
+func TestInitiateCheckoutFailsClosedWhenProviderIdentityNoLongerMatchesSnapshot(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		identity ProviderIdentity
+	}{
+		{name: "merchant missing", identity: ProviderIdentity{ApplicationID: "application-1"}},
+		{name: "application missing", identity: ProviderIdentity{MerchantID: "merchant-1"}},
+		{name: "merchant changed", identity: ProviderIdentity{MerchantID: "merchant-2", ApplicationID: "application-1"}},
+		{name: "application changed", identity: ProviderIdentity{MerchantID: "merchant-1", ApplicationID: "application-2"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			h.orders.orders["order-identity"] = &commerce.Order{
+				NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-identity"},
+				CustomerID:   "customer-1", Status: commerce.OrderStatusAwaitingPayment,
+				AmountMinor: 100, Currency: "CNY", PublicID: "public-order-identity",
+			}
+			h.attempts.attempts["attempt-identity"] = &PaymentAttempt{
+				ID: "attempt-identity", Namespace: "ns", OrderID: "order-identity", CustomerID: "customer-1",
+				Provider: ProviderWeChat, Status: AttemptStatusCreated, AmountMinor: 100, Currency: "CNY",
+				ExpectedMerchantID: "merchant-1", ExpectedApplicationID: "application-1",
+			}
+			h.provider.identity = tt.identity
+			h.provider.qrFn = func(context.Context, CheckoutInput) (CheckoutFact, error) {
+				t.Fatal("CreateQRCode must not run with incomplete or drifted provider identity")
+				return CheckoutFact{}, nil
+			}
+
+			_, err := h.svc.InitiateCheckout(t.Context(), "ns", "attempt-identity")
+			require.ErrorIs(t, err, ErrPermanentProviderProtocol)
+			var providerErr *ProviderError
+			require.ErrorAs(t, err, &providerErr)
+			require.Equal(t, ProviderErrorPermanent, providerErr.Kind)
+			require.Equal(t, "checkout", providerErr.Operation)
+		})
+	}
+}
+
+func TestProviderOperationsTreatNilAdapterAsDisabled(t *testing.T) {
+	h := newTestHarness(t)
+	_, attempt := h.setupPaidOrder("ns", "customer-1", "order-nil-provider", "provider-order-nil", 100)
+	attempt.ExpectedMerchantID = "merchant-1"
+	attempt.ExpectedApplicationID = "application-1"
+
+	svc, err := New(Config{
+		Attempts: h.attempts, Facts: h.facts, Orders: h.orders, TxRunner: h.paidTx,
+		Providers: map[Provider]ProviderAdapter{ProviderWeChat: nil},
+	})
+	require.NoError(t, err)
+
+	for _, operation := range []struct {
+		name string
+		call func() error
+	}{
+		{name: "checkout", call: func() error {
+			_, err := svc.InitiateCheckout(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+		{name: "callback", call: func() error {
+			_, err := svc.HandleCallback(t.Context(), "ns", ProviderWeChat, nil, []byte("callback"))
+			return err
+		}},
+		{name: "confirm", call: func() error {
+			_, err := svc.ConfirmPayment(t.Context(), "ns", attempt.ID)
+			return err
+		}},
+	} {
+		t.Run(operation.name, func(t *testing.T) {
+			require.NotPanics(t, func() {
+				err := operation.call()
+				require.ErrorIs(t, err, ErrPermanentProviderProtocol)
+			})
+		})
 	}
 }
 

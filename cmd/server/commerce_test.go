@@ -74,7 +74,7 @@ func completeRuntimeDependencies() *commerceRuntimeDependencies {
 func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
 	wiring, err := wireCommerce(
 		entdb.NewClient(), "default", testGrantConnector{},
-		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+		config.CommerceConfiguration{Enabled: false}, testutils.NewLogger(t),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, wiring.Handler)
@@ -87,7 +87,7 @@ func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
 func TestWireCommerceDisabledRejectsAllMutationHandlers(t *testing.T) {
 	wiring, err := wireCommerce(
 		entdb.NewClient(), "default", testGrantConnector{},
-		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+		config.CommerceConfiguration{Enabled: false}, testutils.NewLogger(t),
 	)
 	require.NoError(t, err)
 
@@ -139,7 +139,7 @@ func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			wiring, err := wireCommerce(
+			wiring, err := wireCommerceWithRuntimeDependencies(
 				entdb.NewClient(), "default", testGrantConnector{}, cfg, tt.deps, testutils.NewLogger(t),
 			)
 			require.Nil(t, wiring)
@@ -158,14 +158,14 @@ func TestWireCommerceEnabledWithoutChannelsStillRequiresRealRefundDependencies(t
 	}
 
 	wiring, err := wireCommerce(
-		entdb.NewClient(), "default", testGrantConnector{}, cfg, nil, testutils.NewLogger(t),
+		entdb.NewClient(), "default", testGrantConnector{}, cfg, testutils.NewLogger(t),
 	)
 	require.Nil(t, wiring)
 	require.ErrorContains(t, err, "commerce automatic refund disabled")
 }
 
 func TestWireCommerceEnabledRegistersProviderRecoveryWorkersWithCompleteDependencies(t *testing.T) {
-	wiring, err := wireCommerce(
+	wiring, err := wireCommerceWithRuntimeDependencies(
 		entdb.NewClient(), "default", testGrantConnector{},
 		validCommerceConfiguration(t), completeRuntimeDependencies(), testutils.NewLogger(t),
 	)
@@ -183,7 +183,7 @@ func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	cfg := validCommerceConfiguration(t)
 	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
 
-	wiring, err := wireCommerce(
+	wiring, err := wireCommerceWithRuntimeDependencies(
 		entdb.NewClient(), "default", testGrantConnector{}, cfg,
 		completeRuntimeDependencies(), testutils.NewLogger(t),
 	)
@@ -191,6 +191,19 @@ func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	require.Error(t, err)
 	var pathErr *os.PathError
 	require.True(t, errors.As(err, &pathErr))
+}
+
+func TestWireCommerceValidatesProviderSecretsBeforeUnavailableRefundRuntime(t *testing.T) {
+	cfg := validCommerceConfiguration(t)
+	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
+
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{}, cfg, testutils.NewLogger(t),
+	)
+	require.Nil(t, wiring)
+	var pathErr *os.PathError
+	require.ErrorAs(t, err, &pathErr)
+	require.NotContains(t, err.Error(), "refund fence")
 }
 
 func TestWirePaymentProvidersRejectsMalformedSecretFilesAtStartup(t *testing.T) {

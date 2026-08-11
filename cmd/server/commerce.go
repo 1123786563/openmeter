@@ -60,6 +60,20 @@ func wireCommerce(
 	defaultNamespace string,
 	grantConnector credit.GrantConnector,
 	cfg config.CommerceConfiguration,
+	logger *slog.Logger,
+) (*CommerceWiring, error) {
+	return wireCommerceWithRuntimeDependencies(entClient, defaultNamespace, grantConnector, cfg, nil, logger)
+}
+
+// wireCommerceWithRuntimeDependencies is the test seam for proving that the
+// provider-backed refund workers are only registered with a complete real
+// dependency bundle. Production uses wireCommerce and therefore remains
+// fail-closed until those collaborators have production assembly.
+func wireCommerceWithRuntimeDependencies(
+	entClient *entdb.Client,
+	defaultNamespace string,
+	grantConnector credit.GrantConnector,
+	cfg config.CommerceConfiguration,
 	runtimeDeps *commerceRuntimeDependencies,
 	logger *slog.Logger,
 ) (*CommerceWiring, error) {
@@ -121,11 +135,11 @@ func wireCommerce(
 	var paymentRecovery *payment.Recovery
 	var refundWorker *refundWorkerAdapter
 	if cfg.Enabled {
-		if err := validateAutomaticRefundDependencies(runtimeDeps); err != nil {
-			return nil, err
-		}
 		paymentProviders, refundProviders, err = wirePaymentProviders(cfg, logger)
 		if err != nil {
+			return nil, err
+		}
+		if err := validateAutomaticRefundDependencies(runtimeDeps); err != nil {
 			return nil, err
 		}
 
@@ -419,8 +433,8 @@ type refundProcessService interface {
 	ProcessOne(ctx context.Context, namespace, refundID string) (*refund.RefundRequest, error)
 }
 
-func (a *refundWorkerAdapter) ListProviderProcessing(ctx context.Context, namespace string) ([]string, error) {
-	refunds, err := a.repo.ListProviderProcessingRefundRequests(ctx, namespace, 100)
+func (a *refundWorkerAdapter) ListProcessable(ctx context.Context, namespace string) ([]string, error) {
+	refunds, err := a.repo.ListProcessableRefundRequests(ctx, namespace, 100)
 	if err != nil {
 		return nil, err
 	}

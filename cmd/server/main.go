@@ -171,7 +171,6 @@ func main() {
 		app.NamespaceManager.GetDefaultNamespace(),
 		app.EntitlementRegistry.Grant,
 		conf.Commerce,
-		nil,
 		logger,
 	)
 	if err != nil {

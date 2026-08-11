@@ -15,6 +15,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/fulfillment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
 )
 
@@ -424,6 +425,44 @@ func TestListStalePendingPaymentAttemptsFiltersAndOrders(t *testing.T) {
 	}
 	require.Equal(t, wantSameTimeIDs[0], got[1].ID)
 	require.Equal(t, wantSameTimeIDs[1], got[2].ID)
+}
+
+func TestListProcessableRefundRequestsIncludesRecoveryStates(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, _ := createPaidTransitionFixture(t, client, "refund-recovery")
+	otherOrder, _ := createPaidTransitionFixture(t, client, "refund-recovery-other")
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	createRefund := func(namespace, id string, status refundrequest.Status, updatedAt time.Time, commerceOrderID string) {
+		t.Helper()
+		_, err := client.RefundRequest.Create().
+			SetID(id).
+			SetNamespace(namespace).
+			SetCommerceOrderID(commerceOrderID).
+			SetCustomerID("customer-refund-recovery").
+			SetAmountCents(100).
+			SetCurrency("CNY").
+			SetStatus(status).
+			SetIdempotencyKey("idem-" + id).
+			SetUpdatedAt(updatedAt).
+			Save(t.Context())
+		require.NoError(t, err)
+	}
+
+	createRefund("default", "refund-pending", refundrequest.StatusPendingFence, now.Add(-3*time.Minute), order.ID)
+	createRefund("default", "refund-provider", refundrequest.StatusProviderProcessing, now.Add(-2*time.Minute), order.ID)
+	createRefund("default", "refund-ledger", refundrequest.StatusLedgerReversing, now.Add(-time.Minute), order.ID)
+	createRefund("default", "refund-fulfilled", refundrequest.StatusFulfilled, now.Add(-4*time.Minute), order.ID)
+	createRefund("other", "refund-other-namespace", refundrequest.StatusPendingFence, now.Add(-5*time.Minute), otherOrder.ID)
+
+	got, err := adapter.ListProcessableRefundRequests(t.Context(), "default", 100)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	require.Equal(t, []string{"refund-pending", "refund-provider", "refund-ledger"}, []string{got[0].ID, got[1].ID, got[2].ID})
 }
 
 func createPaidTransitionFixture(t *testing.T, client *db.Client, suffix string) (*db.CommerceOrder, *db.PaymentAttempt) {
