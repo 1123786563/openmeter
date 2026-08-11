@@ -292,12 +292,13 @@ func TestCreateOrder_Success(t *testing.T) {
 	h := testHandler(Services{
 		Orders: &mockOrders{
 			order: &commerce.Order{
-				PublicID:    "ord-1",
-				CustomerID:  "cust-1",
-				Kind:        commerce.OrderKindWalletTopUp,
-				Status:      commerce.OrderStatusCreated,
-				AmountMinor: 1000,
-				Currency:    "CNY",
+				NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "01INTERNALORDERID0000000000"},
+				PublicID:     "ord-1",
+				CustomerID:   "cust-1",
+				Kind:         commerce.OrderKindWalletTopUp,
+				Status:       commerce.OrderStatusCreated,
+				AmountMinor:  1000,
+				Currency:     "CNY",
 			},
 			created: true,
 		},
@@ -312,6 +313,16 @@ func TestCreateOrder_Success(t *testing.T) {
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var response api.CommerceOrder
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Id != "01INTERNALORDERID0000000000" {
+		t.Fatalf("id = %q, want internal resource id", response.Id)
+	}
+	if response.BusinessTrackingNumber == nil || *response.BusinessTrackingNumber != "ord-1" {
+		t.Fatalf("business_tracking_number = %v, want public order number ord-1", response.BusinessTrackingNumber)
 	}
 }
 

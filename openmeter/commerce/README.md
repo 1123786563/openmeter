@@ -144,6 +144,11 @@ effect — the ledger effect was committed in the original transaction.
   WeChat or Alipay merchant credentials and does not receive provider callbacks.
 - The repository's protocol-compatible provider test stand is loopback-only;
   its success is not an official sandbox or live-provider acceptance result.
+- The authenticated OpenMeter `__test/commerce` fault/oracle routes are disabled
+  by default and can be enabled only with an explicit test token and local HTTP
+  provider endpoints. They expose no mutation other than arming a one-shot
+  pre-transaction failure and must not be enabled in official sandbox/live
+  deployments.
 
 ### Workers
 See [README-payment-production.md](README-payment-production.md) for the

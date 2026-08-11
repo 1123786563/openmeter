@@ -39,6 +39,7 @@ type CommerceWiring struct {
 
 	paymentProviders map[payment.Provider]payment.ProviderAdapter
 	refundProviders  map[payment.Provider]refund.ProviderRefunder
+	testControl      *commerceTestControl
 }
 
 // commerceRuntimeDependencies is the narrow seam for external automatic
@@ -134,6 +135,7 @@ func wireCommerceWithRuntimeDependencies(
 	var refundSvc refund.Service
 	var paymentRecovery *payment.Recovery
 	var refundWorker *refundWorkerAdapter
+	var testFaultInjector *oneShotPaidTransitionFaultInjector
 	if cfg.Enabled {
 		paymentProviders, refundProviders, err = wirePaymentProviders(cfg, logger)
 		if err != nil {
@@ -145,11 +147,16 @@ func wireCommerceWithRuntimeDependencies(
 
 		if len(paymentProviders) > 0 {
 			attemptRepo := paymentAttemptRepoAdapter{entAdapter}
+			paidTxRunner := payment.PaidTxRunner(&entPaidTxRunner{adapter: entAdapter})
+			if cfg.Test.Enabled {
+				testFaultInjector = newOneShotPaidTransitionFaultInjector(paidTxRunner)
+				paidTxRunner = testFaultInjector
+			}
 			paymentSvc, err = payment.New(payment.Config{
 				Attempts:  attemptRepo,
 				Facts:     paymentFactRepoAdapter{entAdapter},
 				Orders:    fulfillmentOrderAdapter{entAdapter},
-				TxRunner:  &entPaidTxRunner{adapter: entAdapter},
+				TxRunner:  paidTxRunner,
 				Providers: paymentProviders,
 				Logger:    logger,
 			})
@@ -199,6 +206,13 @@ func wireCommerceWithRuntimeDependencies(
 	wiring := &CommerceWiring{
 		Handler: handler, Catalog: catalogSvc,
 		paymentProviders: paymentProviders, refundProviders: refundProviders,
+	}
+	if testFaultInjector != nil {
+		wiring.testControl = &commerceTestControl{
+			token:    cfg.Test.ControlToken,
+			injector: testFaultInjector,
+			oracle:   entCommerceTestOracle{client: entClient, namespace: defaultNamespace},
+		}
 	}
 	if !cfg.Enabled {
 		wiring.Handler = readOnlyCommerceHandler{delegate: handler}

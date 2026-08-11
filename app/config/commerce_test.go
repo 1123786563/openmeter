@@ -43,6 +43,47 @@ func TestCommerceConfigurationValidateDisabled(t *testing.T) {
 	require.NoError(t, CommerceConfiguration{}.Validate())
 }
 
+func TestCommerceConfigurationTestControlsAreDisabledByDefault(t *testing.T) {
+	v := viper.New()
+	ConfigureCommerce(v)
+
+	require.False(t, v.GetBool("commerce.test.enabled"))
+	require.Empty(t, v.GetString("commerce.test.controlToken"))
+}
+
+func TestCommerceConfigurationTestControlsRequireTokenAndLocalProviders(t *testing.T) {
+	t.Run("token is required", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+
+		require.ErrorContains(t, cfg.Validate(), "commerce.test.control_token is required")
+	})
+
+	t.Run("live provider endpoints are rejected", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+		cfg.Test.ControlToken = "phase2-loopback-control-token"
+		cfg.Payment.WeChat.Enabled = true
+
+		require.ErrorContains(t, cfg.Validate(), "commerce.test controls require loopback test provider endpoints")
+	})
+
+	t.Run("explicit local phase2 provider is accepted", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+		cfg.Test.ControlToken = "phase2-loopback-control-token"
+		cfg.Payment.WeChat.Enabled = true
+		cfg.Payment.WeChat.BaseURL = "http://payment-provider:8080"
+		cfg.Payment.WeChat.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/callback"
+		cfg.Payment.WeChat.RefundNotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/refund-callback"
+		cfg.Payment.Alipay.Enabled = true
+		cfg.Payment.Alipay.GatewayURL = "http://payment-provider:8080/gateway.do"
+		cfg.Payment.Alipay.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/alipay/callback"
+
+		require.NoError(t, cfg.Validate())
+	})
+}
+
 func TestCommerceConfigurationValidateAllowsTestWeChatBaseURL(t *testing.T) {
 	for _, baseURL := range []string{"http://127.0.0.1:8080", "http://payment-provider"} {
 		t.Run(baseURL, func(t *testing.T) {

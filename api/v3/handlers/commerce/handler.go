@@ -899,6 +899,10 @@ func toAPIRechargeProduct(p commerce.Product) api.CommerceRechargeProduct {
 }
 
 func toAPIOrder(o *commerce.Order) api.CommerceOrder {
+	businessTrackingNumber := o.BusinessTrackingNumber
+	if businessTrackingNumber == nil && o.PublicID != "" {
+		businessTrackingNumber = &o.PublicID
+	}
 	var credits *int64
 	total := int64(0)
 	for _, l := range o.Lines {
@@ -919,7 +923,7 @@ func toAPIOrder(o *commerce.Order) api.CommerceOrder {
 		CreatedAt:              o.CreatedAt,
 		UpdatedAt:              o.UpdatedAt,
 		ExpiredAt:              toDatePtr(o.ExpiredAt),
-		BusinessTrackingNumber: o.BusinessTrackingNumber,
+		BusinessTrackingNumber: businessTrackingNumber,
 	}
 }
 
