@@ -48,9 +48,9 @@ type AttemptRepository interface {
 
 // FactRepository manages immutable PaymentFact records.
 type FactRepository interface {
-	// InsertFact persists a PaymentFact. It must deduplicate on RawHash — if a
-	// fact with the same RawHash already exists, return the existing fact with
-	// (false, nil).
+	// InsertFact persists a PaymentFact. It must deduplicate on RawHash — if the
+	// same immutable structured fact already exists, return it with (false,
+	// nil); if the persisted structured fact conflicts, return an error.
 	InsertFact(ctx context.Context, fact PaymentFactRecord) (*PaymentFactRecord, bool, error)
 
 	// GetFactByRawHash retrieves a fact by its raw body hash (for dedup). It

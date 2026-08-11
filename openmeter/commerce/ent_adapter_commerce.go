@@ -377,6 +377,9 @@ func (a *EntAdapter) SetPaymentAttemptProviderIDs(ctx context.Context, namespace
 func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire) (*PaymentFactWire, bool, error) {
 	existing, err := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
 	if err == nil && existing != nil {
+		if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+			return nil, false, err
+		}
 		return existing, false, nil
 	}
 	if err != nil && !errors.Is(err, ErrPaymentFactNotFound) {
@@ -410,6 +413,9 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 		if entdb.IsConstraintError(err) {
 			existing, gErr := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
 			if gErr == nil {
+				if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+					return nil, false, err
+				}
 				return existing, false, nil
 			}
 			if !errors.Is(gErr, ErrPaymentFactNotFound) {
@@ -418,6 +424,9 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 			if fact.ProviderEventID != "" {
 				existing, gErr = a.GetPaymentFactByProviderEvent(ctx, fact.Namespace, fact.Provider, fact.ProviderEventID)
 				if gErr == nil {
+					if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+						return nil, false, err
+					}
 					return existing, false, nil
 				}
 			}
@@ -426,6 +435,39 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 		return nil, false, fmt.Errorf("ent: insert payment fact: %w", err)
 	}
 	return mapEntPaymentFact(saved), true, nil
+}
+
+// ensurePaymentFactReplayMatches prevents raw-hash or provider-event
+// uniqueness conflicts from accepting a different verified structured fact as
+// an idempotent replay. RawHash, SignedPayload, CreatedAt, and ID are excluded
+// because they identify the transport observation or local record, not the
+// provider fact itself.
+func ensurePaymentFactReplayMatches(existing *PaymentFactWire, incoming PaymentFactWire) error {
+	if existing == nil ||
+		existing.Namespace != incoming.Namespace ||
+		existing.AttemptID != incoming.AttemptID ||
+		existing.Provider != incoming.Provider ||
+		existing.ProviderOrderID != incoming.ProviderOrderID ||
+		!paymentFactOptionalWireFieldMatches(existing.ProviderPaymentID, incoming.ProviderPaymentID) ||
+		!paymentFactOptionalWireFieldMatches(existing.ProviderEventID, incoming.ProviderEventID) ||
+		!paymentFactOptionalWireFieldMatches(existing.MerchantID, incoming.MerchantID) ||
+		!paymentFactOptionalWireFieldMatches(existing.ApplicationID, incoming.ApplicationID) ||
+		existing.AmountMinor != incoming.AmountMinor ||
+		existing.Currency != incoming.Currency ||
+		existing.Success != incoming.Success ||
+		!existing.Timestamp.Equal(incoming.Timestamp) {
+		return errors.New("ent: persisted payment fact does not match incoming verified fact")
+	}
+	return nil
+}
+
+func paymentFactOptionalWireFieldMatches(existing, incoming string) bool {
+	existingValue := nonEmptyPtr(existing)
+	incomingValue := nonEmptyPtr(incoming)
+	if existingValue == nil || incomingValue == nil {
+		return existingValue == nil && incomingValue == nil
+	}
+	return *existingValue == *incomingValue
 }
 
 func (a *EntAdapter) GetPaymentFactByRawHash(ctx context.Context, namespace, rawHash string) (*PaymentFactWire, error) {
