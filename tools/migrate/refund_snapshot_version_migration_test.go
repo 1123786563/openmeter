@@ -35,7 +35,7 @@ func TestDropRefundSnapshotVersionMigration(t *testing.T) {
 				},
 			},
 			{
-				version:   20260811000200,
+				version:   20260811000100,
 				direction: directionDown,
 				action: func(t *testing.T, db *sql.DB) {
 					var count int
