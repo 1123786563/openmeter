@@ -240,6 +240,9 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	if response.OutTradeNo != providerOrderID || !validTradeStatus(response.TradeState) {
 		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response does not match the request", payment.ErrPermanentProviderProtocol)
 	}
+	if successfulTradeStatus(response.TradeState) && strings.TrimSpace(response.TradeNo) == "" {
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "successful response trade number is missing", payment.ErrPermanentProviderProtocol)
+	}
 	amount, err := parseAmountMinor(response.Amount)
 	if err != nil {
 		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response amount is invalid", payment.ErrPermanentProviderProtocol)
@@ -247,6 +250,10 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 	payload, err := payment.ExtractSignedPayload(rawResponse)
 	if err != nil {
 		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "signed response payload is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	factTime, err := parseOptionalProviderTime(response.SendPayDate)
+	if err != nil {
+		return payment.PaymentFact{}, permanentProviderError("alipay.trade.query", "response payment time is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	return payment.PaymentFact{
 		Provider:          payment.ProviderAlipay,
@@ -259,7 +266,7 @@ func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (pay
 		Success:           successfulTradeStatus(response.TradeState),
 		Terminal:          terminalTradeStatus(response.TradeState),
 		RawHash:           hashBody(rawResponse),
-		Timestamp:         a.now(),
+		Timestamp:         factTime,
 		SignedPayload:     payload,
 	}, nil
 }
@@ -316,28 +323,52 @@ func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInpu
 	if err != nil || amount != input.AmountMinor {
 		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response amount is invalid", payment.ErrPermanentProviderProtocol)
 	}
+	if strings.TrimSpace(response.TradeNo) == "" {
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response trade number is missing", payment.ErrPermanentProviderProtocol)
+	}
 	if response.RefundStatus != "" && response.RefundStatus != "REFUND_SUCCESS" && response.RefundStatus != "REFUND_PROCESSING" && response.RefundStatus != "REFUND_FAIL" {
 		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response status is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	totalAmount := int64(0)
+	if response.TotalAmount != "" {
+		totalAmount, err = parseAmountMinor(response.TotalAmount)
+		if err != nil {
+			return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response total amount is invalid", payment.ErrPermanentProviderProtocol)
+		}
+	}
+	factTime, err := parseOptionalProviderTime(response.RefundedAt)
+	if err != nil {
+		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "response refund time is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	payload, err := payment.ExtractSignedPayload(rawResponse)
 	if err != nil {
 		return payment.RefundFact{}, permanentProviderError("alipay.trade.fastpay.refund.query", "signed response payload is invalid", payment.ErrPermanentProviderProtocol)
 	}
-	success := response.RefundStatus == "" || response.RefundStatus == "REFUND_SUCCESS"
+	status := response.RefundStatus
+	if status == "" {
+		status = "REFUND_SUCCESS"
+	}
+	success := status == "REFUND_SUCCESS"
+	terminal := success || status == "REFUND_FAIL"
 	rawHash := ""
-	if success || response.RefundStatus == "REFUND_FAIL" {
+	if terminal {
 		rawHash = hashBody(rawResponse)
 	}
 	return payment.RefundFact{
-		Provider:         payment.ProviderAlipay,
-		ProviderRefundID: response.OutRequestNo,
-		ProviderOrderID:  response.OutTradeNo,
-		AmountMinor:      amount,
-		Currency:         currency,
-		Success:          success,
-		RawHash:          rawHash,
-		Timestamp:        a.now(),
-		SignedPayload:    payload,
+		Provider:          payment.ProviderAlipay,
+		ProviderRefundID:  response.OutRequestNo,
+		ProviderOrderID:   response.OutTradeNo,
+		ProviderPaymentID: response.TradeNo,
+		MerchantID:        a.sellerID,
+		AmountMinor:       amount,
+		TotalAmountMinor:  totalAmount,
+		Currency:          currency,
+		Status:            status,
+		Success:           success,
+		Terminal:          terminal,
+		RawHash:           rawHash,
+		Timestamp:         factTime,
+		SignedPayload:     payload,
 	}, nil
 }
 
@@ -432,6 +463,13 @@ func successfulTradeStatus(status string) bool {
 
 func terminalTradeStatus(status string) bool {
 	return successfulTradeStatus(status) || status == "TRADE_CLOSED"
+}
+
+func parseOptionalProviderTime(value string) (time.Time, error) {
+	if value == "" {
+		return time.Time{}, nil
+	}
+	return time.ParseInLocation("2006-01-02 15:04:05", value, time.FixedZone("CST", 8*60*60))
 }
 
 func formatAmountMinor(amount int64) string {

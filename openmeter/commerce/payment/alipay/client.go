@@ -40,11 +40,11 @@ func (a *Adapter) call(ctx context.Context, method, responseKey string, requestV
 	}
 	privateKeyPEM, err := a.secrets.Get(ctx, SecretKeyAppPrivateKey)
 	if err != nil {
-		return nil, permanentProviderError(method, "get application private key", err)
+		return nil, permanentProviderError(method, "application private key is unavailable", payment.ErrPermanentProviderProtocol)
 	}
 	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
 	if err != nil {
-		return nil, permanentProviderError(method, "parse application private key", err)
+		return nil, permanentProviderError(method, "application private key is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	signature, err := signRSA2(privateKey, []byte(requestSignContent(values)))
 	if err != nil {
@@ -137,11 +137,11 @@ func permanentProviderHTTPError(operation string, httpStatus int, detail string,
 func (a *Adapter) verifySignature(ctx context.Context, content []byte, encodedSignature string) error {
 	publicKeyPEM, err := a.secrets.Get(ctx, SecretKeyAlipayPublicKey)
 	if err != nil {
-		return fmt.Errorf("alipay: get Alipay public key: %w", err)
+		return fmt.Errorf("%w: Alipay public key is unavailable", payment.ErrPermanentProviderProtocol)
 	}
 	publicKey, err := parseRSAPublicKey([]byte(publicKeyPEM))
 	if err != nil {
-		return fmt.Errorf("alipay: parse Alipay public key: %w", err)
+		return fmt.Errorf("%w: Alipay public key is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	signature, err := base64.StdEncoding.DecodeString(encodedSignature)
 	if err != nil {

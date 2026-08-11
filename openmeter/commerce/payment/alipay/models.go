@@ -18,10 +18,11 @@ type tradeQueryRequest struct {
 
 type tradeQueryResponse struct {
 	providerResponse
-	OutTradeNo string `json:"out_trade_no"`
-	TradeNo    string `json:"trade_no"`
-	TradeState string `json:"trade_status"`
-	Amount     string `json:"total_amount"`
+	OutTradeNo  string `json:"out_trade_no"`
+	TradeNo     string `json:"trade_no"`
+	TradeState  string `json:"trade_status"`
+	Amount      string `json:"total_amount"`
+	SendPayDate string `json:"send_pay_date"`
 }
 
 type refundRequest struct {
@@ -51,6 +52,8 @@ type refundQueryResponse struct {
 	OutRequestNo string `json:"out_request_no"`
 	RefundAmount string `json:"refund_amount"`
 	RefundStatus string `json:"refund_status"`
+	TotalAmount  string `json:"total_amount"`
+	RefundedAt   string `json:"gmt_refund_pay"`
 }
 
 type providerResponse struct {
