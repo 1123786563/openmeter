@@ -111,11 +111,14 @@ func (m *mockAttemptRepo) SetProviderIDs(_ context.Context, namespace, id, order
 }
 
 type mockFactRepo struct {
-	mu        sync.Mutex
-	facts     map[string]*PaymentFactRecord
-	byRawHash map[string]string
-	byEvent   map[string]string
-	insertN   atomic.Int64
+	mu               sync.Mutex
+	facts            map[string]*PaymentFactRecord
+	byRawHash        map[string]string
+	byEvent          map[string]string
+	getByRawHashErr  error
+	getByEventErr    error
+	getByProviderErr error
+	insertN          atomic.Int64
 }
 
 func newMockFactRepo() *mockFactRepo {
@@ -147,9 +150,12 @@ func (m *mockFactRepo) InsertFact(_ context.Context, f PaymentFactRecord) (*Paym
 func (m *mockFactRepo) GetFactByRawHash(_ context.Context, namespace, rawHash string) (*PaymentFactRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getByRawHashErr != nil {
+		return nil, m.getByRawHashErr
+	}
 	id, ok := m.byRawHash[namespace+"/"+rawHash]
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, commerce.ErrPaymentFactNotFound
 	}
 	return m.facts[id], nil
 }
@@ -157,6 +163,9 @@ func (m *mockFactRepo) GetFactByRawHash(_ context.Context, namespace, rawHash st
 func (m *mockFactRepo) GetFactsByProviderOrder(_ context.Context, namespace string, provider Provider, providerOrderID string) ([]PaymentFactRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getByProviderErr != nil {
+		return nil, m.getByProviderErr
+	}
 	var result []PaymentFactRecord
 	for _, f := range m.facts {
 		if f.Namespace == namespace && f.Provider == provider && f.ProviderOrderID == providerOrderID {
@@ -169,9 +178,12 @@ func (m *mockFactRepo) GetFactsByProviderOrder(_ context.Context, namespace stri
 func (m *mockFactRepo) GetFactByProviderEvent(_ context.Context, namespace string, provider Provider, eventID string) (*PaymentFactRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.getByEventErr != nil {
+		return nil, m.getByEventErr
+	}
 	id, ok := m.byEvent[namespace+"/"+string(provider)+"/"+eventID]
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, commerce.ErrPaymentFactNotFound
 	}
 	return m.facts[id], nil
 }
@@ -416,6 +428,59 @@ func TestApplyPaymentFact_PaidTransitionFailureIsRetryable(t *testing.T) {
 	require.Zero(t, h.attempts.updateN.Load())
 }
 
+func TestApplyPaymentFact_FactLookupFailureIsRetryable(t *testing.T) {
+	tests := []struct {
+		name       string
+		setFailure func(*mockFactRepo, error)
+	}{
+		{
+			name: "raw hash lookup",
+			setFailure: func(repo *mockFactRepo, err error) {
+				repo.getByRawHashErr = err
+			},
+		},
+		{
+			name: "provider event lookup",
+			setFailure: func(repo *mockFactRepo, err error) {
+				repo.getByEventErr = err
+			},
+		},
+		{
+			name: "provider order lookup",
+			setFailure: func(repo *mockFactRepo, err error) {
+				repo.getByProviderErr = err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			_, attempt := h.setupPaidOrder("default", "customer-1", "order-1", "provider-order-1", 100)
+			h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+				return PaymentFact{
+					Provider:          ProviderWeChat,
+					ProviderOrderID:   "provider-order-1",
+					ProviderEventID:   "event-1",
+					ProviderPaymentID: "payment-1",
+					AmountMinor:       100,
+					Currency:          "CNY",
+					Success:           true,
+					RawHash:           HashRawBody(body),
+				}, nil
+			}
+			repoErr := errors.New("fact repository unavailable")
+			tt.setFailure(h.facts, repoErr)
+			h.attempts.updateN.Store(0)
+
+			_, err := h.svc.HandleCallback(t.Context(), "default", ProviderWeChat, nil, []byte("callback"))
+			require.ErrorIs(t, err, repoErr)
+			require.Equal(t, AttemptStatusPending, h.attempts.attempts[attempt.ID].Status)
+			require.Zero(t, h.attempts.updateN.Load())
+		})
+	}
+}
+
 // TestHandleCallbackValidPayment verifies the happy path: valid callback moves
 // the order to paid (not fulfilled).
 func TestHandleCallbackValidPayment(t *testing.T) {
@@ -507,6 +572,39 @@ func TestHandleCallbackDuplicateEventId(t *testing.T) {
 	if !result.AlreadyPaid {
 		t.Error("duplicate callback should set AlreadyPaid")
 	}
+}
+
+func TestHandleCallbackDuplicateEventForDifferentAttemptIsRejected(t *testing.T) {
+	h := newTestHarness(t)
+	_, _ = h.setupPaidOrder("ns", "cust-1", "order-event-1", "PROV-EVENT-ORDER-1", 200)
+	secondOrder, secondAttempt := h.setupPaidOrder("ns", "cust-2", "order-event-2", "PROV-EVENT-ORDER-2", 200)
+
+	h.provider.verifyFn = func(_ context.Context, _ http.Header, body []byte) (PaymentFact, error) {
+		providerOrderID := "PROV-EVENT-ORDER-1"
+		providerPaymentID := "PROV-EVENT-PAYMENT-1"
+		if string(body) == "second-event-body" {
+			providerOrderID = "PROV-EVENT-ORDER-2"
+			providerPaymentID = "PROV-EVENT-PAYMENT-2"
+		}
+		return PaymentFact{
+			Provider:          ProviderWeChat,
+			ProviderOrderID:   providerOrderID,
+			ProviderPaymentID: providerPaymentID,
+			ProviderEventID:   "SHARED-PROVIDER-EVENT",
+			AmountMinor:       200,
+			Currency:          "CNY",
+			Success:           true,
+			RawHash:           HashRawBody(body),
+		}, nil
+	}
+
+	_, err := h.svc.HandleCallback(t.Context(), "ns", ProviderWeChat, nil, []byte("first-event-body"))
+	require.NoError(t, err)
+
+	_, err = h.svc.HandleCallback(t.Context(), "ns", ProviderWeChat, nil, []byte("second-event-body"))
+	require.ErrorIs(t, err, ErrContradictoryPaymentFact)
+	require.Equal(t, AttemptStatusPending, h.attempts.attempts[secondAttempt.ID].Status)
+	require.Equal(t, commerce.OrderStatusAwaitingPayment, secondOrder.Status)
 }
 
 // TestHandleCallbackWrongAmount verifies that a fact with the wrong amount is rejected.

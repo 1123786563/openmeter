@@ -53,13 +53,15 @@ type FactRepository interface {
 	// (false, nil).
 	InsertFact(ctx context.Context, fact PaymentFactRecord) (*PaymentFactRecord, bool, error)
 
-	// GetFactByRawHash retrieves a fact by its raw body hash (for dedup).
+	// GetFactByRawHash retrieves a fact by its raw body hash (for dedup). It
+	// returns commerce.ErrPaymentFactNotFound when no fact exists.
 	GetFactByRawHash(ctx context.Context, namespace string, rawHash string) (*PaymentFactRecord, error)
 
 	// GetFactsByProviderOrder retrieves all facts for a provider order.
 	GetFactsByProviderOrder(ctx context.Context, namespace string, provider Provider, providerOrderID string) ([]PaymentFactRecord, error)
 
-	// GetFactByProviderEvent retrieves a fact by provider event ID (dedup).
+	// GetFactByProviderEvent retrieves a fact by provider event ID (dedup). It
+	// returns commerce.ErrPaymentFactNotFound when no fact exists.
 	GetFactByProviderEvent(ctx context.Context, namespace string, provider Provider, providerEventID string) (*PaymentFactRecord, error)
 }
 
@@ -482,7 +484,10 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.RawHash != "" {
 		existing, err := s.facts.GetFactByRawHash(ctx, namespace, pf.RawHash)
 		if err == nil && existing != nil {
-			return s.resultForExistingFact(ctx, namespace, attempt, existing)
+			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
+		}
+		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
+			return CallbackResult{}, fmt.Errorf("payment: look up fact by raw hash: %w", err)
 		}
 	}
 
@@ -490,12 +495,18 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.ProviderEventID != "" {
 		existing, err := s.facts.GetFactByProviderEvent(ctx, namespace, pf.Provider, pf.ProviderEventID)
 		if err == nil && existing != nil {
-			return s.resultForExistingFact(ctx, namespace, attempt, existing)
+			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
+		}
+		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
+			return CallbackResult{}, fmt.Errorf("payment: look up fact by provider event: %w", err)
 		}
 	}
 
 	// Check for contradictory success facts on the same provider order.
-	existingFacts, _ := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
+	existingFacts, err := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
+	if err != nil {
+		return CallbackResult{}, fmt.Errorf("payment: list facts by provider order: %w", err)
+	}
 	if err := checkContradiction(existingFacts, pf); err != nil {
 		return CallbackResult{}, err
 	}
@@ -562,8 +573,15 @@ func (s *service) resultForExistingFact(
 	ctx context.Context,
 	namespace string,
 	attempt *PaymentAttempt,
+	incoming PaymentFact,
 	fact *PaymentFactRecord,
 ) (CallbackResult, error) {
+	if err := matchFactToAttempt(attempt, incoming); err != nil {
+		return CallbackResult{}, err
+	}
+	if !existingPaymentFactMatches(attempt, incoming, fact) {
+		return CallbackResult{}, ErrContradictoryPaymentFact
+	}
 	current, err := s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 	if err != nil {
 		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt for existing fact: %w", err)
@@ -573,6 +591,27 @@ func (s *service) resultForExistingFact(
 		Fact:        fact,
 		AlreadyPaid: current.Status == AttemptStatusSucceeded,
 	}, nil
+}
+
+// existingPaymentFactMatches prevents a raw-hash or provider-event collision
+// from being treated as an idempotent replay for another attempt or for
+// different verified provider fields. RawHash, SignedPayload, and CreatedAt
+// are intentionally excluded: the same provider event can arrive through a
+// callback and a status query with different transport representations.
+func existingPaymentFactMatches(attempt *PaymentAttempt, incoming PaymentFact, existing *PaymentFactRecord) bool {
+	return existing != nil &&
+		existing.Namespace == attempt.Namespace &&
+		existing.AttemptID == attempt.ID &&
+		existing.Provider == incoming.Provider &&
+		existing.ProviderOrderID == incoming.ProviderOrderID &&
+		existing.ProviderPaymentID == incoming.ProviderPaymentID &&
+		existing.ProviderEventID == incoming.ProviderEventID &&
+		existing.MerchantID == incoming.MerchantID &&
+		existing.ApplicationID == incoming.ApplicationID &&
+		existing.AmountMinor == incoming.AmountMinor &&
+		existing.Currency == incoming.Currency &&
+		existing.Success == incoming.Success &&
+		existing.Timestamp.Equal(incoming.Timestamp)
 }
 
 // matchFactToAttempt verifies the payment fact matches the attempt:

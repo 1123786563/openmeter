@@ -106,6 +106,70 @@ func TestPaidTransitionConcurrent(t *testing.T) {
 	require.True(t, savedFact.Success)
 }
 
+func TestPaidTransitionRejectsConflictingDeduplicatedFact(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, attempt := createPaidTransitionFixture(t, client, "conflict-fact")
+	now := time.Date(2026, 8, 9, 10, 30, 0, 0, time.UTC)
+	params := PaidTransitionParams{
+		Namespace:         "default",
+		CustomerID:        "customer-conflict-fact",
+		OrderID:           order.ID,
+		PaymentAttemptID:  attempt.ID,
+		Provider:          "wechat",
+		ProviderOrderID:   "provider-order-conflicting-deduplicated-fact",
+		ProviderPaymentID: "provider-payment-original",
+		ProviderEventID:   "provider-event-conflicting-deduplicated-fact",
+		MerchantID:        "merchant-conflicting-deduplicated-fact",
+		ApplicationID:     "application-conflicting-deduplicated-fact",
+		AmountMinor:       100,
+		Currency:          "CNY",
+		Success:           true,
+		RawHash:           "raw-hash-conflicting-deduplicated-fact-original",
+		Timestamp:         now,
+		CreatedAt:         now,
+		SignedPayload:     map[string]any{"trade_state": "SUCCESS"},
+	}
+
+	_, err = adapter.RunPaidTransition(t.Context(), params)
+	require.NoError(t, err)
+
+	replay := params
+	replay.RawHash = "raw-hash-conflicting-deduplicated-fact-benign-replay"
+	replayed, err := adapter.RunPaidTransition(t.Context(), replay)
+	require.NoError(t, err)
+	require.True(t, replayed.AlreadyPaid)
+
+	conflicting := params
+	conflicting.RawHash = "raw-hash-conflicting-deduplicated-fact-replay"
+	conflicting.ProviderPaymentID = "provider-payment-conflicting"
+	_, err = adapter.RunPaidTransition(t.Context(), conflicting)
+	require.ErrorContains(t, err, "deduplicated payment fact does not match verified transition")
+
+	require.Equal(t, 1, countPaymentFacts(t, client, params.ProviderEventID))
+	fulfillmentCount, err := client.Fulfillment.Query().
+		Where(fulfillment.NamespaceEQ(params.Namespace), fulfillment.CommerceOrderIDEQ(order.ID)).
+		Count(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 1, fulfillmentCount)
+	outboxCount, err := client.CommerceOutbox.Query().
+		Where(commerceoutbox.NamespaceEQ(params.Namespace), commerceoutbox.AggregateIDEQ(order.ID)).
+		Count(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 1, outboxCount)
+
+	savedFact, err := client.PaymentFact.Query().
+		Where(paymentfact.NamespaceEQ(params.Namespace), paymentfact.ProviderEventIDEQ(params.ProviderEventID)).
+		Only(t.Context())
+	require.NoError(t, err)
+	require.NotNil(t, savedFact.ProviderPaymentID)
+	require.Equal(t, params.ProviderPaymentID, *savedFact.ProviderPaymentID)
+}
+
 func TestSetProviderIDsEmpty(t *testing.T) {
 	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
 	defer testDB.Close(t)
