@@ -93,8 +93,10 @@ func (m *mockOrders) TransitionStatus(_ context.Context, _, _ string, _ commerce
 }
 
 type mockPayment struct {
-	attempt *payment.PaymentAttempt
-	err     error
+	attempt        *payment.PaymentAttempt
+	err            error
+	callbackCalled bool
+	callbackBody   []byte
 }
 
 func (m *mockPayment) CreateAttempt(_ context.Context, _ payment.CreateAttemptInput) (*payment.PaymentAttempt, bool, error) {
@@ -109,7 +111,9 @@ func (m *mockPayment) InitiateCheckout(_ context.Context, _, _ string) (payment.
 	return payment.CheckoutResult{Attempt: m.attempt}, m.err
 }
 
-func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, _ []byte) (payment.CallbackResult, error) {
+func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, body []byte) (payment.CallbackResult, error) {
+	m.callbackCalled = true
+	m.callbackBody = append([]byte(nil), body...)
 	return payment.CallbackResult{}, m.err
 }
 
@@ -573,12 +577,39 @@ func TestAlipayCallbackAckIsPlainSuccess(t *testing.T) {
 }
 
 func TestPaymentCallbackBodyLimit(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
+	t.Run("accepts exactly one MiB", func(t *testing.T) {
+		paymentService := &mockPayment{attempt: &payment.PaymentAttempt{}}
+		h := testHandler(Services{Payment: paymentService})
+		body := strings.Repeat("x", 1<<20)
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/callback", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		h.WechatPaymentCallback().ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("expected 204 at the body limit, got %d: %s", rr.Code, rr.Body.String())
+		}
+		if !paymentService.callbackCalled {
+			t.Fatal("payment service was not called at the body limit")
+		}
+		if got := len(paymentService.callbackBody); got != 1<<20 {
+			t.Fatalf("callback body length = %d, want %d", got, 1<<20)
+		}
 	})
-	oversized := string(make([]byte, 1<<20+1))
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", oversized, nil)
-	requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+
+	t.Run("rejects more than one MiB before verification", func(t *testing.T) {
+		paymentService := &mockPayment{attempt: &payment.PaymentAttempt{}}
+		h := testHandler(Services{Payment: paymentService})
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/callback", strings.NewReader(strings.Repeat("x", 1<<20+1)))
+		rr := httptest.NewRecorder()
+
+		h.WechatPaymentCallback().ServeHTTP(rr, req)
+
+		requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+		if paymentService.callbackCalled {
+			t.Fatal("payment service was called with an oversized callback body")
+		}
+	})
 }
 
 func TestPaymentCallbackSignatureRejectionIsBadRequest(t *testing.T) {
@@ -600,24 +631,50 @@ func TestPaymentCallbackFactMismatchIsBadRequest(t *testing.T) {
 	requireProblemResponse(t, rr, http.StatusBadRequest)
 }
 
-func TestPaymentCallbackContradictoryFactIsConflict(t *testing.T) {
+func TestPaymentCallbackContradictoryFactIsBadRequest(t *testing.T) {
 	h := testHandler(Services{
 		Payment: &mockPayment{err: payment.ErrContradictoryPaymentFact},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusConflict)
+	requireProblemResponse(t, rr, http.StatusBadRequest)
 }
 
-func TestPaymentCallbackDuplicateEventIsProviderSuccess(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: payment.ErrDuplicateProviderEvent},
-	})
-	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 on duplicate callback, got %d: %s", rr.Code, rr.Body.String())
+func TestPaymentCallbackLegalReplayUsesProviderSuccessAck(t *testing.T) {
+	tests := []struct {
+		name        string
+		provider    payment.Provider
+		err         error
+		wantStatus  int
+		wantBody    string
+		contentType string
+	}{
+		{name: "WeChat duplicate event", provider: payment.ProviderWeChat, err: payment.ErrDuplicateProviderEvent, wantStatus: http.StatusNoContent},
+		{name: "WeChat already fulfilled", provider: payment.ProviderWeChat, err: payment.ErrFulfillmentAlreadyDone, wantStatus: http.StatusNoContent},
+		{name: "Alipay duplicate event", provider: payment.ProviderAlipay, err: payment.ErrDuplicateProviderEvent, wantStatus: http.StatusOK, wantBody: "success", contentType: "text/plain; charset=utf-8"},
+		{name: "Alipay already fulfilled", provider: payment.ProviderAlipay, err: payment.ErrFulfillmentAlreadyDone, wantStatus: http.StatusOK, wantBody: "success", contentType: "text/plain; charset=utf-8"},
 	}
-	if got := rr.Body.String(); got != "success" {
-		t.Fatalf("expected provider success ACK on duplicate callback, got %q", got)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Payment: &mockPayment{err: tt.err}})
+			var callback http.Handler
+			if tt.provider == payment.ProviderWeChat {
+				callback = h.WechatPaymentCallback()
+			} else {
+				callback = h.AlipayPaymentCallback()
+			}
+			rr := doRequest(t, callback, http.MethodPost, "/callback", "raw-body", nil)
+
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("expected %d on legal replay, got %d: %s", tt.wantStatus, rr.Code, rr.Body.String())
+			}
+			if got := rr.Body.String(); got != tt.wantBody {
+				t.Fatalf("provider ACK body = %q, want %q", got, tt.wantBody)
+			}
+			if got := rr.Header().Get("Content-Type"); got != tt.contentType {
+				t.Fatalf("provider ACK content type = %q, want %q", got, tt.contentType)
+			}
+		})
 	}
 }
 
@@ -899,6 +956,14 @@ func TestPaymentCallback_WrappedContextCanceledTransientError_500(t *testing.T) 
 		Payment: &mockPayment{err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled)},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
+}
+
+func TestPaymentCallback_WrappedDeadlineExceededTransientError_500(t *testing.T) {
+	h := testHandler(Services{
+		Payment: &mockPayment{err: fmt.Errorf("payment database timed out: %w", context.DeadlineExceeded)},
+	})
+	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
 	requireProblemResponse(t, rr, http.StatusInternalServerError)
 }
 

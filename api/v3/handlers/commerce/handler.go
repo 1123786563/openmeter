@@ -636,10 +636,9 @@ func isSuccessfulCallbackError(err error) bool {
 func callbackErrorStatus(err error) int {
 	switch {
 	case errors.Is(err, payment.ErrInvalidSignature),
-		errors.Is(err, payment.ErrPaymentFactMismatch):
+		errors.Is(err, payment.ErrPaymentFactMismatch),
+		errors.Is(err, payment.ErrContradictoryPaymentFact):
 		return http.StatusBadRequest
-	case errors.Is(err, payment.ErrContradictoryPaymentFact):
-		return http.StatusConflict
 	case errors.Is(err, payment.ErrPermanentProviderProtocol):
 		return http.StatusBadRequest
 	}
