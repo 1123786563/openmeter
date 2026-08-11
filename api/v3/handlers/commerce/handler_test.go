@@ -428,6 +428,36 @@ func TestCreateOrderRejectsMismatchingPlanIDAndSKU(t *testing.T) {
 	}
 }
 
+func TestCreateOrderRejectsExplicitEmptyPlanID(t *testing.T) {
+	plan := &commerce.Product{
+		NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"},
+		SKU:          "PLAN-PRO-MONTHLY",
+		Kind:         commerce.ProductKindPlanPurchase,
+		AmountMinor:  9900,
+		Currency:     "CNY",
+		Active:       true,
+	}
+	catalog := &mockCatalog{productBySKU: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1"}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "plan-idem-empty-id",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanId: ptrULID(""), PlanKey: "pro", PlanVersion: "monthly"},
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_invalid_plan_reference", "invalid plan reference")
+	if catalog.lastRequestedSKU != "" {
+		t.Fatalf("explicit empty plan_id fell back to SKU lookup: %q", catalog.lastRequestedSKU)
+	}
+	if len(orders.lastInput.ProductIDs) != 0 {
+		t.Fatalf("order service received product IDs after empty plan_id: %v", orders.lastInput.ProductIDs)
+	}
+}
+
 func TestCreateOrderRejectsUnknownPlan(t *testing.T) {
 	h := testHandler(Services{Catalog: &mockCatalog{err: commerce.ErrProductNotFound}, Orders: &mockOrders{}})
 	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-unknown", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "missing", PlanVersion: "monthly"}}
@@ -452,6 +482,39 @@ func TestCreateOrderRejectsMixedProductReference(t *testing.T) {
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for mixed product references, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrderRejectsPlanWithExplicitEmptyRechargeProductReference(t *testing.T) {
+	plan := &commerce.Product{
+		NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"},
+		SKU:          "PLAN-PRO-MONTHLY",
+		Kind:         commerce.ProductKindPlanPurchase,
+		AmountMinor:  9900,
+		Currency:     "CNY",
+		Active:       true,
+	}
+	catalog := &mockCatalog{productBySKU: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1"}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "mixed-empty-idem",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanKey: "pro", PlanVersion: "monthly"},
+		RechargeProductId: ptrULID(""),
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for explicitly mixed product references, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if catalog.lastRequestedSKU != "" {
+		t.Fatalf("mixed request reached catalog SKU lookup: %q", catalog.lastRequestedSKU)
+	}
+	if len(orders.lastInput.ProductIDs) != 0 {
+		t.Fatalf("mixed request reached order service with product IDs: %v", orders.lastInput.ProductIDs)
 	}
 }
 

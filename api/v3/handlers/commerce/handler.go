@@ -344,7 +344,7 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
 		}
-		if body.Plan != nil && body.RechargeProductId != nil && *body.RechargeProductId != "" {
+		if body.Plan != nil && body.RechargeProductId != nil {
 			writeStatus(ctx, w, http.StatusBadRequest, errors.New("plan and recharge_product_id cannot be provided together"))
 			return
 		}
@@ -367,8 +367,13 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 				return
 			}
 			var product *commerce.Product
-			if body.Plan.PlanId != nil && *body.Plan.PlanId != "" {
-				product, err = h.svc.Catalog.GetProduct(ctx, ns, *body.Plan.PlanId)
+			if body.Plan.PlanId != nil {
+				planID := *body.Plan.PlanId
+				if strings.TrimSpace(planID) == "" {
+					writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
+					return
+				}
+				product, err = h.svc.Catalog.GetProduct(ctx, ns, planID)
 				if err != nil {
 					if errors.Is(err, commerce.ErrProductNotFound) {
 						writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
