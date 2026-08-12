@@ -540,23 +540,29 @@ func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*Re
 		return rec, errors.New("refund: " + reason)
 	}
 
-	order, err := s.orders.GetOrder(ctx, rec.Namespace, rec.CommerceOrderID)
+	authority, err := s.resolvePaymentAuthorityForRefund(ctx, rec, provider)
 	if err != nil {
-		return rec, fmt.Errorf("refund: get order for provider submit: %w", err)
+		return rec, err
 	}
 
 	sub, err := provider.Refund(ctx, payment.RefundInput{
-		Namespace:       rec.Namespace,
-		OrderID:         rec.CommerceOrderID,
-		ProviderOrderID: order.PublicID,
-		AmountMinor:     rec.RefundFen,
-		Currency:        rec.Currency,
-		Reason:          rec.Reason,
-		IdempotencyKey:  rec.IdempotencyKey,
+		Namespace:         rec.Namespace,
+		OrderID:           rec.CommerceOrderID,
+		ProviderOrderID:   authority.ProviderOrderID,
+		ProviderPaymentID: authority.ProviderPaymentID,
+		AmountMinor:       rec.RefundFen,
+		TotalAmountMinor:  authority.AmountMinor,
+		Currency:          rec.Currency,
+		Reason:            rec.Reason,
+		IdempotencyKey:    rec.IdempotencyKey,
 	})
 	if err != nil {
-		reason := "provider refund submission failed: " + err.Error()
-		rec = s.failRefund(ctx, rec, reason)
+		// A Refund call that returns an error cannot authoritatively prove the
+		// provider rejected the request. Permanent provider protocol errors also
+		// cover malformed or mismatched responses after the provider may have
+		// accepted it. Retain the fence and recover through QueryRefund; only an
+		// explicit failed/rejected submission status below is terminal.
+		s.logger.WarnContext(ctx, "refund: provider submission result is unknown (retains fence)", "id", rec.ID, "error", err)
 		return rec, fmt.Errorf("refund: provider refund: %w", err)
 	}
 
@@ -587,6 +593,29 @@ func (s *service) submitToProvider(ctx context.Context, rec *RefundRequest) (*Re
 		// success from the submission result.
 		return rec, nil
 	}
+}
+
+func (s *service) resolvePaymentAuthorityForRefund(ctx context.Context, rec *RefundRequest, provider ProviderRefunder) (PaymentAuthority, error) {
+	if s.aResolver == nil {
+		return PaymentAuthority{}, errors.New("refund: payment authority resolver is required for provider submit")
+	}
+	authority, err := s.aResolver.ResolvePaymentAuthorityForOrder(ctx, rec.Namespace, rec.CommerceOrderID)
+	if err != nil {
+		return PaymentAuthority{}, fmt.Errorf("refund: resolve payment authority for provider submit: %w", err)
+	}
+	if authority.Provider != provider.Name() || (authority.Provider != payment.ProviderWeChat && authority.Provider != payment.ProviderAlipay) {
+		return PaymentAuthority{}, errors.New("refund: payment authority provider does not match refund provider")
+	}
+	if authority.ProviderOrderID == "" || authority.ProviderPaymentID == "" {
+		return PaymentAuthority{}, errors.New("refund: payment authority provider identity is incomplete")
+	}
+	if authority.Currency != rec.Currency || authority.Currency != "CNY" {
+		return PaymentAuthority{}, errors.New("refund: payment authority currency does not match refund currency")
+	}
+	if authority.AmountMinor <= 0 || rec.RefundFen <= 0 || rec.RefundFen > authority.AmountMinor {
+		return PaymentAuthority{}, errors.New("refund: payment authority amount is invalid for refund")
+	}
+	return authority, nil
 }
 
 // processProviderProcessing queries the provider for the current status.

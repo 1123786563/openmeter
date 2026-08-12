@@ -19,11 +19,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/credit"
 	"github.com/openmeterio/openmeter/openmeter/credit/grant"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -177,6 +180,49 @@ func TestWireCommerceEnabledRegistersProviderRecoveryWorkersWithCompleteDependen
 	require.Contains(t, wiring.paymentProviders, payment.ProviderAlipay)
 	require.Contains(t, wiring.refundProviders, payment.ProviderAlipay)
 	require.Same(t, wiring.paymentProviders[payment.ProviderAlipay], wiring.refundProviders[payment.ProviderAlipay])
+}
+
+func TestPaymentProviderResolverAdapterResolvesRefundPaymentAuthority(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	entAdapter, err := commerce.NewEntAdapter(commerce.EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, err := client.CommerceOrder.Create().
+		SetNamespace("default").
+		SetCustomerID("customer-refund-authority").
+		SetKind(commerceorder.KindWalletTopUp).
+		SetStatus(commerceorder.StatusFulfilled).
+		SetTotalCents(10000).
+		SetCurrency("CNY").
+		SetIdempotencyKey("order-refund-authority").
+		Save(t.Context())
+	require.NoError(t, err)
+	_, err = client.PaymentAttempt.Create().
+		SetNamespace("default").
+		SetCommerceOrderID(order.ID).
+		SetCustomerID(order.CustomerID).
+		SetProvider(paymentattempt.ProviderWechat).
+		SetProviderOrderID("wechat-order-refund-authority").
+		SetProviderPaymentID("wechat-payment-refund-authority").
+		SetExpectedMerchantID("wx-mch").
+		SetStatus(paymentattempt.StatusSucceeded).
+		SetIdempotencyKey("attempt-refund-authority").
+		SetAmountCents(10000).
+		SetCurrency("CNY").
+		Save(t.Context())
+	require.NoError(t, err)
+
+	var resolver refund.PaymentAuthorityResolver = paymentProviderResolverAdapter{EntAdapter: entAdapter}
+	authority, err := resolver.ResolvePaymentAuthorityForOrder(t.Context(), "default", order.ID)
+	require.NoError(t, err)
+	require.Equal(t, payment.ProviderWeChat, authority.Provider)
+	require.Equal(t, "wechat-order-refund-authority", authority.ProviderOrderID)
+	require.Equal(t, "wechat-payment-refund-authority", authority.ProviderPaymentID)
+	require.Equal(t, "wx-mch", authority.MerchantID)
+	require.Equal(t, int64(10000), authority.AmountMinor)
+	require.Equal(t, "CNY", authority.Currency)
 }
 
 func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {

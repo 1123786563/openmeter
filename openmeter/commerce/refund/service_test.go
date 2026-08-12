@@ -454,12 +454,16 @@ type mockPaymentAuthorityResolver struct {
 	orders     *mockOrders
 	provider   payment.Provider
 	merchantID string
+	authority  *PaymentAuthority
 	err        error
 }
 
 func (r mockPaymentAuthorityResolver) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (PaymentAuthority, error) {
 	if r.err != nil {
 		return PaymentAuthority{}, r.err
+	}
+	if r.authority != nil {
+		return *r.authority, nil
 	}
 	order, err := r.orders.GetOrder(ctx, namespace, orderID)
 	if err != nil {
@@ -1215,6 +1219,136 @@ func TestProcessOneProviderFailure(t *testing.T) {
 	// Fence released on failure.
 	if h.fence.released.Load() != 1 {
 		t.Errorf("fence released = %d, want 1 (released on failure)", h.fence.released.Load())
+	}
+}
+
+func TestProcessOneProviderTransientErrorRetainsFence(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-provider-transient", "cust", 10000)
+	wantErr := &payment.ProviderError{
+		Provider: payment.ProviderWeChat, Operation: "refund", Kind: payment.ProviderErrorRetryable,
+	}
+	h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{}, wantErr
+	}
+
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-provider-transient", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-provider-transient",
+	})
+	require.NoError(t, err)
+
+	result, err := h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.ErrorIs(t, err, payment.ErrRetryableProvider)
+	require.Equal(t, RefundStatusProviderProcessing, result.Status)
+	require.Zero(t, h.fence.released.Load())
+	require.Zero(t, h.reverser.totalReversed())
+}
+
+func TestProcessOneProviderPermanentProtocolErrorRetainsFence(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-provider-protocol", "cust", 10000)
+	wantErr := &payment.ProviderError{
+		Provider: payment.ProviderWeChat, Operation: "refund", Kind: payment.ProviderErrorPermanent,
+		Cause: payment.ErrPermanentProviderProtocol,
+	}
+	h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{}, wantErr
+	}
+
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-provider-protocol", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-provider-protocol",
+	})
+	require.NoError(t, err)
+
+	result, err := h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+	require.Equal(t, RefundStatusProviderProcessing, result.Status)
+	require.Zero(t, h.fence.released.Load())
+	require.Zero(t, h.reverser.totalReversed())
+}
+
+func TestProcessOneProviderAuthorityPassesOriginalPaymentAndTotal(t *testing.T) {
+	wallet := newMockWallet()
+	orders := newMockOrders()
+	repo := newMockRepo(wallet)
+	fence := newMockFenceClient(repo)
+	reverser := newMockReverser()
+	provider := newMockProvider(payment.ProviderWeChat)
+	wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	orders.addFulfilledOrder("ns", "order-provider-authority", "cust", 10000)
+
+	var refundInput payment.RefundInput
+	provider.refundResult = func(input payment.RefundInput) (payment.RefundSubmission, error) {
+		refundInput = input
+		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: input.IdempotencyKey, Status: "processing"}, nil
+	}
+	svc, err := New(Config{
+		Repo:      repo,
+		Orders:    orders,
+		Wallet:    wallet,
+		Fence:     fence,
+		Reverser:  reverser,
+		Providers: map[payment.Provider]ProviderRefunder{payment.ProviderWeChat: provider},
+		PaymentAuthorityResolver: mockPaymentAuthorityResolver{
+			orders: orders, provider: payment.ProviderWeChat, merchantID: "wx-mch",
+		},
+	})
+	require.NoError(t, err)
+
+	rec, _, err := svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-provider-authority", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-provider-authority",
+	})
+	require.NoError(t, err)
+
+	result, err := svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, result.Status)
+	require.Equal(t, "pub-order-provider-authority", refundInput.ProviderOrderID)
+	require.Equal(t, "payment-order-provider-authority", refundInput.ProviderPaymentID)
+	require.Equal(t, int64(10000), refundInput.TotalAmountMinor)
+
+	for _, authority := range []PaymentAuthority{
+		{Provider: payment.ProviderAlipay, ProviderOrderID: "provider-order", ProviderPaymentID: "provider-payment", AmountMinor: 10000, Currency: "CNY"},
+		{Provider: payment.ProviderWeChat, ProviderOrderID: "provider-order", ProviderPaymentID: "provider-payment", AmountMinor: 10000, Currency: "USD"},
+		{Provider: payment.ProviderWeChat, ProviderOrderID: "provider-order", ProviderPaymentID: "provider-payment", AmountMinor: 9999, Currency: "CNY"},
+	} {
+		t.Run("rejects mismatched authority", func(t *testing.T) {
+			wallet := newMockWallet()
+			orders := newMockOrders()
+			repo := newMockRepo(wallet)
+			fence := newMockFenceClient(repo)
+			provider := newMockProvider(payment.ProviderWeChat)
+			wallet.setGrants("cust", []commerce.AllocationGrant{rechargeGrant("grant-1", 100000, 0, 100000)})
+			orders.addFulfilledOrder("ns", "order-provider-authority-reject", "cust", 10000)
+			svc, err := New(Config{
+				Repo: repo, Orders: orders, Wallet: wallet, Fence: fence, Reverser: newMockReverser(),
+				Providers:                map[payment.Provider]ProviderRefunder{payment.ProviderWeChat: provider},
+				PaymentAuthorityResolver: mockPaymentAuthorityResolver{authority: &authority},
+			})
+			require.NoError(t, err)
+			rec, _, err := svc.CreateRefund(t.Context(), CreateRefundInput{
+				Namespace: "ns", OrderID: "order-provider-authority-reject", CustomerID: "cust",
+				Currency: "CNY", IdempotencyKey: "idem-provider-authority-reject",
+			})
+			require.NoError(t, err)
+
+			result, err := svc.ProcessOne(t.Context(), "ns", rec.ID)
+			require.Error(t, err)
+			require.Equal(t, RefundStatusProviderProcessing, result.Status)
+			require.Zero(t, provider.refundCallN.Load())
+			require.Zero(t, fence.released.Load())
+		})
 	}
 }
 
