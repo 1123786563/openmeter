@@ -313,6 +313,11 @@ type Service interface {
 	ProcessOne(ctx context.Context, namespace, refundID string) (*RefundRequest, error)
 	GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error)
 
+	// HandleCallback verifies a provider-native refund callback before applying
+	// its fact. Only WeChat refund callbacks are accepted; Alipay remains
+	// query-only because its callback cannot establish the full refund authority.
+	HandleCallback(ctx context.Context, namespace string, provider payment.Provider, headers http.Header, body []byte) (*RefundRequest, error)
+
 	// ApplyRefundCallback ingests a verified provider refund callback fact and
 	// drives the refund to completion. Idempotent on RawHash. The refund is
 	// located by its provider refund ID (set during submission).
@@ -720,6 +725,34 @@ func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest
 // GetRefund retrieves a refund by ID.
 func (s *service) GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error) {
 	return s.repo.GetRefund(ctx, namespace, id)
+}
+
+// HandleCallback verifies and applies a WeChat refund callback. The raw request
+// is handed directly to the provider adapter and is never persisted or logged;
+// only the adapter's verified fact is passed to ApplyRefundCallback.
+func (s *service) HandleCallback(ctx context.Context, namespace string, provider payment.Provider, headers http.Header, body []byte) (*RefundRequest, error) {
+	if provider != payment.ProviderWeChat {
+		return nil, fmt.Errorf("%w: refund callbacks are unsupported for provider %q", payment.ErrPermanentProviderProtocol, provider)
+	}
+
+	configured, ok := s.providers[provider]
+	if !ok {
+		return nil, fmt.Errorf("%w: refund callback provider %q is not configured", payment.ErrPermanentProviderProtocol, provider)
+	}
+	configured, err := validateConfiguredProvider(provider, configured)
+	if err != nil {
+		return nil, err
+	}
+	verifier, ok := configured.(RefundCallbackVerifier)
+	if !ok {
+		return nil, fmt.Errorf("%w: refund callback verifier is not configured for provider %q", payment.ErrPermanentProviderProtocol, provider)
+	}
+
+	fact, err := verifier.VerifyRefundCallback(ctx, headers, body)
+	if err != nil {
+		return nil, fmt.Errorf("refund: verify provider callback: %w", err)
+	}
+	return s.ApplyRefundCallback(ctx, namespace, fact)
 }
 
 // ApplyRefundCallback ingests a verified provider refund callback fact and drives

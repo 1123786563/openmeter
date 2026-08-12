@@ -402,12 +402,17 @@ func (r *mockReverser) totalReversed() int64 {
 // ---------------------------------------------------------------------------
 
 type mockProvider struct {
-	mu           sync.Mutex
-	name         payment.Provider
-	refundResult func(input payment.RefundInput) (payment.RefundSubmission, error)
-	queryResult  func(input payment.RefundQueryInput) (payment.RefundFact, error)
-	queryCallN   atomic.Int64
-	refundCallN  atomic.Int64
+	mu                  sync.Mutex
+	name                payment.Provider
+	refundResult        func(input payment.RefundInput) (payment.RefundSubmission, error)
+	queryResult         func(input payment.RefundQueryInput) (payment.RefundFact, error)
+	callbackFact        payment.RefundFact
+	callbackErr         error
+	callbackHeaders     http.Header
+	callbackBody        []byte
+	queryCallN          atomic.Int64
+	refundCallN         atomic.Int64
+	refundCallbackCallN atomic.Int64
 }
 
 func newMockProvider(name payment.Provider) *mockProvider {
@@ -1939,6 +1944,85 @@ func TestApplyRefundCallbackSuccess(t *testing.T) {
 	}
 }
 
+func TestHandleCallbackVerifiesThenAppliesRefundFact(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-http-cb", "cust", 10000)
+	h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: "pr-http-cb", Status: "processing"}, nil
+	}
+
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-http-cb", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-http-cb",
+	})
+	require.NoError(t, err)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+
+	h.provider.callbackFact = verifiedWechatRefundCallbackFact("order-http-cb", "pr-http-cb", "SUCCESS", "hash-http-cb", 10000)
+	headers := http.Header{"Wechatpay-Serial": []string{"platform-serial"}}
+	rec, err = h.svc.HandleCallback(t.Context(), "ns", payment.ProviderWeChat, headers, []byte(`{"id":"refund-event"}`))
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusFulfilled, rec.Status)
+	require.Equal(t, int64(1), h.provider.refundCallbackCallN.Load())
+	require.Equal(t, "platform-serial", h.provider.callbackHeaders.Get("Wechatpay-Serial"))
+	require.Equal(t, `{"id":"refund-event"}`, string(h.provider.callbackBody))
+	require.Equal(t, int64(100000), h.reverser.totalReversed())
+}
+
+func TestHandleCallbackVerificationFailureHasNoRefundEffects(t *testing.T) {
+	h := newTestHarness(t)
+	h.wallet.setGrants("cust", []commerce.AllocationGrant{
+		rechargeGrant("grant-1", 100000, 0, 100000),
+	})
+	h.orders.addFulfilledOrder("ns", "order-http-reject", "cust", 10000)
+	h.provider.refundResult = func(payment.RefundInput) (payment.RefundSubmission, error) {
+		return payment.RefundSubmission{Provider: payment.ProviderWeChat, ProviderRefundID: "pr-http-reject", Status: "processing"}, nil
+	}
+	rec, _, err := h.svc.CreateRefund(t.Context(), CreateRefundInput{
+		Namespace: "ns", OrderID: "order-http-reject", CustomerID: "cust",
+		Currency: "CNY", IdempotencyKey: "idem-http-reject",
+	})
+	require.NoError(t, err)
+	rec, err = h.svc.ProcessOne(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+
+	h.provider.callbackErr = payment.ErrInvalidSignature
+	_, err = h.svc.HandleCallback(t.Context(), "ns", payment.ProviderWeChat, http.Header{}, []byte("invalid"))
+	require.ErrorIs(t, err, payment.ErrInvalidSignature)
+	require.Equal(t, int64(1), h.provider.refundCallbackCallN.Load())
+	require.Equal(t, int64(0), h.reverser.callN.Load())
+	rec, err = h.svc.GetRefund(t.Context(), "ns", rec.ID)
+	require.NoError(t, err)
+	require.Equal(t, RefundStatusProviderProcessing, rec.Status)
+}
+
+func TestHandleCallbackRejectsNonWeChatWithoutVerifying(t *testing.T) {
+	h := newTestHarness(t)
+
+	_, err := h.svc.HandleCallback(t.Context(), "ns", payment.ProviderAlipay, http.Header{}, []byte("callback"))
+	require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
+	require.Zero(t, h.provider.refundCallbackCallN.Load())
+	require.Zero(t, h.reverser.callN.Load())
+}
+
+func TestHandleCallbackUnknownProviderRefundIDHasNoEffects(t *testing.T) {
+	h := newTestHarness(t)
+	h.provider.callbackFact = verifiedWechatRefundCallbackFact("unknown-order", "unknown-provider-refund", "SUCCESS", "hash-unknown-provider-refund", 10000)
+
+	_, err := h.svc.HandleCallback(t.Context(), "ns", payment.ProviderWeChat, http.Header{}, []byte(`{"id":"unknown-refund-event"}`))
+	require.ErrorIs(t, err, ErrRefundNotFound)
+	require.Equal(t, int64(1), h.provider.refundCallbackCallN.Load())
+	require.Zero(t, h.reverser.callN.Load())
+	require.Empty(t, h.repo.refunds)
+	require.Empty(t, h.repo.facts)
+}
+
 func TestApplyRefundCallbackIdempotent(t *testing.T) {
 	h := newTestHarness(t)
 	h.wallet.setGrants("cust", []commerce.AllocationGrant{
@@ -2276,6 +2360,9 @@ var (
 )
 
 // Stub to satisfy RefundCallbackVerifier on mockProvider for compile-time check.
-func (p *mockProvider) VerifyRefundCallback(_ context.Context, _ http.Header, _ []byte) (payment.RefundFact, error) {
-	return payment.RefundFact{}, nil
+func (p *mockProvider) VerifyRefundCallback(_ context.Context, headers http.Header, body []byte) (payment.RefundFact, error) {
+	p.refundCallbackCallN.Add(1)
+	p.callbackHeaders = headers.Clone()
+	p.callbackBody = append([]byte(nil), body...)
+	return p.callbackFact, p.callbackErr
 }

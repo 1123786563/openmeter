@@ -558,23 +558,12 @@ func (h *handler) WechatPaymentCallback() http.HandlerFunc {
 	return h.paymentCallback(payment.ProviderWeChat)
 }
 
-// refundCallbackService is the callback-capable refund service surface. It is
-// kept narrow while the public refund.Service interface is introduced so the
-// handler can safely reject deployments that have not wired callback support.
-type refundCallbackService interface {
-	HandleCallback(ctx context.Context, namespace string, provider payment.Provider, headers http.Header, body []byte) (*refund.RefundRequest, error)
-}
-
 // WechatRefundCallback accepts verified WeChat Pay refund notifications. The
 // endpoint is public: signature verification and refund authority checks are
 // performed by the refund service before it applies a callback fact.
 func (h *handler) WechatRefundCallback() http.HandlerFunc {
 	if h.svc.Refund == nil {
 		return notImplementedHandler("refund service not configured")
-	}
-	callbackService, ok := h.svc.Refund.(refundCallbackService)
-	if !ok {
-		return notImplementedHandler("refund callback service not configured")
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -599,7 +588,7 @@ func (h *handler) WechatRefundCallback() http.HandlerFunc {
 		}
 		r.Body.Close()
 
-		_, cbErr := callbackService.HandleCallback(ctx, ns, payment.ProviderWeChat, r.Header, body)
+		_, cbErr := h.svc.Refund.HandleCallback(ctx, ns, payment.ProviderWeChat, r.Header, body)
 		if cbErr != nil {
 			h.logger.WarnContext(ctx, "commerce: WeChat refund callback error", "error", cbErr)
 			if isSuccessfulRefundCallbackError(cbErr) {
