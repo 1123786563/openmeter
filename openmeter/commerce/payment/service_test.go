@@ -201,9 +201,13 @@ func (m *mockFactRepo) GetFactByProviderEvent(_ context.Context, namespace strin
 }
 
 type mockOrderStatusUpdater struct {
-	mu     sync.Mutex
-	orders map[string]*commerce.Order
-	paidN  atomic.Int64
+	mu                sync.Mutex
+	orders            map[string]*commerce.Order
+	getOrderErr       error
+	getOrderErrOnCall int
+	getOrderCalls     int
+	updateErr         error
+	paidN             atomic.Int64
 }
 
 func newMockOrderUpdater() *mockOrderStatusUpdater {
@@ -213,6 +217,10 @@ func newMockOrderUpdater() *mockOrderStatusUpdater {
 func (m *mockOrderStatusUpdater) GetOrder(_ context.Context, namespace, id string) (*commerce.Order, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	m.getOrderCalls++
+	if m.getOrderErr != nil && m.getOrderCalls == m.getOrderErrOnCall {
+		return nil, m.getOrderErr
+	}
 	o, ok := m.orders[id]
 	if !ok {
 		return nil, commerce.ErrOrderNotFound
@@ -224,6 +232,9 @@ func (m *mockOrderStatusUpdater) GetOrder(_ context.Context, namespace, id strin
 func (m *mockOrderStatusUpdater) UpdateOrderStatus(_ context.Context, namespace, id string, expectedFrom, to commerce.OrderStatus) (*commerce.Order, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.updateErr != nil {
+		return nil, m.updateErr
+	}
 	o, ok := m.orders[id]
 	if !ok {
 		return nil, commerce.ErrOrderNotFound
@@ -1111,6 +1122,105 @@ func TestInitiateCheckout(t *testing.T) {
 	if result.Attempt.Status != AttemptStatusPending {
 		t.Errorf("status = %s, want pending", result.Attempt.Status)
 	}
+}
+
+func TestInitiateCheckoutFailsClosedWhenOrderTransitionFails(t *testing.T) {
+	h := newTestHarness(t)
+	h.orders.orders["order-transition-failure"] = &commerce.Order{
+		NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-transition-failure"},
+		CustomerID:   "cust",
+		Status:       commerce.OrderStatusCreated,
+		AmountMinor:  100,
+		Currency:     "CNY",
+		PublicID:     "PUB-TRANSITION-FAILURE",
+	}
+	h.attempts.attempts["attempt-transition-failure"] = &PaymentAttempt{
+		ID: "attempt-transition-failure", Namespace: "ns", OrderID: "order-transition-failure", CustomerID: "cust",
+		Provider: ProviderWeChat, Status: AttemptStatusCreated, AmountMinor: 100, Currency: "CNY",
+		ExpectedMerchantID: "merchant-1", ExpectedApplicationID: "application-1",
+	}
+	transitionErr := errors.New("database unavailable")
+	h.orders.updateErr = transitionErr
+	h.provider.qrFn = func(context.Context, CheckoutInput) (CheckoutFact, error) {
+		return CheckoutFact{Provider: ProviderWeChat, ProviderOrderID: "WX-TRANSITION-FAILURE", QRCodeURL: "weixin://wxpay/bizpayurl?pr=transition-failure"}, nil
+	}
+
+	result, err := h.svc.InitiateCheckout(t.Context(), "ns", "attempt-transition-failure")
+
+	require.ErrorIs(t, err, transitionErr)
+	require.Equal(t, CheckoutResult{}, result, "a failed order transition must not expose a checkout session")
+}
+
+func TestInitiateCheckoutOnlyAcceptsVerifiedAwaitingPaymentIdempotency(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		orderStatus commerce.OrderStatus
+		wantErr     bool
+	}{
+		{name: "already awaiting payment", orderStatus: commerce.OrderStatusAwaitingPayment},
+		{name: "unverified invalid transition", orderStatus: commerce.OrderStatusCreated, wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newTestHarness(t)
+			h.orders.orders["order-idempotency"] = &commerce.Order{
+				NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-idempotency"},
+				CustomerID:   "cust",
+				Status:       tt.orderStatus,
+				AmountMinor:  100,
+				Currency:     "CNY",
+				PublicID:     "PUB-IDEMPOTENCY",
+			}
+			h.attempts.attempts["attempt-idempotency"] = &PaymentAttempt{
+				ID: "attempt-idempotency", Namespace: "ns", OrderID: "order-idempotency", CustomerID: "cust",
+				Provider: ProviderWeChat, Status: AttemptStatusCreated, AmountMinor: 100, Currency: "CNY",
+				ExpectedMerchantID: "merchant-1", ExpectedApplicationID: "application-1",
+			}
+			h.orders.updateErr = commerce.ErrInvalidOrderTransition
+			h.provider.qrFn = func(context.Context, CheckoutInput) (CheckoutFact, error) {
+				return CheckoutFact{Provider: ProviderWeChat, ProviderOrderID: "WX-IDEMPOTENCY", QRCodeURL: "weixin://wxpay/bizpayurl?pr=idempotency"}, nil
+			}
+
+			result, err := h.svc.InitiateCheckout(t.Context(), "ns", "attempt-idempotency")
+
+			if tt.wantErr {
+				require.ErrorIs(t, err, commerce.ErrInvalidOrderTransition)
+				require.Equal(t, CheckoutResult{}, result, "an unverified transition error must not expose a checkout session")
+				return
+			}
+			require.NoError(t, err)
+			require.NotEmpty(t, result.Fact.QRCodeURL)
+			require.Equal(t, AttemptStatusPending, result.Attempt.Status)
+		})
+	}
+}
+
+func TestInitiateCheckoutFailsClosedWhenIdempotencyVerificationFails(t *testing.T) {
+	h := newTestHarness(t)
+	h.orders.orders["order-idempotency-verification"] = &commerce.Order{
+		NamespacedID: models.NamespacedID{Namespace: "ns", ID: "order-idempotency-verification"},
+		CustomerID:   "cust",
+		Status:       commerce.OrderStatusCreated,
+		AmountMinor:  100,
+		Currency:     "CNY",
+		PublicID:     "PUB-IDEMPOTENCY-VERIFICATION",
+	}
+	h.attempts.attempts["attempt-idempotency-verification"] = &PaymentAttempt{
+		ID: "attempt-idempotency-verification", Namespace: "ns", OrderID: "order-idempotency-verification", CustomerID: "cust",
+		Provider: ProviderWeChat, Status: AttemptStatusCreated, AmountMinor: 100, Currency: "CNY",
+		ExpectedMerchantID: "merchant-1", ExpectedApplicationID: "application-1",
+	}
+	h.orders.updateErr = commerce.ErrInvalidOrderTransition
+	verificationErr := errors.New("order verification unavailable")
+	h.orders.getOrderErr = verificationErr
+	h.orders.getOrderErrOnCall = 2 // the checkout order read succeeds; idempotency verification fails.
+	h.provider.qrFn = func(context.Context, CheckoutInput) (CheckoutFact, error) {
+		return CheckoutFact{Provider: ProviderWeChat, ProviderOrderID: "WX-IDEMPOTENCY-VERIFICATION", QRCodeURL: "weixin://wxpay/bizpayurl?pr=idempotency-verification"}, nil
+	}
+
+	result, err := h.svc.InitiateCheckout(t.Context(), "ns", "attempt-idempotency-verification")
+
+	require.ErrorIs(t, err, verificationErr)
+	require.Equal(t, CheckoutResult{}, result, "an unverifiable idempotency state must not expose a checkout session")
 }
 
 func TestInitiateCheckoutFailsClosedWhenProviderIdentityNoLongerMatchesSnapshot(t *testing.T) {

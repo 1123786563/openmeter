@@ -423,8 +423,21 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 	// Transition the order from created to awaiting_payment so the paid-tx
 	// runner can later move it to paid when the callback arrives.
 	if _, err := s.orders.UpdateOrderStatus(ctx, namespace, attempt.OrderID, commerce.OrderStatusCreated, commerce.OrderStatusAwaitingPayment); err != nil {
-		// If already awaiting_payment (idempotent checkout), this is fine.
-		s.logger.WarnContext(ctx, "payment: order status transition to awaiting_payment", "error", err, "orderID", attempt.OrderID)
+		// Ent returns ErrInvalidOrderTransition when an optimistic update affects
+		// no rows. Treat that as an idempotent checkout only after confirming the
+		// order is already awaiting payment; all other repository failures must
+		// fail closed without returning a usable provider session.
+		if errors.Is(err, commerce.ErrInvalidOrderTransition) {
+			current, getErr := s.orders.GetOrder(ctx, namespace, attempt.OrderID)
+			if getErr != nil {
+				return CheckoutResult{}, fmt.Errorf("payment: verify order awaiting_payment state: %w", getErr)
+			}
+			if current != nil && current.Status == commerce.OrderStatusAwaitingPayment {
+				return CheckoutResult{Attempt: updated, Fact: fact}, nil
+			}
+		}
+
+		return CheckoutResult{}, fmt.Errorf("payment: transition order to awaiting_payment: %w", err)
 	}
 
 	return CheckoutResult{Attempt: updated, Fact: fact}, nil
