@@ -281,6 +281,10 @@ func (readOnlyCommerceHandler) WechatPaymentCallback() http.HandlerFunc {
 	return commerceDisabledMutation()
 }
 
+func (readOnlyCommerceHandler) WechatRefundCallback() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
 func (readOnlyCommerceHandler) CreateRefund() http.HandlerFunc { return commerceDisabledMutation() }
 
 func (h readOnlyCommerceHandler) GetRefund() http.HandlerFunc { return h.delegate.GetRefund() }

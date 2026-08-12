@@ -64,6 +64,9 @@ export type GetRefundResponse = CommerceRefund
 export type WechatPaymentCallbackRequest = AcceptDateStrings<string>
 export type WechatPaymentCallbackResponse = void
 
+export type WechatRefundCallbackRequest = AcceptDateStrings<string>
+export type WechatRefundCallbackResponse = void
+
 export type AlipayPaymentCallbackRequest = AcceptDateStrings<string>
 export type AlipayPaymentCallbackResponse = string
 

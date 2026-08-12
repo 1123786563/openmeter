@@ -56,6 +56,11 @@ const expectedRoutes = [
   ['post', '/refunds', 'create-refund'],
   ['get', '/refunds/{refundId}', 'get-refund'],
   ['post', '/payment-providers/wechat/callback', 'wechat-payment-callback'],
+  [
+    'post',
+    '/payment-providers/wechat/refund-callback',
+    'wechat-refund-callback',
+  ],
   ['post', '/payment-providers/alipay/callback', 'alipay-payment-callback'],
   [
     'get',
@@ -76,7 +81,7 @@ const expectedRoutes = [
 
 describe('WeKnora Phase 2 commerce contract', () => {
   describe('routes', () => {
-    it('exposes all 13 Phase 2 commerce paths with correct methods and operation IDs', () => {
+    it('exposes all 14 Phase 2 commerce paths with correct methods and operation IDs', () => {
       const spec = compileAIP()
       for (const [method, routePath, opId] of expectedRoutes) {
         const pathItem = spec.paths[routePath]
@@ -90,6 +95,28 @@ describe('WeKnora Phase 2 commerce contract', () => {
           op.operationId,
           opId,
           `Operation ID for ${method.toUpperCase()} ${routePath}`,
+        )
+      }
+    })
+
+    it('declares provider-native callback request media types', () => {
+      const spec = compileAIP()
+      const callbackMediaTypes = [
+        ['/payment-providers/wechat/callback', ['application/json']],
+        ['/payment-providers/wechat/refund-callback', ['application/json']],
+        [
+          '/payment-providers/alipay/callback',
+          ['application/x-www-form-urlencoded'],
+        ],
+      ]
+
+      for (const [routePath, wantMediaTypes] of callbackMediaTypes) {
+        const requestContent = spec.paths[routePath]?.post?.requestBody?.content
+        assert.ok(requestContent, `${routePath} must declare a request body`)
+        assert.deepEqual(
+          Object.keys(requestContent),
+          wantMediaTypes,
+          `${routePath} request media types`,
         )
       }
     })

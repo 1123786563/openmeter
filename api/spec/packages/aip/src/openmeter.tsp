@@ -259,6 +259,11 @@ interface RefundsEndpoints extends Commerce.RefundOperations {}
 interface WechatPaymentCallbackEndpoints
   extends Commerce.WechatCallbackOperations {}
 
+@route("/payment-providers/wechat/refund-callback")
+@tag(Shared.CommerceTag)
+interface WechatRefundCallbackEndpoints
+  extends Commerce.WechatRefundCallbackOperations {}
+
 @route("/payment-providers/alipay/callback")
 @tag(Shared.CommerceTag)
 interface AlipayPaymentCallbackEndpoints

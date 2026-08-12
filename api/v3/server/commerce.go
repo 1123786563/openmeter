@@ -80,6 +80,14 @@ func (s *Server) WechatPaymentCallback(w http.ResponseWriter, r *http.Request) {
 	s.commerceHandler.WechatPaymentCallback().ServeHTTP(w, r)
 }
 
+func (s *Server) WechatRefundCallback(w http.ResponseWriter, r *http.Request) {
+	if s.commerceHandler == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+	s.commerceHandler.WechatRefundCallback().ServeHTTP(w, r)
+}
+
 func (s *Server) CreateRefund(w http.ResponseWriter, r *http.Request) {
 	if s.commerceHandler == nil {
 		w.WriteHeader(http.StatusNotImplemented)
