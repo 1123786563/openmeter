@@ -122,9 +122,13 @@ func (m *mockPayment) ConfirmPayment(_ context.Context, _, _ string) (payment.Ca
 }
 
 type mockRefund struct {
-	rec     *refund.RefundRequest
-	created bool
-	err     error
+	rec              *refund.RefundRequest
+	created          bool
+	err              error
+	callbackCalls    int
+	callbackProvider payment.Provider
+	callbackHeaders  http.Header
+	callbackBody     []byte
 }
 
 func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput) (*refund.RefundRequest, bool, error) {
@@ -143,10 +147,29 @@ func (m *mockRefund) ApplyRefundCallback(_ context.Context, _ string, _ payment.
 	return m.rec, m.err
 }
 
+func (m *mockRefund) HandleCallback(_ context.Context, _ string, provider payment.Provider, headers http.Header, body []byte) (*refund.RefundRequest, error) {
+	m.callbackCalls++
+	m.callbackProvider = provider
+	m.callbackHeaders = headers.Clone()
+	m.callbackBody = append([]byte(nil), body...)
+	return m.rec, m.err
+}
+
 func testHandler(svc Services) Handler {
 	return New(func(_ context.Context) (string, error) {
 		return "test-ns", nil
 	}, svc)
+}
+
+func requireWechatRefundCallback(t *testing.T, h Handler) http.HandlerFunc {
+	t.Helper()
+	callbackHandler, ok := h.(interface {
+		WechatRefundCallback() http.HandlerFunc
+	})
+	if !ok {
+		t.Fatal("commerce handler does not implement WechatRefundCallback")
+	}
+	return callbackHandler.WechatRefundCallback()
 }
 
 func doRequest(t *testing.T, h http.Handler, method, path string, body any, pathValues map[string]string) *httptest.ResponseRecorder {
@@ -749,6 +772,97 @@ func TestPaymentCallbackLegalReplayUsesProviderSuccessAck(t *testing.T) {
 				t.Fatalf("provider ACK content type = %q, want %q", got, tt.contentType)
 			}
 		})
+	}
+}
+
+func TestWechatRefundCallbackSuccessAndReplayUseNativeAck(t *testing.T) {
+	refundService := &mockRefund{rec: &refund.RefundRequest{Status: refund.RefundStatusFulfilled}}
+	h := testHandler(Services{Refund: refundService})
+	callback := requireWechatRefundCallback(t, h)
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/refund-callback", strings.NewReader(`{"id":"refund-event"}`))
+		req.Header.Set("Wechatpay-Serial", "platform-serial")
+		rr := httptest.NewRecorder()
+		callback.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("attempt %d: expected 204, got %d: %s", attempt, rr.Code, rr.Body.String())
+		}
+		if got := rr.Body.String(); got != "" {
+			t.Fatalf("attempt %d: expected empty ACK body, got %q", attempt, got)
+		}
+		if got := rr.Header().Get("Content-Type"); got != "" {
+			t.Fatalf("attempt %d: expected no ACK content type, got %q", attempt, got)
+		}
+	}
+
+	if refundService.callbackCalls != 2 {
+		t.Fatalf("refund callback calls = %d, want 2", refundService.callbackCalls)
+	}
+	if refundService.callbackProvider != payment.ProviderWeChat {
+		t.Fatalf("refund callback provider = %q, want %q", refundService.callbackProvider, payment.ProviderWeChat)
+	}
+	if got := refundService.callbackHeaders.Get("Wechatpay-Serial"); got != "platform-serial" {
+		t.Fatalf("refund callback serial header = %q", got)
+	}
+	if got := string(refundService.callbackBody); got != `{"id":"refund-event"}` {
+		t.Fatalf("refund callback body = %q", got)
+	}
+}
+
+func TestWechatRefundCallbackRejectsVerificationAndAuthorityMismatch(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{name: "signature verification", err: payment.ErrInvalidSignature},
+		{name: "verified fact mismatch", err: refund.ErrRefundFactMismatch},
+		{name: "permanent provider protocol", err: payment.ErrPermanentProviderProtocol},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Refund: &mockRefund{err: tt.err}})
+			rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+			requireProblemResponse(t, rr, http.StatusBadRequest)
+		})
+	}
+}
+
+func TestWechatRefundCallbackReturnsRetryableError(t *testing.T) {
+	h := testHandler(Services{Refund: &mockRefund{err: errors.New("refund database unavailable")}})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
+}
+
+func TestWechatRefundCallbackAcknowledgesAppliedDefinitiveFailure(t *testing.T) {
+	h := testHandler(Services{Refund: &mockRefund{err: refund.ErrProviderRefundFailed}})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 after applying a verified terminal failure, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWechatRefundCallbackBodyLimit(t *testing.T) {
+	refundService := &mockRefund{}
+	h := testHandler(Services{Refund: refundService})
+	req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/refund-callback", strings.NewReader(strings.Repeat("x", 1<<20+1)))
+	rr := httptest.NewRecorder()
+
+	requireWechatRefundCallback(t, h).ServeHTTP(rr, req)
+
+	requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+	if refundService.callbackCalls != 0 {
+		t.Fatal("refund service was called with an oversized callback body")
+	}
+}
+
+func TestWechatRefundCallback_NilRefund_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for nil refund callback, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 

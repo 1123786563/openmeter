@@ -51,6 +51,7 @@ type Handler interface {
 	GetCheckoutSession() http.HandlerFunc
 	AlipayPaymentCallback() http.HandlerFunc
 	WechatPaymentCallback() http.HandlerFunc
+	WechatRefundCallback() http.HandlerFunc
 	CreateRefund() http.HandlerFunc
 	GetRefund() http.HandlerFunc
 	CreateOfflinePayment() http.HandlerFunc
@@ -557,6 +558,66 @@ func (h *handler) WechatPaymentCallback() http.HandlerFunc {
 	return h.paymentCallback(payment.ProviderWeChat)
 }
 
+// refundCallbackService is the callback-capable refund service surface. It is
+// kept narrow while the public refund.Service interface is introduced so the
+// handler can safely reject deployments that have not wired callback support.
+type refundCallbackService interface {
+	HandleCallback(ctx context.Context, namespace string, provider payment.Provider, headers http.Header, body []byte) (*refund.RefundRequest, error)
+}
+
+// WechatRefundCallback accepts verified WeChat Pay refund notifications. The
+// endpoint is public: signature verification and refund authority checks are
+// performed by the refund service before it applies a callback fact.
+func (h *handler) WechatRefundCallback() http.HandlerFunc {
+	if h.svc.Refund == nil {
+		return notImplementedHandler("refund service not configured")
+	}
+	callbackService, ok := h.svc.Refund.(refundCallbackService)
+	if !ok {
+		return notImplementedHandler("refund callback service not configured")
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeStatus(ctx, w, http.StatusBadRequest, errors.New("namespace could not be resolved for refund callback"))
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			r.Body.Close()
+			status := http.StatusBadRequest
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				status = http.StatusRequestEntityTooLarge
+			}
+			writeStatus(ctx, w, status, err)
+			return
+		}
+		r.Body.Close()
+
+		_, cbErr := callbackService.HandleCallback(ctx, ns, payment.ProviderWeChat, r.Header, body)
+		if cbErr != nil {
+			h.logger.WarnContext(ctx, "commerce: WeChat refund callback error", "error", cbErr)
+			if isSuccessfulRefundCallbackError(cbErr) {
+				writeWechatCallbackSuccess(w)
+				return
+			}
+			if isPermanentRefundCallbackError(cbErr) {
+				writeStatus(ctx, w, http.StatusBadRequest, cbErr)
+				return
+			}
+			writeCallbackRetryableError(ctx, w)
+			return
+		}
+
+		writeWechatCallbackSuccess(w)
+	}
+}
+
 func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -640,6 +701,22 @@ func writeAlipayCallbackSuccess(w http.ResponseWriter) {
 func isSuccessfulCallbackError(err error) bool {
 	return errors.Is(err, payment.ErrDuplicateProviderEvent) ||
 		errors.Is(err, payment.ErrFulfillmentAlreadyDone)
+}
+
+// isSuccessfulRefundCallbackError reports a verified terminal refund result
+// that has already been applied. Returning WeChat's native 204 prevents a
+// provider retry after the refund has been durably marked failed.
+func isSuccessfulRefundCallbackError(err error) bool {
+	return errors.Is(err, refund.ErrProviderRefundFailed)
+}
+
+// isPermanentRefundCallbackError reports a deterministic callback rejection.
+// These errors must not be acknowledged because the provider must not discard
+// an event that failed signature or persisted-authority validation.
+func isPermanentRefundCallbackError(err error) bool {
+	return errors.Is(err, payment.ErrInvalidSignature) ||
+		errors.Is(err, payment.ErrPermanentProviderProtocol) ||
+		errors.Is(err, refund.ErrRefundFactMismatch)
 }
 
 // callbackErrorStatus uses an explicit callback-contract whitelist. Generic
