@@ -15,6 +15,15 @@ import (
 type CommerceConfiguration struct {
 	Enabled bool                         `yaml:"enabled" mapstructure:"enabled"`
 	Payment CommercePaymentConfiguration `yaml:"payment" mapstructure:"payment"`
+	Test    CommerceTestConfiguration    `yaml:"test" mapstructure:"test"`
+}
+
+// CommerceTestConfiguration enables the authenticated Phase 2 control plane.
+// It is intentionally disabled by default and is only valid with local test
+// provider endpoints, preventing accidental exposure alongside live channels.
+type CommerceTestConfiguration struct {
+	Enabled      bool   `yaml:"enabled" mapstructure:"enabled"`
+	ControlToken string `yaml:"controlToken" mapstructure:"controlToken"`
 }
 
 type CommercePaymentConfiguration struct {
@@ -51,6 +60,9 @@ type AlipayPaymentConfiguration struct {
 
 func (c CommerceConfiguration) Validate() error {
 	if !c.Enabled {
+		if c.Test.Enabled {
+			return models.NewNillableGenericValidationError(errors.New("commerce.test controls require commerce.enabled"))
+		}
 		return nil
 	}
 
@@ -70,8 +82,40 @@ func (c CommerceConfiguration) Validate() error {
 
 	errs = append(errs, c.Payment.WeChat.validate()...)
 	errs = append(errs, c.Payment.Alipay.validate()...)
+	errs = append(errs, c.Test.validate(c.Payment)...)
 
 	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+func (c CommerceTestConfiguration) validate(payment CommercePaymentConfiguration) []error {
+	if !c.Enabled {
+		return nil
+	}
+
+	var errs []error
+	if len(strings.TrimSpace(c.ControlToken)) < 24 {
+		errs = append(errs, errors.New("commerce.test.control_token is required and must contain at least 24 characters"))
+	}
+
+	providerURLs := make([]string, 0, 2)
+	if payment.WeChat.Enabled {
+		providerURLs = append(providerURLs, payment.WeChat.BaseURL)
+	}
+	if payment.Alipay.Enabled {
+		providerURLs = append(providerURLs, payment.Alipay.GatewayURL)
+	}
+	if len(providerURLs) == 0 {
+		errs = append(errs, errors.New("commerce.test controls require at least one test payment provider"))
+	}
+	for _, rawURL := range providerURLs {
+		parsed, err := url.ParseRequestURI(rawURL)
+		if err != nil || parsed.Scheme != "http" || !isCommerceLocalHTTPHost(parsed.Hostname()) {
+			errs = append(errs, errors.New("commerce.test controls require loopback test provider endpoints"))
+			break
+		}
+	}
+
+	return errs
 }
 
 func (c WeChatPaymentConfiguration) validate() []error {
@@ -195,6 +239,8 @@ func isCommerceLocalHTTPHost(host string) bool {
 
 func ConfigureCommerce(v *viper.Viper) {
 	v.SetDefault("commerce.enabled", false)
+	v.SetDefault("commerce.test.enabled", false)
+	v.SetDefault("commerce.test.controlToken", "")
 	v.SetDefault("commerce.payment.httpTimeout", 10*time.Second)
 	v.SetDefault("commerce.payment.maxResponseBytes", int64(1024*1024))
 	v.SetDefault("commerce.payment.pendingStaleAfter", 30*time.Second)

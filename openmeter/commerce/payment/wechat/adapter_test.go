@@ -106,7 +106,12 @@ func signWechatMessage(t *testing.T, key *rsa.PrivateKey, message string) string
 
 func writeSignedWechatResponse(t *testing.T, key *rsa.PrivateKey, w http.ResponseWriter, status int, body string) {
 	t.Helper()
-	timestamp := strconv.FormatInt(testNowUnix, 10)
+	writeSignedWechatResponseAt(t, key, w, status, body, testNowUnix)
+}
+
+func writeSignedWechatResponseAt(t *testing.T, key *rsa.PrivateKey, w http.ResponseWriter, status int, body string, unixTimestamp int64) {
+	t.Helper()
+	timestamp := strconv.FormatInt(unixTimestamp, 10)
 	nonce := "response-nonce"
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Wechatpay-Timestamp", timestamp)
@@ -166,10 +171,11 @@ func encryptedCallback(t *testing.T, key *rsa.PrivateKey, apiKey string, timesta
 	t.Helper()
 	resource := encryptNotificationResource(t, apiKey, `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4200000001","trade_state":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"total":10000,"currency":"CNY"}}`)
 	body, err := json.Marshal(notification{
-		ID:         "notification-id",
-		CreateTime: "2027-01-15T08:00:00+08:00",
-		EventType:  "TRANSACTION.SUCCESS",
-		Resource:   resource,
+		ID:           "notification-id",
+		CreateTime:   "2027-01-15T08:00:00+08:00",
+		EventType:    "TRANSACTION.SUCCESS",
+		ResourceType: "encrypt-resource",
+		Resource:     resource,
 	})
 	require.NoError(t, err)
 	timestampString := strconv.FormatInt(timestamp, 10)
@@ -188,7 +194,7 @@ func encryptedRefundCallback(t *testing.T, key *rsa.PrivateKey, plaintext string
 	resource.OriginalType = "refund"
 	body, err := json.Marshal(notification{
 		ID: "refund-notification-id", CreateTime: "2027-01-15T08:00:00+08:00",
-		EventType: "REFUND.SUCCESS", Resource: resource,
+		EventType: "REFUND.SUCCESS", ResourceType: "encrypt-resource", Resource: resource,
 	})
 	require.NoError(t, err)
 	timestamp := strconv.FormatInt(testNowUnix, 10)
@@ -255,6 +261,7 @@ func TestVerifyEncryptedCallback(t *testing.T) {
 		require.Equal(t, "CNY", fact.Currency)
 		require.True(t, fact.Success)
 		require.NotEmpty(t, fact.RawHash)
+		require.Equal(t, "2027-01-15T00:00:00Z", fact.Timestamp.UTC().Format(time.RFC3339))
 		require.NotContains(t, fmt.Sprint(fact.SignedPayload), "ciphertext")
 	})
 
@@ -278,6 +285,13 @@ func TestVerifyEncryptedCallback(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("representable far future timestamp", func(t *testing.T) {
+		futureUnix := time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
+		futureHeaders, futureBody := encryptedCallback(t, keys.platformPrivate, testAPIv3Key, futureUnix)
+		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), futureHeaders, futureBody)
+		require.ErrorIs(t, err, payment.ErrInvalidSignature)
+	})
+
 	t.Run("wrong API v3 key", func(t *testing.T) {
 		wrongHeaders, wrongBody := encryptedCallback(t, keys.platformPrivate, "abcdef0123456789abcdef0123456789", testNowUnix)
 		_, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), wrongHeaders, wrongBody)
@@ -295,11 +309,15 @@ func TestVerifyEncryptedCallbackRejectsPaymentIdentityAndMoneyMismatch(t *testin
 		{name: "merchant", plaintext: `{"appid":"wx-app","mchid":"other-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":10000,"currency":"CNY"}}`},
 		{name: "amount", plaintext: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":0,"currency":"CNY"}}`},
 		{name: "currency", plaintext: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"SUCCESS","amount":{"total":10000,"currency":"USD"}}`},
+		{name: "success event status", plaintext: `{"appid":"wx-app","mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4201","trade_state":"CLOSED","amount":{"total":10000,"currency":"CNY"}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resource := encryptNotificationResource(t, testAPIv3Key, tt.plaintext)
-			body, err := json.Marshal(notification{ID: "notification-id", CreateTime: "2027-01-15T08:00:00+08:00", Resource: resource})
+			body, err := json.Marshal(notification{
+				ID: "notification-id", CreateTime: "2027-01-15T08:00:00+08:00",
+				EventType: "TRANSACTION.SUCCESS", ResourceType: "encrypt-resource", Resource: resource,
+			})
 			require.NoError(t, err)
 			timestamp := strconv.FormatInt(testNowUnix, 10)
 			headers := http.Header{
@@ -310,6 +328,39 @@ func TestVerifyEncryptedCallbackRejectsPaymentIdentityAndMoneyMismatch(t *testin
 			headers.Set("Wechatpay-Signature", signWechatMessage(t, keys.platformPrivate, timestamp+"\nnonce\n"+string(body)+"\n"))
 			_, err = newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), headers, body)
 			require.Error(t, err)
+		})
+	}
+}
+
+func TestVerifyEncryptedCallbackRejectsMismatchedEnvelopeContext(t *testing.T) {
+	keys := newTestKeys(t)
+	_, validBody := encryptedCallback(t, keys.platformPrivate, testAPIv3Key, testNowUnix)
+
+	for _, tt := range []struct {
+		name   string
+		mutate func(*notification)
+	}{
+		{name: "event type", mutate: func(value *notification) { value.EventType = "REFUND.SUCCESS" }},
+		{name: "resource type", mutate: func(value *notification) { value.ResourceType = "plaintext" }},
+		{name: "original type", mutate: func(value *notification) { value.Resource.OriginalType = "refund" }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var envelope notification
+			require.NoError(t, json.Unmarshal(validBody, &envelope))
+			tt.mutate(&envelope)
+			body, err := json.Marshal(envelope)
+			require.NoError(t, err)
+			timestamp := strconv.FormatInt(testNowUnix, 10)
+			nonce := "callback-signature-nonce"
+			headers := http.Header{
+				"Wechatpay-Timestamp": []string{timestamp},
+				"Wechatpay-Nonce":     []string{nonce},
+				"Wechatpay-Serial":    []string{"platform-serial"},
+			}
+			headers.Set("Wechatpay-Signature", signWechatMessage(t, keys.platformPrivate, timestamp+"\n"+nonce+"\n"+string(body)+"\n"))
+
+			_, err = newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyCallback(t.Context(), headers, body)
+			require.ErrorIs(t, err, payment.ErrPermanentProviderProtocol)
 		})
 	}
 }
@@ -406,7 +457,7 @@ func TestRefundAndQueryRefund(t *testing.T) {
 			require.Equal(t, "CNY", body.Amount.Currency)
 			writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
 		case r.Method == http.MethodGet && r.URL.EscapedPath() == "/v3/refund/domestic/refunds/refund-idem":
-			writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
+			writeSignedWechatResponse(t, keys.platformPrivate, w, http.StatusOK, `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","transaction_id":"4200000001","status":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`)
 		default:
 			http.Error(w, "unexpected request", http.StatusNotFound)
 		}
@@ -431,8 +482,13 @@ func TestRefundAndQueryRefund(t *testing.T) {
 	require.True(t, fact.Success)
 	require.Equal(t, "refund-idem", fact.ProviderRefundID)
 	require.Equal(t, "01ORDER", fact.ProviderOrderID)
+	require.Equal(t, "4200000001", fact.ProviderPaymentID)
+	require.Equal(t, "wx-mch", fact.MerchantID)
 	require.Equal(t, int64(3000), fact.AmountMinor)
+	require.Equal(t, int64(10000), fact.TotalAmountMinor)
 	require.Equal(t, "CNY", fact.Currency)
+	require.Equal(t, "SUCCESS", fact.Status)
+	require.True(t, fact.Terminal)
 }
 
 func TestRefundRejectsNonCNYBeforeCallingProvider(t *testing.T) {
@@ -511,6 +567,7 @@ func TestQueryRefundRejectsInvalidMoneyAndProviderFields(t *testing.T) {
 		{name: "non CNY", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"USD"}}`},
 		{name: "missing provider refund ID", body: `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
 		{name: "mismatched out refund number", body: `{"refund_id":"5030000001","out_refund_no":"other","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "unknown status", body: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"UNKNOWN","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -528,7 +585,7 @@ func TestQueryRefundRejectsInvalidMoneyAndProviderFields(t *testing.T) {
 
 func TestVerifyRefundCallbackValidatesMoneyAndProviderFields(t *testing.T) {
 	keys := newTestKeys(t)
-	valid := `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"SUCCESS","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`
+	valid := `{"mchid":"wx-mch","out_trade_no":"01ORDER","transaction_id":"4200000001","out_refund_no":"refund-idem","refund_id":"5030000001","refund_status":"SUCCESS","success_time":"2027-01-15T08:00:00+08:00","amount":{"refund":3000,"total":10000,"payer_refund":3000,"payer_total":10000}}`
 	headers, body := encryptedRefundCallback(t, keys.platformPrivate, valid)
 	fact, err := newTestAdapter(t, "https://api.mch.weixin.qq.com", keys).VerifyRefundCallback(t.Context(), headers, body)
 	require.NoError(t, err)
@@ -542,11 +599,13 @@ func TestVerifyRefundCallbackValidatesMoneyAndProviderFields(t *testing.T) {
 		name      string
 		plaintext string
 	}{
-		{name: "zero total", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":0,"currency":"CNY"}}`},
-		{name: "refund exceeds total", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":10001,"total":10000,"currency":"CNY"}}`},
-		{name: "non CNY", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"USD"}}`},
-		{name: "missing provider refund ID", plaintext: `{"out_refund_no":"refund-idem","out_trade_no":"01ORDER","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
-		{name: "missing order", plaintext: `{"refund_id":"5030000001","out_refund_no":"refund-idem","status":"PROCESSING","amount":{"refund":3000,"total":10000,"currency":"CNY"}}`},
+		{name: "merchant", plaintext: `{"mchid":"other-mch","transaction_id":"4200000001","refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"SUCCESS","amount":{"refund":3000,"total":10000}}`},
+		{name: "transaction ID", plaintext: `{"mchid":"wx-mch","refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"SUCCESS","amount":{"refund":3000,"total":10000}}`},
+		{name: "zero total", plaintext: `{"mchid":"wx-mch","transaction_id":"4200000001","refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"SUCCESS","amount":{"refund":3000,"total":0}}`},
+		{name: "refund exceeds total", plaintext: `{"mchid":"wx-mch","transaction_id":"4200000001","refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"SUCCESS","amount":{"refund":10001,"total":10000}}`},
+		{name: "missing provider refund ID", plaintext: `{"mchid":"wx-mch","transaction_id":"4200000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"SUCCESS","amount":{"refund":3000,"total":10000}}`},
+		{name: "missing order", plaintext: `{"mchid":"wx-mch","transaction_id":"4200000001","refund_id":"5030000001","out_refund_no":"refund-idem","refund_status":"SUCCESS","amount":{"refund":3000,"total":10000}}`},
+		{name: "unknown status", plaintext: `{"mchid":"wx-mch","transaction_id":"4200000001","refund_id":"5030000001","out_refund_no":"refund-idem","out_trade_no":"01ORDER","refund_status":"UNKNOWN","amount":{"refund":3000,"total":10000}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -582,6 +641,37 @@ func TestSuccessfulAPIResponseRequiresValidSignature(t *testing.T) {
 		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
 	})
 	require.ErrorIs(t, err, payment.ErrInvalidSignature)
+}
+
+func TestSuccessfulAPIResponseRejectsStaleTimestamp(t *testing.T) {
+	keys := newTestKeys(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedWechatResponseAt(t, keys.platformPrivate, w, http.StatusOK, `{"code_url":"weixin://stale"}`, testNowUnix-int64((5*time.Minute)/time.Second)-1)
+	}))
+	defer server.Close()
+
+	_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrInvalidSignature)
+}
+
+func TestSuccessfulAPIResponseRejectsRepresentableFarFutureTimestamp(t *testing.T) {
+	keys := newTestKeys(t)
+	farFutureUnix := time.Date(3000, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeSignedWechatResponseAt(t, keys.platformPrivate, w, http.StatusOK, `{"code_url":"weixin://future"}`, farFutureUnix)
+	}))
+	defer server.Close()
+
+	_, err := newTestAdapter(t, server.URL, keys).CreateQRCode(t.Context(), payment.CheckoutInput{
+		OrderPublicID: "01ORDER", AmountMinor: 10000, Currency: "CNY", Description: "test",
+	})
+	require.ErrorIs(t, err, payment.ErrInvalidSignature)
+	var providerErr *payment.ProviderError
+	require.ErrorAs(t, err, &providerErr)
+	require.Equal(t, payment.ProviderWeChat, providerErr.Provider)
+	require.Equal(t, payment.ProviderErrorPermanent, providerErr.Kind)
 }
 
 func TestAPIResponseBodyLimit(t *testing.T) {

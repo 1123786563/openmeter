@@ -1,6 +1,7 @@
 package commerce
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/fulfillment"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentfact"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/refundrequest"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
 )
 
@@ -106,6 +108,70 @@ func TestPaidTransitionConcurrent(t *testing.T) {
 	require.True(t, savedFact.Success)
 }
 
+func TestPaidTransitionRejectsConflictingDeduplicatedFact(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, attempt := createPaidTransitionFixture(t, client, "conflict-fact")
+	now := time.Date(2026, 8, 9, 10, 30, 0, 0, time.UTC)
+	params := PaidTransitionParams{
+		Namespace:         "default",
+		CustomerID:        "customer-conflict-fact",
+		OrderID:           order.ID,
+		PaymentAttemptID:  attempt.ID,
+		Provider:          "wechat",
+		ProviderOrderID:   "provider-order-conflicting-deduplicated-fact",
+		ProviderPaymentID: "provider-payment-original",
+		ProviderEventID:   "provider-event-conflicting-deduplicated-fact",
+		MerchantID:        "merchant-conflicting-deduplicated-fact",
+		ApplicationID:     "application-conflicting-deduplicated-fact",
+		AmountMinor:       100,
+		Currency:          "CNY",
+		Success:           true,
+		RawHash:           "raw-hash-conflicting-deduplicated-fact-original",
+		Timestamp:         now,
+		CreatedAt:         now,
+		SignedPayload:     map[string]any{"trade_state": "SUCCESS"},
+	}
+
+	_, err = adapter.RunPaidTransition(t.Context(), params)
+	require.NoError(t, err)
+
+	replay := params
+	replay.RawHash = "raw-hash-conflicting-deduplicated-fact-benign-replay"
+	replayed, err := adapter.RunPaidTransition(t.Context(), replay)
+	require.NoError(t, err)
+	require.True(t, replayed.AlreadyPaid)
+
+	conflicting := params
+	conflicting.RawHash = "raw-hash-conflicting-deduplicated-fact-replay"
+	conflicting.ProviderPaymentID = "provider-payment-conflicting"
+	_, err = adapter.RunPaidTransition(t.Context(), conflicting)
+	require.ErrorContains(t, err, "deduplicated payment fact does not match verified transition")
+
+	require.Equal(t, 1, countPaymentFacts(t, client, params.ProviderEventID))
+	fulfillmentCount, err := client.Fulfillment.Query().
+		Where(fulfillment.NamespaceEQ(params.Namespace), fulfillment.CommerceOrderIDEQ(order.ID)).
+		Count(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 1, fulfillmentCount)
+	outboxCount, err := client.CommerceOutbox.Query().
+		Where(commerceoutbox.NamespaceEQ(params.Namespace), commerceoutbox.AggregateIDEQ(order.ID)).
+		Count(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, 1, outboxCount)
+
+	savedFact, err := client.PaymentFact.Query().
+		Where(paymentfact.NamespaceEQ(params.Namespace), paymentfact.ProviderEventIDEQ(params.ProviderEventID)).
+		Only(t.Context())
+	require.NoError(t, err)
+	require.NotNil(t, savedFact.ProviderPaymentID)
+	require.Equal(t, params.ProviderPaymentID, *savedFact.ProviderPaymentID)
+}
+
 func TestSetProviderIDsEmpty(t *testing.T) {
 	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
 	defer testDB.Close(t)
@@ -169,6 +235,144 @@ func TestInsertPaymentFactProviderEventDedupDifferentRawHashNonSuccess(t *testin
 	require.Equal(t, 1, countPaymentFacts(t, client, first.ProviderEventID))
 }
 
+func TestInsertPaymentFactRejectsRawHashStructuredConflictNonSuccess(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	_, attempt := createPaidTransitionFixture(t, client, "raw-hash-conflict")
+	now := time.Date(2026, 8, 12, 8, 30, 0, 0, time.UTC)
+	first := PaymentFactWire{
+		ID:                ulid.Make().String(),
+		Namespace:         "default",
+		AttemptID:         attempt.ID,
+		Provider:          "wechat",
+		ProviderOrderID:   "provider-order-raw-hash-conflict",
+		ProviderPaymentID: "provider-payment-raw-hash-original",
+		ProviderEventID:   "provider-event-raw-hash-conflict",
+		MerchantID:        "merchant-raw-hash-conflict",
+		ApplicationID:     "application-raw-hash-conflict",
+		AmountMinor:       100,
+		Currency:          "CNY",
+		Success:           false,
+		RawHash:           "raw-hash-structured-conflict",
+		SignedPayload:     map[string]any{"trade_state": "NOTPAY"},
+		Timestamp:         now,
+		CreatedAt:         now,
+	}
+	_, fresh, err := adapter.InsertPaymentFact(t.Context(), first)
+	require.NoError(t, err)
+	require.True(t, fresh)
+
+	conflicting := first
+	conflicting.ID = ulid.Make().String()
+	conflicting.ProviderPaymentID = "provider-payment-raw-hash-conflicting"
+	_, _, err = adapter.InsertPaymentFact(t.Context(), conflicting)
+	require.ErrorContains(t, err, "persisted payment fact does not match incoming verified fact")
+	require.Equal(t, 1, countPaymentFacts(t, client, first.ProviderEventID))
+}
+
+func TestInsertPaymentFactConcurrentProviderEventConflictNonSuccess(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name               string
+		secondAttempt      bool
+		conflictSecondFact func(*PaymentFactWire)
+	}{
+		{
+			name: "same attempt with conflicting provider payment ID",
+			conflictSecondFact: func(fact *PaymentFactWire) {
+				fact.ProviderPaymentID = "provider-payment-conflict-second"
+			},
+		},
+		{
+			name:          "different attempt",
+			secondAttempt: true,
+			conflictSecondFact: func(fact *PaymentFactWire) {
+				fact.ProviderOrderID = "provider-order-conflict-second"
+			},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, firstAttempt := createPaidTransitionFixture(t, client, fmt.Sprintf("provider-event-conflict-%d-first", i))
+			secondAttempt := firstAttempt
+			if tt.secondAttempt {
+				_, secondAttempt = createPaidTransitionFixture(t, client, fmt.Sprintf("provider-event-conflict-%d-second", i))
+			}
+
+			now := time.Date(2026, 8, 12, 9, i, 0, 0, time.UTC)
+			first := PaymentFactWire{
+				ID:                ulid.Make().String(),
+				Namespace:         "default",
+				AttemptID:         firstAttempt.ID,
+				Provider:          "wechat",
+				ProviderOrderID:   fmt.Sprintf("provider-order-conflict-%d", i),
+				ProviderPaymentID: fmt.Sprintf("provider-payment-conflict-%d", i),
+				ProviderEventID:   fmt.Sprintf("provider-event-conflict-%d", i),
+				MerchantID:        "merchant-conflict",
+				ApplicationID:     "application-conflict",
+				AmountMinor:       100,
+				Currency:          "CNY",
+				Success:           false,
+				RawHash:           fmt.Sprintf("raw-hash-conflict-%d-first", i),
+				SignedPayload:     map[string]any{"trade_state": "NOTPAY"},
+				Timestamp:         now,
+				CreatedAt:         now,
+			}
+			second := first
+			second.ID = ulid.Make().String()
+			second.AttemptID = secondAttempt.ID
+			second.RawHash = fmt.Sprintf("raw-hash-conflict-%d-second", i)
+			tt.conflictSecondFact(&second)
+
+			type insertResult struct {
+				fresh bool
+				err   error
+			}
+			results := make(chan insertResult, 2)
+			var ready sync.WaitGroup
+			ready.Add(2)
+			start := make(chan struct{})
+			for _, fact := range []PaymentFactWire{first, second} {
+				go func(fact PaymentFactWire) {
+					ready.Done()
+					<-start
+					_, fresh, err := adapter.InsertPaymentFact(t.Context(), fact)
+					results <- insertResult{fresh: fresh, err: err}
+				}(fact)
+			}
+			ready.Wait()
+			close(start)
+
+			freshCount := 0
+			conflictCount := 0
+			for range 2 {
+				result := <-results
+				if result.err != nil {
+					require.ErrorContains(t, result.err, "persisted payment fact does not match incoming verified fact")
+					conflictCount++
+					continue
+				}
+				if result.fresh {
+					freshCount++
+				}
+			}
+			require.Equal(t, 1, freshCount)
+			require.Equal(t, 1, conflictCount)
+			require.Equal(t, 1, countPaymentFacts(t, client, first.ProviderEventID))
+		})
+	}
+}
+
 func TestListStalePendingPaymentAttemptsFiltersAndOrders(t *testing.T) {
 	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
 	defer testDB.Close(t)
@@ -221,6 +425,44 @@ func TestListStalePendingPaymentAttemptsFiltersAndOrders(t *testing.T) {
 	}
 	require.Equal(t, wantSameTimeIDs[0], got[1].ID)
 	require.Equal(t, wantSameTimeIDs[1], got[2].ID)
+}
+
+func TestListProcessableRefundRequestsIncludesRecoveryStates(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	adapter, err := NewEntAdapter(EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, _ := createPaidTransitionFixture(t, client, "refund-recovery")
+	otherOrder, _ := createPaidTransitionFixture(t, client, "refund-recovery-other")
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	createRefund := func(namespace, id string, status refundrequest.Status, updatedAt time.Time, commerceOrderID string) {
+		t.Helper()
+		_, err := client.RefundRequest.Create().
+			SetID(id).
+			SetNamespace(namespace).
+			SetCommerceOrderID(commerceOrderID).
+			SetCustomerID("customer-refund-recovery").
+			SetAmountCents(100).
+			SetCurrency("CNY").
+			SetStatus(status).
+			SetIdempotencyKey("idem-" + id).
+			SetUpdatedAt(updatedAt).
+			Save(t.Context())
+		require.NoError(t, err)
+	}
+
+	createRefund("default", "refund-pending", refundrequest.StatusPendingFence, now.Add(-3*time.Minute), order.ID)
+	createRefund("default", "refund-provider", refundrequest.StatusProviderProcessing, now.Add(-2*time.Minute), order.ID)
+	createRefund("default", "refund-ledger", refundrequest.StatusLedgerReversing, now.Add(-time.Minute), order.ID)
+	createRefund("default", "refund-fulfilled", refundrequest.StatusFulfilled, now.Add(-4*time.Minute), order.ID)
+	createRefund("other", "refund-other-namespace", refundrequest.StatusPendingFence, now.Add(-5*time.Minute), otherOrder.ID)
+
+	got, err := adapter.ListProcessableRefundRequests(t.Context(), "default", 100)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	require.Equal(t, []string{"refund-pending", "refund-provider", "refund-ledger"}, []string{got[0].ID, got[1].ID, got[2].ID})
 }
 
 func createPaidTransitionFixture(t *testing.T, client *db.Client, suffix string) (*db.CommerceOrder, *db.PaymentAttempt) {

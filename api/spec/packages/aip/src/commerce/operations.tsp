@@ -171,10 +171,29 @@ interface WechatCallbackOperations {
   @post
   @operationId("wechat-payment-callback")
   @summary("WeChat Pay callback")
-  callback(@body body: string):
+  callback(@header contentType: "application/json", @body body: string):
     | WechatCallbackSuccess
     | Common.BadRequest
-    | Common.Conflict
+    | Common.PayloadTooLarge
+    | Common.Internal
+    | Common.ErrorResponses;
+}
+
+/**
+ * WeChat Pay refund callback operation.
+ */
+interface WechatRefundCallbackOperations {
+  /**
+   * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
+   * then applies the authoritative refund fact.
+   */
+  @extension(Shared.UnstableExtension, true)
+  @post
+  @operationId("wechat-refund-callback")
+  @summary("WeChat Pay refund callback")
+  callback(@header contentType: "application/json", @body body: string):
+    | WechatCallbackSuccess
+    | Common.BadRequest
     | Common.PayloadTooLarge
     | Common.Internal
     | Common.ErrorResponses;
@@ -192,10 +211,12 @@ interface AlipayCallbackOperations {
   @post
   @operationId("alipay-payment-callback")
   @summary("Alipay callback")
-  callback(@body body: string):
+  callback(
+    @header contentType: "application/x-www-form-urlencoded",
+    @body body: string,
+  ):
     | AlipayCallbackSuccess
     | Common.BadRequest
-    | Common.Conflict
     | Common.PayloadTooLarge
     | Common.Internal
     | Common.ErrorResponses;

@@ -48,18 +48,20 @@ type AttemptRepository interface {
 
 // FactRepository manages immutable PaymentFact records.
 type FactRepository interface {
-	// InsertFact persists a PaymentFact. It must deduplicate on RawHash — if a
-	// fact with the same RawHash already exists, return the existing fact with
-	// (false, nil).
+	// InsertFact persists a PaymentFact. It must deduplicate on RawHash — if the
+	// same immutable structured fact already exists, return it with (false,
+	// nil); if the persisted structured fact conflicts, return an error.
 	InsertFact(ctx context.Context, fact PaymentFactRecord) (*PaymentFactRecord, bool, error)
 
-	// GetFactByRawHash retrieves a fact by its raw body hash (for dedup).
+	// GetFactByRawHash retrieves a fact by its raw body hash (for dedup). It
+	// returns commerce.ErrPaymentFactNotFound when no fact exists.
 	GetFactByRawHash(ctx context.Context, namespace string, rawHash string) (*PaymentFactRecord, error)
 
 	// GetFactsByProviderOrder retrieves all facts for a provider order.
 	GetFactsByProviderOrder(ctx context.Context, namespace string, provider Provider, providerOrderID string) ([]PaymentFactRecord, error)
 
-	// GetFactByProviderEvent retrieves a fact by provider event ID (dedup).
+	// GetFactByProviderEvent retrieves a fact by provider event ID (dedup). It
+	// returns commerce.ErrPaymentFactNotFound when no fact exists.
 	GetFactByProviderEvent(ctx context.Context, namespace string, provider Provider, providerEventID string) (*PaymentFactRecord, error)
 }
 
@@ -283,7 +285,7 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 		return existing, false, nil
 	}
 
-	identity, err := s.providerIdentity(ctx, in.Provider)
+	identity, err := s.providerIdentity(ctx, in.Provider, "identity")
 	if err != nil {
 		return nil, false, err
 	}
@@ -308,22 +310,38 @@ func (s *service) CreateAttempt(ctx context.Context, in CreateAttemptInput) (*Pa
 	return s.attempts.CreateAttempt(ctx, attempt)
 }
 
-func (s *service) providerIdentity(ctx context.Context, providerName Provider) (ProviderIdentity, error) {
+func (s *service) providerAdapter(providerName Provider, operation string) (ProviderAdapter, error) {
 	provider, ok := s.providers[providerName]
-	if !ok || provider == nil {
-		return ProviderIdentity{}, &ProviderError{
+	if !ok {
+		return nil, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
 		}
+	}
+	if err := ValidateProviderAdapter(providerName, provider); err != nil {
+		return nil, &ProviderError{
+			Provider:  providerName,
+			Operation: operation,
+			Kind:      ProviderErrorPermanent,
+			Cause:     err,
+		}
+	}
+	return provider, nil
+}
+
+func (s *service) providerIdentity(ctx context.Context, providerName Provider, operation string) (ProviderIdentity, error) {
+	provider, err := s.providerAdapter(providerName, operation)
+	if err != nil {
+		return ProviderIdentity{}, err
 	}
 
 	identity, err := provider.Identity(ctx)
 	if err != nil {
 		return ProviderIdentity{}, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: %v", ErrPermanentProviderProtocol, err),
 		}
@@ -333,7 +351,7 @@ func (s *service) providerIdentity(ctx context.Context, providerName Provider) (
 	if identity.MerchantID == "" || identity.ApplicationID == "" {
 		return ProviderIdentity{}, &ProviderError{
 			Provider:  providerName,
-			Operation: "identity",
+			Operation: operation,
 			Kind:      ProviderErrorPermanent,
 			Cause:     fmt.Errorf("%w: merchant and application identity are required", ErrPermanentProviderProtocol),
 		}
@@ -355,9 +373,22 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 		return CheckoutResult{}, err
 	}
 
-	provider, ok := s.providers[attempt.Provider]
-	if !ok {
-		return CheckoutResult{}, fmt.Errorf("payment: provider %s not configured", attempt.Provider)
+	provider, err := s.providerAdapter(attempt.Provider, "checkout")
+	if err != nil {
+		return CheckoutResult{}, err
+	}
+	identity, err := s.providerIdentity(ctx, attempt.Provider, "checkout")
+	if err != nil {
+		return CheckoutResult{}, err
+	}
+	if attempt.ExpectedMerchantID == "" || attempt.ExpectedApplicationID == "" ||
+		identity.MerchantID != attempt.ExpectedMerchantID || identity.ApplicationID != attempt.ExpectedApplicationID {
+		return CheckoutResult{}, &ProviderError{
+			Provider:  attempt.Provider,
+			Operation: "checkout",
+			Kind:      ProviderErrorPermanent,
+			Cause:     fmt.Errorf("%w: configured provider identity does not match payment attempt snapshot", ErrPermanentProviderProtocol),
+		}
 	}
 
 	// Fetch order for the public ID and amount.
@@ -392,8 +423,21 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 	// Transition the order from created to awaiting_payment so the paid-tx
 	// runner can later move it to paid when the callback arrives.
 	if _, err := s.orders.UpdateOrderStatus(ctx, namespace, attempt.OrderID, commerce.OrderStatusCreated, commerce.OrderStatusAwaitingPayment); err != nil {
-		// If already awaiting_payment (idempotent checkout), this is fine.
-		s.logger.WarnContext(ctx, "payment: order status transition to awaiting_payment", "error", err, "orderID", attempt.OrderID)
+		// Ent returns ErrInvalidOrderTransition when an optimistic update affects
+		// no rows. Treat that as an idempotent checkout only after confirming the
+		// order is already awaiting payment; all other repository failures must
+		// fail closed without returning a usable provider session.
+		if errors.Is(err, commerce.ErrInvalidOrderTransition) {
+			current, getErr := s.orders.GetOrder(ctx, namespace, attempt.OrderID)
+			if getErr != nil {
+				return CheckoutResult{}, fmt.Errorf("payment: verify order awaiting_payment state: %w", getErr)
+			}
+			if current != nil && current.Status == commerce.OrderStatusAwaitingPayment {
+				return CheckoutResult{Attempt: updated, Fact: fact}, nil
+			}
+		}
+
+		return CheckoutResult{}, fmt.Errorf("payment: transition order to awaiting_payment: %w", err)
 	}
 
 	return CheckoutResult{Attempt: updated, Fact: fact}, nil
@@ -405,14 +449,9 @@ func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID str
 // The namespace parameter scopes the attempt lookup. Payment callback URLs are
 // registered per-tenant, so the HTTP handler always knows the namespace.
 func (s *service) HandleCallback(ctx context.Context, namespace string, providerName Provider, headers map[string][]string, body []byte) (CallbackResult, error) {
-	provider, ok := s.providers[providerName]
-	if !ok {
-		return CallbackResult{}, &ProviderError{
-			Provider:  providerName,
-			Operation: "callback",
-			Kind:      ProviderErrorPermanent,
-			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
-		}
+	provider, err := s.providerAdapter(providerName, "callback")
+	if err != nil {
+		return CallbackResult{}, err
 	}
 
 	// Verify the signature — the adapter does this and extracts verified fields.
@@ -431,14 +470,9 @@ func (s *service) ConfirmPayment(ctx context.Context, namespace, attemptID strin
 		return CallbackResult{}, err
 	}
 
-	provider, ok := s.providers[attempt.Provider]
-	if !ok {
-		return CallbackResult{}, &ProviderError{
-			Provider:  attempt.Provider,
-			Operation: "confirm",
-			Kind:      ProviderErrorPermanent,
-			Cause:     fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol),
-		}
+	provider, err := s.providerAdapter(attempt.Provider, "confirm")
+	if err != nil {
+		return CallbackResult{}, err
 	}
 
 	if attempt.ProviderOrderID == "" {
@@ -474,7 +508,11 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	// Locate the attempt by namespace + provider + provider order ID.
 	attempt, err := s.attempts.GetAttemptByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: locate attempt by provider order %s in namespace %s: %w", pf.ProviderOrderID, namespace, err)
+		wrapped := fmt.Errorf("payment: locate attempt by provider order %s in namespace %s: %w", pf.ProviderOrderID, namespace, err)
+		if errors.Is(err, commerce.ErrPaymentAttemptNotFound) || errors.Is(err, ErrPaymentAttemptNotFound) {
+			return CallbackResult{}, wrapped
+		}
+		return CallbackResult{}, markRetryableCallback(wrapped)
 	}
 
 	// Dedup by raw hash: if we've already seen this exact callback, return
@@ -482,7 +520,10 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.RawHash != "" {
 		existing, err := s.facts.GetFactByRawHash(ctx, namespace, pf.RawHash)
 		if err == nil && existing != nil {
-			return s.resultForExistingFact(ctx, namespace, attempt, existing)
+			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
+		}
+		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: look up fact by raw hash: %w", err))
 		}
 	}
 
@@ -490,12 +531,18 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 	if pf.ProviderEventID != "" {
 		existing, err := s.facts.GetFactByProviderEvent(ctx, namespace, pf.Provider, pf.ProviderEventID)
 		if err == nil && existing != nil {
-			return s.resultForExistingFact(ctx, namespace, attempt, existing)
+			return s.resultForExistingFact(ctx, namespace, attempt, pf, existing)
+		}
+		if err != nil && !errors.Is(err, commerce.ErrPaymentFactNotFound) {
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: look up fact by provider event: %w", err))
 		}
 	}
 
 	// Check for contradictory success facts on the same provider order.
-	existingFacts, _ := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
+	existingFacts, err := s.facts.GetFactsByProviderOrder(ctx, namespace, pf.Provider, pf.ProviderOrderID)
+	if err != nil {
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: list facts by provider order: %w", err))
+	}
 	if err := checkContradiction(existingFacts, pf); err != nil {
 		return CallbackResult{}, err
 	}
@@ -530,7 +577,7 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 		// Record the fact but don't transition. The order stays in its current state.
 		saved, _, err := s.facts.InsertFact(ctx, record)
 		if err != nil {
-			return CallbackResult{}, fmt.Errorf("payment: insert payment fact: %w", err)
+			return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: insert payment fact: %w", err))
 		}
 		return CallbackResult{Attempt: attempt, Fact: saved}, nil
 	}
@@ -545,14 +592,14 @@ func (s *service) applyPaymentFact(ctx context.Context, namespace string, pf Pay
 		},
 	})
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: paid transition: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: paid transition: %w", err))
 	}
 	if result.Fact == nil {
-		return CallbackResult{}, errors.New("payment: paid transition returned no payment fact")
+		return CallbackResult{}, markRetryableCallback(errors.New("payment: paid transition returned no payment fact"))
 	}
 	attempt, err = s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt after paid transition: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: reload payment attempt after paid transition: %w", err))
 	}
 
 	return CallbackResult{Attempt: attempt, Fact: result.Fact, AlreadyPaid: result.AlreadyPaid}, nil
@@ -562,17 +609,52 @@ func (s *service) resultForExistingFact(
 	ctx context.Context,
 	namespace string,
 	attempt *PaymentAttempt,
+	incoming PaymentFact,
 	fact *PaymentFactRecord,
 ) (CallbackResult, error) {
+	if err := matchFactToAttempt(attempt, incoming); err != nil {
+		return CallbackResult{}, err
+	}
+	if !existingPaymentFactMatches(attempt, incoming, fact) {
+		return CallbackResult{}, ErrContradictoryPaymentFact
+	}
 	current, err := s.attempts.GetAttempt(ctx, namespace, attempt.ID)
 	if err != nil {
-		return CallbackResult{}, fmt.Errorf("payment: reload payment attempt for existing fact: %w", err)
+		return CallbackResult{}, markRetryableCallback(fmt.Errorf("payment: reload payment attempt for existing fact: %w", err))
 	}
 	return CallbackResult{
 		Attempt:     current,
 		Fact:        fact,
 		AlreadyPaid: current.Status == AttemptStatusSucceeded,
 	}, nil
+}
+
+func markRetryableCallback(err error) error {
+	if err == nil || errors.Is(err, ErrRetryableCallback) {
+		return err
+	}
+	return fmt.Errorf("%w: %w", ErrRetryableCallback, err)
+}
+
+// existingPaymentFactMatches prevents a raw-hash or provider-event collision
+// from being treated as an idempotent replay for another attempt or for
+// different verified provider fields. RawHash, SignedPayload, and CreatedAt
+// are intentionally excluded: the same provider event can arrive through a
+// callback and a status query with different transport representations.
+func existingPaymentFactMatches(attempt *PaymentAttempt, incoming PaymentFact, existing *PaymentFactRecord) bool {
+	return existing != nil &&
+		existing.Namespace == attempt.Namespace &&
+		existing.AttemptID == attempt.ID &&
+		existing.Provider == incoming.Provider &&
+		existing.ProviderOrderID == incoming.ProviderOrderID &&
+		existing.ProviderPaymentID == incoming.ProviderPaymentID &&
+		existing.ProviderEventID == incoming.ProviderEventID &&
+		existing.MerchantID == incoming.MerchantID &&
+		existing.ApplicationID == incoming.ApplicationID &&
+		existing.AmountMinor == incoming.AmountMinor &&
+		existing.Currency == incoming.Currency &&
+		existing.Success == incoming.Success &&
+		existing.Timestamp.Equal(incoming.Timestamp)
 }
 
 // matchFactToAttempt verifies the payment fact matches the attempt:

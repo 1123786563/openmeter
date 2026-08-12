@@ -50,8 +50,10 @@ Five lifecycle-managed workers start on server boot:
    lost. Runs every 30s.
 2. **fulfillment**: Processes pending fulfillment records toward `fulfilled`.
    Runs every 10s. Recovers expired leases on startup (60s timeout).
-3. **refund-query**: Polls providers for refund status on refunds stuck in
-   `provider_processing`. Runs every 15s.
+3. **refund-query**: Drives new `pending_fence` refunds, polls provider status
+   in `provider_processing`, and resumes `ledger_reversing` after a crash. Runs
+   every 15s and processes at most 100 records per tick in stable
+   `updated_at,id` order.
 4. **receivable-close**: Closes enterprise receivable periods that have ended.
    Runs hourly.
 5. **reconciliation**: Runs invariant checks. Runs every 5m. Reports only —

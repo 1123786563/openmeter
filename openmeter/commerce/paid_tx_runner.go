@@ -126,8 +126,8 @@ func (a *EntAdapter) RunPaidTransition(ctx context.Context, p PaidTransitionPara
 		if err != nil {
 			return err
 		}
-		if fact.PaymentAttemptID != p.PaymentAttemptID || fact.ProviderOrderID != p.ProviderOrderID {
-			return errors.New("paid-tx: deduplicated payment fact belongs to a different attempt or provider order")
+		if !paymentFactMatchesPaidTransition(fact, p) {
+			return errors.New("paid-tx: deduplicated payment fact does not match verified transition")
 		}
 		result.Fact = mapEntPaymentFact(fact)
 
@@ -230,4 +230,32 @@ func (a *EntAdapter) getPaidTransitionFact(ctx context.Context, p PaidTransition
 		return nil, fmt.Errorf("paid-tx: get payment fact by provider event: %w", err)
 	}
 	return fact, nil
+}
+
+// paymentFactMatchesPaidTransition ensures a uniqueness conflict represents
+// an idempotent replay of the same structured provider fact. RawHash,
+// SignedPayload, and CreatedAt are transport or persistence metadata and can
+// legitimately differ when the same provider event is observed by callback
+// and by status query.
+func paymentFactMatchesPaidTransition(fact *entdb.PaymentFact, p PaidTransitionParams) bool {
+	return fact != nil &&
+		fact.Namespace == p.Namespace &&
+		fact.PaymentAttemptID == p.PaymentAttemptID &&
+		string(fact.Provider) == p.Provider &&
+		fact.ProviderOrderID == p.ProviderOrderID &&
+		nillablePaymentFactFieldMatches(fact.ProviderPaymentID, p.ProviderPaymentID) &&
+		nillablePaymentFactFieldMatches(fact.ProviderEventID, p.ProviderEventID) &&
+		nillablePaymentFactFieldMatches(fact.MerchantID, p.MerchantID) &&
+		nillablePaymentFactFieldMatches(fact.ApplicationID, p.ApplicationID) &&
+		fact.AmountMinor == p.AmountMinor &&
+		fact.Currency == p.Currency &&
+		fact.Success == p.Success &&
+		fact.Timestamp.Equal(p.Timestamp)
+}
+
+func nillablePaymentFactFieldMatches(stored *string, incoming string) bool {
+	if stored == nil {
+		return nonEmptyPtr(incoming) == nil
+	}
+	return *stored == incoming
 }

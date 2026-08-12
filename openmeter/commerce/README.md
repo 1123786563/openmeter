@@ -132,6 +132,24 @@ effect — the ledger effect was committed in the original transaction.
 
 ## Operations
 
+### Production payment boundary
+
+- Provider callbacks terminate at OpenMeter only:
+  `/api/v3/payment-providers/wechat/callback` and
+  `/api/v3/payment-providers/alipay/callback`.
+- OpenMeter owns provider credentials, signature verification, immutable
+  `PaymentFact` records, paid transitions, query recovery, and fulfillment.
+- WeKnora calls Commerce with an OpenMeter API key and may verify signed
+  OpenMeter responses with the OpenMeter public-key keyring. It does not hold
+  WeChat or Alipay merchant credentials and does not receive provider callbacks.
+- The repository's protocol-compatible provider test stand is loopback-only;
+  its success is not an official sandbox or live-provider acceptance result.
+- The authenticated OpenMeter `__test/commerce` fault/oracle routes are disabled
+  by default and can be enabled only with an explicit test token and local HTTP
+  provider endpoints. They expose no mutation other than arming a one-shot
+  pre-transaction failure and must not be enabled in official sandbox/live
+  deployments.
+
 ### Workers
 See [README-payment-production.md](README-payment-production.md) for the
 production payment operations manual covering callback endpoints, credential

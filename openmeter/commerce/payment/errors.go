@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/openmeterio/openmeter/pkg/framework/commonhttp"
@@ -8,6 +9,12 @@ import (
 )
 
 // Payment fact errors
+
+// ErrRetryableCallback marks callback processing failures whose provenance is
+// storage or the paid transition transaction. Provider callbacks must receive
+// a retryable response even when the underlying failure wraps a deterministic
+// commerce sentinel (for example, an order disappearing inside the transaction).
+var ErrRetryableCallback = errors.New("retryable payment callback failure")
 
 const ErrCodeInvalidSignature models.ErrorCode = "commerce_invalid_payment_signature"
 

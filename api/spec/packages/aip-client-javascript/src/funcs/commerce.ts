@@ -25,6 +25,8 @@ import type {
   GetRefundResponse,
   WechatPaymentCallbackRequest,
   WechatPaymentCallbackResponse,
+  WechatRefundCallbackRequest,
+  WechatRefundCallbackResponse,
   AlipayPaymentCallbackRequest,
   AlipayPaymentCallbackResponse,
   ListReceivablePeriodsRequest,
@@ -351,6 +353,8 @@ export function wechatPaymentCallback(
   req: WechatPaymentCallbackRequest,
   options?: RequestOptions,
 ): Promise<Result<WechatPaymentCallbackResponse>> {
+  const headers = new Headers(options?.headers as HeadersInit | undefined)
+  headers.set('content-type', 'application/json')
   return request(async () => {
     const body = toWire(req, schemas.wechatPaymentCallbackBody)
     if (client._options.validate) {
@@ -358,7 +362,36 @@ export function wechatPaymentCallback(
     }
     await http(client).post('payment-providers/wechat/callback', {
       ...options,
-      json: body,
+      body,
+      headers,
+    })
+  })
+}
+
+/**
+ * WeChat Pay refund callback
+ *
+ * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
+ * then applies the authoritative refund fact.
+ *
+ * POST /payment-providers/wechat/refund-callback
+ */
+export function wechatRefundCallback(
+  client: Client,
+  req: WechatRefundCallbackRequest,
+  options?: RequestOptions,
+): Promise<Result<WechatRefundCallbackResponse>> {
+  const headers = new Headers(options?.headers as HeadersInit | undefined)
+  headers.set('content-type', 'application/json')
+  return request(async () => {
+    const body = toWire(req, schemas.wechatRefundCallbackBody)
+    if (client._options.validate) {
+      assertValid(schemas.wechatRefundCallbackBodyWire, body)
+    }
+    await http(client).post('payment-providers/wechat/refund-callback', {
+      ...options,
+      body,
+      headers,
     })
   })
 }
@@ -378,17 +411,14 @@ export function alipayPaymentCallback(
 ): Promise<Result<AlipayPaymentCallbackResponse>> {
   const headers = new Headers(options?.headers as HeadersInit | undefined)
   headers.set('accept', 'text/plain')
+  headers.set('content-type', 'application/x-www-form-urlencoded')
   return request(() => {
     const body = toWire(req, schemas.alipayPaymentCallbackBody)
     if (client._options.validate) {
       assertValid(schemas.alipayPaymentCallbackBodyWire, body)
     }
     return http(client)
-      .post('payment-providers/alipay/callback', {
-        ...options,
-        json: body,
-        headers,
-      })
+      .post('payment-providers/alipay/callback', { ...options, body, headers })
       .text()
   })
 }

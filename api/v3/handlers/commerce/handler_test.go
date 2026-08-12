@@ -93,8 +93,10 @@ func (m *mockOrders) TransitionStatus(_ context.Context, _, _ string, _ commerce
 }
 
 type mockPayment struct {
-	attempt *payment.PaymentAttempt
-	err     error
+	attempt        *payment.PaymentAttempt
+	err            error
+	callbackCalled bool
+	callbackBody   []byte
 }
 
 func (m *mockPayment) CreateAttempt(_ context.Context, _ payment.CreateAttemptInput) (*payment.PaymentAttempt, bool, error) {
@@ -109,7 +111,9 @@ func (m *mockPayment) InitiateCheckout(_ context.Context, _, _ string) (payment.
 	return payment.CheckoutResult{Attempt: m.attempt}, m.err
 }
 
-func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, _ []byte) (payment.CallbackResult, error) {
+func (m *mockPayment) HandleCallback(_ context.Context, _ string, _ payment.Provider, _ map[string][]string, body []byte) (payment.CallbackResult, error) {
+	m.callbackCalled = true
+	m.callbackBody = append([]byte(nil), body...)
 	return payment.CallbackResult{}, m.err
 }
 
@@ -118,9 +122,13 @@ func (m *mockPayment) ConfirmPayment(_ context.Context, _, _ string) (payment.Ca
 }
 
 type mockRefund struct {
-	rec     *refund.RefundRequest
-	created bool
-	err     error
+	rec              *refund.RefundRequest
+	created          bool
+	err              error
+	callbackCalls    int
+	callbackProvider payment.Provider
+	callbackHeaders  http.Header
+	callbackBody     []byte
 }
 
 func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput) (*refund.RefundRequest, bool, error) {
@@ -139,10 +147,29 @@ func (m *mockRefund) ApplyRefundCallback(_ context.Context, _ string, _ payment.
 	return m.rec, m.err
 }
 
+func (m *mockRefund) HandleCallback(_ context.Context, _ string, provider payment.Provider, headers http.Header, body []byte) (*refund.RefundRequest, error) {
+	m.callbackCalls++
+	m.callbackProvider = provider
+	m.callbackHeaders = headers.Clone()
+	m.callbackBody = append([]byte(nil), body...)
+	return m.rec, m.err
+}
+
 func testHandler(svc Services) Handler {
 	return New(func(_ context.Context) (string, error) {
 		return "test-ns", nil
 	}, svc)
+}
+
+func requireWechatRefundCallback(t *testing.T, h Handler) http.HandlerFunc {
+	t.Helper()
+	callbackHandler, ok := h.(interface {
+		WechatRefundCallback() http.HandlerFunc
+	})
+	if !ok {
+		t.Fatal("commerce handler does not implement WechatRefundCallback")
+	}
+	return callbackHandler.WechatRefundCallback()
 }
 
 func doRequest(t *testing.T, h http.Handler, method, path string, body any, pathValues map[string]string) *httptest.ResponseRecorder {
@@ -288,12 +315,13 @@ func TestCreateOrder_Success(t *testing.T) {
 	h := testHandler(Services{
 		Orders: &mockOrders{
 			order: &commerce.Order{
-				PublicID:    "ord-1",
-				CustomerID:  "cust-1",
-				Kind:        commerce.OrderKindWalletTopUp,
-				Status:      commerce.OrderStatusCreated,
-				AmountMinor: 1000,
-				Currency:    "CNY",
+				NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "01INTERNALORDERID0000000000"},
+				PublicID:     "ord-1",
+				CustomerID:   "cust-1",
+				Kind:         commerce.OrderKindWalletTopUp,
+				Status:       commerce.OrderStatusCreated,
+				AmountMinor:  1000,
+				Currency:     "CNY",
 			},
 			created: true,
 		},
@@ -308,6 +336,16 @@ func TestCreateOrder_Success(t *testing.T) {
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var response api.CommerceOrder
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Id != "01INTERNALORDERID0000000000" {
+		t.Fatalf("id = %q, want internal resource id", response.Id)
+	}
+	if response.BusinessTrackingNumber == nil || *response.BusinessTrackingNumber != "ord-1" {
+		t.Fatalf("business_tracking_number = %v, want public order number ord-1", response.BusinessTrackingNumber)
 	}
 }
 
@@ -424,6 +462,36 @@ func TestCreateOrderRejectsMismatchingPlanIDAndSKU(t *testing.T) {
 	}
 }
 
+func TestCreateOrderRejectsExplicitEmptyPlanID(t *testing.T) {
+	plan := &commerce.Product{
+		NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"},
+		SKU:          "PLAN-PRO-MONTHLY",
+		Kind:         commerce.ProductKindPlanPurchase,
+		AmountMinor:  9900,
+		Currency:     "CNY",
+		Active:       true,
+	}
+	catalog := &mockCatalog{productBySKU: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1"}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "plan-idem-empty-id",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanId: ptrULID(""), PlanKey: "pro", PlanVersion: "monthly"},
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	requireValidationIssue(t, rr, http.StatusBadRequest, "commerce_invalid_plan_reference", "invalid plan reference")
+	if catalog.lastRequestedSKU != "" {
+		t.Fatalf("explicit empty plan_id fell back to SKU lookup: %q", catalog.lastRequestedSKU)
+	}
+	if len(orders.lastInput.ProductIDs) != 0 {
+		t.Fatalf("order service received product IDs after empty plan_id: %v", orders.lastInput.ProductIDs)
+	}
+}
+
 func TestCreateOrderRejectsUnknownPlan(t *testing.T) {
 	h := testHandler(Services{Catalog: &mockCatalog{err: commerce.ErrProductNotFound}, Orders: &mockOrders{}})
 	body := api.CommerceOrderCreate{BillingCustomerId: "customer-1", IdempotencyKey: "plan-idem-unknown", Kind: api.CommerceOrderKindPlanPurchase, Currency: "CNY", Plan: &api.CommerceOrderCreatePlanRef{PlanKey: "missing", PlanVersion: "monthly"}}
@@ -448,6 +516,39 @@ func TestCreateOrderRejectsMixedProductReference(t *testing.T) {
 	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for mixed product references, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateOrderRejectsPlanWithExplicitEmptyRechargeProductReference(t *testing.T) {
+	plan := &commerce.Product{
+		NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "product-plan-pro-monthly"},
+		SKU:          "PLAN-PRO-MONTHLY",
+		Kind:         commerce.ProductKindPlanPurchase,
+		AmountMinor:  9900,
+		Currency:     "CNY",
+		Active:       true,
+	}
+	catalog := &mockCatalog{productBySKU: plan}
+	orders := &mockOrders{order: &commerce.Order{PublicID: "ord-1"}, created: true}
+	h := testHandler(Services{Catalog: catalog, Orders: orders})
+	body := api.CommerceOrderCreate{
+		BillingCustomerId: "customer-1",
+		IdempotencyKey:    "mixed-empty-idem",
+		Kind:              api.CommerceOrderKindPlanPurchase,
+		Currency:          "CNY",
+		Plan:              &api.CommerceOrderCreatePlanRef{PlanKey: "pro", PlanVersion: "monthly"},
+		RechargeProductId: ptrULID(""),
+	}
+
+	rr := doRequest(t, h.CreateOrder(), http.MethodPost, "/orders", body, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for explicitly mixed product references, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if catalog.lastRequestedSKU != "" {
+		t.Fatalf("mixed request reached catalog SKU lookup: %q", catalog.lastRequestedSKU)
+	}
+	if len(orders.lastInput.ProductIDs) != 0 {
+		t.Fatalf("mixed request reached order service with product IDs: %v", orders.lastInput.ProductIDs)
 	}
 }
 
@@ -573,12 +674,39 @@ func TestAlipayCallbackAckIsPlainSuccess(t *testing.T) {
 }
 
 func TestPaymentCallbackBodyLimit(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{attempt: &payment.PaymentAttempt{}},
+	t.Run("accepts exactly one MiB", func(t *testing.T) {
+		paymentService := &mockPayment{attempt: &payment.PaymentAttempt{}}
+		h := testHandler(Services{Payment: paymentService})
+		body := strings.Repeat("x", 1<<20)
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/callback", strings.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		h.WechatPaymentCallback().ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("expected 204 at the body limit, got %d: %s", rr.Code, rr.Body.String())
+		}
+		if !paymentService.callbackCalled {
+			t.Fatal("payment service was not called at the body limit")
+		}
+		if got := len(paymentService.callbackBody); got != 1<<20 {
+			t.Fatalf("callback body length = %d, want %d", got, 1<<20)
+		}
 	})
-	oversized := string(make([]byte, 1<<20+1))
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", oversized, nil)
-	requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+
+	t.Run("rejects more than one MiB before verification", func(t *testing.T) {
+		paymentService := &mockPayment{attempt: &payment.PaymentAttempt{}}
+		h := testHandler(Services{Payment: paymentService})
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/callback", strings.NewReader(strings.Repeat("x", 1<<20+1)))
+		rr := httptest.NewRecorder()
+
+		h.WechatPaymentCallback().ServeHTTP(rr, req)
+
+		requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+		if paymentService.callbackCalled {
+			t.Fatal("payment service was called with an oversized callback body")
+		}
+	})
 }
 
 func TestPaymentCallbackSignatureRejectionIsBadRequest(t *testing.T) {
@@ -600,24 +728,141 @@ func TestPaymentCallbackFactMismatchIsBadRequest(t *testing.T) {
 	requireProblemResponse(t, rr, http.StatusBadRequest)
 }
 
-func TestPaymentCallbackContradictoryFactIsConflict(t *testing.T) {
+func TestPaymentCallbackContradictoryFactIsBadRequest(t *testing.T) {
 	h := testHandler(Services{
 		Payment: &mockPayment{err: payment.ErrContradictoryPaymentFact},
 	})
 	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusConflict)
+	requireProblemResponse(t, rr, http.StatusBadRequest)
 }
 
-func TestPaymentCallbackDuplicateEventIsProviderSuccess(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: payment.ErrDuplicateProviderEvent},
-	})
-	rr := doRequest(t, h.AlipayPaymentCallback(), http.MethodPost, "/payment-providers/alipay/callback", "raw-body", nil)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 on duplicate callback, got %d: %s", rr.Code, rr.Body.String())
+func TestPaymentCallbackLegalReplayUsesProviderSuccessAck(t *testing.T) {
+	tests := []struct {
+		name        string
+		provider    payment.Provider
+		err         error
+		wantStatus  int
+		wantBody    string
+		contentType string
+	}{
+		{name: "WeChat duplicate event", provider: payment.ProviderWeChat, err: payment.ErrDuplicateProviderEvent, wantStatus: http.StatusNoContent},
+		{name: "WeChat already fulfilled", provider: payment.ProviderWeChat, err: payment.ErrFulfillmentAlreadyDone, wantStatus: http.StatusNoContent},
+		{name: "Alipay duplicate event", provider: payment.ProviderAlipay, err: payment.ErrDuplicateProviderEvent, wantStatus: http.StatusOK, wantBody: "success", contentType: "text/plain; charset=utf-8"},
+		{name: "Alipay already fulfilled", provider: payment.ProviderAlipay, err: payment.ErrFulfillmentAlreadyDone, wantStatus: http.StatusOK, wantBody: "success", contentType: "text/plain; charset=utf-8"},
 	}
-	if got := rr.Body.String(); got != "success" {
-		t.Fatalf("expected provider success ACK on duplicate callback, got %q", got)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Payment: &mockPayment{err: tt.err}})
+			var callback http.Handler
+			if tt.provider == payment.ProviderWeChat {
+				callback = h.WechatPaymentCallback()
+			} else {
+				callback = h.AlipayPaymentCallback()
+			}
+			rr := doRequest(t, callback, http.MethodPost, "/callback", "raw-body", nil)
+
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("expected %d on legal replay, got %d: %s", tt.wantStatus, rr.Code, rr.Body.String())
+			}
+			if got := rr.Body.String(); got != tt.wantBody {
+				t.Fatalf("provider ACK body = %q, want %q", got, tt.wantBody)
+			}
+			if got := rr.Header().Get("Content-Type"); got != tt.contentType {
+				t.Fatalf("provider ACK content type = %q, want %q", got, tt.contentType)
+			}
+		})
+	}
+}
+
+func TestWechatRefundCallbackSuccessAndReplayUseNativeAck(t *testing.T) {
+	refundService := &mockRefund{rec: &refund.RefundRequest{Status: refund.RefundStatusFulfilled}}
+	h := testHandler(Services{Refund: refundService})
+	callback := requireWechatRefundCallback(t, h)
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/refund-callback", strings.NewReader(`{"id":"refund-event"}`))
+		req.Header.Set("Wechatpay-Serial", "platform-serial")
+		rr := httptest.NewRecorder()
+		callback.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusNoContent {
+			t.Fatalf("attempt %d: expected 204, got %d: %s", attempt, rr.Code, rr.Body.String())
+		}
+		if got := rr.Body.String(); got != "" {
+			t.Fatalf("attempt %d: expected empty ACK body, got %q", attempt, got)
+		}
+		if got := rr.Header().Get("Content-Type"); got != "" {
+			t.Fatalf("attempt %d: expected no ACK content type, got %q", attempt, got)
+		}
+	}
+
+	if refundService.callbackCalls != 2 {
+		t.Fatalf("refund callback calls = %d, want 2", refundService.callbackCalls)
+	}
+	if refundService.callbackProvider != payment.ProviderWeChat {
+		t.Fatalf("refund callback provider = %q, want %q", refundService.callbackProvider, payment.ProviderWeChat)
+	}
+	if got := refundService.callbackHeaders.Get("Wechatpay-Serial"); got != "platform-serial" {
+		t.Fatalf("refund callback serial header = %q", got)
+	}
+	if got := string(refundService.callbackBody); got != `{"id":"refund-event"}` {
+		t.Fatalf("refund callback body = %q", got)
+	}
+}
+
+func TestWechatRefundCallbackRejectsVerificationAndAuthorityMismatch(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{name: "signature verification", err: payment.ErrInvalidSignature},
+		{name: "verified fact mismatch", err: refund.ErrRefundFactMismatch},
+		{name: "permanent provider protocol", err: payment.ErrPermanentProviderProtocol},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Refund: &mockRefund{err: tt.err}})
+			rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+			requireProblemResponse(t, rr, http.StatusBadRequest)
+		})
+	}
+}
+
+func TestWechatRefundCallbackReturnsRetryableError(t *testing.T) {
+	h := testHandler(Services{Refund: &mockRefund{err: errors.New("refund database unavailable")}})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+	requireProblemResponse(t, rr, http.StatusInternalServerError)
+}
+
+func TestWechatRefundCallbackAcknowledgesAppliedDefinitiveFailure(t *testing.T) {
+	h := testHandler(Services{Refund: &mockRefund{err: refund.ErrProviderRefundFailed}})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "raw-body", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 after applying a verified terminal failure, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestWechatRefundCallbackBodyLimit(t *testing.T) {
+	refundService := &mockRefund{}
+	h := testHandler(Services{Refund: refundService})
+	req := httptest.NewRequest(http.MethodPost, "/payment-providers/wechat/refund-callback", strings.NewReader(strings.Repeat("x", 1<<20+1)))
+	rr := httptest.NewRecorder()
+
+	requireWechatRefundCallback(t, h).ServeHTTP(rr, req)
+
+	requireProblemResponse(t, rr, http.StatusRequestEntityTooLarge)
+	if refundService.callbackCalls != 0 {
+		t.Fatal("refund service was called with an oversized callback body")
+	}
+}
+
+func TestWechatRefundCallback_NilRefund_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, requireWechatRefundCallback(t, h), http.MethodPost, "/payment-providers/wechat/refund-callback", "body", nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for nil refund callback, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 
@@ -883,23 +1128,33 @@ func TestWechatCallback_NilPayment_501(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Payment callback transient error test (Important #3)
+// Payment callback error provenance
 // ---------------------------------------------------------------------------
 
-func TestPaymentCallback_TxRunnerError_500(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: errors.New("paid TxRunner: database connection lost")},
-	})
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusInternalServerError)
-}
+func TestPaymentCallbackErrorClassification(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+	}{
+		{name: "unknown provider order from production repository", err: commerce.ErrPaymentAttemptNotFound, wantStatus: http.StatusBadRequest},
+		{name: "unknown provider order from payment repository", err: payment.ErrPaymentAttemptNotFound, wantStatus: http.StatusBadRequest},
+		{name: "paid transition wraps missing order", err: fmt.Errorf("%w: payment: paid transition: %w", payment.ErrRetryableCallback, commerce.ErrOrderNotFound), wantStatus: http.StatusInternalServerError},
+		{name: "retryable provenance wins over deterministic sentinel", err: fmt.Errorf("%w: paid transition: %w", payment.ErrRetryableCallback, payment.ErrPaymentAttemptNotFound), wantStatus: http.StatusInternalServerError},
+		{name: "paid transition database failure", err: errors.New("paid TxRunner: database connection lost"), wantStatus: http.StatusInternalServerError},
+		{name: "wrapped context cancellation", err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled), wantStatus: http.StatusInternalServerError},
+		{name: "wrapped deadline exceeded", err: fmt.Errorf("payment database timed out: %w", context.DeadlineExceeded), wantStatus: http.StatusInternalServerError},
+		{name: "non-whitelisted payment validation issue", err: payment.ErrPaymentNotVerified, wantStatus: http.StatusInternalServerError},
+		{name: "non-whitelisted commerce validation issue", err: commerce.ErrOrderIdempotencyConflict, wantStatus: http.StatusInternalServerError},
+	}
 
-func TestPaymentCallback_WrappedContextCanceledTransientError_500(t *testing.T) {
-	h := testHandler(Services{
-		Payment: &mockPayment{err: fmt.Errorf("paid TxRunner dependency canceled: %w", context.Canceled)},
-	})
-	rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
-	requireProblemResponse(t, rr, http.StatusInternalServerError)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := testHandler(Services{Payment: &mockPayment{err: tt.err}})
+			rr := doRequest(t, h.WechatPaymentCallback(), http.MethodPost, "/payment-providers/wechat/callback", "raw-body", nil)
+			requireProblemResponse(t, rr, tt.wantStatus)
+		})
+	}
 }
 
 func TestPaymentCallback_SignatureRejection_400(t *testing.T) {

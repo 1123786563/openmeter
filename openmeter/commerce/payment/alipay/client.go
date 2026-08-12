@@ -40,11 +40,11 @@ func (a *Adapter) call(ctx context.Context, method, responseKey string, requestV
 	}
 	privateKeyPEM, err := a.secrets.Get(ctx, SecretKeyAppPrivateKey)
 	if err != nil {
-		return nil, permanentProviderError(method, "get application private key", err)
+		return nil, permanentProviderError(method, "application private key is unavailable", payment.ErrPermanentProviderProtocol)
 	}
 	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
 	if err != nil {
-		return nil, permanentProviderError(method, "parse application private key", err)
+		return nil, permanentProviderError(method, "application private key is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	signature, err := signRSA2(privateKey, []byte(requestSignContent(values)))
 	if err != nil {
@@ -106,6 +106,10 @@ func (a *Adapter) verifyResponse(ctx context.Context, body []byte, responseKey, 
 	if err := decoder.Decode(&envelope); err != nil {
 		return nil, permanentProviderHTTPError(operation, httpStatus, "invalid response envelope", payment.ErrPermanentProviderProtocol)
 	}
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return nil, permanentProviderHTTPError(operation, httpStatus, "response envelope has trailing data", payment.ErrPermanentProviderProtocol)
+	}
 	responseBody := envelope[responseKey]
 	if len(responseBody) == 0 || bytes.Equal(responseBody, []byte("null")) {
 		return nil, permanentProviderHTTPError(operation, httpStatus, "response object is missing", payment.ErrPermanentProviderProtocol)
@@ -137,11 +141,11 @@ func permanentProviderHTTPError(operation string, httpStatus int, detail string,
 func (a *Adapter) verifySignature(ctx context.Context, content []byte, encodedSignature string) error {
 	publicKeyPEM, err := a.secrets.Get(ctx, SecretKeyAlipayPublicKey)
 	if err != nil {
-		return fmt.Errorf("alipay: get Alipay public key: %w", err)
+		return fmt.Errorf("%w: Alipay public key is unavailable", payment.ErrPermanentProviderProtocol)
 	}
 	publicKey, err := parseRSAPublicKey([]byte(publicKeyPEM))
 	if err != nil {
-		return fmt.Errorf("alipay: parse Alipay public key: %w", err)
+		return fmt.Errorf("%w: Alipay public key is invalid", payment.ErrPermanentProviderProtocol)
 	}
 	signature, err := base64.StdEncoding.DecodeString(encodedSignature)
 	if err != nil {

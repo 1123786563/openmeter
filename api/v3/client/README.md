@@ -347,6 +347,7 @@ The full call path, HTTP route, and a short description are listed below.
 | `om.Commerce.CreateRefund` | `POST /refunds` | Create a refund request for an order. |
 | `om.Commerce.GetRefund` | `GET /refunds/{refundId}` | Retrieve a refund by its ID. |
 | `om.Commerce.WechatPaymentCallback` | `POST /payment-providers/wechat/callback` | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
+| `om.Commerce.WechatRefundCallback` | `POST /payment-providers/wechat/refund-callback` | WeChat Pay refund callback. OpenMeter verifies and decrypts the notification, then applies the authoritative refund fact. |
 | `om.Commerce.AlipayPaymentCallback` | `POST /payment-providers/alipay/callback` | Alipay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. |
 | `om.Commerce.AlipayPaymentCallbackStream` | `POST /payment-providers/alipay/callback` | Streaming variant of `AlipayPaymentCallback` returning an `io.ReadCloser`. |
 | `om.Commerce.ListReceivablePeriods` | `GET /customers/{customerId}/receivable-periods` | List receivable periods for a customer. |

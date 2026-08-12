@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"time"
 )
 
@@ -195,15 +196,20 @@ type RefundQueryInput struct {
 
 // RefundFact is a verified refund result from the provider.
 type RefundFact struct {
-	Provider         Provider
-	ProviderRefundID string
-	ProviderOrderID  string
-	AmountMinor      int64
-	Currency         string
-	Success          bool
-	RawHash          string
-	Timestamp        time.Time
-	SignedPayload    map[string]any
+	Provider          Provider
+	ProviderRefundID  string
+	ProviderOrderID   string
+	ProviderPaymentID string
+	MerchantID        string
+	AmountMinor       int64
+	TotalAmountMinor  int64
+	Currency          string
+	Status            string
+	Success           bool
+	Terminal          bool
+	RawHash           string
+	Timestamp         time.Time
+	SignedPayload     map[string]any
 }
 
 // Provider is the boundary between the payment domain and external payment
@@ -241,6 +247,30 @@ type ProviderAdapter interface {
 
 	// Name returns the provider identifier.
 	Name() Provider
+}
+
+// ValidateProviderAdapter rejects absent adapters and map key/name mismatches
+// before any provider method with external side effects is called. The guarded
+// kind switch is required because IsNil panics for non-nilable reflected kinds.
+func ValidateProviderAdapter(expected Provider, adapter interface{ Name() Provider }) error {
+	if adapter == nil || isNilProviderAdapter(adapter) {
+		return fmt.Errorf("%w: provider is disabled or not configured", ErrPermanentProviderProtocol)
+	}
+	actual := adapter.Name()
+	if actual != expected {
+		return fmt.Errorf("%w: provider adapter name %q does not match configured key %q", ErrPermanentProviderProtocol, actual, expected)
+	}
+	return nil
+}
+
+func isNilProviderAdapter(adapter any) bool {
+	value := reflect.ValueOf(adapter)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	default:
+		return false
+	}
 }
 
 // SecretProvider supplies secrets from a secret manager or mounted files. Keys

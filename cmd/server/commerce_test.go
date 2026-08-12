@@ -19,11 +19,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
 	"github.com/openmeterio/openmeter/openmeter/credit"
 	"github.com/openmeterio/openmeter/openmeter/credit/grant"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
+	"github.com/openmeterio/openmeter/openmeter/ent/db/paymentattempt"
 	"github.com/openmeterio/openmeter/openmeter/testutils"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -74,7 +77,7 @@ func completeRuntimeDependencies() *commerceRuntimeDependencies {
 func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
 	wiring, err := wireCommerce(
 		entdb.NewClient(), "default", testGrantConnector{},
-		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+		config.CommerceConfiguration{Enabled: false}, testutils.NewLogger(t),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, wiring.Handler)
@@ -87,7 +90,7 @@ func TestWireCommerceDisabledKeepsReadOnlyWiringWithoutWorkers(t *testing.T) {
 func TestWireCommerceDisabledRejectsAllMutationHandlers(t *testing.T) {
 	wiring, err := wireCommerce(
 		entdb.NewClient(), "default", testGrantConnector{},
-		config.CommerceConfiguration{Enabled: false}, nil, testutils.NewLogger(t),
+		config.CommerceConfiguration{Enabled: false}, testutils.NewLogger(t),
 	)
 	require.NoError(t, err)
 
@@ -139,7 +142,7 @@ func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			wiring, err := wireCommerce(
+			wiring, err := wireCommerceWithRuntimeDependencies(
 				entdb.NewClient(), "default", testGrantConnector{}, cfg, tt.deps, testutils.NewLogger(t),
 			)
 			require.Nil(t, wiring)
@@ -158,14 +161,14 @@ func TestWireCommerceEnabledWithoutChannelsStillRequiresRealRefundDependencies(t
 	}
 
 	wiring, err := wireCommerce(
-		entdb.NewClient(), "default", testGrantConnector{}, cfg, nil, testutils.NewLogger(t),
+		entdb.NewClient(), "default", testGrantConnector{}, cfg, testutils.NewLogger(t),
 	)
 	require.Nil(t, wiring)
 	require.ErrorContains(t, err, "commerce automatic refund disabled")
 }
 
 func TestWireCommerceEnabledRegistersProviderRecoveryWorkersWithCompleteDependencies(t *testing.T) {
-	wiring, err := wireCommerce(
+	wiring, err := wireCommerceWithRuntimeDependencies(
 		entdb.NewClient(), "default", testGrantConnector{},
 		validCommerceConfiguration(t), completeRuntimeDependencies(), testutils.NewLogger(t),
 	)
@@ -179,11 +182,54 @@ func TestWireCommerceEnabledRegistersProviderRecoveryWorkersWithCompleteDependen
 	require.Same(t, wiring.paymentProviders[payment.ProviderAlipay], wiring.refundProviders[payment.ProviderAlipay])
 }
 
+func TestPaymentProviderResolverAdapterResolvesRefundPaymentAuthority(t *testing.T) {
+	testDB := testutils.InitPostgresDB(t, testutils.PostgresDBStateEntMigrated)
+	defer testDB.Close(t)
+	client := testDB.EntDriver.Client()
+	entAdapter, err := commerce.NewEntAdapter(commerce.EntAdapterConfig{Client: client, Logger: testutils.NewLogger(t)})
+	require.NoError(t, err)
+
+	order, err := client.CommerceOrder.Create().
+		SetNamespace("default").
+		SetCustomerID("customer-refund-authority").
+		SetKind(commerceorder.KindWalletTopUp).
+		SetStatus(commerceorder.StatusFulfilled).
+		SetTotalCents(10000).
+		SetCurrency("CNY").
+		SetIdempotencyKey("order-refund-authority").
+		Save(t.Context())
+	require.NoError(t, err)
+	_, err = client.PaymentAttempt.Create().
+		SetNamespace("default").
+		SetCommerceOrderID(order.ID).
+		SetCustomerID(order.CustomerID).
+		SetProvider(paymentattempt.ProviderWechat).
+		SetProviderOrderID("wechat-order-refund-authority").
+		SetProviderPaymentID("wechat-payment-refund-authority").
+		SetExpectedMerchantID("wx-mch").
+		SetStatus(paymentattempt.StatusSucceeded).
+		SetIdempotencyKey("attempt-refund-authority").
+		SetAmountCents(10000).
+		SetCurrency("CNY").
+		Save(t.Context())
+	require.NoError(t, err)
+
+	var resolver refund.PaymentAuthorityResolver = paymentProviderResolverAdapter{EntAdapter: entAdapter}
+	authority, err := resolver.ResolvePaymentAuthorityForOrder(t.Context(), "default", order.ID)
+	require.NoError(t, err)
+	require.Equal(t, payment.ProviderWeChat, authority.Provider)
+	require.Equal(t, "wechat-order-refund-authority", authority.ProviderOrderID)
+	require.Equal(t, "wechat-payment-refund-authority", authority.ProviderPaymentID)
+	require.Equal(t, "wx-mch", authority.MerchantID)
+	require.Equal(t, int64(10000), authority.AmountMinor)
+	require.Equal(t, "CNY", authority.Currency)
+}
+
 func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	cfg := validCommerceConfiguration(t)
 	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
 
-	wiring, err := wireCommerce(
+	wiring, err := wireCommerceWithRuntimeDependencies(
 		entdb.NewClient(), "default", testGrantConnector{}, cfg,
 		completeRuntimeDependencies(), testutils.NewLogger(t),
 	)
@@ -191,6 +237,19 @@ func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	require.Error(t, err)
 	var pathErr *os.PathError
 	require.True(t, errors.As(err, &pathErr))
+}
+
+func TestWireCommerceValidatesProviderSecretsBeforeUnavailableRefundRuntime(t *testing.T) {
+	cfg := validCommerceConfiguration(t)
+	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
+
+	wiring, err := wireCommerce(
+		entdb.NewClient(), "default", testGrantConnector{}, cfg, testutils.NewLogger(t),
+	)
+	require.Nil(t, wiring)
+	var pathErr *os.PathError
+	require.ErrorAs(t, err, &pathErr)
+	require.NotContains(t, err.Error(), "refund fence")
 }
 
 func TestWirePaymentProvidersRejectsMalformedSecretFilesAtStartup(t *testing.T) {

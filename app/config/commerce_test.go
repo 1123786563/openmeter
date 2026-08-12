@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -40,6 +41,47 @@ func TestCommerceConfigurationValidate(t *testing.T) {
 
 func TestCommerceConfigurationValidateDisabled(t *testing.T) {
 	require.NoError(t, CommerceConfiguration{}.Validate())
+}
+
+func TestCommerceConfigurationTestControlsAreDisabledByDefault(t *testing.T) {
+	v := viper.New()
+	ConfigureCommerce(v)
+
+	require.False(t, v.GetBool("commerce.test.enabled"))
+	require.Empty(t, v.GetString("commerce.test.controlToken"))
+}
+
+func TestCommerceConfigurationTestControlsRequireTokenAndLocalProviders(t *testing.T) {
+	t.Run("token is required", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+
+		require.ErrorContains(t, cfg.Validate(), "commerce.test.control_token is required")
+	})
+
+	t.Run("live provider endpoints are rejected", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+		cfg.Test.ControlToken = "phase2-loopback-control-token"
+		cfg.Payment.WeChat.Enabled = true
+
+		require.ErrorContains(t, cfg.Validate(), "commerce.test controls require loopback test provider endpoints")
+	})
+
+	t.Run("explicit local phase2 provider is accepted", func(t *testing.T) {
+		cfg := validCommerceConfiguration()
+		cfg.Test.Enabled = true
+		cfg.Test.ControlToken = "phase2-loopback-control-token"
+		cfg.Payment.WeChat.Enabled = true
+		cfg.Payment.WeChat.BaseURL = "http://payment-provider:8080"
+		cfg.Payment.WeChat.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/callback"
+		cfg.Payment.WeChat.RefundNotifyURL = "http://openmeter:8888/api/v3/payment-providers/wechat/refund-callback"
+		cfg.Payment.Alipay.Enabled = true
+		cfg.Payment.Alipay.GatewayURL = "http://payment-provider:8080/gateway.do"
+		cfg.Payment.Alipay.NotifyURL = "http://openmeter:8888/api/v3/payment-providers/alipay/callback"
+
+		require.NoError(t, cfg.Validate())
+	})
 }
 
 func TestCommerceConfigurationValidateAllowsTestWeChatBaseURL(t *testing.T) {
@@ -152,6 +194,28 @@ func TestConfigureCommerceDefaults(t *testing.T) {
 	require.Equal(t, "https://api.mch.weixin.qq.com", v.GetString("commerce.payment.wechat.baseURL"))
 	require.Equal(t, 5*time.Minute, v.GetDuration("commerce.payment.wechat.callbackMaxAge"))
 	require.Equal(t, "https://openapi.alipay.com/gateway.do", v.GetString("commerce.payment.alipay.gatewayURL"))
+}
+
+func TestCommerceConfigurationLoadsAlipayFromEnvironment(t *testing.T) {
+	t.Setenv("COMMERCE_ENABLED", "true")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_ENABLED", "true")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_APPID", "alipay-app-id")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_SELLERID", "seller-id")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_APPPRIVATEKEYFILE", "/run/secrets/alipay-app-private-key.pem")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_ALIPAYPUBLICKEYFILE", "/run/secrets/alipay-public-key.pem")
+	t.Setenv("COMMERCE_PAYMENT_ALIPAY_NOTIFYURL", "https://openmeter.example.com/commerce/alipay/notify")
+
+	v := viper.New()
+	SetViperDefaults(v, pflag.NewFlagSet("OpenMeter", pflag.ContinueOnError))
+
+	var actual Configuration
+	require.NoError(t, v.Unmarshal(&actual, viper.DecodeHook(DecodeHook())))
+	require.NoError(t, actual.Commerce.Validate())
+	require.Equal(t, "alipay-app-id", actual.Commerce.Payment.Alipay.AppID)
+	require.Equal(t, "seller-id", actual.Commerce.Payment.Alipay.SellerID)
+	require.Equal(t, "/run/secrets/alipay-app-private-key.pem", actual.Commerce.Payment.Alipay.AppPrivateKeyFile)
+	require.Equal(t, "/run/secrets/alipay-public-key.pem", actual.Commerce.Payment.Alipay.AlipayPublicKeyFile)
+	require.Equal(t, "https://openmeter.example.com/commerce/alipay/notify", actual.Commerce.Payment.Alipay.NotifyURL)
 }
 
 func TestConfigurationValidatePrefixesCommerceErrors(t *testing.T) {

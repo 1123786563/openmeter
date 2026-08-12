@@ -39,6 +39,7 @@ type CommerceWiring struct {
 
 	paymentProviders map[payment.Provider]payment.ProviderAdapter
 	refundProviders  map[payment.Provider]refund.ProviderRefunder
+	testControl      *commerceTestControl
 }
 
 // commerceRuntimeDependencies is the narrow seam for external automatic
@@ -56,6 +57,20 @@ type commerceRuntimeDependencies struct {
 // The defaultNamespace is used to resolve the namespace for both the handler
 // (via StaticNamespaceDecoder) and the worker jobs.
 func wireCommerce(
+	entClient *entdb.Client,
+	defaultNamespace string,
+	grantConnector credit.GrantConnector,
+	cfg config.CommerceConfiguration,
+	logger *slog.Logger,
+) (*CommerceWiring, error) {
+	return wireCommerceWithRuntimeDependencies(entClient, defaultNamespace, grantConnector, cfg, nil, logger)
+}
+
+// wireCommerceWithRuntimeDependencies is the test seam for proving that the
+// provider-backed refund workers are only registered with a complete real
+// dependency bundle. Production uses wireCommerce and therefore remains
+// fail-closed until those collaborators have production assembly.
+func wireCommerceWithRuntimeDependencies(
 	entClient *entdb.Client,
 	defaultNamespace string,
 	grantConnector credit.GrantConnector,
@@ -120,22 +135,28 @@ func wireCommerce(
 	var refundSvc refund.Service
 	var paymentRecovery *payment.Recovery
 	var refundWorker *refundWorkerAdapter
+	var testFaultInjector *oneShotPaidTransitionFaultInjector
 	if cfg.Enabled {
-		if err := validateAutomaticRefundDependencies(runtimeDeps); err != nil {
-			return nil, err
-		}
 		paymentProviders, refundProviders, err = wirePaymentProviders(cfg, logger)
 		if err != nil {
+			return nil, err
+		}
+		if err := validateAutomaticRefundDependencies(runtimeDeps); err != nil {
 			return nil, err
 		}
 
 		if len(paymentProviders) > 0 {
 			attemptRepo := paymentAttemptRepoAdapter{entAdapter}
+			paidTxRunner := payment.PaidTxRunner(&entPaidTxRunner{adapter: entAdapter})
+			if cfg.Test.Enabled {
+				testFaultInjector = newOneShotPaidTransitionFaultInjector(paidTxRunner)
+				paidTxRunner = testFaultInjector
+			}
 			paymentSvc, err = payment.New(payment.Config{
 				Attempts:  attemptRepo,
 				Facts:     paymentFactRepoAdapter{entAdapter},
 				Orders:    fulfillmentOrderAdapter{entAdapter},
-				TxRunner:  &entPaidTxRunner{adapter: entAdapter},
+				TxRunner:  paidTxRunner,
 				Providers: paymentProviders,
 				Logger:    logger,
 			})
@@ -144,15 +165,17 @@ func wireCommerce(
 			}
 			paymentRecovery = payment.NewRecovery(attemptRepo, paymentSvc, cfg.Payment.PendingStaleAfter)
 
+			paymentResolver := paymentProviderResolverAdapter{entAdapter}
 			refundSvc, err = refund.New(refund.Config{
-				Repo:             refundRepoAdapter{entAdapter},
-				Orders:           refundOrderReader{entAdapter},
-				Wallet:           refundWalletAdapter{entAdapter},
-				Fence:            runtimeDeps.RefundFence,
-				Reverser:         runtimeDeps.RefundCreditReverser,
-				Providers:        refundProviders,
-				ProviderResolver: paymentProviderResolverAdapter{entAdapter},
-				Logger:           logger,
+				Repo:                     refundRepoAdapter{entAdapter},
+				Orders:                   refundOrderReader{entAdapter},
+				Wallet:                   refundWalletAdapter{entAdapter},
+				Fence:                    runtimeDeps.RefundFence,
+				Reverser:                 runtimeDeps.RefundCreditReverser,
+				Providers:                refundProviders,
+				ProviderResolver:         paymentResolver,
+				PaymentAuthorityResolver: paymentResolver,
+				Logger:                   logger,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("refund service: %w", err)
@@ -183,6 +206,13 @@ func wireCommerce(
 	wiring := &CommerceWiring{
 		Handler: handler, Catalog: catalogSvc,
 		paymentProviders: paymentProviders, refundProviders: refundProviders,
+	}
+	if testFaultInjector != nil {
+		wiring.testControl = &commerceTestControl{
+			token:    cfg.Test.ControlToken,
+			injector: testFaultInjector,
+			oracle:   entCommerceTestOracle{client: entClient, namespace: defaultNamespace},
+		}
 	}
 	if !cfg.Enabled {
 		wiring.Handler = readOnlyCommerceHandler{delegate: handler}
@@ -248,6 +278,10 @@ func (readOnlyCommerceHandler) AlipayPaymentCallback() http.HandlerFunc {
 }
 
 func (readOnlyCommerceHandler) WechatPaymentCallback() http.HandlerFunc {
+	return commerceDisabledMutation()
+}
+
+func (readOnlyCommerceHandler) WechatRefundCallback() http.HandlerFunc {
 	return commerceDisabledMutation()
 }
 
@@ -417,8 +451,8 @@ type refundProcessService interface {
 	ProcessOne(ctx context.Context, namespace, refundID string) (*refund.RefundRequest, error)
 }
 
-func (a *refundWorkerAdapter) ListProviderProcessing(ctx context.Context, namespace string) ([]string, error) {
-	refunds, err := a.repo.ListProviderProcessingRefundRequests(ctx, namespace, 100)
+func (a *refundWorkerAdapter) ListProcessable(ctx context.Context, namespace string) ([]string, error) {
+	refunds, err := a.repo.ListProcessableRefundRequests(ctx, namespace, 100)
 	if err != nil {
 		return nil, err
 	}
@@ -652,6 +686,21 @@ func (a paymentProviderResolverAdapter) ResolveProviderForOrder(ctx context.Cont
 		return "", err
 	}
 	return payment.Provider(provider), nil
+}
+
+func (a paymentProviderResolverAdapter) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (refund.PaymentAuthority, error) {
+	attempt, err := a.EntAdapter.ResolvePaymentAuthorityForOrder(ctx, namespace, orderID)
+	if err != nil {
+		return refund.PaymentAuthority{}, err
+	}
+	return refund.PaymentAuthority{
+		Provider:          payment.Provider(attempt.Provider),
+		ProviderOrderID:   attempt.ProviderOrderID,
+		ProviderPaymentID: attempt.ProviderPaymentID,
+		MerchantID:        attempt.ExpectedMerchantID,
+		AmountMinor:       attempt.AmountMinor,
+		Currency:          attempt.Currency,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------

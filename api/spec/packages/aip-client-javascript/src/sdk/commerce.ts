@@ -13,6 +13,7 @@ import {
   createRefund,
   getRefund,
   wechatPaymentCallback,
+  wechatRefundCallback,
   alipayPaymentCallback,
   listReceivablePeriods,
   createOfflinePayment,
@@ -37,6 +38,8 @@ import type {
   GetRefundResponse,
   WechatPaymentCallbackRequest,
   WechatPaymentCallbackResponse,
+  WechatRefundCallbackRequest,
+  WechatRefundCallbackResponse,
   AlipayPaymentCallbackRequest,
   AlipayPaymentCallbackResponse,
   ListReceivablePeriodsRequest,
@@ -182,6 +185,21 @@ export class Commerce {
     options?: RequestOptions,
   ): Promise<WechatPaymentCallbackResponse> {
     return unwrap(await wechatPaymentCallback(this._client, request, options))
+  }
+
+  /**
+   * WeChat Pay refund callback
+   *
+   * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
+   * then applies the authoritative refund fact.
+   *
+   * POST /payment-providers/wechat/refund-callback
+   */
+  async wechatRefundCallback(
+    request: WechatRefundCallbackRequest,
+    options?: RequestOptions,
+  ): Promise<WechatRefundCallbackResponse> {
+    return unwrap(await wechatRefundCallback(this._client, request, options))
   }
 
   /**

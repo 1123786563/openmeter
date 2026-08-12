@@ -39,6 +39,42 @@ The paid-to-fulfilled pipeline inside OpenMeter:
 If the callback is lost, the `payment-query-recovery` worker polls the provider
 directly and drives the same pipeline.
 
+### Evidence boundary: loopback is not live
+
+The checked-in WeKnora Phase 2 payment-provider is a loopback-only protocol
+test stand. It uses synthetic keys and provider control endpoints to reproduce
+WeChat Pay v3 and Alipay RSA2 wire contracts. It may prove QR parsing,
+signature/decryption compatibility, native callback ACKs, duplicate and late
+delivery, query recovery, transaction retry behavior, and local database
+convergence. It does **not** prove that an official provider sandbox or live
+payment network accepted a merchant request or moved money.
+
+Production-like acceptance must record all of the following without recording
+secret values:
+
+1. The exact OpenMeter and WeKnora commits/images and migration heads.
+2. A successful configuration `--validate` run using externally mounted,
+   permission-checked credentials.
+3. The database and worker processes used by the run, including
+   `payment-query-recovery`, `fulfillment`, and `refund-query` health.
+4. Provider environment (`official sandbox` or `live`), merchant identity,
+   and sanitized provider transaction IDs.
+5. Fresh callback ACK, duplicate/late/lost callback convergence, paid
+   transaction retry, fulfillment, and reconciliation evidence.
+
+The loopback provider's `/__test/*` control surface must never be exposed by a
+production deployment. OpenMeter's own transaction-fault and read-only oracle
+routes are also disabled by default. They are registered only when
+`commerce.test.enabled=true`, a control token of at least 24 characters is
+configured, and every enabled provider endpoint is local HTTP
+(`127.0.0.1`, `payment-provider`, or `openmeter`). Each request additionally
+requires that token as a bearer credential and a local Host (`127.0.0.1`,
+`::1`, `localhost`, `openmeter`, or `payment-provider`); other hosts receive
+404. Startup validation rejects the test control plane beside official/live
+provider URLs. Startup logs and
+rendered production configuration must not contain synthetic markers such as
+`test-wechat-*`, `test-alipay-*`, or `tmp/test_public_key.pem`.
+
 ## 2. Callback Endpoints
 
 Both endpoints are public (no RBAC). Signature verification is mandatory and
@@ -63,7 +99,9 @@ against the attempt.
 - Duplicate events and already-fulfilled orders return `204` so WeChat stops
   retrying.
 - Signature failures, protocol errors, and fact mismatches return `400` and are
-  **not** acknowledged.
+  **not** acknowledged. Whether and how often a provider redelivers a rejected
+  callback is provider- and error-specific; operations must not treat every
+  4xx response as a universal "stop retrying" signal.
 - Database, transaction, and timeout errors return `500` so WeChat retries.
 
 ### Alipay Callback
@@ -125,8 +163,10 @@ worker restores convergence without manual intervention.
   states do not trigger a transition.
 
 The refund side has an analogous `refund-query` worker (15-second interval)
-that polls refunds in `provider_processing`. It does **not** infer a
-`PROCESSING` refund status as success.
+that establishes fences for `pending_fence`, polls `provider_processing`, and
+resumes `ledger_reversing` after crashes. Each tick processes at most 100
+refunds in stable `updated_at,id` order. It does **not** infer a `PROCESSING`
+refund status as success.
 
 ## 5. Certificate Rotation Procedure
 
@@ -198,14 +238,22 @@ commerce:
 Effects of `enabled=false`:
 
 - New checkout sessions for that channel are rejected.
-- The callback handler returns a permanent 4xx error (non-retryable) for that
-  channel, so the provider stops retrying and existing in-flight callbacks are
-  cleanly rejected.
+- Callback handling and provider confirmation/query calls for that channel are
+  unavailable. Existing attempts cannot converge by callback or query while
+  the channel remains disabled; provider redelivery behavior depends on that
+  provider's protocol and must not be inferred from a generic 4xx.
 - **Order queries remain available** -- existing orders can still be looked up.
 - **The fulfillment worker continues running** -- already-paid orders still
   receive their credit grants.
-- **The payment-query-recovery worker continues running** -- pending attempts
-  for existing orders still converge if the provider reports success.
+- The `payment-query-recovery` runner remains registered, but provider confirm
+  calls for the disabled channel are rejected. Pending attempts therefore do
+  not converge by provider query until the channel is re-enabled.
+
+If the incident requires stopping only new checkouts while preserving callback
+and query recovery for in-flight attempts, first block new checkout admission
+at the tenant/gateway rollout layer and leave the provider enabled until pending
+attempts drain. Use `enabled=false` only when accepting or querying that
+provider is itself unsafe.
 
 ### What Must NOT Be Done During Shutdown
 
@@ -286,9 +334,9 @@ Additional monitoring signals (informational, not page-worthy):
 
 | Scenario | Rollback Action |
 |----------|----------------|
-| **Provider checkout errors** | Disable the affected channel (`enabled=false`). Keep order queries, callbacks, and fulfillment running so existing orders converge. |
+| **Provider checkout errors** | Stop new checkout admission at the rollout layer and keep callbacks/query recovery/fulfillment running while pending attempts drain. If provider use itself is unsafe, set the channel `enabled=false`; order reads and already-created fulfillment continue, but callback and confirm processing pause until re-enabled. |
 | **Callback signature errors** | Restore the previous platform public key mapping. Never bypass verification or accept unsigned/`resource`-only callbacks. |
-| **Paid transaction errors** | Stop new checkout (disable channel). Let the provider retry callbacks. Fix and deploy, then let the callback or recovery worker converge pending orders. |
+| **Paid transaction errors** | Stop new checkout admission at the gateway/tenant rollout layer, but keep the provider adapter enabled so signed callbacks and provider-query recovery can continue for in-flight attempts. Fix and deploy, then replay/recover. Set the provider `enabled=false` only when protocol or key safety makes callback/query processing itself unsafe; doing so pauses callback, confirm, and recovery until re-enabled. |
 | **WeKnora display errors** | Roll back WeKnora BFF/frontend only. OpenMeter PaymentFact and order states are not rolled back. |
 | **Migration errors** | Apply a forward-fix migration validated by Atlas only. Never delete verified payment facts or run destructive rollback migrations. |
 

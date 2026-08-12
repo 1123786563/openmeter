@@ -7670,6 +7670,8 @@ export const getRefundResponse = commerceRefund
 
 export const wechatPaymentCallbackBody = z.string()
 
+export const wechatRefundCallbackBody = z.string()
+
 export const alipayPaymentCallbackBody = z.string()
 
 export const alipayPaymentCallbackResponse = z.string()
@@ -15431,6 +15433,8 @@ export const getRefundPathParamsWire = z.object({
 export const getRefundResponseWire = commerceRefundWire
 
 export const wechatPaymentCallbackBodyWire = z.string()
+
+export const wechatRefundCallbackBodyWire = z.string()
 
 export const alipayPaymentCallbackBodyWire = z.string()
 

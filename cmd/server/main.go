@@ -171,13 +171,13 @@ func main() {
 		app.NamespaceManager.GetDefaultNamespace(),
 		app.EntitlementRegistry.Grant,
 		conf.Commerce,
-		nil,
 		logger,
 	)
 	if err != nil {
 		logger.Error("failed to wire commerce services", "error", err)
 		os.Exit(1)
 	}
+	registerCommerceTestControls(app.RouterHooks, commerceWiring.testControl)
 
 	// Wire credit reservation service when enabled.
 	var creditReservationsHandler creditreservationshandler.Handler

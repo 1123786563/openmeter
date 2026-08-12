@@ -51,6 +51,7 @@ type Handler interface {
 	GetCheckoutSession() http.HandlerFunc
 	AlipayPaymentCallback() http.HandlerFunc
 	WechatPaymentCallback() http.HandlerFunc
+	WechatRefundCallback() http.HandlerFunc
 	CreateRefund() http.HandlerFunc
 	GetRefund() http.HandlerFunc
 	CreateOfflinePayment() http.HandlerFunc
@@ -344,7 +345,7 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
 		}
-		if body.Plan != nil && body.RechargeProductId != nil && *body.RechargeProductId != "" {
+		if body.Plan != nil && body.RechargeProductId != nil {
 			writeStatus(ctx, w, http.StatusBadRequest, errors.New("plan and recharge_product_id cannot be provided together"))
 			return
 		}
@@ -367,8 +368,13 @@ func (h *handler) CreateOrder() http.HandlerFunc {
 				return
 			}
 			var product *commerce.Product
-			if body.Plan.PlanId != nil && *body.Plan.PlanId != "" {
-				product, err = h.svc.Catalog.GetProduct(ctx, ns, *body.Plan.PlanId)
+			if body.Plan.PlanId != nil {
+				planID := *body.Plan.PlanId
+				if strings.TrimSpace(planID) == "" {
+					writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
+					return
+				}
+				product, err = h.svc.Catalog.GetProduct(ctx, ns, planID)
 				if err != nil {
 					if errors.Is(err, commerce.ErrProductNotFound) {
 						writeCommerceError(ctx, w, commerce.ErrInvalidPlanReference)
@@ -552,6 +558,55 @@ func (h *handler) WechatPaymentCallback() http.HandlerFunc {
 	return h.paymentCallback(payment.ProviderWeChat)
 }
 
+// WechatRefundCallback accepts verified WeChat Pay refund notifications. The
+// endpoint is public: signature verification and refund authority checks are
+// performed by the refund service before it applies a callback fact.
+func (h *handler) WechatRefundCallback() http.HandlerFunc {
+	if h.svc.Refund == nil {
+		return notImplementedHandler("refund service not configured")
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeStatus(ctx, w, http.StatusBadRequest, errors.New("namespace could not be resolved for refund callback"))
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			r.Body.Close()
+			status := http.StatusBadRequest
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				status = http.StatusRequestEntityTooLarge
+			}
+			writeStatus(ctx, w, status, err)
+			return
+		}
+		r.Body.Close()
+
+		_, cbErr := h.svc.Refund.HandleCallback(ctx, ns, payment.ProviderWeChat, r.Header, body)
+		if cbErr != nil {
+			h.logger.WarnContext(ctx, "commerce: WeChat refund callback error", "error", cbErr)
+			if isSuccessfulRefundCallbackError(cbErr) {
+				writeWechatCallbackSuccess(w)
+				return
+			}
+			if isPermanentRefundCallbackError(cbErr) {
+				writeStatus(ctx, w, http.StatusBadRequest, cbErr)
+				return
+			}
+			writeCallbackRetryableError(ctx, w)
+			return
+		}
+
+		writeWechatCallbackSuccess(w)
+	}
+}
+
 func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -577,6 +632,12 @@ func (h *handler) paymentCallback(provider payment.Provider) http.HandlerFunc {
 		_, cbErr := h.svc.Payment.HandleCallback(ctx, ns, provider, r.Header, body)
 		if cbErr != nil {
 			h.logger.WarnContext(ctx, "commerce: payment callback error", "provider", provider, "error", cbErr)
+			// Storage and paid-transition failures retain their retryable
+			// provenance even if they wrap a deterministic domain sentinel.
+			if errors.Is(cbErr, payment.ErrRetryableCallback) {
+				writeCallbackRetryableError(ctx, w)
+				return
+			}
 			if isSuccessfulCallbackError(cbErr) {
 				writeCallbackSuccess(w, provider)
 				return
@@ -631,33 +692,39 @@ func isSuccessfulCallbackError(err error) bool {
 		errors.Is(err, payment.ErrFulfillmentAlreadyDone)
 }
 
-// callbackErrorStatus returns a 4xx status for deterministic callback errors.
-// Non-deterministic errors return 500 so the provider retries them.
+// isSuccessfulRefundCallbackError reports a verified terminal refund result
+// that has already been applied. Returning WeChat's native 204 prevents a
+// provider retry after the refund has been durably marked failed.
+func isSuccessfulRefundCallbackError(err error) bool {
+	return errors.Is(err, refund.ErrProviderRefundFailed)
+}
+
+// isPermanentRefundCallbackError reports a deterministic callback rejection.
+// These errors must not be acknowledged because the provider must not discard
+// an event that failed signature or persisted-authority validation.
+func isPermanentRefundCallbackError(err error) bool {
+	return errors.Is(err, payment.ErrInvalidSignature) ||
+		errors.Is(err, payment.ErrPermanentProviderProtocol) ||
+		errors.Is(err, refund.ErrRefundFactMismatch)
+}
+
+// callbackErrorStatus uses an explicit callback-contract whitelist. Generic
+// commerce status mapping is intentionally not used because callback storage
+// failures can wrap domain sentinels whose ordinary API status is not valid for
+// a provider callback.
 func callbackErrorStatus(err error) int {
 	switch {
+	case errors.Is(err, payment.ErrRetryableCallback):
+		return http.StatusInternalServerError
 	case errors.Is(err, payment.ErrInvalidSignature),
-		errors.Is(err, payment.ErrPaymentFactMismatch):
+		errors.Is(err, payment.ErrPaymentFactMismatch),
+		errors.Is(err, payment.ErrContradictoryPaymentFact),
+		errors.Is(err, payment.ErrPermanentProviderProtocol),
+		errors.Is(err, payment.ErrPaymentAttemptNotFound),
+		errors.Is(err, commerce.ErrPaymentAttemptNotFound):
 		return http.StatusBadRequest
-	case errors.Is(err, payment.ErrContradictoryPaymentFact):
-		return http.StatusConflict
-	case errors.Is(err, payment.ErrPermanentProviderProtocol):
-		return http.StatusBadRequest
-	}
-
-	var vi models.ValidationIssue
-	if !errors.As(err, &vi) {
-		return http.StatusInternalServerError
-	}
-
-	switch vi.Code() {
-	case payment.ErrCodePaymentAttemptNotFound:
-		return http.StatusNotFound
-	case payment.ErrCodePaymentNotVerified:
-		return http.StatusPaymentRequired
-	case payment.ErrCodeFulfillmentFailed:
-		return http.StatusInternalServerError
 	default:
-		return httpStatusForIssue(vi)
+		return http.StatusInternalServerError
 	}
 }
 
@@ -665,6 +732,9 @@ func callbackErrorStatus(err error) int {
 // transient and should cause the provider to retry. It is retained as a small
 // helper for callers/tests that need to inspect the retry classification.
 func isRetryableCallbackError(err error) bool {
+	if errors.Is(err, payment.ErrRetryableCallback) {
+		return true
+	}
 	if isSuccessfulCallbackError(err) {
 		return false
 	}
@@ -895,6 +965,10 @@ func toAPIRechargeProduct(p commerce.Product) api.CommerceRechargeProduct {
 }
 
 func toAPIOrder(o *commerce.Order) api.CommerceOrder {
+	businessTrackingNumber := o.BusinessTrackingNumber
+	if businessTrackingNumber == nil && o.PublicID != "" {
+		businessTrackingNumber = &o.PublicID
+	}
 	var credits *int64
 	total := int64(0)
 	for _, l := range o.Lines {
@@ -915,7 +989,7 @@ func toAPIOrder(o *commerce.Order) api.CommerceOrder {
 		CreatedAt:              o.CreatedAt,
 		UpdatedAt:              o.UpdatedAt,
 		ExpiredAt:              toDatePtr(o.ExpiredAt),
-		BusinessTrackingNumber: o.BusinessTrackingNumber,
+		BusinessTrackingNumber: businessTrackingNumber,
 	}
 }
 

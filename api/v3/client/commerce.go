@@ -218,7 +218,21 @@ func (s *CommerceService) GetRefund(ctx context.Context, refundID string) (*Comm
 func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request string) error {
 	path := "/payment-providers/wechat/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "application/json", "")
+	if err != nil {
+		return err
+	}
+
+	_, err = s.client.doRaw(req)
+	return err
+}
+
+// WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
+// then applies the authoritative refund fact.
+func (s *CommerceService) WechatRefundCallback(ctx context.Context, request string) error {
+	path := "/payment-providers/wechat/refund-callback"
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "application/json", "")
 	if err != nil {
 		return err
 	}
@@ -232,7 +246,7 @@ func (s *CommerceService) WechatPaymentCallback(ctx context.Context, request str
 func (s *CommerceService) AlipayPaymentCallback(ctx context.Context, request string) ([]byte, error) {
 	path := "/payment-providers/alipay/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "text/plain")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "application/x-www-form-urlencoded", "text/plain")
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +257,7 @@ func (s *CommerceService) AlipayPaymentCallback(ctx context.Context, request str
 func (s *CommerceService) AlipayPaymentCallbackStream(ctx context.Context, request string) (io.ReadCloser, error) {
 	path := "/payment-providers/alipay/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "text/plain", "text/plain")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "application/x-www-form-urlencoded", "text/plain")
 	if err != nil {
 		return nil, err
 	}

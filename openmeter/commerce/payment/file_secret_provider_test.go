@@ -62,14 +62,11 @@ func TestFileSecretProviderRejectsBlankFile(t *testing.T) {
 
 func TestFileSecretProviderReadErrorDoesNotExposeSecretContent(t *testing.T) {
 	secretContent := "private-key-must-not-appear-in-errors"
-	secretPath := filepath.Join(t.TempDir(), "unreadable-secret.pem")
-	require.NoError(t, os.WriteFile(secretPath, []byte(secretContent), 0o600))
-	require.NoError(t, os.Chmod(secretPath, 0o000))
-	t.Cleanup(func() {
-		require.NoError(t, os.Chmod(secretPath, 0o600))
-	})
+	secretDir := filepath.Join(t.TempDir(), "mounted-secret")
+	require.NoError(t, os.Mkdir(secretDir, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(secretDir, "contents"), []byte(secretContent), 0o600))
 
-	_, err := NewFileSecretProvider(map[string]string{"merchant_private_key": secretPath})
+	_, err := NewFileSecretProvider(map[string]string{"merchant_private_key": secretDir})
 	require.Error(t, err)
 	require.False(t, strings.Contains(err.Error(), secretContent))
 }

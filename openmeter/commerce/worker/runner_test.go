@@ -272,7 +272,7 @@ type mockRefundProcessor struct {
 	processed []string
 }
 
-func (m *mockRefundProcessor) ListProviderProcessing(_ context.Context, _ string) ([]string, error) {
+func (m *mockRefundProcessor) ListProcessable(_ context.Context, _ string) ([]string, error) {
 	return m.listIDs, m.listErr
 }
 
@@ -418,7 +418,7 @@ type realRefundServiceProcessor struct {
 	id      string
 }
 
-func (p realRefundServiceProcessor) ListProviderProcessing(context.Context, string) ([]string, error) {
+func (p realRefundServiceProcessor) ListProcessable(context.Context, string) ([]string, error) {
 	return []string{p.id}, nil
 }
 

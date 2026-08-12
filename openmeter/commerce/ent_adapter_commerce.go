@@ -302,16 +302,26 @@ func (a *EntAdapter) ListStalePendingPaymentAttempts(ctx context.Context, namesp
 	return result, nil
 }
 
-// ResolvePaymentProviderForOrder returns the successful provider when present,
-// otherwise the most recently updated attempt's provider.
+// ResolvePaymentAuthorityForOrder returns the successful payment attempt whose
+// immutable provider identity, order, payment, and money fields are the
+// persisted authority for refund callback ingestion.
+func (a *EntAdapter) ResolvePaymentAuthorityForOrder(ctx context.Context, namespace, orderID string) (*PaymentAttemptWire, error) {
+	attempts, err := a.listPaymentAttemptsForOrder(ctx, namespace, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("ent: resolve payment authority for order: %w", err)
+	}
+	for _, attempt := range attempts {
+		if attempt.Status == paymentattempt.StatusSucceeded {
+			return mapEntPaymentAttempt(attempt), nil
+		}
+	}
+	return nil, ErrPaymentAttemptNotFound
+}
+
+// ResolvePaymentProviderForOrder preserves the provider-only resolver contract
+// for refund submission routing.
 func (a *EntAdapter) ResolvePaymentProviderForOrder(ctx context.Context, namespace, orderID string) (PaymentProviderWire, error) {
-	attempts, err := a.db.PaymentAttempt.Query().
-		Where(
-			paymentattempt.NamespaceEQ(namespace),
-			paymentattempt.CommerceOrderIDEQ(orderID),
-		).
-		Order(paymentattempt.ByUpdatedAt(entsql.OrderDesc()), paymentattempt.ByID(entsql.OrderDesc())).
-		All(ctx)
+	attempts, err := a.listPaymentAttemptsForOrder(ctx, namespace, orderID)
 	if err != nil {
 		return "", fmt.Errorf("ent: resolve payment provider for order: %w", err)
 	}
@@ -324,6 +334,16 @@ func (a *EntAdapter) ResolvePaymentProviderForOrder(ctx context.Context, namespa
 		}
 	}
 	return string(attempts[0].Provider), nil
+}
+
+func (a *EntAdapter) listPaymentAttemptsForOrder(ctx context.Context, namespace, orderID string) ([]*entdb.PaymentAttempt, error) {
+	return a.db.PaymentAttempt.Query().
+		Where(
+			paymentattempt.NamespaceEQ(namespace),
+			paymentattempt.CommerceOrderIDEQ(orderID),
+		).
+		Order(paymentattempt.ByUpdatedAt(entsql.OrderDesc()), paymentattempt.ByID(entsql.OrderDesc())).
+		All(ctx)
 }
 
 func (a *EntAdapter) UpdatePaymentAttemptStatus(ctx context.Context, namespace, id string, expectedFrom, to AttemptStatusWire) (*PaymentAttemptWire, error) {
@@ -377,6 +397,9 @@ func (a *EntAdapter) SetPaymentAttemptProviderIDs(ctx context.Context, namespace
 func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire) (*PaymentFactWire, bool, error) {
 	existing, err := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
 	if err == nil && existing != nil {
+		if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+			return nil, false, err
+		}
 		return existing, false, nil
 	}
 	if err != nil && !errors.Is(err, ErrPaymentFactNotFound) {
@@ -410,6 +433,9 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 		if entdb.IsConstraintError(err) {
 			existing, gErr := a.GetPaymentFactByRawHash(ctx, fact.Namespace, fact.RawHash)
 			if gErr == nil {
+				if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+					return nil, false, err
+				}
 				return existing, false, nil
 			}
 			if !errors.Is(gErr, ErrPaymentFactNotFound) {
@@ -418,6 +444,9 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 			if fact.ProviderEventID != "" {
 				existing, gErr = a.GetPaymentFactByProviderEvent(ctx, fact.Namespace, fact.Provider, fact.ProviderEventID)
 				if gErr == nil {
+					if err := ensurePaymentFactReplayMatches(existing, fact); err != nil {
+						return nil, false, err
+					}
 					return existing, false, nil
 				}
 			}
@@ -426,6 +455,39 @@ func (a *EntAdapter) InsertPaymentFact(ctx context.Context, fact PaymentFactWire
 		return nil, false, fmt.Errorf("ent: insert payment fact: %w", err)
 	}
 	return mapEntPaymentFact(saved), true, nil
+}
+
+// ensurePaymentFactReplayMatches prevents raw-hash or provider-event
+// uniqueness conflicts from accepting a different verified structured fact as
+// an idempotent replay. RawHash, SignedPayload, CreatedAt, and ID are excluded
+// because they identify the transport observation or local record, not the
+// provider fact itself.
+func ensurePaymentFactReplayMatches(existing *PaymentFactWire, incoming PaymentFactWire) error {
+	if existing == nil ||
+		existing.Namespace != incoming.Namespace ||
+		existing.AttemptID != incoming.AttemptID ||
+		existing.Provider != incoming.Provider ||
+		existing.ProviderOrderID != incoming.ProviderOrderID ||
+		!paymentFactOptionalWireFieldMatches(existing.ProviderPaymentID, incoming.ProviderPaymentID) ||
+		!paymentFactOptionalWireFieldMatches(existing.ProviderEventID, incoming.ProviderEventID) ||
+		!paymentFactOptionalWireFieldMatches(existing.MerchantID, incoming.MerchantID) ||
+		!paymentFactOptionalWireFieldMatches(existing.ApplicationID, incoming.ApplicationID) ||
+		existing.AmountMinor != incoming.AmountMinor ||
+		existing.Currency != incoming.Currency ||
+		existing.Success != incoming.Success ||
+		!existing.Timestamp.Equal(incoming.Timestamp) {
+		return errors.New("ent: persisted payment fact does not match incoming verified fact")
+	}
+	return nil
+}
+
+func paymentFactOptionalWireFieldMatches(existing, incoming string) bool {
+	existingValue := nonEmptyPtr(existing)
+	incomingValue := nonEmptyPtr(incoming)
+	if existingValue == nil || incomingValue == nil {
+		return existingValue == nil && incomingValue == nil
+	}
+	return *existingValue == *incomingValue
 }
 
 func (a *EntAdapter) GetPaymentFactByRawHash(ctx context.Context, namespace, rawHash string) (*PaymentFactWire, error) {
@@ -688,20 +750,27 @@ func (a *EntAdapter) GetRefundRequestByIdempotencyKey(ctx context.Context, names
 	return mapEntRefundRequest(er), nil
 }
 
-func (a *EntAdapter) ListProviderProcessingRefundRequests(ctx context.Context, namespace string, limit int) ([]RefundRequestWire, error) {
+// ListProcessableRefundRequests returns every non-terminal refund state that
+// ProcessOne can advance. This includes initial submissions and crash recovery
+// after a provider success, not only provider-status polling.
+func (a *EntAdapter) ListProcessableRefundRequests(ctx context.Context, namespace string, limit int) ([]RefundRequestWire, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 100
 	}
 	requests, err := a.db.RefundRequest.Query().
 		Where(
 			refundrequest.NamespaceEQ(namespace),
-			refundrequest.StatusEQ(refundrequest.StatusProviderProcessing),
+			refundrequest.StatusIn(
+				refundrequest.StatusPendingFence,
+				refundrequest.StatusProviderProcessing,
+				refundrequest.StatusLedgerReversing,
+			),
 		).
 		Order(refundrequest.ByUpdatedAt(), refundrequest.ByID()).
 		Limit(limit).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("ent: list provider-processing refunds: %w", err)
+		return nil, fmt.Errorf("ent: list processable refunds: %w", err)
 	}
 	result := make([]RefundRequestWire, len(requests))
 	for i, request := range requests {
