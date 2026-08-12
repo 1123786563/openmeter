@@ -27,6 +27,7 @@ const RUNTIME_FILES: Record<string, string> = {
   'tests/nesting.spec.ts': 'tests/nesting.spec.ts',
   'tests/internal.spec.ts': 'tests/internal.spec.ts',
   'tests/validation.spec.ts': 'tests/validation.spec.ts',
+  'tests/callback-transport.spec.ts': 'tests/callback-transport.spec.ts',
 }
 
 export const RUNTIME_TEMPLATES: Record<string, string> = Object.fromEntries(

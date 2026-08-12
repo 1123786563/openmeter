@@ -54,6 +54,9 @@ function funcBody(op: SdkOperation): string {
   const url = hasPath
     ? pathExpr(op, 'pathParams')
     : `'${op.path.replace(/^\//, '')}'`
+  const rawBodyContentType = op.requestBodyIsString
+    ? op.requestBodyContentType
+    : undefined
 
   const kyOpts: string[] = []
   if (hasQuery) {
@@ -62,9 +65,9 @@ function funcBody(op: SdkOperation): string {
   if (op.hasBody) {
     // The snake_case wire body is computed into `body` inside the closure (so the
     // optional validate check can run against the actual payload before sending).
-    kyOpts.push('json: body')
+    kyOpts.push(rawBodyContentType ? 'body' : 'json: body')
   }
-  if (op.textResponseContentType) {
+  if (op.textResponseContentType || rawBodyContentType) {
     kyOpts.push('headers')
   }
   const optsObj =
@@ -82,13 +85,19 @@ function funcBody(op: SdkOperation): string {
     `  options?: RequestOptions,`,
     `): Promise<Result<${resType}>> {`,
   )
-  if (op.textResponseContentType) {
-    // The server negotiates this variant on the exact Accept media type; user
-    // headers are carried over so only `accept` is forced.
+  if (op.textResponseContentType || rawBodyContentType) {
+    // User headers are carried over before operation-specific media types are
+    // forced, so callback bodies and negotiated text responses use the exact
+    // TypeSpec HTTP contract.
     lines.push(
       `  const headers = new Headers(options?.headers as HeadersInit | undefined)`,
-      `  headers.set('accept', '${op.textResponseContentType}')`,
     )
+    if (op.textResponseContentType) {
+      lines.push(`  headers.set('accept', '${op.textResponseContentType}')`)
+    }
+    if (rawBodyContentType) {
+      lines.push(`  headers.set('content-type', '${rawBodyContentType}')`)
+    }
   }
   const target = hasPath ? 'path' : url
   const optsArg = optsObj === 'options' ? ', options' : `, ${optsObj}`

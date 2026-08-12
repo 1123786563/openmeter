@@ -1,5 +1,6 @@
 import {
   getFriendlyName,
+  isStringType,
   type Operation,
   type Program,
   type Type,
@@ -24,6 +25,10 @@ export interface SdkOperation {
   queryParams: string[]
   queryCodecs: SdkQueryCodec[]
   hasBody: boolean
+  /** The request body's declared HTTP media type, when the operation has one. */
+  requestBodyContentType?: string
+  /** Whether the effective request body is a string scalar. */
+  requestBodyIsString: boolean
   hasResponse: boolean
   /** Documented interface name for the success body, when it is a named model. */
   responseInterface?: string
@@ -173,7 +178,10 @@ export function sdkOperation(
       ? resolveInterface(responseBody.type)
       : undefined) ?? resolveInterface(successResponseEnvelope(program, op))
 
-  const requestBodyInterface = resolveRequestBody(httpOp.parameters.body?.type)
+  const declaredRequestBody = httpOp.parameters.body
+  const overriddenRequestBody = bodyOverrides.get(base)
+  const requestBodyType = overriddenRequestBody ?? declaredRequestBody?.type
+  const requestBodyInterface = resolveRequestBody(requestBodyType)
 
   return {
     funcName: lowerFirst(base),
@@ -185,8 +193,12 @@ export function sdkOperation(
     queryParams,
     queryCodecs,
     nestPath,
-    hasBody:
-      httpOp.parameters.body?.type !== undefined || bodyOverrides.has(base),
+    hasBody: requestBodyType !== undefined,
+    requestBodyContentType: overriddenRequestBody
+      ? 'application/json'
+      : declaredRequestBody?.contentTypes[0],
+    requestBodyIsString:
+      requestBodyType !== undefined && isStringType(program, requestBodyType),
     hasResponse: responseBody !== undefined,
     requestBodyInterface,
     responseInterface,
