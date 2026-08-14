@@ -1,10 +1,23 @@
 package entutils
 
 import (
+	"regexp"
+
 	"entgo.io/ent/dialect/sql"
 
 	"github.com/openmeterio/openmeter/pkg/slicesx"
 )
+
+// jsonKeyPattern bounds the column names and JSON object keys that get
+// interpolated into JSONB operator expressions (values are always bound as
+// query arguments). Keys outside the pattern fail closed with a `false`
+// predicate instead of reaching the SQL builder, so no interpolated string
+// can terminate a literal early.
+var jsonKeyPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
+
+func jsonKeySafe(s string) bool {
+	return jsonKeyPattern.MatchString(s)
+}
 
 // JSONBIn returns a function that filters the given JSONB field by the given key and value
 // Caveats:
@@ -16,7 +29,7 @@ func JSONBIn(field string, key string, values []string) func(*sql.Selector) {
 	return func(s *sql.Selector) {
 		// This is just a safeguard, it should never happen, but if it's not in place, then if
 		// len(values) == 0, then generated SQL query will be field->>'key' IN (), which is invalid in SQL
-		if len(values) == 0 {
+		if len(values) == 0 || !jsonKeySafe(field) || !jsonKeySafe(key) {
 			s.Where(sql.P(func(b *sql.Builder) {
 				b.WriteString("false")
 			}))
@@ -54,6 +67,12 @@ func JSONBIn(field string, key string, values []string) func(*sql.Selector) {
 //	status_details_cache -> 'availableActions' ? 'advance'
 func JSONBKeyExistsInObject(field string, member string, expectedKey string) func(*sql.Selector) {
 	return func(s *sql.Selector) {
+		if !jsonKeySafe(field) || !jsonKeySafe(member) || !jsonKeySafe(expectedKey) {
+			s.Where(sql.P(func(b *sql.Builder) {
+				b.WriteString("false")
+			}))
+			return
+		}
 		s.Where(sql.P(func(b *sql.Builder) {
 			b.WriteString("(")
 			b.WriteString(field)

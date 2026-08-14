@@ -20,6 +20,7 @@ import (
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/filter"
 	"github.com/openmeterio/openmeter/pkg/models"
+	"github.com/openmeterio/openmeter/pkg/pagination"
 )
 
 type CreditTransactionType string
@@ -62,6 +63,10 @@ func (i ListCreditTransactionsInput) Validate() error {
 
 	if i.Limit < 1 {
 		errs = append(errs, fmt.Errorf("limit must be greater than 0"))
+	}
+
+	if i.Limit > pagination.MaxPageSize {
+		errs = append(errs, fmt.Errorf("limit must not be greater than %d", pagination.MaxPageSize))
 	}
 
 	if i.After != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/models"
+	"github.com/openmeterio/openmeter/pkg/pagination"
 )
 
 type FundedCreditActivityCursor struct {
@@ -69,6 +70,10 @@ func (i ListFundedCreditActivitiesInput) Validate() error {
 
 	if i.Limit < 1 {
 		errs = append(errs, fmt.Errorf("limit must be greater than 0"))
+	}
+
+	if i.Limit > pagination.MaxPageSize {
+		errs = append(errs, fmt.Errorf("limit must not be greater than %d", pagination.MaxPageSize))
 	}
 
 	if i.After != nil {

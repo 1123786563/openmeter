@@ -1,6 +1,15 @@
 package pagination
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
+
+// MaxPageSize bounds user-supplied page sizes so a single request cannot
+// force the server to materialize an arbitrarily large page. Internal
+// callers that legitimately page through larger windows construct Page
+// values directly without going through Validate.
+const MaxPageSize = 1000
 
 type InvalidError struct {
 	p   Page
@@ -54,8 +63,20 @@ func (p Page) Validate() error {
 		return &InvalidError{p, "pagesize cannot be negative"}
 	}
 
+	if p.PageSize > MaxPageSize {
+		return &InvalidError{p, fmt.Sprintf("pagesize cannot be greater than %d", MaxPageSize)}
+	}
+
 	if p.PageNumber < 1 {
 		return &InvalidError{p, "page has to be at least 1"}
+	}
+
+	// The offset is computed as PageSize * (PageNumber - 1); reject
+	// combinations that would overflow int and wrap the OFFSET negative.
+	// Written as PageNumber-1 > MaxInt/PageSize because MaxInt/PageSize+1
+	// itself overflows when PageSize is 1.
+	if p.PageSize > 0 && p.PageNumber-1 > math.MaxInt/p.PageSize {
+		return &InvalidError{p, "page and pagesize combination is too large"}
 	}
 
 	return nil

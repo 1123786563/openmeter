@@ -164,14 +164,18 @@ func (in *kubernetesResourcesInput) Connect(ctx context.Context) error {
 
 		// Start blocks, so we run it in the background.
 		if err := in.manager.Start(mgrCtx); err != nil {
+			// Only log here: Close waits on in.done, which is closed by this
+			// goroutine's defer, so calling Close from here would deadlock.
+			// ReadBatch surfaces the failure once the stopped cache rejects
+			// List calls and benthos reconnects.
 			in.logger.Errorf("failed to start manager: %v", err)
-			in.Close(ctx)
 		}
 	}()
 
 	// Wait for the cache to sync. This ensures that subsequent List() calls
 	// use up-to-date cached data.
 	if synced := in.manager.GetCache().WaitForCacheSync(ctx); !synced {
+		cancel()
 		return errors.New("failed to sync cache")
 	}
 

@@ -24,11 +24,14 @@ func WithPrefix(err error, prefix string) error {
 
 	errs := e.Unwrap()
 
+	// Unwrap may return the error's live backing slice (errors.Join does);
+	// copy it so prefixing does not rewrite the caller's error tree.
+	prefixed := make([]error, len(errs))
 	for i, err := range errs {
-		errs[i] = WithPrefix(err, prefix)
+		prefixed[i] = WithPrefix(err, prefix)
 	}
 
-	return errors.Join(errs...)
+	return errors.Join(prefixed...)
 }
 
 var _ error = (*warnError)(nil)

@@ -63,3 +63,15 @@ func TestWithPrefix(t *testing.T) {
 		})
 	}
 }
+
+func TestWithPrefixDoesNotMutateInput(t *testing.T) {
+	joined := errors.Join(
+		errors.New("error 1"),
+		errors.New("error 2"),
+	)
+
+	prefixed := WithPrefix(joined, "prefix")
+
+	assert.Equal(t, "prefix: error 1\nprefix: error 2", prefixed.Error())
+	assert.Equal(t, "error 1\nerror 2", joined.Error(), "input error tree must stay unchanged")
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/framework/commonhttp"
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
+	"github.com/openmeterio/openmeter/pkg/pagination"
 )
 
 type (
@@ -40,12 +41,12 @@ func (h *handler) ListCreditTransactions() ListCreditTransactionsHandler {
 				size = lo.FromPtrOr(args.Params.Page.Size, 20)
 			}
 
-			if size < 1 {
-				err := fmt.Errorf("must be greater than 0")
+			if size < 1 || size > pagination.MaxPageSize {
+				err := fmt.Errorf("must be between 1 and %d", pagination.MaxPageSize)
 				return ListCreditTransactionsRequest{}, apierrors.NewBadRequestError(ctx, err, apierrors.InvalidParameters{
 					{
 						Field:  "page.size",
-						Reason: "must be greater than 0",
+						Reason: err.Error(),
 						Source: apierrors.InvalidParamSourceQuery,
 					},
 				})
