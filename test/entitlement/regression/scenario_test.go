@@ -650,7 +650,9 @@ func TestBalanceWorkerActiveToFromEntitlementsMapping(t *testing.T) {
 	ns := affectedEntitlements[0].Namespace
 	entID := affectedEntitlements[0].EntitlementID
 
-	value, err := deps.EntitlementConnector.GetEntitlementValue(ctx, ns, "subject-1", entID, clock.Now())
+	// Entitlement lookups are scoped to the customer: resolve the entitlement's
+	// value with the owning customer's ID, not its subject key.
+	value, err := deps.EntitlementConnector.GetEntitlementValue(ctx, ns, cust.ID, entID, clock.Now())
 	assert.NoError(err)
 
 	mappedValues, err := entitlementdriver.MapEntitlementValueToAPI(value)
