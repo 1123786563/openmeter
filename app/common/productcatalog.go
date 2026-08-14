@@ -149,7 +149,7 @@ func NewPlanAddonService(
 		Logger: logger.With("subsystem", "productcatalog.planaddon"),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize add-on adapter: %w", err)
+		return nil, fmt.Errorf("failed to initialize plan add-on adapter: %w", err)
 	}
 
 	return planaddonservice.New(planaddonservice.Config{

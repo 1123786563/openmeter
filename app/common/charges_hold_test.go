@@ -9,12 +9,16 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/creditlimit"
 )
 
-func TestActiveHoldReaderForCreditsPhaseGate(t *testing.T) {
+func TestActiveHoldReaderForCredits(t *testing.T) {
 	reader, err := activeHoldReaderForCredits(nil, config.CreditsConfiguration{})
 	require.NoError(t, err)
 	require.IsType(t, creditlimit.NoActiveHoldReader{}, reader)
 
+	// With reservations enabled, holds are served by the durable reader over
+	// the credit_reservation table; the earlier fail-closed phase gate was
+	// removed when that reader landed.
 	reader, err = activeHoldReaderForCredits(nil, config.CreditsConfiguration{ReservationsEnabled: true})
-	require.Nil(t, reader)
-	require.ErrorContains(t, err, "durable active hold reader")
+	require.NoError(t, err)
+	_, isNoop := reader.(creditlimit.NoActiveHoldReader)
+	require.False(t, isNoop, "expected the durable reservation hold reader, got the no-op reader")
 }

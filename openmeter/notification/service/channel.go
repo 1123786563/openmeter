@@ -211,7 +211,7 @@ func (s Service) UpdateChannel(ctx context.Context, params notification.UpdateCh
 
 		channel, err = s.adapter.UpdateChannel(ctx, params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create channel: %w", err)
+			return nil, fmt.Errorf("failed to update channel: %w", err)
 		}
 
 		logger.Debug("channel updated in repository")

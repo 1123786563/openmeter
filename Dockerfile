@@ -78,7 +78,7 @@ RUN xx-verify /usr/local/bin/openmeter-jobs
 # Phase 1 contract artifact: convert the v3 OpenAPI spec from YAML to JSON
 # so the artifact builder (tools/weknora/build-phase1-artifact.sh) can checksum
 # a canonical JSON form.
-FROM mikefarah/yq:4 AS openapi-json
+FROM mikefarah/yq:4@sha256:752ae3c50efa722fb0617e73f3c27b185b912c4eabc055e429c563702da6b79c AS openapi-json
 COPY --link api/v3/openapi.yaml /openapi.yaml
 WORKDIR /tmp
 RUN yq -o=json /openapi.yaml > openapi.json
@@ -86,6 +86,11 @@ RUN yq -o=json /openapi.yaml > openapi.json
 FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 RUN apk add --update --no-cache ca-certificates tzdata bash
+
+# Run as an unprivileged user by default. Deployments that mount custom CA
+# certificates into /usr/local/share/ca-certificates must run as root or
+# manage the trust store themselves (see entrypoint.sh).
+RUN addgroup -S -g 1000 openmeter && adduser -S -u 1000 -G openmeter openmeter
 
 SHELL ["/bin/bash", "-c"]
 
@@ -100,6 +105,8 @@ COPY --link --from=builder /src/entrypoint.sh /entrypoint.sh
 
 COPY --link api/v3/openapi.yaml /contract/openapi.yaml
 COPY --link --from=openapi-json /tmp/openapi.json /contract/openapi.json
+
+USER openmeter
 
 ENTRYPOINT ["/entrypoint.sh"]
 

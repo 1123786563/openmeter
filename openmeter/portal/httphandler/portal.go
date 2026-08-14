@@ -163,7 +163,7 @@ func (h *handler) InvalidateToken() InvalidateTokenHandler {
 		func(ctx context.Context, r *http.Request) (InvalidateTokenRequest, error) {
 			body := api.InvalidatePortalTokensJSONBody{}
 			if err := commonhttp.JSONRequestBodyDecoder(r, &body); err != nil {
-				return InvalidateTokenRequest{}, fmt.Errorf("field to decode create token request: %w", err)
+				return InvalidateTokenRequest{}, fmt.Errorf("field to decode invalidate token request: %w", err)
 			}
 
 			ns, err := h.resolveNamespace(ctx)

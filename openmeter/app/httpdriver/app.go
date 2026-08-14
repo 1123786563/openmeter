@@ -132,7 +132,7 @@ func (h *handler) UpdateApp() UpdateAppHandler {
 
 			var body api.UpdateAppJSONRequestBody
 			if err := commonhttp.JSONRequestBodyDecoder(r, &body); err != nil {
-				return UpdateAppRequest{}, fmt.Errorf("field to decode upsert customer data request: %w", err)
+				return UpdateAppRequest{}, fmt.Errorf("field to decode update app request: %w", err)
 			}
 
 			updateType, err := body.Discriminator()

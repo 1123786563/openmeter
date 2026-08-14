@@ -20,7 +20,7 @@ updates:
       k8s:
         patterns:
           - "k8s.io/*"
-          - "sigs.sk8s.io/*"
+          - "sigs.k8s.io/*"
       aws:
         patterns:
           - "github.com/aws/*"
@@ -85,7 +85,7 @@ updates:
       - release-note/dependency-update
 
   - package-ecosystem: npm
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     directory: "/api/client/javascript"
     schedule:
       interval: weekly

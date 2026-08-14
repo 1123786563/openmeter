@@ -103,7 +103,7 @@ func (h *handler) MarketplaceAppAPIKeyInstall() MarketplaceAppAPIKeyInstallHandl
 		func(ctx context.Context, r *http.Request, appType api.AppType) (MarketplaceAppAPIKeyInstallRequest, error) {
 			body := api.MarketplaceAppAPIKeyInstallJSONBody{}
 			if err := commonhttp.JSONRequestBodyDecoder(r, &body); err != nil {
-				return MarketplaceAppAPIKeyInstallRequest{}, fmt.Errorf("field to decode marketplace app install request: %w", err)
+				return MarketplaceAppAPIKeyInstallRequest{}, fmt.Errorf("field to decode marketplace app api key install request: %w", err)
 			}
 
 			// Resolve namespace

@@ -22,7 +22,7 @@ func NewNamespaceManager(
 		DisableManagement: conf.DisableManagement,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create namespace manager: %v", err)
+		return nil, fmt.Errorf("create namespace manager: %w", err)
 	}
 
 	return manager, nil

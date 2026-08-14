@@ -16,15 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type creditReservationFixture struct{ address, customer, subject, feature, resource, provider, model string }
-type reservationEnvelope struct {
-	ID             string `json:"id"`
-	State          string `json:"state"`
-	SettledCredits int64  `json:"settled_credits"`
-	Funding        struct {
-		EnterpriseHold int64 `json:"enterprise_hold"`
-	} `json:"funding"`
-}
+type (
+	creditReservationFixture struct{ address, customer, subject, feature, resource, provider, model string }
+	reservationEnvelope      struct {
+		ID             string `json:"id"`
+		State          string `json:"state"`
+		SettledCredits int64  `json:"settled_credits"`
+		Funding        struct {
+			EnterpriseHold int64 `json:"enterprise_hold"`
+		} `json:"funding"`
+	}
+)
 
 func TestCreditReservationV3Acceptance(t *testing.T) {
 	f := creditReservationFixture{address: strings.TrimRight(os.Getenv("OPENMETER_ADDRESS"), "/"), customer: os.Getenv("OPENMETER_CR_CUSTOMER_ID"), subject: os.Getenv("OPENMETER_CR_SUBJECT_ID"), feature: os.Getenv("OPENMETER_CR_FEATURE_KEY"), resource: os.Getenv("OPENMETER_CR_RESOURCE_CODE"), provider: os.Getenv("OPENMETER_CR_PROVIDER"), model: os.Getenv("OPENMETER_CR_MODEL")}
@@ -130,6 +132,7 @@ func postReservation(t *testing.T, url string, body any, want int) reservationEn
 	}
 	return out
 }
+
 func getReservation(t *testing.T, url string, want int) reservationEnvelope {
 	t.Helper()
 	r, err := http.Get(url)
@@ -140,6 +143,7 @@ func getReservation(t *testing.T, url string, want int) reservationEnvelope {
 	require.NoError(t, json.NewDecoder(r.Body).Decode(&out))
 	return out
 }
+
 func acceptanceID(prefix string) string {
 	return fmt.Sprintf("cr_acceptance_%s_%d", prefix, time.Now().UnixNano())
 }

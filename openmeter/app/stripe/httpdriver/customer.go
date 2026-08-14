@@ -178,7 +178,7 @@ func (h *handler) CreateStripeCustomerPortalSession() CreateStripeCustomerPortal
 			// Parse request body
 			body := api.CreateStripeCustomerPortalSessionParams{}
 			if err := commonhttp.JSONRequestBodyDecoder(r, &body); err != nil {
-				return CreateStripeCustomerPortalSessionRequest{}, fmt.Errorf("field to decode create app stripe checkout session request: %w", err)
+				return CreateStripeCustomerPortalSessionRequest{}, fmt.Errorf("field to decode create app stripe customer portal session request: %w", err)
 			}
 
 			// Resolve namespace

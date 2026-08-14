@@ -436,7 +436,7 @@ func initNamespace(manager *namespace.Manager, logger *slog.Logger) error {
 
 	err := manager.CreateDefaultNamespace(context.Background())
 	if err != nil {
-		return fmt.Errorf("create default namespace: %v", err)
+		return fmt.Errorf("create default namespace: %w", err)
 	}
 
 	logger.Info("default namespace created")
