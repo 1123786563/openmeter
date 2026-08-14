@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
+	"github.com/openmeterio/openmeter/pkg/framework/commonhttp"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
 
@@ -65,7 +66,7 @@ func (h *handler) Reserve() http.HandlerFunc {
 			return
 		}
 		var body reserveRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -112,7 +113,7 @@ func (h *handler) Execute() http.HandlerFunc {
 			return
 		}
 		var body executeRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -138,7 +139,7 @@ func (h *handler) Settle() http.HandlerFunc {
 			return
 		}
 		var body settleRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -164,7 +165,7 @@ func (h *handler) Release() http.HandlerFunc {
 			return
 		}
 		var body releaseRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -190,7 +191,7 @@ func (h *handler) Unknown() http.HandlerFunc {
 			return
 		}
 		var body unknownRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -216,7 +217,7 @@ func (h *handler) Charge() http.HandlerFunc {
 			return
 		}
 		var body chargeRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}
@@ -242,7 +243,7 @@ func (h *handler) ReverseCharge() http.HandlerFunc {
 			return
 		}
 		var body reverseChargeRequest
-		if err := decodeJSON(r.Body, &body); err != nil {
+		if err := decodeJSON(http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize), &body); err != nil {
 			writeError(r.Context(), w, r, err)
 			return
 		}

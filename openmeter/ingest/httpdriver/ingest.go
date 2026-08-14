@@ -34,6 +34,12 @@ func (h *handler) IngestEvents() IngestEventsHandler {
 
 			contentType := r.Header.Get("Content-Type")
 
+			// Bound the body before any content-type specific decoding to
+			// prevent unbounded per-request memory use. A nil ResponseWriter is
+			// safe here: MaxBytesReader only consults it for connection
+			// teardown after the limit is exceeded.
+			r.Body = http.MaxBytesReader(nil, r.Body, commonhttp.MaxJSONRequestBodySize)
+
 			switch contentType {
 			case "application/json":
 				var apiRequest api.IngestEventsBody

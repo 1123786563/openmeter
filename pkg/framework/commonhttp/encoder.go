@@ -9,6 +9,8 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport/encoder"
 	"github.com/openmeterio/openmeter/pkg/models"
@@ -97,11 +99,37 @@ func CSVResponseEncoder[Response CSVResponse](_ context.Context, w http.Response
 	return csvResponseEncoder(w, http.StatusOK, response)
 }
 
+// csvFormulaTriggerChars are the characters a spreadsheet treats as the start
+// of a formula when they begin a cell.
+const csvFormulaTriggerChars = "=+-@\t\r"
+
+// csvSanitizeCell defuses spreadsheet formula injection in CSV exports: a cell
+// starting with a formula trigger character is prefixed with a single quote so
+// spreadsheets render it as text. Purely numeric values (e.g. negative meter
+// readings) are left untouched.
+func csvSanitizeCell(v string) string {
+	if len(v) == 0 || !strings.ContainsRune(csvFormulaTriggerChars, rune(v[0])) {
+		return v
+	}
+	if _, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+		return v
+	}
+	return "'" + v
+}
+
 // CSVResponseEncoder encodes a response as CSV.
 func csvResponseEncoder[Response CSVResponse](w http.ResponseWriter, statusCode int, response Response) error {
 	buf := &bytes.Buffer{}
 	writer := csv.NewWriter(buf)
-	if err := writer.WriteAll(response.Records()); err != nil {
+
+	records := response.Records()
+	for _, record := range records {
+		for i, cell := range record {
+			record[i] = csvSanitizeCell(cell)
+		}
+	}
+
+	if err := writer.WriteAll(records); err != nil {
 		return fmt.Errorf("writing record to csv: %w", err)
 	}
 	if err := writer.Error(); err != nil {
@@ -109,7 +137,9 @@ func csvResponseEncoder[Response CSVResponse](w http.ResponseWriter, statusCode 
 	}
 
 	w.Header().Set("Content-Type", "text/csv")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", response.FileName()))
+	// FormatMediaType quotes and escapes the filename, preventing header
+	// injection through the response-provided file name.
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": response.FileName() + ".csv"}))
 	w.WriteHeader(statusCode)
 
 	if _, err := w.Write(buf.Bytes()); err != nil {
