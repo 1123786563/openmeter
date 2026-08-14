@@ -15,7 +15,7 @@ creditReservation:
     maxClaimCount: 3
 
 commerce:
-  enabled: false
+  enabled: true
   payment:
     wechat:
       enabled: false

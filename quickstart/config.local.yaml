@@ -3,42 +3,23 @@ credits:
   enableCreditThenInvoice: true
   reservationsEnabled: true
 
-creditReservation:
-  enabled: true
-  authorizationTTL: 5m
-  executionDeadline: 10m
-  unknownManualReviewAfter: 1h
-  worker:
-    pollInterval: 5s
-    leaseDuration: 30s
-    batchSize: 50
-    maxClaimCount: 3
-
-commerce:
-  enabled: false
-  payment:
-    wechat:
-      enabled: false
-    alipay:
-      enabled: false
-
 ingest:
   kafka:
-    broker: kafka:9092
+    broker: localhost:29092
     brokerAddressFamily: v4
     socketKeepAliveEnable: true
     topicMetadataRefreshInterval: 10s
 
 aggregation:
   clickhouse:
-    address: clickhouse:9000
+    address: localhost:9000
 
 sink:
   minCommitCount: 1
   namespaceRefetch: 5s
   namespaceRefetchTimeout: 5s
   kafka:
-    brokers: kafka:9092
+    brokers: localhost:29092
     brokerAddressFamily: v4
     socketKeepAliveEnable: true
     topicMetadataRefreshInterval: 10s
@@ -46,12 +27,12 @@ sink:
     enabled: true
     driver: redis
     config:
-      address: redis:6379
+      address: localhost:6380
       database: 0
       expiration: 768h
 
 postgres:
-  url: postgres://postgres:qwerdfpostgres!123@postgres:5432/postgres?sslmode=disable
+  url: postgres://postgres:qwerdfpostgres!123@localhost:5433/postgres?sslmode=disable
   autoMigrate: migration
 
 meters:

@@ -8,6 +8,7 @@ OPENMETER_ADDRESS ?= http://localhost:38888
 BENCHTIME ?= 20x
 # Number of times to repeat the whole benchmark (feed >1 into benchstat for variance).
 COUNT ?= 1
+OPENMETER_E2E_POSTGRES_URL ?= postgres://postgres:qwerdfpostgres!123@127.0.0.1:35432/postgres?sslmode=disable
 OPENMETER_E2E_EXTRA_COMPOSE_FILES ?=
 
 .PHONY: bench-governance
@@ -39,7 +40,7 @@ test-local-credits-disabled: ## Run credits-disabled e2e tests against local ope
 	$(call print-target)
 	$(MAKE) env-local-down
 	set -e; trap '$(MAKE) env-local-down' EXIT; \
-		OPENMETER_E2E_EXTRA_COMPOSE_FILES="-f docker-compose.credits-disabled.yaml" $(MAKE) env-local-up; \
+		OPENMETER_E2E_EXTRA_COMPOSE_FILES="$(OPENMETER_E2E_EXTRA_COMPOSE_FILES) -f docker-compose.credits-disabled.yaml" $(MAKE) env-local-up; \
 		$(MAKE) wait-local; \
 		$(MAKE) test-credits-disabled
 
@@ -55,12 +56,12 @@ test-local-base: ## Run default e2e tests against local openmeter
 .PHONY: test-credits-disabled
 test-credits-disabled: ## Run e2e tests that require credits.enabled=false
 	$(call print-target)
-	TZ=UTC OPENMETER_ADDRESS=$(OPENMETER_ADDRESS) go test -count=1 -v ./creditsdisabled
+	TZ=UTC OPENMETER_ADDRESS=$(OPENMETER_ADDRESS) OPENMETER_E2E_POSTGRES_URL=$(OPENMETER_E2E_POSTGRES_URL) go test -count=1 -v ./creditsdisabled
 
 .PHONY: test-base
 test-base: ## Run the default e2e test package
 	$(call print-target)
-	TZ=UTC OPENMETER_ADDRESS=$(OPENMETER_ADDRESS) go test -count=1 -v ./
+	TZ=UTC OPENMETER_ADDRESS=$(OPENMETER_ADDRESS) OPENMETER_E2E_POSTGRES_URL=$(OPENMETER_E2E_POSTGRES_URL) go test -count=1 -v ./
 
 .PHONY: wait-local
 wait-local:
