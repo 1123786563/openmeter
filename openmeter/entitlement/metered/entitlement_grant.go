@@ -56,6 +56,12 @@ func (e *connector) CreateGrant(ctx context.Context, namespace string, customerI
 	if err != nil {
 		return EntitlementGrant{}, err
 	}
+
+	// Resolving by ID must not cross customer boundaries. Report entitlements
+	// belonging to another customer as not found instead of leaking them.
+	if ent != nil && ent.CustomerID != customerID {
+		return EntitlementGrant{}, &entitlement.NotFoundError{EntitlementID: models.NamespacedID{Namespace: namespace, ID: entitlementIdOrFeatureKey}}
+	}
 	metered, err := ParseFromGenericEntitlement(ent)
 	if err != nil {
 		return EntitlementGrant{}, err
@@ -106,6 +112,12 @@ func (e *connector) ListEntitlementGrants(ctx context.Context, namespace string,
 	}
 	if err != nil {
 		return def, err
+	}
+
+	// Resolving by ID must not cross customer boundaries. Report entitlements
+	// belonging to another customer as not found instead of leaking them.
+	if ent != nil && ent.CustomerID != params.CustomerID {
+		return def, &entitlement.NotFoundError{EntitlementID: models.NamespacedID{Namespace: namespace, ID: params.EntitlementIDOrFeatureKey}}
 	}
 
 	grants, err := e.grantRepo.ListGrants(ctx, grant.ListParams{

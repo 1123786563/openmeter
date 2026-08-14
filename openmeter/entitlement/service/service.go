@@ -237,8 +237,17 @@ func (c *service) GetEntitlementOfCustomerAt(ctx context.Context, namespace stri
 	if _, ok := lo.ErrorsAs[*entitlement.NotFoundError](err); ok {
 		ent, err = c.entitlementRepo.GetActiveEntitlementOfCustomerAt(ctx, namespace, customerID, idOrFeatureKey, at)
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return ent, err
+	// Resolving by ID must not cross customer boundaries. Report entitlements
+	// belonging to another customer as not found instead of leaking them.
+	if ent != nil && ent.CustomerID != customerID {
+		return nil, &entitlement.NotFoundError{EntitlementID: models.NamespacedID{Namespace: namespace, ID: idOrFeatureKey}}
+	}
+
+	return ent, nil
 }
 
 func (c *service) GetEntitlementValue(ctx context.Context, namespace string, customerID string, idOrFeatureKey string, at time.Time) (entitlement.EntitlementValue, error) {

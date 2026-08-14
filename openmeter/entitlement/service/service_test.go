@@ -77,4 +77,14 @@ func TestGetEntitlementOfCustomerAt(t *testing.T) {
 		require.Equal(t, feat.Key, res.FeatureKey)
 		require.Equal(t, cust.ID, res.CustomerID)
 	})
+
+	t.Run("Should not resolve another customer's entitlement by ID", func(t *testing.T) {
+		other := createCustomerAndSubject(t, deps.subjectService, deps.customerService, namespace, "cust-2", "Customer 2")
+
+		res, err := conn.GetEntitlementOfCustomerAt(t.Context(), namespace, other.ID, ent.ID, clock.Now().Add(time.Hour))
+		require.Error(t, err)
+		var notFound *entitlement.NotFoundError
+		require.ErrorAs(t, err, &notFound)
+		require.Nil(t, res)
+	})
 }
