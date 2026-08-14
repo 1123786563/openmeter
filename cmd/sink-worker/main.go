@@ -122,6 +122,8 @@ func main() {
 		}
 
 		logger.Error("application stopped due to error", slog.Any("error", err))
+		// os.Exit skips deferred cleanup, so run it explicitly before exiting
+		cleanup()
 		os.Exit(1)
 	}
 }

@@ -77,24 +77,28 @@ func main() {
 
 	logger := app.Logger
 
-	// Migrate database
-	if err := app.Migrate(ctx); err != nil {
-		logger.Error("failed to initialize database", "error", err)
+	// Startup and serving funnel through a single error exit so deferred
+	// cleanup still runs: os.Exit skips deferred calls, so it is called
+	// explicitly before exiting.
+	if err := func() error {
+		// Migrate database
+		if err := app.Migrate(ctx); err != nil {
+			return fmt.Errorf("failed to initialize database: %w", err)
+		}
+
+		if _, err := app.LedgerAccountResolver.EnsureBusinessAccounts(ctx, app.NamespaceManager.GetDefaultNamespace()); err != nil {
+			return fmt.Errorf("failed to provision ledger business accounts: %w", err)
+		}
+
+		// Provision sandbox app
+		if err := app.AppRegistry.SandboxProvisioner(ctx, app.NamespaceManager.GetDefaultNamespace()); err != nil {
+			return fmt.Errorf("failed to provision sandbox app: %w", err)
+		}
+
+		return app.Run()
+	}(); err != nil {
+		logger.Error("application stopped due to error", "error", err)
+		cleanup()
 		os.Exit(1)
 	}
-
-	_, err = app.LedgerAccountResolver.EnsureBusinessAccounts(ctx, app.NamespaceManager.GetDefaultNamespace())
-	if err != nil {
-		logger.Error("failed to provision ledger business accounts", "error", err)
-		os.Exit(1)
-	}
-
-	// Provision sandbox app
-	err = app.AppRegistry.SandboxProvisioner(ctx, app.NamespaceManager.GetDefaultNamespace())
-	if err != nil {
-		logger.Error("failed to provision sandbox app", "error", err)
-		os.Exit(1)
-	}
-
-	app.Run()
 }

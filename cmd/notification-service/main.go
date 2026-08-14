@@ -85,6 +85,8 @@ func main() {
 
 	if err := app.Migrate(ctx); err != nil {
 		logger.Error("failed to initialize database", "error", err)
+		// os.Exit skips deferred cleanup, so run it explicitly before exiting
+		cleanup()
 		os.Exit(1)
 	}
 
@@ -95,6 +97,7 @@ func main() {
 	})
 	if err != nil {
 		logger.Error("failed to initialize Kafka subscriber", slog.Any("error", err))
+		cleanup()
 		os.Exit(1)
 	}
 
@@ -120,6 +123,7 @@ func main() {
 	notificationConsumer, err := consumer.New(consumerOptions)
 	if err != nil {
 		logger.Error("failed to initialize worker", slog.Any("error", err))
+		cleanup()
 		os.Exit(1)
 	}
 
@@ -151,6 +155,10 @@ func main() {
 	if e := &(run.SignalError{}); errors.As(err, &e) {
 		logger.Info("received signal: shutting down", slog.String("signal", e.Signal.String()))
 	} else if !errors.Is(err, http.ErrServerClosed) {
+		// Surface genuine failures to the orchestrator: os.Exit skips deferred
+		// cleanup, so it is called explicitly before exiting.
 		logger.Error("application stopped due to error", slog.Any("error", err))
+		cleanup()
+		os.Exit(1)
 	}
 }

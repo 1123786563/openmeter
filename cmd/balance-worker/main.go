@@ -77,12 +77,19 @@ func main() {
 
 	logger := app.Logger
 
-	// Validate service prerequisites
+	// Startup and serving funnel through a single error exit so deferred
+	// cleanup still runs: os.Exit skips deferred calls, so it is called
+	// explicitly before exiting.
+	if err := func() error {
+		// Validate service prerequisites
+		if err := app.Migrate(ctx); err != nil {
+			return fmt.Errorf("failed to initialize database: %w", err)
+		}
 
-	if err := app.Migrate(ctx); err != nil {
-		logger.Error("failed to initialize database", "error", err)
+		return app.Run()
+	}(); err != nil {
+		logger.Error("application stopped due to error", "error", err)
+		cleanup()
 		os.Exit(1)
 	}
-
-	app.Run()
 }

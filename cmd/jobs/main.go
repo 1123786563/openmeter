@@ -40,11 +40,8 @@ func main() {
 			if err != nil {
 				slog.Error("failed to initialize application", "error", err)
 
-				// Call cleanup function is may not set yet
-				if internal.AppShutdown != nil {
-					internal.AppShutdown()
-				}
-
+				// The deferred shutdown below covers this path: returning the
+				// error makes ExecuteContext fail and main exits through it.
 				return errors.New("failed to initialize application")
 			}
 
@@ -71,6 +68,10 @@ func main() {
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		slog.Error("failed to execute command", "error", err)
+		// os.Exit skips the deferred shutdown, so run it explicitly before exiting
+		if internal.AppShutdown != nil {
+			internal.AppShutdown()
+		}
 		os.Exit(1)
 	}
 }
