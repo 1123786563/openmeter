@@ -95,6 +95,31 @@ func TestCommerceTestControlsAreAuthenticatedAndNotRegisteredWhenDisabled(t *tes
 		router.ServeHTTP(externalResponse, external)
 		require.Equal(t, http.StatusNotFound, externalResponse.Code)
 	})
+
+	t.Run("unconfigured token fails closed", func(t *testing.T) {
+		// An empty token must never authorize: an empty Authorization header
+		// compares equal to it.
+		injector := newOneShotPaidTransitionFaultInjector(&recordingPaidTxRunner{})
+		control := &commerceTestControl{token: "", injector: injector, oracle: stubCommerceOracle{}}
+		hooks := &openmeterserver.RouterHooks{}
+		registerCommerceTestControls(hooks, control)
+		router := chi.NewRouter()
+		for _, hook := range hooks.Routes {
+			hook(router)
+		}
+
+		for _, token := range []string{"", "Bearer ", "Bearer anything"} {
+			request := httptest.NewRequest(http.MethodPost, commerceTestFaultPath, nil)
+			request.Host = "127.0.0.1:8889"
+			if token != "" {
+				request.Header.Set("Authorization", token)
+			}
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+			require.Equal(t, http.StatusUnauthorized, response.Code)
+		}
+		require.False(t, injector.armed.Load(), "no request may arm the fault injector")
+	})
 }
 
 func TestCommerceTestOracleHandlerReturnsAuthoritativeCardinalities(t *testing.T) {

@@ -189,6 +189,12 @@ func (c *commerceTestControl) authenticate(next http.HandlerFunc) http.HandlerFu
 			http.NotFound(w, r)
 			return
 		}
+		// Fail closed when no token is configured: an empty Authorization header
+		// compares equal to an empty token, which would authorize any caller.
+		if c.token == "" {
+			writeCommerceTestJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
 		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if len(provided) != len(c.token) || subtle.ConstantTimeCompare([]byte(provided), []byte(c.token)) != 1 {
 			writeCommerceTestJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
