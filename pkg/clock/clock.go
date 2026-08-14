@@ -31,8 +31,10 @@ func ResetTime() {
 }
 
 func FreezeTime(t time.Time) {
-	atomic.StoreInt32(&frozen, 1)
+	// Publish the frozen value before the flag so a concurrent Now() can never
+	// observe the flag set while the value is still unset.
 	frozenTime.Store(t)
+	atomic.StoreInt32(&frozen, 1)
 }
 
 func UnFreeze() {
