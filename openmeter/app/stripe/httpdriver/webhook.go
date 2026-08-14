@@ -36,6 +36,12 @@ type (
 	AppStripeWebhookHandler  httptransport.HandlerWithArgs[AppStripeWebhookRequest, AppStripeWebhookResponse, AppStripeWebhookParams]
 )
 
+// stripeWebhookTolerance bounds how old a signed event may be and still be
+// accepted. Stripe retries failed deliveries in live mode for up to 3 days, so
+// the tolerance must cover that retry horizon; anything older has been
+// abandoned by Stripe already and is treated as a replay.
+const stripeWebhookTolerance = 72 * time.Hour
+
 // AppStripeWebhook returns a new httptransport.Handler for creating a customer.
 func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 	return httptransport.NewHandlerWithArgs(
@@ -53,7 +59,7 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 			}
 
 			// Validate the webhook event
-			event, err := webhook.ConstructEventWithTolerance(params.Payload, r.Header.Get("Stripe-Signature"), secret.Value, time.Hour*10000)
+			event, err := webhook.ConstructEventWithTolerance(params.Payload, r.Header.Get("Stripe-Signature"), secret.Value, stripeWebhookTolerance)
 			if err != nil {
 				return AppStripeWebhookRequest{}, models.NewGenericValidationError(
 					fmt.Errorf("failed to construct webhook event: %w", err),
@@ -80,18 +86,18 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 			// Handle the webhook event based on the event type
 			switch request.Event.Type {
 			case stripeclient.WebhookEventTypeSetupIntentSucceeded:
-				// Unmarshal to payment intent object
-				var paymentIntent stripe.PaymentIntent
+				// Unmarshal to setup intent object
+				var setupIntent stripe.SetupIntent
 
-				err := json.Unmarshal(request.Event.Data.Raw, &paymentIntent)
+				err := json.Unmarshal(request.Event.Data.Raw, &setupIntent)
 				if err != nil {
 					return AppStripeWebhookResponse{}, models.NewGenericValidationError(
-						fmt.Errorf("failed to unmarshal payment intent for app: %s in event: %s: %w", request.AppID.ID, request.Event.ID, err),
+						fmt.Errorf("failed to unmarshal setup intent for app: %s in event: %s: %w", request.AppID.ID, request.Event.ID, err),
 					)
 				}
 
-				// Validate the payment intent metadata
-				metadataAppId, hasMetadataAppId := paymentIntent.Metadata[stripeclient.StripeMetadataAppID]
+				// Validate the setup intent metadata
+				metadataAppId, hasMetadataAppId := setupIntent.Metadata[stripeclient.StripeMetadataAppID]
 
 				// If the event has not app metadata it's not initiated by an OpenMeter app and we ignore it.
 				// This can be the case when someone manually creates a payment intent.
@@ -118,7 +124,7 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 
 				// Validate the namespace
 				// At this point we know that the event is for this specific app so require the namespace.
-				metadataNamespace, hasMetadataNamespace := paymentIntent.Metadata[stripeclient.StripeMetadataNamespace]
+				metadataNamespace, hasMetadataNamespace := setupIntent.Metadata[stripeclient.StripeMetadataNamespace]
 				if !hasMetadataNamespace {
 					return AppStripeWebhookResponse{}, models.NewGenericValidationError(
 						fmt.Errorf("namespace metadata is required for app: %s in event: %s", request.AppID.ID, request.Event.ID),
@@ -139,16 +145,16 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 					)
 				}
 
-				// Validate the payment intent object
-				if paymentIntent.Customer == nil {
+				// Validate the setup intent object
+				if setupIntent.Customer == nil {
 					return AppStripeWebhookResponse{}, models.NewGenericValidationError(
-						fmt.Errorf("payment intent customer is required for app: %s in event: %s", request.AppID.ID, request.Event.ID),
+						fmt.Errorf("setup intent customer is required for app: %s in event: %s", request.AppID.ID, request.Event.ID),
 					)
 				}
 
-				if paymentIntent.PaymentMethod == nil {
+				if setupIntent.PaymentMethod == nil {
 					return AppStripeWebhookResponse{}, models.NewGenericValidationError(
-						fmt.Errorf("payment intent payment method is required for app %s in event: %s", request.AppID.ID, request.Event.ID),
+						fmt.Errorf("setup intent payment method is required for app %s in event: %s", request.AppID.ID, request.Event.ID),
 					)
 				}
 
@@ -157,10 +163,10 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 					appstripe.HandleSetupIntentSucceededInput{
 						SetCustomerDefaultPaymentMethodInput: appstripe.SetCustomerDefaultPaymentMethodInput{
 							AppID:            request.AppID,
-							StripeCustomerID: paymentIntent.Customer.ID,
-							PaymentMethodID:  paymentIntent.PaymentMethod.ID,
+							StripeCustomerID: setupIntent.Customer.ID,
+							PaymentMethodID:  setupIntent.PaymentMethod.ID,
 						},
-						PaymentIntentMetadata: paymentIntent.Metadata,
+						PaymentIntentMetadata: setupIntent.Metadata,
 					})
 				if err != nil {
 					return AppStripeWebhookResponse{}, err
@@ -425,9 +431,14 @@ func (h *handler) AppStripeWebhook() AppStripeWebhookHandler {
 				}, nil
 			}
 
-			return AppStripeWebhookResponse{}, models.NewGenericValidationError(
-				fmt.Errorf("unsupported event type: %s", request.Event.Type),
-			)
+			// Acknowledge unhandled event types with a success response: Stripe
+			// retries any non-2xx delivery for days, which cannot make an
+			// unsupported event type succeed.
+			return AppStripeWebhookResponse{
+				NamespaceId: request.AppID.Namespace,
+				AppId:       request.AppID.ID,
+				Message:     lo.ToPtr(fmt.Sprintf("ignoring unsupported event type: %s", request.Event.Type)),
+			}, nil
 		},
 		commonhttp.JSONResponseEncoderWithStatus[AppStripeWebhookResponse](http.StatusCreated),
 		httptransport.AppendOptions(
