@@ -855,19 +855,19 @@ func TestDecryptResourceRejectsMalformedNonceWithoutPanic(t *testing.T) {
 	ciphertext := base64.StdEncoding.EncodeToString([]byte("ciphertext"))
 
 	_, err := decryptResource(testAPIv3Key, encryptedResource{
-		Algorithm:       "AEAD_AES_256_GCM",
-		Ciphertext:      ciphertext,
-		Nonce:           "too-short",
-		AssociatedData:  "",
+		Algorithm:      "AEAD_AES_256_GCM",
+		Ciphertext:     ciphertext,
+		Nonce:          "too-short",
+		AssociatedData: "",
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "nonce")
 
 	_, err = decryptResource(testAPIv3Key, encryptedResource{
-		Algorithm:       "AEAD_AES_256_GCM",
-		Ciphertext:      ciphertext,
-		Nonce:           strings.Repeat("n", 64),
-		AssociatedData:  "",
+		Algorithm:      "AEAD_AES_256_GCM",
+		Ciphertext:     ciphertext,
+		Nonce:          strings.Repeat("n", 64),
+		AssociatedData: "",
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "nonce")

@@ -365,8 +365,6 @@ func (s *service) GetAttempt(ctx context.Context, namespace, id string) (*Paymen
 	return s.attempts.GetAttempt(ctx, namespace, id)
 }
 
-// InitiateCheckout calls the provider to create a QR code and stores the
-// provider IDs on the attempt.
 // checkoutDescription derives the provider-facing payment subject from the
 // order's immutable line snapshots. WeChat Native requires a non-empty
 // description and Alipay precreate requires a non-empty subject, so an order
@@ -380,6 +378,8 @@ func checkoutDescription(order *commerce.Order) string {
 	return "Order " + order.PublicID
 }
 
+// InitiateCheckout calls the provider to create a QR code and stores the
+// provider IDs on the attempt.
 func (s *service) InitiateCheckout(ctx context.Context, namespace, attemptID string) (CheckoutResult, error) {
 	attempt, err := s.attempts.GetAttempt(ctx, namespace, attemptID)
 	if err != nil {

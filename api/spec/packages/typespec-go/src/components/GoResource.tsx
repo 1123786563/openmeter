@@ -320,6 +320,9 @@ function StreamMethod({
       ? 'optionalBody(request)'
       : 'request'
     : 'nil'
+  const requestContentType = operation.body
+    ? JSON.stringify(operation.requestContentType ?? 'application/json')
+    : '""'
 
   return (
     <go.FunctionDeclaration
@@ -331,7 +334,7 @@ function StreamMethod({
       {ay.code`
         ${pathCode(operation)}
 
-        req, err := s.client.newRequestWithContentType(ctx, ${httpMethod(operation.verb)}, path, ${operation.queryParams.length > 0 ? 'params.values()' : 'nil'}, ${requestBody}, ${JSON.stringify(operation.requestContentType ?? 'application/json')}, ${JSON.stringify(operation.responseContentType ?? 'text/csv')})
+        req, err := s.client.newRequestWithContentType(ctx, ${httpMethod(operation.verb)}, path, ${operation.queryParams.length > 0 ? 'params.values()' : 'nil'}, ${requestBody}, ${requestContentType}, ${JSON.stringify(operation.responseContentType ?? 'text/csv')})
         if err != nil {
           return nil, err
         }

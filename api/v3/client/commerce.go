@@ -217,9 +217,9 @@ func (s *CommerceService) GetRefund(ctx context.Context, refundID string) (*Comm
 // payment fact, and fulfills the order.
 //
 // The request body is the provider-signed WeChat Pay v3 notification: a JSON
-// envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
-// verifies the RSA signature over the raw bytes, so the body is intentionally
-// not modeled with a schema and must be forwarded byte-for-byte.
+// envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies
+// the RSA signature over the raw bytes, so the body is intentionally not modeled
+// with a schema and must be forwarded byte-for-byte.
 func (s *CommerceService) WechatPaymentCallback(ctx context.Context) error {
 	path := "/payment-providers/wechat/callback"
 
@@ -237,8 +237,7 @@ func (s *CommerceService) WechatPaymentCallback(ctx context.Context) error {
 //
 // The request body is the provider-signed WeChat Pay v3 refund notification.
 // OpenMeter verifies the RSA signature over the raw bytes, so the body is
-// intentionally not modeled with a schema and must be forwarded
-// byte-for-byte.
+// intentionally not modeled with a schema and must be forwarded byte-for-byte.
 func (s *CommerceService) WechatRefundCallback(ctx context.Context) error {
 	path := "/payment-providers/wechat/refund-callback"
 
@@ -254,11 +253,10 @@ func (s *CommerceService) WechatRefundCallback(ctx context.Context) error {
 // Alipay payment callback. OpenMeter verifies the signature, confirms the payment
 // fact, and fulfills the order.
 //
-// The request body is the `application/x-www-form-urlencoded` Alipay
-// notification whose field set varies by trade type. OpenMeter verifies the
-// RSA2 signature over the canonicalized raw form fields, so the body is
-// intentionally not modeled with a schema and must be forwarded
-// byte-for-byte.
+// The request body is the `application/x-www-form-urlencoded` Alipay notification
+// whose field set varies by trade type. OpenMeter verifies the RSA2 signature over
+// the canonicalized raw form fields, so the body is intentionally not modeled with
+// a schema and must be forwarded byte-for-byte.
 func (s *CommerceService) AlipayPaymentCallback(ctx context.Context) ([]byte, error) {
 	path := "/payment-providers/alipay/callback"
 
@@ -273,7 +271,7 @@ func (s *CommerceService) AlipayPaymentCallback(ctx context.Context) ([]byte, er
 func (s *CommerceService) AlipayPaymentCallbackStream(ctx context.Context) (io.ReadCloser, error) {
 	path := "/payment-providers/alipay/callback"
 
-	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, nil, "application/json", "text/plain")
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, nil, "", "text/plain")
 	if err != nil {
 		return nil, err
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/catalog"
 	"github.com/openmeterio/openmeter/openmeter/commerce/fulfillment"
-	meteredentitlement "github.com/openmeterio/openmeter/openmeter/entitlement/metered"
 	"github.com/openmeterio/openmeter/openmeter/commerce/order"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/alipay"
@@ -26,6 +25,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/credit"
 	"github.com/openmeterio/openmeter/openmeter/credit/grant"
 	entdb "github.com/openmeterio/openmeter/openmeter/ent/db"
+	meteredentitlement "github.com/openmeterio/openmeter/openmeter/entitlement/metered"
 	"github.com/openmeterio/openmeter/openmeter/namespace/namespacedriver"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -67,10 +67,12 @@ func wireCommerce(
 	return wireCommerceWithRuntimeDependencies(entClient, defaultNamespace, grantConnector, nil, cfg, nil, logger)
 }
 
-// wireCommerceWithRuntimeDependencies is the test seam for proving that the
-// provider-backed refund workers are only registered with a complete real
-// dependency bundle. Production uses wireCommerce and therefore remains
-// fail-closed until those collaborators have production assembly.
+// wireCommerceWithRuntimeDependencies is the seam for external automatic
+// refund collaborators: the provider-backed refund workers are only
+// registered with a complete real dependency bundle. Production calls this
+// directly with nil runtime dependencies (the loopback stand supplies them
+// only under commerce.test.enabled), so it stays fail-closed until those
+// collaborators have production assembly.
 func wireCommerceWithRuntimeDependencies(
 	entClient *entdb.Client,
 	defaultNamespace string,
@@ -373,8 +375,9 @@ func wirePaymentProviders(cfg config.CommerceConfiguration, logger *slog.Logger)
 // validateCommerceProviderConfiguration performs the provider-only portion of
 // production assembly for --validate. It reads and validates configured local
 // key material, but does not construct domain services, workers, or listeners.
-// Automatic refund dependency validation remains in wireCommerce so normal
-// startup continues to fail closed when those real dependencies are absent.
+// Automatic refund dependency validation remains in
+// wireCommerceWithRuntimeDependencies so normal startup continues to fail
+// closed when those real dependencies are absent.
 func validateCommerceProviderConfiguration(cfg config.CommerceConfiguration, logger *slog.Logger) error {
 	if !cfg.Enabled {
 		return nil

@@ -142,8 +142,7 @@ func TestWireCommerceEnabledFailsClosedWithoutRealRefundDependencies(t *testing.
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			wiring, err := wireCommerceWithRuntimeDependencies(entdb.NewClient(), "default", testGrantConnector{}, nil, cfg, tt.deps, testutils.NewLogger(t),
-			)
+			wiring, err := wireCommerceWithRuntimeDependencies(entdb.NewClient(), "default", testGrantConnector{}, nil, cfg, tt.deps, testutils.NewLogger(t))
 			require.Nil(t, wiring)
 			require.ErrorContains(t, err, "commerce automatic refund disabled")
 			require.ErrorContains(t, err, tt.want)
@@ -228,8 +227,7 @@ func TestWireCommerceLoadsProviderSecretsAtStartup(t *testing.T) {
 	cfg := validCommerceConfiguration(t)
 	cfg.Payment.WeChat.MerchantPrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
 
-	wiring, err := wireCommerceWithRuntimeDependencies(entdb.NewClient(), "default", testGrantConnector{}, nil, cfg, completeRuntimeDependencies(), testutils.NewLogger(t),
-	)
+	wiring, err := wireCommerceWithRuntimeDependencies(entdb.NewClient(), "default", testGrantConnector{}, nil, cfg, completeRuntimeDependencies(), testutils.NewLogger(t))
 	require.Nil(t, wiring)
 	require.Error(t, err)
 	var pathErr *os.PathError
