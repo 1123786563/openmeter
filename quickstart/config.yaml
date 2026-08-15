@@ -51,7 +51,7 @@ sink:
       expiration: 768h
 
 postgres:
-  url: postgres://postgres:qwerdfpostgres!123@postgres:5432/postgres?sslmode=disable
+  url: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable
   autoMigrate: migration
 
 meters:

@@ -112,7 +112,9 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=qwerdfpostgres!123
+      # Local default only; override via shell env for volumes initialized
+      # with a different password (compose performs the substitution).
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST_AUTH_METHOD=md5
     configs:
       - source: svix_sql

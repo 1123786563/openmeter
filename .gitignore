@@ -38,5 +38,8 @@ server
 # SDD worktrees
 .worktrees/
 .idea/
-e2e/
+# Local e2e scratch stands (sandbox keys, verification evidence); do not
+# ignore all of e2e/ — new test files must stay visible in git status.
+e2e/alipay-sandbox/
+e2e/commerce-verify/
 .playwright-mcp/
