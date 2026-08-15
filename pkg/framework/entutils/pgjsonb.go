@@ -19,6 +19,15 @@ func jsonKeySafe(s string) bool {
 	return jsonKeyPattern.MatchString(s)
 }
 
+// failClosedPredicate emits a SQL `false` literal for inputs that must not
+// reach the interpolated JSONB expression (empty value lists or keys outside
+// jsonKeyPattern).
+func failClosedPredicate(s *sql.Selector) {
+	s.Where(sql.P(func(b *sql.Builder) {
+		b.WriteString("false")
+	}))
+}
+
 // JSONBIn returns a function that filters the given JSONB field by the given key and value
 // Caveats:
 // - PostgreSQL only
@@ -30,9 +39,7 @@ func JSONBIn(field string, key string, values []string) func(*sql.Selector) {
 		// This is just a safeguard, it should never happen, but if it's not in place, then if
 		// len(values) == 0, then generated SQL query will be field->>'key' IN (), which is invalid in SQL
 		if len(values) == 0 || !jsonKeySafe(field) || !jsonKeySafe(key) {
-			s.Where(sql.P(func(b *sql.Builder) {
-				b.WriteString("false")
-			}))
+			failClosedPredicate(s)
 			return
 		}
 		s.Where(sql.P(func(b *sql.Builder) {
@@ -68,9 +75,7 @@ func JSONBIn(field string, key string, values []string) func(*sql.Selector) {
 func JSONBKeyExistsInObject(field string, member string, expectedKey string) func(*sql.Selector) {
 	return func(s *sql.Selector) {
 		if !jsonKeySafe(field) || !jsonKeySafe(member) || !jsonKeySafe(expectedKey) {
-			s.Where(sql.P(func(b *sql.Builder) {
-				b.WriteString("false")
-			}))
+			failClosedPredicate(s)
 			return
 		}
 		s.Where(sql.P(func(b *sql.Builder) {
