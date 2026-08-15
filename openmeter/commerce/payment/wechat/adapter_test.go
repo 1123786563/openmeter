@@ -848,3 +848,27 @@ func TestRequestCanonicalURLPreservesEncodedPathAndQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "/v3/pay/transactions/out-trade-no/ORDER%2F1", u.EscapedPath())
 }
+
+func TestDecryptResourceRejectsMalformedNonceWithoutPanic(t *testing.T) {
+	// A notification whose resource.nonce is not the GCM nonce size must be
+	// rejected with an error; cipher.Open panics on such input otherwise.
+	ciphertext := base64.StdEncoding.EncodeToString([]byte("ciphertext"))
+
+	_, err := decryptResource(testAPIv3Key, encryptedResource{
+		Algorithm:       "AEAD_AES_256_GCM",
+		Ciphertext:      ciphertext,
+		Nonce:           "too-short",
+		AssociatedData:  "",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "nonce")
+
+	_, err = decryptResource(testAPIv3Key, encryptedResource{
+		Algorithm:       "AEAD_AES_256_GCM",
+		Ciphertext:      ciphertext,
+		Nonce:           strings.Repeat("n", 64),
+		AssociatedData:  "",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "nonce")
+}

@@ -165,12 +165,16 @@ func main() {
 	}
 
 	// Wire Phase 2 commerce services (catalog, orders, wallet, fulfillment,
-	// reconciliation) and worker manager from the Ent client.
-	commerceWiring, err := wireCommerce(
+	// reconciliation) and worker manager from the Ent client. Automatic-refund
+	// collaborators are only supplied on the loopback test stand
+	// (commerce.test.enabled); production stays fail-closed.
+	commerceWiring, err := wireCommerceWithRuntimeDependencies(
 		app.EntClient,
 		app.NamespaceManager.GetDefaultNamespace(),
 		app.EntitlementRegistry.Grant,
+		app.EntitlementRegistry.MeteredEntitlement,
 		conf.Commerce,
+		loopbackTestRuntimeDependencies(conf.Commerce),
 		logger,
 	)
 	if err != nil {

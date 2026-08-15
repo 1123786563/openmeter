@@ -346,6 +346,11 @@ export function getRefund(
  * WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
  * payment fact, and fulfills the order.
  *
+ * The request body is the provider-signed WeChat Pay v3 notification: a JSON
+ * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
+ * verifies the RSA signature over the raw bytes, so the body is intentionally
+ * not modeled with a schema and must be forwarded byte-for-byte.
+ *
  * POST /payment-providers/wechat/callback
  */
 export function wechatPaymentCallback(
@@ -353,18 +358,8 @@ export function wechatPaymentCallback(
   req: WechatPaymentCallbackRequest,
   options?: RequestOptions,
 ): Promise<Result<WechatPaymentCallbackResponse>> {
-  const headers = new Headers(options?.headers as HeadersInit | undefined)
-  headers.set('content-type', 'application/json')
   return request(async () => {
-    const body = toWire(req, schemas.wechatPaymentCallbackBody)
-    if (client._options.validate) {
-      assertValid(schemas.wechatPaymentCallbackBodyWire, body)
-    }
-    await http(client).post('payment-providers/wechat/callback', {
-      ...options,
-      body,
-      headers,
-    })
+    await http(client).post('payment-providers/wechat/callback', options)
   })
 }
 
@@ -374,6 +369,11 @@ export function wechatPaymentCallback(
  * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
  * then applies the authoritative refund fact.
  *
+ * The request body is the provider-signed WeChat Pay v3 refund notification.
+ * OpenMeter verifies the RSA signature over the raw bytes, so the body is
+ * intentionally not modeled with a schema and must be forwarded
+ * byte-for-byte.
+ *
  * POST /payment-providers/wechat/refund-callback
  */
 export function wechatRefundCallback(
@@ -381,18 +381,8 @@ export function wechatRefundCallback(
   req: WechatRefundCallbackRequest,
   options?: RequestOptions,
 ): Promise<Result<WechatRefundCallbackResponse>> {
-  const headers = new Headers(options?.headers as HeadersInit | undefined)
-  headers.set('content-type', 'application/json')
   return request(async () => {
-    const body = toWire(req, schemas.wechatRefundCallbackBody)
-    if (client._options.validate) {
-      assertValid(schemas.wechatRefundCallbackBodyWire, body)
-    }
-    await http(client).post('payment-providers/wechat/refund-callback', {
-      ...options,
-      body,
-      headers,
-    })
+    await http(client).post('payment-providers/wechat/refund-callback', options)
   })
 }
 
@@ -401,6 +391,12 @@ export function wechatRefundCallback(
  *
  * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
  * fact, and fulfills the order.
+ *
+ * The request body is the `application/x-www-form-urlencoded` Alipay
+ * notification whose field set varies by trade type. OpenMeter verifies the
+ * RSA2 signature over the canonicalized raw form fields, so the body is
+ * intentionally not modeled with a schema and must be forwarded
+ * byte-for-byte.
  *
  * POST /payment-providers/alipay/callback
  */
@@ -411,16 +407,11 @@ export function alipayPaymentCallback(
 ): Promise<Result<AlipayPaymentCallbackResponse>> {
   const headers = new Headers(options?.headers as HeadersInit | undefined)
   headers.set('accept', 'text/plain')
-  headers.set('content-type', 'application/x-www-form-urlencoded')
-  return request(() => {
-    const body = toWire(req, schemas.alipayPaymentCallbackBody)
-    if (client._options.validate) {
-      assertValid(schemas.alipayPaymentCallbackBodyWire, body)
-    }
-    return http(client)
-      .post('payment-providers/alipay/callback', { ...options, body, headers })
-      .text()
-  })
+  return request(() =>
+    http(client)
+      .post('payment-providers/alipay/callback', { ...options, headers })
+      .text(),
+  )
 }
 
 /**

@@ -188,15 +188,15 @@ func TestCreateQRCodeCallsAlipayPrecreate(t *testing.T) {
 		require.Equal(t, http.MethodPost, r.Method)
 		require.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
 		require.NoError(t, r.ParseForm())
-		require.Equal(t, "alipay.trade.precreate", r.Form.Get("method"))
-		require.Equal(t, "RSA2", r.Form.Get("sign_type"))
-		require.Equal(t, "ali-app", r.Form.Get("app_id"))
-		require.Equal(t, "2027-01-15 08:00:00", r.Form.Get("timestamp"))
-		require.Equal(t, "https://merchant.example/alipay/notify", r.Form.Get("notify_url"))
-		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
+		require.Equal(t, "alipay.trade.precreate", r.PostForm.Get("method"))
+		require.Equal(t, "RSA2", r.PostForm.Get("sign_type"))
+		require.Equal(t, "ali-app", r.PostForm.Get("app_id"))
+		require.Equal(t, "2027-01-15 08:00:00", r.PostForm.Get("timestamp"))
+		require.Equal(t, "https://merchant.example/alipay/notify", r.PostForm.Get("notify_url"))
+		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.PostForm)
 
 		var biz map[string]any
-		require.NoError(t, json.Unmarshal([]byte(r.Form.Get("biz_content")), &biz))
+		require.NoError(t, json.Unmarshal([]byte(r.PostForm.Get("biz_content")), &biz))
 		require.Equal(t, "01ORDER", biz["out_trade_no"])
 		require.Equal(t, "100.00", biz["total_amount"])
 		require.Equal(t, "WeKnora recharge", biz["subject"])
@@ -373,8 +373,8 @@ func TestQueryPaymentMapsOnlySuccessfulTradeStates(t *testing.T) {
 			keys := newTestKeys(t)
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				require.NoError(t, r.ParseForm())
-				require.Equal(t, "alipay.trade.query", r.Form.Get("method"))
-				requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
+				require.Equal(t, "alipay.trade.query", r.PostForm.Get("method"))
+				requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.PostForm)
 				writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_query_response", map[string]any{
 					"code": "10000", "msg": "Success", "out_trade_no": "01ORDER",
 					"trade_no": "2027011522001400000001", "trade_status": testCase.status,
@@ -491,13 +491,13 @@ func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestNumber++
 		require.NoError(t, r.ParseForm())
-		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.Form)
+		requireValidRequestRSA2(t, &keys.appPrivate.PublicKey, r.PostForm)
 		var biz map[string]any
-		require.NoError(t, json.Unmarshal([]byte(r.Form.Get("biz_content")), &biz))
+		require.NoError(t, json.Unmarshal([]byte(r.PostForm.Get("biz_content")), &biz))
 
 		switch requestNumber {
 		case 1:
-			require.Equal(t, "alipay.trade.refund", r.Form.Get("method"))
+			require.Equal(t, "alipay.trade.refund", r.PostForm.Get("method"))
 			require.Equal(t, "01ORDER", biz["out_trade_no"])
 			require.Equal(t, "10.01", biz["refund_amount"])
 			require.Equal(t, "refund-idem-1", biz["out_request_no"])
@@ -507,7 +507,7 @@ func TestRefundAndQueryRefundCallAlipayGateway(t *testing.T) {
 				"out_trade_no": "01ORDER", "refund_fee": "10.01", "fund_change": "Y",
 			})
 		case 2:
-			require.Equal(t, "alipay.trade.fastpay.refund.query", r.Form.Get("method"))
+			require.Equal(t, "alipay.trade.fastpay.refund.query", r.PostForm.Get("method"))
 			require.Equal(t, "refund-idem-1", biz["out_request_no"])
 			require.Equal(t, "01ORDER", biz["out_trade_no"])
 			writeSignedAlipayResponse(t, keys.alipayPrivate, w, "alipay_trade_fastpay_refund_query_response", map[string]any{

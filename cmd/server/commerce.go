@@ -14,6 +14,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/commerce"
 	"github.com/openmeterio/openmeter/openmeter/commerce/catalog"
 	"github.com/openmeterio/openmeter/openmeter/commerce/fulfillment"
+	meteredentitlement "github.com/openmeterio/openmeter/openmeter/entitlement/metered"
 	"github.com/openmeterio/openmeter/openmeter/commerce/order"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
 	"github.com/openmeterio/openmeter/openmeter/commerce/payment/alipay"
@@ -63,7 +64,7 @@ func wireCommerce(
 	cfg config.CommerceConfiguration,
 	logger *slog.Logger,
 ) (*CommerceWiring, error) {
-	return wireCommerceWithRuntimeDependencies(entClient, defaultNamespace, grantConnector, cfg, nil, logger)
+	return wireCommerceWithRuntimeDependencies(entClient, defaultNamespace, grantConnector, nil, cfg, nil, logger)
 }
 
 // wireCommerceWithRuntimeDependencies is the test seam for proving that the
@@ -74,6 +75,7 @@ func wireCommerceWithRuntimeDependencies(
 	entClient *entdb.Client,
 	defaultNamespace string,
 	grantConnector credit.GrantConnector,
+	meteredGrants meteredGrantCreator,
 	cfg config.CommerceConfiguration,
 	runtimeDeps *commerceRuntimeDependencies,
 	logger *slog.Logger,
@@ -115,7 +117,7 @@ func wireCommerceWithRuntimeDependencies(
 	fulfillmentSvc, err := fulfillment.New(fulfillment.Config{
 		Repo:    fulfillmentRepoAdapterV2{entAdapter},
 		Orders:  fulfillmentOrderAdapter{entAdapter},
-		Grantor: creditGrantAdapter{connector: grantConnector},
+		Grantor: creditGrantAdapter{connector: grantConnector, metered: meteredGrants},
 		Logger:  logger,
 	})
 	if err != nil {
@@ -988,8 +990,21 @@ func mapWireToRefundFact(w *commerce.RefundFactWire) *refund.RefundFactRecord {
 // CreditGrantor: real implementation using credit.GrantConnector
 // ---------------------------------------------------------------------------
 
+// walletCreditsFeatureKey is the metered-entitlement feature key that owns a
+// customer's wallet credit grants. It mirrors the feature key resolved by the
+// v2 /customers/{id}/entitlements/credits/grants surface. The entitlement
+// grant connector is keyed by entitlement owner, so granting wallet credits
+// through the customer ID alone always fails with an owner-not-found error;
+// the metered connector resolves the customer's active entitlement first.
+const walletCreditsFeatureKey = "credits"
+
+type meteredGrantCreator interface {
+	CreateGrant(ctx context.Context, namespace, customerID, entitlementIdOrFeatureKey string, inputGrant meteredentitlement.CreateEntitlementGrantInputs) (meteredentitlement.EntitlementGrant, error)
+}
+
 type creditGrantAdapter struct {
 	connector credit.GrantConnector
+	metered   meteredGrantCreator
 }
 
 func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.GrantCreditsInput) (fulfillment.GrantCreditsResult, error) {
@@ -1009,6 +1024,23 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 			Count:    uint32(in.ValidityDays),
 			Duration: grant.ExpirationPeriodDurationDay,
 		}
+	}
+
+	// Wallet bucket priority: recharge=30, plan=10 (see commerce.SourcePriority).
+	if in.Source == commerce.BucketSourceRecharge {
+		input.Priority = 30
+	} else if in.Source == commerce.BucketSourcePlan {
+		input.Priority = 10
+	}
+	if g.metered != nil {
+		created, err := g.metered.CreateGrant(ctx, in.Namespace, in.CustomerID, walletCreditsFeatureKey, meteredentitlement.CreateEntitlementGrantInputs{CreateGrantInput: input})
+		if err != nil {
+			return fulfillment.GrantCreditsResult{}, fmt.Errorf("credit grant: %w", err)
+		}
+		return fulfillment.GrantCreditsResult{
+			GrantID: created.ID,
+			Credits: int64(created.Amount),
+		}, nil
 	}
 
 	created, err := g.connector.CreateGrant(ctx, models.NamespacedID{

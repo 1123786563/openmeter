@@ -79,6 +79,11 @@ func decryptResource(apiKey string, resource encryptedResource) ([]byte, error) 
 	if err != nil {
 		return nil, fmt.Errorf("initialize AES-GCM: %w", err)
 	}
+	// gcm.Open panics on a nonce of an unsupported length, so a malformed or
+	// malicious notification must be rejected before reaching the cipher.
+	if len(resource.Nonce) != gcm.NonceSize() {
+		return nil, fmt.Errorf("resource nonce must be %d bytes, got %d", gcm.NonceSize(), len(resource.Nonce))
+	}
 	plaintext, err := gcm.Open(nil, []byte(resource.Nonce), ciphertext, []byte(resource.AssociatedData))
 	if err != nil {
 		return nil, errors.New("AES-GCM resource authentication failed")

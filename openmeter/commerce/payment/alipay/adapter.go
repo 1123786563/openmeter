@@ -67,6 +67,15 @@ func New(cfg Config) (*Adapter, error) {
 	if err != nil || parsedGateway.Scheme == "" || parsedGateway.Host == "" {
 		return nil, errors.New("alipay adapter: gateway URL must be absolute")
 	}
+	// Alipay gateways (production and sandbox) require the request charset as
+	// a gateway query parameter in addition to the form field; without it the
+	// gateway rejects the signature (isv.invalid-signature). Official SDKs
+	// append it to the gateway URL as well.
+	gatewayQuery := parsedGateway.Query()
+	if gatewayQuery.Get("charset") == "" {
+		gatewayQuery.Set("charset", "utf-8")
+		parsedGateway.RawQuery = gatewayQuery.Encode()
+	}
 	if strings.TrimSpace(cfg.AppID) == "" {
 		return nil, errors.New("alipay adapter: application ID is required")
 	}

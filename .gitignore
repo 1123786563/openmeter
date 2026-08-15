@@ -38,3 +38,5 @@ server
 # SDD worktrees
 .worktrees/
 .idea/
+e2e/
+.playwright-mcp/

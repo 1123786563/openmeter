@@ -16,6 +16,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceorder"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/commerceproduct"
 	dbgrant "github.com/openmeterio/openmeter/openmeter/ent/db/grant"
+	entdbent "github.com/openmeterio/openmeter/openmeter/ent/db/entitlement"
 	"github.com/openmeterio/openmeter/openmeter/ent/db/receivableaccount"
 	"github.com/openmeterio/openmeter/pkg/clock"
 	"github.com/openmeterio/openmeter/pkg/framework/entutils"
@@ -384,10 +385,27 @@ func (a *EntAdapter) GetGrants(ctx context.Context, namespace, customerID string
 	// (Balance), so we report Granted as the grant amount and Consumed=0; the
 	// refund service independently computes refundable credits from the wallet
 	// snapshot. This returns real allocation data instead of an empty stub.
+	// Wallet credits are granted on the customer's metered entitlement (the
+	// "credits" feature entitlement), so the grant owner is the entitlement ID,
+	// not the customer ID. Resolve the customer's entitlements first and match
+	// grants by those owner IDs.
+	entOwnerIDs, err := a.db.Entitlement.Query().
+		Where(
+			entdbent.NamespaceEQ(namespace),
+			entdbent.CustomerIDEQ(customerID),
+		).
+		IDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ent: list wallet entitlements: %w", err)
+	}
+	if len(entOwnerIDs) == 0 {
+		return []AllocationGrant{}, nil
+	}
+
 	q := a.db.Grant.Query().
 		Where(
 			dbgrant.NamespaceEQ(namespace),
-			dbgrant.OwnerIDEQ(customerID),
+			dbgrant.OwnerIDIn(entOwnerIDs...),
 			dbgrant.VoidedAtIsNil(),
 		)
 

@@ -1,0 +1,9 @@
+ALTER TABLE "refund_requests" DROP COLUMN "credit_quantum";
+ALTER TABLE "refund_requests" DROP COLUMN "refund_quantum_fen";
+ALTER TABLE "refund_requests" DROP COLUMN "reserved_credits";
+ALTER TABLE "refund_requests" DROP COLUMN "refund_fen";
+ALTER TABLE "refund_requests" DROP COLUMN "remainder_credits";
+ALTER TABLE "refund_requests" DROP COLUMN "provider_name";
+ALTER TABLE "refund_requests" DROP COLUMN "provider_refund_id";
+ALTER TABLE "refund_requests" DROP COLUMN "fence_sequence";
+ALTER TABLE "refund_requests" DROP COLUMN "failure_reason";

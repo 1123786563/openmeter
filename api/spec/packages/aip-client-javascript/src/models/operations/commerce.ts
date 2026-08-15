@@ -61,13 +61,13 @@ export type GetRefundRequest = {
 }
 export type GetRefundResponse = CommerceRefund
 
-export type WechatPaymentCallbackRequest = AcceptDateStrings<string>
+export type WechatPaymentCallbackRequest = Record<string, never>
 export type WechatPaymentCallbackResponse = void
 
-export type WechatRefundCallbackRequest = AcceptDateStrings<string>
+export type WechatRefundCallbackRequest = Record<string, never>
 export type WechatRefundCallbackResponse = void
 
-export type AlipayPaymentCallbackRequest = AcceptDateStrings<string>
+export type AlipayPaymentCallbackRequest = Record<string, never>
 export type AlipayPaymentCallbackResponse = string
 
 export interface ListReceivablePeriodsQuery {

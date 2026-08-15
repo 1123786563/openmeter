@@ -726,8 +726,7 @@ func TestCrashAfterCreditGrant(t *testing.T) {
 	})
 
 	// Process: the grantor crashes after granting credits, before fulfillment is marked.
-	_, _ = crashSvc.ProcessOne(context.Background(), "ns", rec.ID)
-	if err == nil {
+	if _, procErr := crashSvc.ProcessOne(context.Background(), "ns", rec.ID); procErr == nil {
 		t.Fatal("first process should crash")
 	}
 

@@ -1,4 +1,4 @@
-h1:wB5DRhWYukJSv+CmxhDN5+qdck9NFDMenvOD5yzsdwU=
+h1:UizitDeb+usj/i+tkbsBrNd2oGNd7CLu9ch/Ku6TyFI=
 20240826120919_init.up.sql h1:tc1V91/smlmaeJGQ8h+MzTEeFjjnrrFDbDAjOYJK91o=
 20240903155435_entitlement-expired-index.up.sql h1:Hp8u5uckmLXc1cRvWU0AtVnnK8ShlpzZNp8pbiJLhac=
 20240917172257_billing-entities.up.sql h1:Q1dAMo0Vjiit76OybClNfYPGC5nmvov2/M2W1ioi4Kw=
@@ -260,3 +260,4 @@ h1:wB5DRhWYukJSv+CmxhDN5+qdck9NFDMenvOD5yzsdwU=
 20260810000300_credit_reservation_commands.up.sql h1:ROKX0aA0pmAEzghFKF5arQRQ7LzBsHJQ3+ssUvjInt8=
 20260811000100_drop_legacy_ai_usage.up.sql h1:iDgYIafApCq/otr5GG+ImuQB8fe2sfdtorMmWaEPZNU=
 20260811000200_drop_refund_snapshot_version.up.sql h1:fCW7Q89QAbQ+Oud9PMUcrY3j0+Y3sa/Qi5fZYDBHTVk=
+20260815000000_add_refund_request_quantum_columns.up.sql h1:KUTMQslnUXHY2aXJbHf++kXrVkS/w9Re8+FLYLGmh+8=

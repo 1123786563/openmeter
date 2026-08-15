@@ -178,6 +178,11 @@ export class Commerce {
    * WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
    * payment fact, and fulfills the order.
    *
+   * The request body is the provider-signed WeChat Pay v3 notification: a JSON
+   * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
+   * verifies the RSA signature over the raw bytes, so the body is intentionally
+   * not modeled with a schema and must be forwarded byte-for-byte.
+   *
    * POST /payment-providers/wechat/callback
    */
   async wechatPaymentCallback(
@@ -193,6 +198,11 @@ export class Commerce {
    * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
    * then applies the authoritative refund fact.
    *
+   * The request body is the provider-signed WeChat Pay v3 refund notification.
+   * OpenMeter verifies the RSA signature over the raw bytes, so the body is
+   * intentionally not modeled with a schema and must be forwarded
+   * byte-for-byte.
+   *
    * POST /payment-providers/wechat/refund-callback
    */
   async wechatRefundCallback(
@@ -207,6 +217,12 @@ export class Commerce {
    *
    * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
    * fact, and fulfills the order.
+   *
+   * The request body is the `application/x-www-form-urlencoded` Alipay
+   * notification whose field set varies by trade type. OpenMeter verifies the
+   * RSA2 signature over the canonicalized raw form fields, so the body is
+   * intentionally not modeled with a schema and must be forwarded
+   * byte-for-byte.
    *
    * POST /payment-providers/alipay/callback
    */

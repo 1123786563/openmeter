@@ -4155,6 +4155,12 @@ paths:
       description: |-
         Alipay payment callback. OpenMeter verifies the signature, confirms the payment
         fact, and fulfills the order.
+
+        The request body is the `application/x-www-form-urlencoded` Alipay
+        notification whose field set varies by trade type. OpenMeter verifies the
+        RSA2 signature over the canonicalized raw form fields, so the body is
+        intentionally not modeled with a schema and must be forwarded
+        byte-for-byte.
       responses:
         '200':
           description: |-
@@ -4176,12 +4182,6 @@ paths:
           $ref: '#/components/responses/Internal'
       tags:
         - Commerce
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: string
       x-unstable: true
   /payment-providers/wechat/callback:
     post:
@@ -4190,6 +4190,11 @@ paths:
       description: |-
         WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
         payment fact, and fulfills the order.
+
+        The request body is the provider-signed WeChat Pay v3 notification: a JSON
+        envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
+        verifies the RSA signature over the raw bytes, so the body is intentionally
+        not modeled with a schema and must be forwarded byte-for-byte.
       responses:
         '204':
           description: |-
@@ -4207,12 +4212,6 @@ paths:
           $ref: '#/components/responses/Internal'
       tags:
         - Commerce
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: string
       x-unstable: true
   /payment-providers/wechat/refund-callback:
     post:
@@ -4221,6 +4220,11 @@ paths:
       description: |-
         WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
         then applies the authoritative refund fact.
+
+        The request body is the provider-signed WeChat Pay v3 refund notification.
+        OpenMeter verifies the RSA signature over the raw bytes, so the body is
+        intentionally not modeled with a schema and must be forwarded
+        byte-for-byte.
       responses:
         '204':
           description: |-
@@ -4238,12 +4242,6 @@ paths:
           $ref: '#/components/responses/Internal'
       tags:
         - Commerce
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: string
       x-unstable: true
   /recharge-products:
     get:

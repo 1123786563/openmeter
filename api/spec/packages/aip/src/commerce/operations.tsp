@@ -166,12 +166,17 @@ interface WechatCallbackOperations {
   /**
    * WeChat Pay payment callback. OpenMeter verifies the signature, confirms the
    * payment fact, and fulfills the order.
+   *
+   * The request body is the provider-signed WeChat Pay v3 notification: a JSON
+   * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies
+   * the RSA signature over the raw bytes, so the body is intentionally not modeled
+   * with a schema and must be forwarded byte-for-byte.
    */
   @extension(Shared.UnstableExtension, true)
   @post
   @operationId("wechat-payment-callback")
   @summary("WeChat Pay callback")
-  callback(@header contentType: "application/json", @body body: string):
+  callback():
     | WechatCallbackSuccess
     | Common.BadRequest
     | Common.PayloadTooLarge
@@ -186,12 +191,16 @@ interface WechatRefundCallbackOperations {
   /**
    * WeChat Pay refund callback. OpenMeter verifies and decrypts the notification,
    * then applies the authoritative refund fact.
+   *
+   * The request body is the provider-signed WeChat Pay v3 refund notification.
+   * OpenMeter verifies the RSA signature over the raw bytes, so the body is
+   * intentionally not modeled with a schema and must be forwarded byte-for-byte.
    */
   @extension(Shared.UnstableExtension, true)
   @post
   @operationId("wechat-refund-callback")
   @summary("WeChat Pay refund callback")
-  callback(@header contentType: "application/json", @body body: string):
+  callback():
     | WechatCallbackSuccess
     | Common.BadRequest
     | Common.PayloadTooLarge
@@ -206,15 +215,17 @@ interface AlipayCallbackOperations {
   /**
    * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
    * fact, and fulfills the order.
+   *
+   * The request body is the `application/x-www-form-urlencoded` Alipay notification
+   * whose field set varies by trade type. OpenMeter verifies the RSA2 signature over
+   * the canonicalized raw form fields, so the body is intentionally not modeled with
+   * a schema and must be forwarded byte-for-byte.
    */
   @extension(Shared.UnstableExtension, true)
   @post
   @operationId("alipay-payment-callback")
   @summary("Alipay callback")
-  callback(
-    @header contentType: "application/x-www-form-urlencoded",
-    @body body: string,
-  ):
+  callback():
     | AlipayCallbackSuccess
     | Common.BadRequest
     | Common.PayloadTooLarge
