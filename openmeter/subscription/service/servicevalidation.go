@@ -25,7 +25,7 @@ func (s *service) validateCreate(ctx context.Context, cust customer.Customer, sp
 		return fmt.Errorf("spec is invalid: %w", err)
 	}
 
-	if err := validateSubscriptionUsesFiatOnly(spec); err != nil {
+	if err := validateSubscriptionCurrencySupport(spec); err != nil {
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (s *service) validateUpdate(ctx context.Context, currentView subscription.S
 		return err
 	}
 
-	if err := validateSubscriptionUsesFiatOnly(newSpec); err != nil {
+	if err := validateSubscriptionCurrencySupport(newSpec); err != nil {
 		return err
 	}
 
@@ -88,12 +88,14 @@ func (s *service) validateUpdate(ctx context.Context, currentView subscription.S
 	return nil
 }
 
-// validateSubscriptionUsesFiatOnly is a temporary boundary while the product
-// catalog can persist custom currencies but subscriptions cannot yet
-// materialize or bill them. Checking both the subscription default and priced
-// item overrides prevents plan changes and add-on updates from bypassing it.
-func validateSubscriptionUsesFiatOnly(spec subscription.SubscriptionSpec) error {
-	if spec.Currency != "" && spec.Currency.IsCustom() {
+// validateSubscriptionCurrencySupport is the narrowed form of the former
+// fiat-only boundary: the product catalog can persist custom currencies, and
+// subscriptions may now materialize the internal CREDIT currency (credit
+// reservation pricing) while billing support for arbitrary custom currencies
+// is still pending. Checking both the subscription default and priced item
+// overrides prevents plan changes and add-on updates from bypassing it.
+func validateSubscriptionCurrencySupport(spec subscription.SubscriptionSpec) error {
+	if spec.Currency != "" && spec.Currency.IsCustom() && spec.Currency != subscription.CreditCurrencyCode {
 		return models.NewGenericValidationError(fmt.Errorf(
 			"%w: subscription currency is %q",
 			subscription.ErrCustomCurrencySubscriptionsNotSupported,
@@ -114,6 +116,10 @@ func validateSubscriptionUsesFiatOnly(spec subscription.SubscriptionSpec) error 
 
 				meta := item.RateCard.AsMeta()
 				if meta.Price == nil || meta.Currency == nil || !meta.Currency.IsCustom() {
+					continue
+				}
+
+				if meta.Currency.GetCode() == subscription.CreditCurrencyCode {
 					continue
 				}
 

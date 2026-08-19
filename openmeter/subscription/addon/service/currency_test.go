@@ -26,16 +26,21 @@ func TestAddonServiceCreateRejectsCustomEffectiveCurrency(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		defaultCustom  bool
+		currencyKind   string // "fiat" (default), "custom", or "credit"
 		overrideCustom bool
 		expectedError  error
 	}{
 		{
-			name: "fiat add-on remains supported",
+			name:         "fiat add-on remains supported",
+			currencyKind: "fiat",
+		},
+		{
+			name:         "CREDIT add-on default is materializable",
+			currencyKind: "credit",
 		},
 		{
 			name:          "custom add-on default is rejected",
-			defaultCustom: true,
+			currencyKind:  "custom",
 			expectedError: subscription.ErrCustomCurrencySubscriptionsNotSupported,
 		},
 		{
@@ -50,19 +55,24 @@ func TestAddonServiceCreateRejectsCustomEffectiveCurrency(t *testing.T) {
 			withDeps(t, func(t *testing.T, deps subscriptiontestutils.SubscriptionDependencies) {
 				// given:
 				// - a USD plan with a published, compatible add-on
-				// - the add-on is fiat-only or has a valid custom effective currency
+				// - the add-on is fiat-only, CREDIT-denominated, or has an
+				//   unrelated custom effective currency
 				clock.SetTime(now)
 				defer clock.ResetTime()
 
 				customCurrency := createCustomCurrencyWithUSDCostBasis(t, deps, "CREDITS")
+				creditCurrency := createCustomCurrencyWithUSDCostBasis(t, deps, subscription.CreditCurrencyCode)
 				rateCardCurrency := (*currencies.CurrencyReference)(nil)
 				if tt.overrideCustom {
 					rateCardCurrency = lo.ToPtr(currencies.NewCurrencyReference(customCurrency.GetCode()))
 				}
 
 				addonInput := newBillableAddonInput(t, now, rateCardCurrency)
-				if tt.defaultCustom {
+				switch tt.currencyKind {
+				case "custom":
 					addonInput.Currency = currencies.NewCurrencyReference(customCurrency.GetCode())
+				case "credit":
+					addonInput.Currency = currencies.NewCurrencyReference(creditCurrency.GetCode())
 				}
 
 				subscriptionID, add := createSubscriptionForPlanWithAddon(t, deps, now, addonInput)
@@ -77,11 +87,12 @@ func TestAddonServiceCreateRejectsCustomEffectiveCurrency(t *testing.T) {
 
 				// when:
 				// - the add-on is attached to the subscription
+
 				created, err := deps.SubscriptionAddonService.Create(t.Context(), subscriptiontestutils.ExampleNamespace, input)
 
 				// then:
-				// - fiat pricing remains supported
-				// - custom effective currencies fail before an attachment is persisted
+				// - fiat and CREDIT pricing are supported
+				// - unrelated custom effective currencies fail before an attachment is persisted
 				if tt.expectedError == nil {
 					require.NoError(t, err)
 					require.NotNil(t, created)

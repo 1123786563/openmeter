@@ -82,15 +82,17 @@ func NewService(
 	}, nil
 }
 
-// validateAddonUsesFiatOnly enforces the temporary subscription boundary on
-// priced add-on rate cards. The effective currency includes the add-on default,
-// which is otherwise lost when an inherited rate card is materialized.
-func validateAddonUsesFiatOnly(add addon.Addon) error {
+// validateAddonCurrencySupport enforces the narrowed subscription currency
+// boundary on priced add-on rate cards: the internal CREDIT currency (credit
+// reservation pricing) may be materialized, other custom currencies are still
+// rejected. The effective currency includes the add-on default, which is
+// otherwise lost when an inherited rate card is materialized.
+func validateAddonCurrencySupport(add addon.Addon) error {
 	productCatalogAddon := add.AsProductCatalogAddon()
 
 	for _, rateCard := range productCatalogAddon.RateCards.Billables() {
 		effectiveCurrency := rateCard.AsMeta().EffectiveCurrency(productCatalogAddon.Currency)
-		if effectiveCurrency.IsCustom() {
+		if effectiveCurrency.IsCustom() && effectiveCurrency.GetCode() != subscription.CreditCurrencyCode {
 			return models.NewGenericValidationError(fmt.Errorf(
 				"%w: add-on rate card %q uses %q",
 				subscription.ErrCustomCurrencySubscriptionsNotSupported,
@@ -123,7 +125,7 @@ func (s *service) Create(ctx context.Context, ns string, input subscriptionaddon
 		return nil, fmt.Errorf("inconsitency error: nil add-on received")
 	}
 
-	if err := validateAddonUsesFiatOnly(*add); err != nil {
+	if err := validateAddonCurrencySupport(*add); err != nil {
 		return nil, err
 	}
 
@@ -273,7 +275,7 @@ func (s *service) ChangeQuantity(ctx context.Context, id models.NamespacedID, in
 		return nil, fmt.Errorf("inconsitency error: nil add-on received")
 	}
 
-	if err := validateAddonUsesFiatOnly(*add); err != nil {
+	if err := validateAddonCurrencySupport(*add); err != nil {
 		return nil, err
 	}
 

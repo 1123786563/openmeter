@@ -12,9 +12,10 @@ import (
 	"github.com/openmeterio/openmeter/pkg/currencyx"
 )
 
-func TestValidateSubscriptionUsesFiatOnly(t *testing.T) {
+func TestValidateSubscriptionCurrencySupport(t *testing.T) {
 	customCurrency := currencyx.Code("CREDITS")
 	customCurrencyReference := currencies.NewCurrencyReference(customCurrency)
+	creditCurrencyReference := currencies.NewCurrencyReference(subscription.CreditCurrencyCode)
 
 	newSpec := func(subscriptionCurrency currencyx.Code, rateCardCurrency *currencies.CurrencyReference) subscription.SubscriptionSpec {
 		rateCard := &productcatalog.FlatFeeRateCard{
@@ -61,8 +62,12 @@ func TestValidateSubscriptionUsesFiatOnly(t *testing.T) {
 			spec: newSpec(currencyx.Code("USD"), nil),
 		},
 		{
-			name:     "custom subscription currency",
-			spec:     newSpec(customCurrency, nil),
+			name: "fiat subscription with CREDIT rate card currency",
+			spec: newSpec(currencyx.Code("USD"), &creditCurrencyReference),
+		},
+		{
+			name: "custom subscription currency",
+			spec: newSpec(customCurrency, nil),
 			expected: subscription.ErrCustomCurrencySubscriptionsNotSupported,
 		},
 		{
@@ -75,12 +80,14 @@ func TestValidateSubscriptionUsesFiatOnly(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// given:
-			// - a subscription spec using only fiat or introducing a custom currency
+			// - a subscription spec using fiat, the internal CREDIT currency, or
+			//   an unrelated custom currency
 			// when:
-			// - the temporary subscription boundary is validated
+			// - the subscription currency boundary is validated
 			// then:
-			// - custom currencies are rejected before persistence or billing sync
-			err := validateSubscriptionUsesFiatOnly(tt.spec)
+			// - CREDIT (credit reservation pricing currency) is materializable,
+			//   other custom currencies are rejected before persistence or billing sync
+			err := validateSubscriptionCurrencySupport(tt.spec)
 			if tt.expected == nil {
 				require.NoError(t, err)
 				return
