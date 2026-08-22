@@ -1,0 +1,617 @@
+// Package wechat implements the WeChat Pay API v3 Native payment adapter.
+package wechat
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
+)
+
+const (
+	SecretKeyMerchantPrivateKey = "wechat_merchant_private_key"
+	SecretKeyAPIv3              = "wechat_api_v3_key"
+	secretKeyPlatformPublicKey  = "wechat_platform_public_key"
+)
+
+// PlatformPublicKeySecret returns the serial-specific logical key used for
+// WeChat platform certificate rotation.
+func PlatformPublicKeySecret(serial string) string {
+	return secretKeyPlatformPublicKey + "/" + strings.TrimSpace(serial)
+}
+
+// Config wires the production dependencies and non-secret WeChat identities.
+type Config struct {
+	Secrets                  payment.SecretProvider
+	Client                   *http.Client
+	BaseURL                  string
+	AppID                    string
+	MerchantID               string
+	MerchantSerial           string
+	PlatformPublicKeySerials []string
+	NotifyURL                string
+	RefundNotifyURL          string
+	Now                      func() time.Time
+	CallbackMaxAge           time.Duration
+	MaxResponseBytes         int64
+	Logger                   *slog.Logger
+}
+
+// Adapter implements the WeChat Pay API v3 Native workflow.
+type Adapter struct {
+	secrets          payment.SecretProvider
+	httpClient       *http.Client
+	baseURL          string
+	appID            string
+	merchantID       string
+	merchantSerial   string
+	notifyURL        string
+	refundNotifyURL  string
+	now              func() time.Time
+	callbackMaxAge   time.Duration
+	maxResponseBytes int64
+}
+
+// New creates a production WeChat Pay adapter. Callers own HTTP timeout and
+// transport configuration through the injected client.
+func New(cfg Config) (*Adapter, error) {
+	if cfg.Secrets == nil {
+		return nil, errors.New("wechat adapter: secrets provider is required")
+	}
+	if cfg.Client == nil {
+		return nil, errors.New("wechat adapter: HTTP client is required")
+	}
+	if cfg.Client.Timeout <= 0 {
+		return nil, errors.New("wechat adapter: HTTP client total timeout must be positive")
+	}
+	parsedBaseURL, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
+	if err != nil || parsedBaseURL.Scheme == "" || parsedBaseURL.Host == "" {
+		return nil, errors.New("wechat adapter: base URL must be absolute")
+	}
+	if strings.TrimSpace(cfg.AppID) == "" {
+		return nil, errors.New("wechat adapter: application ID is required")
+	}
+	if strings.TrimSpace(cfg.MerchantID) == "" {
+		return nil, errors.New("wechat adapter: merchant ID is required")
+	}
+	if strings.TrimSpace(cfg.MerchantSerial) == "" {
+		return nil, errors.New("wechat adapter: merchant serial is required")
+	}
+	if strings.TrimSpace(cfg.NotifyURL) == "" {
+		return nil, errors.New("wechat adapter: notify URL is required")
+	}
+	if strings.TrimSpace(cfg.RefundNotifyURL) == "" {
+		return nil, errors.New("wechat adapter: refund notify URL is required")
+	}
+	if cfg.Now == nil {
+		return nil, errors.New("wechat adapter: clock is required")
+	}
+	if cfg.CallbackMaxAge <= 0 {
+		return nil, errors.New("wechat adapter: callback max age must be positive")
+	}
+	if cfg.MaxResponseBytes <= 0 {
+		return nil, errors.New("wechat adapter: max response bytes must be positive")
+	}
+	if cfg.Logger == nil {
+		return nil, errors.New("wechat adapter: logger is required")
+	}
+	if err := validateConfiguredKeyMaterial(cfg.Secrets, cfg.MerchantSerial, cfg.PlatformPublicKeySerials); err != nil {
+		return nil, err
+	}
+
+	return &Adapter{
+		secrets:          cfg.Secrets,
+		httpClient:       cfg.Client,
+		baseURL:          strings.TrimRight(parsedBaseURL.String(), "/"),
+		appID:            strings.TrimSpace(cfg.AppID),
+		merchantID:       strings.TrimSpace(cfg.MerchantID),
+		merchantSerial:   strings.TrimSpace(cfg.MerchantSerial),
+		notifyURL:        strings.TrimSpace(cfg.NotifyURL),
+		refundNotifyURL:  strings.TrimSpace(cfg.RefundNotifyURL),
+		now:              cfg.Now,
+		callbackMaxAge:   cfg.CallbackMaxAge,
+		maxResponseBytes: cfg.MaxResponseBytes,
+	}, nil
+}
+
+func validateConfiguredKeyMaterial(secrets payment.SecretProvider, merchantSerial string, platformSerials []string) error {
+	ctx := context.Background()
+	privateKeyPEM, err := secrets.Get(ctx, SecretKeyMerchantPrivateKey)
+	if err != nil {
+		return errors.New("wechat adapter: merchant private key is unavailable")
+	}
+	privateKey, err := parseRSAPrivateKey([]byte(privateKeyPEM))
+	if err != nil || privateKey.Validate() != nil {
+		return errors.New("wechat adapter: merchant private key is invalid")
+	}
+
+	apiV3Key, err := secrets.Get(ctx, SecretKeyAPIv3)
+	if err != nil {
+		return errors.New("wechat adapter: API v3 key is unavailable")
+	}
+	if len([]byte(strings.TrimSpace(apiV3Key))) != 32 {
+		return errors.New("wechat adapter: API v3 key must contain exactly 32 bytes")
+	}
+
+	if len(platformSerials) == 0 {
+		platformSerials = []string{merchantSerial}
+	}
+	seen := make(map[string]struct{}, len(platformSerials))
+	for _, configuredSerial := range platformSerials {
+		serial := strings.TrimSpace(configuredSerial)
+		if serial == "" {
+			return errors.New("wechat adapter: platform public key serial is required")
+		}
+		if _, ok := seen[serial]; ok {
+			continue
+		}
+		seen[serial] = struct{}{}
+		publicKeyPEM, err := secrets.Get(ctx, PlatformPublicKeySecret(serial))
+		if err != nil {
+			return fmt.Errorf("wechat adapter: platform public key for serial %q is unavailable", serial)
+		}
+		if _, err := parseRSAPublicKey([]byte(publicKeyPEM)); err != nil {
+			return fmt.Errorf("wechat adapter: platform public key for serial %q is invalid", serial)
+		}
+	}
+	return nil
+}
+
+// Name returns the provider identifier.
+func (a *Adapter) Name() payment.Provider { return payment.ProviderWeChat }
+
+// Identity returns the non-secret merchant and application identities used to
+// bind later provider facts to the payment attempt.
+func (a *Adapter) Identity(context.Context) (payment.ProviderIdentity, error) {
+	return payment.ProviderIdentity{MerchantID: a.merchantID, ApplicationID: a.appID}, nil
+}
+
+// CreateQRCode creates a Native payment and returns WeChat's code_url.
+func (a *Adapter) CreateQRCode(ctx context.Context, input payment.CheckoutInput) (payment.CheckoutFact, error) {
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if strings.TrimSpace(input.OrderPublicID) == "" || input.AmountMinor <= 0 || currency != "CNY" || strings.TrimSpace(input.Description) == "" {
+		return payment.CheckoutFact{}, fmt.Errorf("%w: invalid Native payment input", payment.ErrPermanentProviderProtocol)
+	}
+	request := nativeCreateRequest{
+		AppID:       a.appID,
+		MchID:       a.merchantID,
+		Description: input.Description,
+		OutTradeNo:  input.OrderPublicID,
+		NotifyURL:   a.notifyURL,
+		Amount: amount{
+			Total:    input.AmountMinor,
+			Currency: currency,
+		},
+	}
+	var response nativeCreateResponse
+	if _, err := a.doJSON(ctx, http.MethodPost, "/v3/pay/transactions/native", nil, request, &response); err != nil {
+		return payment.CheckoutFact{}, err
+	}
+	if strings.TrimSpace(response.CodeURL) == "" {
+		return payment.CheckoutFact{}, fmt.Errorf("%w: Native response has no code_url", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.CheckoutFact{
+		Provider:        payment.ProviderWeChat,
+		ProviderOrderID: input.OrderPublicID,
+		QRCodeURL:       response.CodeURL,
+	}, nil
+}
+
+// QueryPayment queries a transaction by out_trade_no. Only SUCCESS is mapped
+// to a successful fact.
+func (a *Adapter) QueryPayment(ctx context.Context, providerOrderID string) (payment.PaymentFact, error) {
+	providerOrderID = strings.TrimSpace(providerOrderID)
+	if providerOrderID == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: provider order ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	path := "/v3/pay/transactions/out-trade-no/" + url.PathEscape(providerOrderID)
+	query := url.Values{"mchid": []string{a.merchantID}}
+	var response transaction
+	rawBody, err := a.doJSON(ctx, http.MethodGet, path, query, nil, &response)
+	if err != nil {
+		return payment.PaymentFact{}, err
+	}
+	if err := a.validateTransaction(response); err != nil {
+		return payment.PaymentFact{}, err
+	}
+	if response.OutTradeNo != providerOrderID {
+		return payment.PaymentFact{}, fmt.Errorf("%w: transaction out_trade_no mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	factTime, err := transactionFactTime(response)
+	if err != nil {
+		return payment.PaymentFact{}, err
+	}
+	payload, err := payment.ExtractSignedPayload(rawBody)
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid transaction response", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.PaymentFact{
+		Provider:          payment.ProviderWeChat,
+		ProviderOrderID:   response.OutTradeNo,
+		ProviderPaymentID: response.TransactionID,
+		MerchantID:        response.MchID,
+		ApplicationID:     response.AppID,
+		AmountMinor:       response.Amount.Total,
+		Currency:          response.Amount.Currency,
+		Success:           response.TradeState == "SUCCESS",
+		Terminal:          terminalTradeState(response.TradeState),
+		RawHash:           hashBody(rawBody),
+		Timestamp:         factTime,
+		SignedPayload:     payload,
+	}, nil
+}
+
+// VerifyCallback verifies the raw notification, checks freshness, decrypts its
+// resource, and validates the configured merchant and application identities.
+func (a *Adapter) VerifyCallback(ctx context.Context, headers http.Header, body []byte) (payment.PaymentFact, error) {
+	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
+		return payment.PaymentFact{}, err
+	}
+	if _, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp")); err != nil {
+		return payment.PaymentFact{}, err
+	}
+
+	var envelope notification
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid notification JSON", payment.ErrPermanentProviderProtocol)
+	}
+	if strings.TrimSpace(envelope.ID) == "" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: notification ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	if envelope.EventType != "TRANSACTION.SUCCESS" || envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "transaction" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: notification context does not describe a transaction success", payment.ErrPermanentProviderProtocol)
+	}
+	eventTime, err := requiredProviderTime(envelope.CreateTime, "notification create_time")
+	if err != nil {
+		return payment.PaymentFact{}, err
+	}
+	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
+	if err != nil {
+		return payment.PaymentFact{}, err
+	}
+	var resource transaction
+	if err := json.Unmarshal(plaintext, &resource); err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid decrypted transaction", payment.ErrPermanentProviderProtocol)
+	}
+	if err := a.validateTransaction(resource); err != nil {
+		return payment.PaymentFact{}, err
+	}
+	if resource.TradeState != "SUCCESS" {
+		return payment.PaymentFact{}, fmt.Errorf("%w: transaction success notification has non-success state", payment.ErrPermanentProviderProtocol)
+	}
+	payload, err := payment.ExtractSignedPayload(plaintext)
+	if err != nil {
+		return payment.PaymentFact{}, fmt.Errorf("%w: invalid decrypted transaction", payment.ErrPermanentProviderProtocol)
+	}
+	payload["notification_id"] = envelope.ID
+	payload["event_type"] = envelope.EventType
+	payload["create_time"] = envelope.CreateTime
+
+	return payment.PaymentFact{
+		Provider:          payment.ProviderWeChat,
+		ProviderOrderID:   resource.OutTradeNo,
+		ProviderPaymentID: resource.TransactionID,
+		ProviderEventID:   envelope.ID,
+		MerchantID:        resource.MchID,
+		ApplicationID:     resource.AppID,
+		AmountMinor:       resource.Amount.Total,
+		Currency:          resource.Amount.Currency,
+		Success:           resource.TradeState == "SUCCESS",
+		Terminal:          terminalTradeState(resource.TradeState),
+		RawHash:           hashBody(body),
+		Timestamp:         eventTime,
+		SignedPayload:     payload,
+	}, nil
+}
+
+// Refund submits an original-route refund. out_refund_no is the caller's
+// idempotency key and remains the stable identifier used by QueryRefund.
+func (a *Adapter) Refund(ctx context.Context, input payment.RefundInput) (payment.RefundSubmission, error) {
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	orderID := strings.TrimSpace(input.OrderID)
+	outTradeNo := strings.TrimSpace(input.ProviderOrderID)
+	outRefundNo := strings.TrimSpace(input.IdempotencyKey)
+	if orderID == "" || outTradeNo == "" || outRefundNo == "" || input.AmountMinor <= 0 || input.TotalAmountMinor <= 0 || input.AmountMinor > input.TotalAmountMinor || currency != "CNY" {
+		return payment.RefundSubmission{}, fmt.Errorf("%w: invalid refund input", payment.ErrPermanentProviderProtocol)
+	}
+	request := refundRequest{
+		OutTradeNo:  outTradeNo,
+		OutRefundNo: outRefundNo,
+		Reason:      input.Reason,
+		NotifyURL:   a.refundNotifyURL,
+		Amount: refundAmount{
+			Refund:   input.AmountMinor,
+			Total:    input.TotalAmountMinor,
+			Currency: currency,
+		},
+	}
+	var response refund
+	if _, err := a.doJSON(ctx, http.MethodPost, "/v3/refund/domestic/refunds", nil, request, &response); err != nil {
+		return payment.RefundSubmission{}, err
+	}
+	if err := validateRefund(response, outRefundNo, outTradeNo); err != nil {
+		return payment.RefundSubmission{}, err
+	}
+	if response.Amount.Refund != input.AmountMinor || response.Amount.Total != input.TotalAmountMinor || response.Amount.Currency != currency {
+		return payment.RefundSubmission{}, fmt.Errorf("%w: refund response does not match request", payment.ErrPermanentProviderProtocol)
+	}
+	return payment.RefundSubmission{
+		Provider:         payment.ProviderWeChat,
+		ProviderRefundID: response.OutRefundNo,
+		Status:           strings.ToLower(response.Status),
+	}, nil
+}
+
+// QueryRefund queries a refund by out_refund_no and binds the response to the
+// persisted provider order, amount, and currency. PROCESSING remains a
+// non-terminal fact; CLOSED and ABNORMAL are definitive failures.
+func (a *Adapter) QueryRefund(ctx context.Context, input payment.RefundQueryInput) (payment.RefundFact, error) {
+	providerRefundID := strings.TrimSpace(input.ProviderRefundID)
+	providerOrderID := strings.TrimSpace(input.ProviderOrderID)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if providerRefundID == "" || providerOrderID == "" || input.AmountMinor <= 0 || currency != "CNY" {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund query input", payment.ErrPermanentProviderProtocol)
+	}
+	path := "/v3/refund/domestic/refunds/" + url.PathEscape(providerRefundID)
+	var response refund
+	rawBody, err := a.doJSON(ctx, http.MethodGet, path, nil, nil, &response)
+	if err != nil {
+		return payment.RefundFact{}, err
+	}
+	if err := validateRefund(response, providerRefundID, providerOrderID); err != nil {
+		return payment.RefundFact{}, err
+	}
+	if response.Amount.Refund != input.AmountMinor || response.Amount.Currency != currency {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund query response does not match request", payment.ErrPermanentProviderProtocol)
+	}
+	payload, err := payment.ExtractSignedPayload(rawBody)
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund response", payment.ErrPermanentProviderProtocol)
+	}
+	rawHash := ""
+	if response.Status == "SUCCESS" || response.Status == "CLOSED" || response.Status == "ABNORMAL" {
+		rawHash = hashBody(rawBody)
+	}
+	factTime, err := refundFactTime(response)
+	if err != nil {
+		return payment.RefundFact{}, err
+	}
+	return payment.RefundFact{
+		Provider:          payment.ProviderWeChat,
+		ProviderRefundID:  response.OutRefundNo,
+		ProviderOrderID:   response.OutTradeNo,
+		ProviderPaymentID: response.TransactionID,
+		MerchantID:        a.merchantID,
+		AmountMinor:       response.Amount.Refund,
+		TotalAmountMinor:  response.Amount.Total,
+		Currency:          response.Amount.Currency,
+		Status:            response.Status,
+		Success:           response.Status == "SUCCESS",
+		Terminal:          terminalRefundStatus(response.Status),
+		RawHash:           rawHash,
+		Timestamp:         factTime,
+		SignedPayload:     payload,
+	}, nil
+}
+
+// VerifyRefundCallback applies the same v3 signature, freshness, and AES-GCM
+// checks to refund notifications.
+func (a *Adapter) VerifyRefundCallback(ctx context.Context, headers http.Header, body []byte) (payment.RefundFact, error) {
+	if err := a.verifyHTTPMessage(ctx, headers, body); err != nil {
+		return payment.RefundFact{}, err
+	}
+	if _, err := a.validateSignatureTime(headers.Get("Wechatpay-Timestamp")); err != nil {
+		return payment.RefundFact{}, err
+	}
+	var envelope notification
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid refund notification", payment.ErrPermanentProviderProtocol)
+	}
+	if strings.TrimSpace(envelope.ID) == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund notification ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	if envelope.ResourceType != "encrypt-resource" || envelope.Resource.OriginalType != "refund" {
+		return payment.RefundFact{}, fmt.Errorf("%w: notification context does not describe a refund", payment.ErrPermanentProviderProtocol)
+	}
+	eventTime, err := requiredProviderTime(envelope.CreateTime, "refund notification create_time")
+	if err != nil {
+		return payment.RefundFact{}, err
+	}
+	plaintext, err := a.decryptNotificationResource(ctx, envelope.Resource)
+	if err != nil {
+		return payment.RefundFact{}, err
+	}
+	var notificationResource refundNotificationResource
+	if err := json.Unmarshal(plaintext, &notificationResource); err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid decrypted refund", payment.ErrPermanentProviderProtocol)
+	}
+	if notificationResource.MchID != a.merchantID {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund merchant ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if strings.TrimSpace(notificationResource.TransactionID) == "" {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund transaction ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	resource := refund{
+		RefundID:      notificationResource.RefundID,
+		OutRefundNo:   notificationResource.OutRefundNo,
+		OutTradeNo:    notificationResource.OutTradeNo,
+		TransactionID: notificationResource.TransactionID,
+		Status:        notificationResource.RefundStatus,
+		SuccessTime:   notificationResource.SuccessTime,
+		Amount: refundAmount{
+			Refund:   notificationResource.Amount.Refund,
+			Total:    notificationResource.Amount.Total,
+			Currency: "CNY",
+		},
+	}
+	if err := validateRefund(resource, "", ""); err != nil {
+		return payment.RefundFact{}, err
+	}
+	if resource.Status == "PROCESSING" || envelope.EventType != "REFUND."+resource.Status {
+		return payment.RefundFact{}, fmt.Errorf("%w: refund notification event type does not match status", payment.ErrPermanentProviderProtocol)
+	}
+	payload, err := payment.ExtractSignedPayload(plaintext)
+	if err != nil {
+		return payment.RefundFact{}, fmt.Errorf("%w: invalid decrypted refund", payment.ErrPermanentProviderProtocol)
+	}
+	payload["notification_id"] = envelope.ID
+	payload["event_type"] = envelope.EventType
+	payload["create_time"] = envelope.CreateTime
+	rawHash := ""
+	if resource.Status == "SUCCESS" || resource.Status == "CLOSED" || resource.Status == "ABNORMAL" {
+		rawHash = hashBody(body)
+	}
+	return payment.RefundFact{
+		Provider:          payment.ProviderWeChat,
+		ProviderRefundID:  resource.OutRefundNo,
+		ProviderOrderID:   resource.OutTradeNo,
+		ProviderPaymentID: resource.TransactionID,
+		MerchantID:        notificationResource.MchID,
+		AmountMinor:       resource.Amount.Refund,
+		TotalAmountMinor:  resource.Amount.Total,
+		Currency:          resource.Amount.Currency,
+		Status:            resource.Status,
+		Success:           resource.Status == "SUCCESS",
+		Terminal:          terminalRefundStatus(resource.Status),
+		RawHash:           rawHash,
+		Timestamp:         eventTime,
+		SignedPayload:     payload,
+	}, nil
+}
+
+func (a *Adapter) validateTransaction(value transaction) error {
+	if value.AppID != a.appID {
+		return fmt.Errorf("%w: transaction application ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if value.MchID != a.merchantID {
+		return fmt.Errorf("%w: transaction merchant ID mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if value.OutTradeNo == "" || value.Amount.Total <= 0 {
+		return fmt.Errorf("%w: transaction order or amount is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if !validTradeState(value.TradeState) {
+		return fmt.Errorf("%w: transaction trade state is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if value.TradeState == "SUCCESS" && value.TransactionID == "" {
+		return fmt.Errorf("%w: successful transaction ID is required", payment.ErrPermanentProviderProtocol)
+	}
+	if value.TradeState == "SUCCESS" {
+		if _, err := requiredProviderTime(value.SuccessTime, "transaction success_time"); err != nil {
+			return err
+		}
+	}
+	if value.Amount.Currency != "CNY" {
+		return fmt.Errorf("%w: transaction currency must be CNY", payment.ErrPermanentProviderProtocol)
+	}
+	return nil
+}
+
+func validTradeState(state string) bool {
+	switch state {
+	case "SUCCESS", "NOTPAY", "USERPAYING", "CLOSED", "PAYERROR":
+		return true
+	default:
+		return false
+	}
+}
+
+func terminalTradeState(state string) bool {
+	return state == "SUCCESS" || state == "CLOSED" || state == "PAYERROR"
+}
+
+func terminalRefundStatus(status string) bool {
+	return status == "SUCCESS" || status == "CLOSED" || status == "ABNORMAL"
+}
+
+func validateRefund(value refund, expectedOutRefundNo, expectedOutTradeNo string) error {
+	if value.RefundID == "" || value.OutRefundNo == "" || value.OutTradeNo == "" || value.Status == "" {
+		return fmt.Errorf("%w: incomplete refund provider identity", payment.ErrPermanentProviderProtocol)
+	}
+	if expectedOutRefundNo != "" && value.OutRefundNo != expectedOutRefundNo {
+		return fmt.Errorf("%w: refund out_refund_no mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if expectedOutTradeNo != "" && value.OutTradeNo != expectedOutTradeNo {
+		return fmt.Errorf("%w: refund out_trade_no mismatch", payment.ErrPermanentProviderProtocol)
+	}
+	if value.Amount.Total <= 0 || value.Amount.Refund <= 0 || value.Amount.Refund > value.Amount.Total {
+		return fmt.Errorf("%w: invalid refund amount", payment.ErrPermanentProviderProtocol)
+	}
+	if value.Amount.Currency != "CNY" {
+		return fmt.Errorf("%w: refund currency must be CNY", payment.ErrPermanentProviderProtocol)
+	}
+	switch value.Status {
+	case "SUCCESS", "PROCESSING", "CLOSED", "ABNORMAL":
+	default:
+		return fmt.Errorf("%w: refund status is invalid", payment.ErrPermanentProviderProtocol)
+	}
+	if value.Status == "SUCCESS" {
+		if _, err := requiredProviderTime(value.SuccessTime, "refund success_time"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *Adapter) validateSignatureTime(timestamp string) (time.Time, error) {
+	seconds, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("%w: invalid Wechatpay timestamp", payment.ErrInvalidSignature)
+	}
+	signedTime := time.Unix(seconds, 0)
+	now := a.now()
+	if signedTime.Before(now.Add(-a.callbackMaxAge)) || signedTime.After(now.Add(a.callbackMaxAge)) {
+		return time.Time{}, fmt.Errorf("%w: Wechatpay timestamp is outside the accepted window", payment.ErrInvalidSignature)
+	}
+	return signedTime, nil
+}
+
+func (a *Adapter) decryptNotificationResource(ctx context.Context, resource encryptedResource) ([]byte, error) {
+	apiKey, err := a.secrets.Get(ctx, SecretKeyAPIv3)
+	if err != nil {
+		return nil, fmt.Errorf("wechat: get API v3 key: %w", err)
+	}
+	plaintext, err := decryptResource(strings.TrimSpace(apiKey), resource)
+	if err != nil {
+		return nil, fmt.Errorf("%w: cannot decrypt notification resource", payment.ErrPermanentProviderProtocol)
+	}
+	return plaintext, nil
+}
+
+func hashBody(body []byte) string {
+	digest := sha256.Sum256(body)
+	return hex.EncodeToString(digest[:])
+}
+
+func requiredProviderTime(value, field string) (time.Time, error) {
+	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("%w: invalid %s", payment.ErrPermanentProviderProtocol, field)
+	}
+	return parsed, nil
+}
+
+func transactionFactTime(value transaction) (time.Time, error) {
+	if value.TradeState != "SUCCESS" {
+		return time.Time{}, nil
+	}
+	return requiredProviderTime(value.SuccessTime, "transaction success_time")
+}
+
+func refundFactTime(value refund) (time.Time, error) {
+	if value.Status != "SUCCESS" {
+		return time.Time{}, nil
+	}
+	return requiredProviderTime(value.SuccessTime, "refund success_time")
+}
+
+var _ payment.ProviderAdapter = (*Adapter)(nil)

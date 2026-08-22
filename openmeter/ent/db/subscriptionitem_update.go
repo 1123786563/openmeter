@@ -23,6 +23,7 @@ import (
 	dbtaxcode "github.com/openmeterio/openmeter/openmeter/ent/db/taxcode"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog/unitconfig"
+	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/datetime"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -295,6 +296,46 @@ func (_u *SubscriptionItemUpdate) SetNillableFeatureKey(v *string) *Subscription
 // ClearFeatureKey clears the value of the "feature_key" field.
 func (_u *SubscriptionItemUpdate) ClearFeatureKey() *SubscriptionItemUpdate {
 	_u.mutation.ClearFeatureKey()
+	return _u
+}
+
+// SetCurrency sets the "currency" field.
+func (_u *SubscriptionItemUpdate) SetCurrency(v currencyx.Code) *SubscriptionItemUpdate {
+	_u.mutation.SetCurrency(v)
+	return _u
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_u *SubscriptionItemUpdate) SetNillableCurrency(v *currencyx.Code) *SubscriptionItemUpdate {
+	if v != nil {
+		_u.SetCurrency(*v)
+	}
+	return _u
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (_u *SubscriptionItemUpdate) ClearCurrency() *SubscriptionItemUpdate {
+	_u.mutation.ClearCurrency()
+	return _u
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (_u *SubscriptionItemUpdate) SetCustomCurrencyID(v string) *SubscriptionItemUpdate {
+	_u.mutation.SetCustomCurrencyID(v)
+	return _u
+}
+
+// SetNillableCustomCurrencyID sets the "custom_currency_id" field if the given value is not nil.
+func (_u *SubscriptionItemUpdate) SetNillableCustomCurrencyID(v *string) *SubscriptionItemUpdate {
+	if v != nil {
+		_u.SetCustomCurrencyID(*v)
+	}
+	return _u
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (_u *SubscriptionItemUpdate) ClearCustomCurrencyID() *SubscriptionItemUpdate {
+	_u.mutation.ClearCustomCurrencyID()
 	return _u
 }
 
@@ -669,6 +710,11 @@ func (_u *SubscriptionItemUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Currency(); ok {
+		if err := subscriptionitem.CurrencyValidator(string(v)); err != nil {
+			return &ValidationError{Name: "currency", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.currency": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.EntitlementTemplate(); ok {
 		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "entitlement_template", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.entitlement_template": %w`, err)}
@@ -784,6 +830,18 @@ func (_u *SubscriptionItemUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if _u.mutation.FeatureKeyCleared() {
 		_spec.ClearField(subscriptionitem.FieldFeatureKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.Currency(); ok {
+		_spec.SetField(subscriptionitem.FieldCurrency, field.TypeString, value)
+	}
+	if _u.mutation.CurrencyCleared() {
+		_spec.ClearField(subscriptionitem.FieldCurrency, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomCurrencyID(); ok {
+		_spec.SetField(subscriptionitem.FieldCustomCurrencyID, field.TypeString, value)
+	}
+	if _u.mutation.CustomCurrencyIDCleared() {
+		_spec.ClearField(subscriptionitem.FieldCustomCurrencyID, field.TypeString)
 	}
 	if value, ok := _u.mutation.EntitlementTemplate(); ok {
 		vv, err := subscriptionitem.ValueScanner.EntitlementTemplate.Value(value)
@@ -1447,6 +1505,46 @@ func (_u *SubscriptionItemUpdateOne) ClearFeatureKey() *SubscriptionItemUpdateOn
 	return _u
 }
 
+// SetCurrency sets the "currency" field.
+func (_u *SubscriptionItemUpdateOne) SetCurrency(v currencyx.Code) *SubscriptionItemUpdateOne {
+	_u.mutation.SetCurrency(v)
+	return _u
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_u *SubscriptionItemUpdateOne) SetNillableCurrency(v *currencyx.Code) *SubscriptionItemUpdateOne {
+	if v != nil {
+		_u.SetCurrency(*v)
+	}
+	return _u
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (_u *SubscriptionItemUpdateOne) ClearCurrency() *SubscriptionItemUpdateOne {
+	_u.mutation.ClearCurrency()
+	return _u
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (_u *SubscriptionItemUpdateOne) SetCustomCurrencyID(v string) *SubscriptionItemUpdateOne {
+	_u.mutation.SetCustomCurrencyID(v)
+	return _u
+}
+
+// SetNillableCustomCurrencyID sets the "custom_currency_id" field if the given value is not nil.
+func (_u *SubscriptionItemUpdateOne) SetNillableCustomCurrencyID(v *string) *SubscriptionItemUpdateOne {
+	if v != nil {
+		_u.SetCustomCurrencyID(*v)
+	}
+	return _u
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (_u *SubscriptionItemUpdateOne) ClearCustomCurrencyID() *SubscriptionItemUpdateOne {
+	_u.mutation.ClearCustomCurrencyID()
+	return _u
+}
+
 // SetEntitlementTemplate sets the "entitlement_template" field.
 func (_u *SubscriptionItemUpdateOne) SetEntitlementTemplate(v *productcatalog.EntitlementTemplate) *SubscriptionItemUpdateOne {
 	_u.mutation.SetEntitlementTemplate(v)
@@ -1831,6 +1929,11 @@ func (_u *SubscriptionItemUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Currency(); ok {
+		if err := subscriptionitem.CurrencyValidator(string(v)); err != nil {
+			return &ValidationError{Name: "currency", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.currency": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.EntitlementTemplate(); ok {
 		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "entitlement_template", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.entitlement_template": %w`, err)}
@@ -1963,6 +2066,18 @@ func (_u *SubscriptionItemUpdateOne) sqlSave(ctx context.Context) (_node *Subscr
 	}
 	if _u.mutation.FeatureKeyCleared() {
 		_spec.ClearField(subscriptionitem.FieldFeatureKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.Currency(); ok {
+		_spec.SetField(subscriptionitem.FieldCurrency, field.TypeString, value)
+	}
+	if _u.mutation.CurrencyCleared() {
+		_spec.ClearField(subscriptionitem.FieldCurrency, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomCurrencyID(); ok {
+		_spec.SetField(subscriptionitem.FieldCustomCurrencyID, field.TypeString, value)
+	}
+	if _u.mutation.CustomCurrencyIDCleared() {
+		_spec.ClearField(subscriptionitem.FieldCustomCurrencyID, field.TypeString)
 	}
 	if value, ok := _u.mutation.EntitlementTemplate(); ok {
 		vv, err := subscriptionitem.ValueScanner.EntitlementTemplate.Value(value)

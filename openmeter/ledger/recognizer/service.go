@@ -9,7 +9,6 @@ import (
 	"github.com/alpacahq/alpacadecimal"
 
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/lineage"
-	"github.com/openmeterio/openmeter/openmeter/billing/charges/meta"
 	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
@@ -103,9 +102,12 @@ func (i RecognizeEarningsInput) Validate() error {
 		errs = append(errs, fmt.Errorf("currency: %w", err))
 	}
 
-	if i.Currency.IsCustom() {
-		errs = append(errs, fmt.Errorf("custom currency: %w", meta.ErrCustomCurrencyNotSupported))
-	}
+	// WeKnora fork: custom (prepaid credit) currencies are recognized as pure
+	// ledger bookkeeping — recognition for them means "no fiat revenue". The
+	// lineage query below is currency-scoped; prepaid grants carry no fiat
+	// lineages, so an empty result is the correct outcome (equivalent to
+	// NoopService). Overage-to-fiat conversion remains rejected in the
+	// charge adapters, where a cost basis would be required.
 
 	return errors.Join(errs...)
 }

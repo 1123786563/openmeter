@@ -182,6 +182,12 @@ func (SubscriptionItem) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		field.String("description").Optional().Nillable(),
 		field.String("feature_key").Optional().Nillable(),
+		// WeKnora fork: persist the plan rate card's currency on the immutable
+		// subscription item snapshot so credit reservation pricing can resolve
+		// the managed CREDIT currency without re-reading the catalog. Nullable
+		// for backward compatibility with pre-existing rows.
+		field.String("currency").GoType(currencyx.Code("")).MinLen(3).MaxLen(24).Optional().Nillable(),
+		field.String("custom_currency_id").Optional().Nillable(),
 		field.String("entitlement_template").
 			GoType(&productcatalog.EntitlementTemplate{}).
 			ValueScanner(EntitlementTemplateValueScanner).

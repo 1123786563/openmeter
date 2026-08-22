@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/ent/db"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 	"github.com/openmeterio/openmeter/openmeter/subscription"
@@ -140,6 +141,14 @@ func MapDBSubscriptionItem(item *db.SubscriptionItem) (subscription.Subscription
 		Key:                 item.Key,
 		// NOTE: resolving feature is done on service level as there is no direct relationship between subscription items and features.
 		FeatureID: nil,
+	}
+	// WeKnora fork: hydrate the persisted currency snapshot (nullable for
+	// legacy rows) so reservation pricing resolves managed CREDIT cards.
+	if item.Currency != nil {
+		rcMeta.Currency = lo.ToPtr(currencies.NewCurrencyReference(*item.Currency))
+		if item.CustomCurrencyID != nil {
+			rcMeta.Currency.CustomCurrencyID = item.CustomCurrencyID
+		}
 	}
 
 	// Map TaxCode if eagerly loaded.

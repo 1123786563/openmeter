@@ -1,0 +1,233 @@
+package charges
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/openmeterio/openmeter/openmeter/billing"
+	"github.com/openmeterio/openmeter/openmeter/billing/charges/meta"
+	"github.com/openmeterio/openmeter/openmeter/customer"
+	"github.com/openmeterio/openmeter/pkg/models"
+	"github.com/openmeterio/openmeter/pkg/pagination"
+	"github.com/openmeterio/openmeter/pkg/sortx"
+)
+
+type Service interface {
+	ChargeService
+
+	// Facade interfaces provide convenience helpers for the API layer.
+	CreditPurchaseFacadeService
+	CustomerChargeAPIService
+}
+
+type ChargeService interface {
+	GetByID(ctx context.Context, input GetByIDInput) (Charge, error)
+	GetByIDs(ctx context.Context, input GetByIDsInput) (Charges, error)
+	Create(ctx context.Context, input CreateInput) (Charges, error)
+	CreatePendingInvoiceLines(ctx context.Context, input CreatePendingInvoiceLinesInput) (*CreatePendingInvoiceLinesResult, error)
+	UpdateSubscriptionItemID(ctx context.Context, charge Charge, newSubscriptionItemID string) (Charge, error)
+
+	AdvanceCharges(ctx context.Context, input AdvanceChargesInput) (Charges, error)
+	ListCustomersToAdvance(ctx context.Context, input ListCustomersToAdvanceInput) (pagination.Result[customer.CustomerID], error)
+	// ApplyPatches currently returns no affected-charge payload. If exact post-apply
+	// results are needed, shrink/extend must first be implemented properly instead of
+	// going through the temporary delete+create remap.
+	ApplyPatches(ctx context.Context, input ApplyPatchesInput) error
+	ListCharges(ctx context.Context, input ListChargesInput) (pagination.Result[Charge], error)
+}
+
+type CreateInput struct {
+	Namespace string
+	Intents   ChargeIntents
+}
+
+type (
+	CreatePendingInvoiceLinesInput  = billing.CreatePendingInvoiceLinesInput
+	CreatePendingInvoiceLinesResult = billing.CreatePendingInvoiceLinesResult
+)
+
+func (i CreateInput) Validate() error {
+	var errs []error
+
+	if i.Namespace == "" {
+		errs = append(errs, fmt.Errorf("namespace is required"))
+	}
+
+	if err := i.Intents.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("intents: %w", err))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+type GetByIDInput struct {
+	ChargeID meta.ChargeID
+	Expands  meta.Expands
+}
+
+func (i GetByIDInput) Validate() error {
+	var errs []error
+
+	if err := i.ChargeID.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("charge ID: %w", err))
+	}
+
+	if err := i.Expands.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("expands: %w", err))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+type GetByIDsInput struct {
+	Namespace string
+	IDs       []string
+	Expands   meta.Expands
+}
+
+func (i GetByIDsInput) Validate() error {
+	var errs []error
+
+	if i.Namespace == "" {
+		errs = append(errs, errors.New("namespace is required"))
+	}
+
+	for _, id := range i.IDs {
+		if id == "" {
+			errs = append(errs, errors.New("id is required"))
+		}
+	}
+
+	if err := i.Expands.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("expands: %w", err))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+type AdvanceChargesInput struct {
+	Customer customer.CustomerID
+}
+
+func (i AdvanceChargesInput) Validate() error {
+	var errs []error
+	if err := i.Customer.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("customer ID: %w", err))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+type ListChargesDeletedAtFilter string
+
+const (
+	ListChargesDeletedAtFilterEffective  ListChargesDeletedAtFilter = "effective"
+	ListChargesDeletedAtFilterBaseIntent ListChargesDeletedAtFilter = "base_intent"
+)
+
+func (f ListChargesDeletedAtFilter) Validate() error {
+	switch f {
+	case "", ListChargesDeletedAtFilterEffective, ListChargesDeletedAtFilterBaseIntent:
+		return nil
+	default:
+		return fmt.Errorf("invalid value: %s", f)
+	}
+}
+
+type ListChargesInput struct {
+	pagination.Page
+
+	Namespace       string
+	CustomerIDs     []string
+	SubscriptionIDs []string
+	ChargeTypes     []meta.ChargeType
+	StatusIn        []meta.ChargeStatus
+	StatusNotIn     []meta.ChargeStatus
+	IncludeDeleted  bool
+	// DeletedAtFilter selects which deleted-at field is used when IncludeDeleted is false.
+	// Empty defaults to effective charge deletion.
+	DeletedAtFilter ListChargesDeletedAtFilter
+
+	// OrderBy is the field to sort by. Supported values: id, created_at,
+	// service_period.from, billing_period.from.
+	// Defaults to created_at when empty.
+	OrderBy string
+	Order   sortx.Order
+
+	Expands meta.Expands
+}
+
+func (i ListChargesInput) Validate() error {
+	var errs []error
+
+	if i.Namespace == "" {
+		errs = append(errs, errors.New("namespace is required"))
+	}
+
+	for _, customerID := range i.CustomerIDs {
+		if customerID == "" {
+			errs = append(errs, errors.New("customer id is required"))
+		}
+	}
+
+	for _, subscriptionID := range i.SubscriptionIDs {
+		if subscriptionID == "" {
+			errs = append(errs, errors.New("subscription id is required"))
+		}
+	}
+
+	for _, chargeType := range i.ChargeTypes {
+		if err := chargeType.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("charge type: %w", err))
+		}
+	}
+
+	for _, status := range i.StatusIn {
+		if err := status.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("status: %w", err))
+		}
+	}
+
+	for _, status := range i.StatusNotIn {
+		if err := status.Validate(); err != nil {
+			errs = append(errs, fmt.Errorf("status: %w", err))
+		}
+	}
+
+	if len(i.StatusIn) > 0 && len(i.StatusNotIn) > 0 {
+		errs = append(errs, errors.New("status_in and status_not_in cannot be set at the same time"))
+	}
+
+	if err := i.DeletedAtFilter.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("deleted at filter: %w", err))
+	}
+
+	if err := i.Expands.Validate(); err != nil {
+		errs = append(errs, fmt.Errorf("expands: %w", err))
+	}
+
+	return models.NewNillableGenericValidationError(errors.Join(errs...))
+}
+
+type ListCustomersToAdvanceInput struct {
+	pagination.Page
+
+	Namespaces      []string
+	AdvanceAfterLTE time.Time
+}
+
+func (i ListCustomersToAdvanceInput) Validate() error {
+	if i.AdvanceAfterLTE.IsZero() {
+		return models.NewGenericValidationError(errors.New("advance_after_lte is required"))
+	}
+
+	if !i.Page.IsZero() {
+		if err := i.Page.Validate(); err != nil {
+			return models.NewGenericValidationError(fmt.Errorf("page: %w", err))
+		}
+	}
+
+	return nil
+}

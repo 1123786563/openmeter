@@ -1,0 +1,302 @@
+// Command alipay-sandbox exercises the production Alipay adapter from
+// openmeter/commerce/payment/alipay against the official Alipay sandbox
+// (face-to-face flow): precreate a QR code, wait for the sandbox wallet to
+// pay, then refund and verify the refund. It is a manual verification tool;
+// see README.md for sandbox console setup.
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/skip2/go-qrcode"
+
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment"
+	"github.com/openmeterio/openmeter/openmeter/commerce/payment/alipay"
+)
+
+const defaultGatewayURL = "https://openapi-sandbox.dl.alipaydev.com/gateway.do"
+
+type sandboxConfig struct {
+	appID           string
+	sellerID        string
+	gatewayURL      string
+	notifyURL       string
+	appPrivateKey   string
+	alipayPublicKey string
+	amountMinor     int64
+	skipRefund      bool
+	existingOrderID string
+}
+
+func loadConfig() (sandboxConfig, error) {
+	cfg := sandboxConfig{
+		appID:           strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_APP_ID")),
+		sellerID:        strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_SELLER_ID")),
+		notifyURL:       strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_NOTIFY_URL")),
+		skipRefund:      strings.EqualFold(strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_SKIP_REFUND")), "true"),
+		existingOrderID: strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_EXISTING_ORDER")),
+	}
+	if cfg.appID == "" {
+		return cfg, errors.New("ALIPAY_SANDBOX_APP_ID is required (sandbox APPID from the Alipay sandbox console)")
+	}
+	if cfg.sellerID == "" {
+		return cfg, errors.New("ALIPAY_SANDBOX_SELLER_ID is required (sandbox seller PID from the Alipay sandbox console)")
+	}
+	if cfg.gatewayURL = strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_GATEWAY")); cfg.gatewayURL == "" {
+		cfg.gatewayURL = defaultGatewayURL
+	}
+	if cfg.notifyURL == "" {
+		// The sandbox cannot reach loopback addresses; a placeholder keeps the
+		// precreate request valid while payment status is confirmed by query.
+		cfg.notifyURL = "https://notify.invalid/openmeter/alipay/callback"
+	}
+
+	var err error
+	if cfg.appPrivateKey, err = readKeyFile("ALIPAY_SANDBOX_APP_PRIVATE_KEY_FILE", "secrets/app_private_key.pem"); err != nil {
+		return cfg, err
+	}
+	if cfg.alipayPublicKey, err = readKeyFile("ALIPAY_SANDBOX_ALIPAY_PUBLIC_KEY_FILE", "secrets/alipay_public_key.pem"); err != nil {
+		return cfg, err
+	}
+
+	cfg.amountMinor = 10 // 0.10 CNY
+	if raw := strings.TrimSpace(os.Getenv("ALIPAY_SANDBOX_AMOUNT_MINOR")); raw != "" {
+		if cfg.amountMinor, err = strconv.ParseInt(raw, 10, 64); err != nil || cfg.amountMinor <= 0 {
+			return cfg, fmt.Errorf("ALIPAY_SANDBOX_AMOUNT_MINOR must be a positive integer of minor units, got %q", raw)
+		}
+	}
+	return cfg, nil
+}
+
+func readKeyFile(envName, defaultPath string) (string, error) {
+	path := strings.TrimSpace(os.Getenv(envName))
+	if path == "" {
+		path = defaultPath
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", envName, err)
+	}
+	if trimmed := strings.TrimSpace(string(content)); trimmed != "" {
+		return trimmed, nil
+	}
+	return "", fmt.Errorf("%s: %s is empty", envName, path)
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, "FAILED:", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("configuration: %w", err)
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}))
+
+	adapter, err := alipay.New(alipay.Config{
+		Secrets: &payment.StaticSecretProvider{Secrets: map[string]string{
+			alipay.SecretKeyAppPrivateKey:   cfg.appPrivateKey,
+			alipay.SecretKeyAlipayPublicKey: cfg.alipayPublicKey,
+		}},
+		Client:           &http.Client{Timeout: 30 * time.Second},
+		GatewayURL:       cfg.gatewayURL,
+		AppID:            cfg.appID,
+		SellerID:         cfg.sellerID,
+		NotifyURL:        cfg.notifyURL,
+		Now:              time.Now,
+		MaxResponseBytes: 1024 * 1024,
+		Logger:           logger,
+	})
+	if err != nil {
+		return fmt.Errorf("adapter construction: %w", err)
+	}
+	fmt.Printf("adapter configured: gateway=%s app=%s seller=%s\n", cfg.gatewayURL, cfg.appID, cfg.sellerID)
+
+	ctx := context.Background()
+	var orderID string
+	if cfg.existingOrderID != "" {
+		// Resume mode: settle an order created by an earlier run (e.g. the
+		// buyer paid after the previous polling window expired). Test orders
+		// are always created with the configured amount by this tool.
+		orderID = cfg.existingOrderID
+		fmt.Printf("\n==> [1/5] resuming existing order %s amount=%.2f CNY (skipping precreate)\n",
+			orderID, float64(cfg.amountMinor)/100)
+	} else {
+		orderID = "OMSBX" + time.Now().Format("20060102150405")
+
+		fmt.Printf("\n==> [1/5] alipay.trade.precreate: order=%s amount=%.2f CNY\n", orderID, float64(cfg.amountMinor)/100)
+		checkout, err := adapter.CreateQRCode(ctx, payment.CheckoutInput{
+			OrderPublicID: orderID,
+			AmountMinor:   cfg.amountMinor,
+			Currency:      "CNY",
+			Description:   "OpenMeter Alipay sandbox verification",
+		})
+		if err != nil {
+			return fmt.Errorf("precreate: %w", err)
+		}
+		fmt.Printf("provider order: %s\nqr_code url: %s\n\n", checkout.ProviderOrderID, checkout.QRCodeURL)
+		if err := renderQRCode(checkout.QRCodeURL); err != nil {
+			fmt.Printf("(QR rendering failed: %v — open the url above manually)\n", err)
+		}
+		fmt.Println("Scan the QR code with the SANDBOX Alipay wallet app (not the production one),")
+		fmt.Println("log in with the sandbox buyer account and complete the payment.")
+	}
+
+	fmt.Println("\n==> [2/5] polling alipay.trade.query until the payment settles (timeout 5m)")
+	paid, err := pollPayment(ctx, adapter, orderID, 5*time.Minute)
+	if err != nil {
+		return err
+	}
+	printPaymentFact(paid)
+
+	if cfg.skipRefund {
+		fmt.Println("\n==> refund skipped (ALIPAY_SANDBOX_SKIP_REFUND=true); done")
+		return nil
+	}
+
+	fmt.Printf("\n==> [3/5] alipay.trade.refund: full refund of %.2f CNY\n", float64(cfg.amountMinor)/100)
+	refundID := "rf-" + orderID
+	submission, err := adapter.Refund(ctx, payment.RefundInput{
+		ProviderOrderID: orderID,
+		AmountMinor:     cfg.amountMinor,
+		Currency:        "CNY",
+		Reason:          "OpenMeter sandbox verification",
+		IdempotencyKey:  refundID,
+	})
+	if err != nil {
+		return fmt.Errorf("refund: %w", err)
+	}
+	fmt.Printf("refund submitted: provider_refund_id=%s status=%s\n", submission.ProviderRefundID, submission.Status)
+
+	fmt.Println("\n==> [4/5] polling alipay.trade.fastpay.refund.query")
+	refund, err := pollRefund(ctx, adapter, orderID, refundID, cfg.amountMinor, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("refund settled: status=%s success=%v amount=%.2f total=%.2f provider_payment_id=%s\n",
+		refund.Status, refund.Success, float64(refund.AmountMinor)/100, float64(refund.TotalAmountMinor)/100, refund.ProviderPaymentID)
+
+	fmt.Println("\n==> [5/5] all steps passed: precreate, signed query, payment, refund, refund query")
+	return nil
+}
+
+// pollPayment queries until the fact is terminal. Before the buyer scans, the
+// sandbox reports ACQ.TRADE_NOT_EXIST for precreated orders; that state is
+// normal and does not fail the run.
+func pollPayment(ctx context.Context, adapter *alipay.Adapter, orderID string, timeout time.Duration) (payment.PaymentFact, error) {
+	deadline := time.Now().Add(timeout)
+	lastReport := time.Time{}
+	for time.Now().Before(deadline) {
+		fact, err := adapter.QueryPayment(ctx, orderID)
+		if err != nil {
+			var providerErr *payment.ProviderError
+			switch {
+			case errors.As(err, &providerErr) && providerErr.SubCode == "ACQ.TRADE_NOT_EXIST":
+				if time.Since(lastReport) > 15*time.Second {
+					fmt.Println("waiting for the buyer to scan the QR code...")
+					lastReport = time.Now()
+				}
+			case errors.Is(err, payment.ErrRetryableProvider):
+				// Transient sandbox gateway slowness; keep polling.
+				fmt.Printf("transient query failure, retrying: %v\n", err)
+			default:
+				return payment.PaymentFact{}, fmt.Errorf("query payment: %w", err)
+			}
+		} else {
+			if fact.Terminal {
+				return fact, nil
+			}
+			fmt.Printf("order state: %s success=%v (still pending)\n", tradeState(fact), fact.Success)
+		}
+		select {
+		case <-ctx.Done():
+			return payment.PaymentFact{}, ctx.Err()
+		case <-time.After(3 * time.Second):
+		}
+	}
+	return payment.PaymentFact{}, fmt.Errorf("payment did not settle within %s", timeout)
+}
+
+func pollRefund(ctx context.Context, adapter *alipay.Adapter, orderID, refundID string, amountMinor int64, timeout time.Duration) (payment.RefundFact, error) {
+	deadline := time.Now().Add(timeout)
+	for {
+		fact, err := adapter.QueryRefund(ctx, payment.RefundQueryInput{
+			ProviderRefundID: refundID,
+			ProviderOrderID:  orderID,
+			AmountMinor:      amountMinor,
+			Currency:         "CNY",
+		})
+		if err != nil {
+			if errors.Is(err, payment.ErrRetryableProvider) {
+				if time.Now().After(deadline) {
+					return payment.RefundFact{}, fmt.Errorf("refund query kept failing within %s: %w", timeout, err)
+				}
+				select {
+				case <-ctx.Done():
+					return payment.RefundFact{}, ctx.Err()
+				case <-time.After(2 * time.Second):
+				}
+				continue
+			}
+			return payment.RefundFact{}, fmt.Errorf("query refund: %w", err)
+		}
+		if fact.Terminal {
+			return fact, nil
+		}
+		if time.Now().After(deadline) {
+			return payment.RefundFact{}, fmt.Errorf("refund did not settle within %s (last status %s)", timeout, fact.Status)
+		}
+		select {
+		case <-ctx.Done():
+			return payment.RefundFact{}, ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+func tradeState(fact payment.PaymentFact) string {
+	if status, ok := fact.SignedPayload["trade_status"].(string); ok && status != "" {
+		return status
+	}
+	if fact.Success {
+		return "SUCCESS"
+	}
+	return "PENDING"
+}
+
+func printPaymentFact(fact payment.PaymentFact) {
+	paidAt := ""
+	if !fact.Timestamp.IsZero() {
+		paidAt = fact.Timestamp.Format(time.RFC3339)
+	}
+	fmt.Printf("payment settled: success=%v amount=%.2f CNY provider_payment_id=%s merchant=%s paid_at=%s\n",
+		fact.Success, float64(fact.AmountMinor)/100, fact.ProviderPaymentID, fact.MerchantID, paidAt)
+	if fact.AmountMinor <= 0 || !fact.Success {
+		fmt.Println("unexpected final payment state, inspect the signed payload below")
+	}
+	fmt.Printf("signed payload: %v\n", fact.SignedPayload)
+}
+
+func renderQRCode(content string) error {
+	image, err := qrcode.New(content, qrcode.Medium)
+	if err != nil {
+		return err
+	}
+	fmt.Println(image.ToSmallString(true))
+	if err := qrcode.WriteFile(content, qrcode.Medium, 480, "secrets/qrcode.png"); err == nil {
+		fmt.Println("also written to secrets/qrcode.png")
+	}
+	return nil
+}

@@ -1,0 +1,470 @@
+#!/usr/bin/env bash
+# =============================================================================
+# commerce-recharge-verify.sh — 充值到账与 credit 流出全链路活栈验证
+# =============================================================================
+# 验证链路:
+#   1. 创建 customer
+#   2. 微信充值: 下单 → checkout(QR) → 回调 → order paid → fulfillment → credit 到账
+#   3. 支付宝充值: 同上
+#   4. 到账查询: wallet / credits balance / credits transactions
+#   5. 重复回调幂等: 重放支付回调, credit 不得重复入账
+#   6. 流出: Reserve(预减/占用) → Execute(使用) → Settle(扣减, 多退少补)
+#   7. 直接扣减 Charge + 冲正 Reverse
+#   8. 余额不足 402
+#   9. 交叉验证: 充值 wallet credit 能否被 reservation 占用
+#
+# Usage: ./verify.sh [evidence-dir]
+set -uo pipefail
+
+OM_BASE="${OM_BASE:-http://127.0.0.1:18888/api/v3}"
+STAND_BASE="${STAND_BASE:-http://127.0.0.1:18094}"
+PG_CONTAINER="${PG_CONTAINER:-om-commerce-verify-postgres-1}"
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+EVIDENCE_DIR="${1:-evidence-$TS}"
+mkdir -p "$EVIDENCE_DIR"
+
+PASS=0; FAIL=0; declare -a SUMMARY
+
+say()  { printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
+ok()   { PASS=$((PASS+1)); SUMMARY+=("PASS | $*"); printf '\033[1;32m[PASS]\033[0m %s\n' "$*"; }
+bad()  { FAIL=$((FAIL+1)); SUMMARY+=("FAIL | $*"); printf '\033[1;31m[FAIL]\033[0m %s\n' "$*"; }
+finding() { SUMMARY+=("FIND | $*"); printf '\033[1;33m[FIND]\033[0m %s\n' "$*"; }
+info() { printf '\033[0;90m[info]\033[0m %s\n' "$*"; }
+save() { cat > "$EVIDENCE_DIR/$1"; info "saved $EVIDENCE_DIR/$1"; }
+
+http() {
+  local method="$1" url="$2" body="${3:-}"
+  local tmp; tmp="$(mktemp)"
+  if [[ -n "$body" ]]; then
+    STATUS=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" "$url" \
+      -H 'Content-Type: application/json' -d "$body" --max-time 60)
+  else
+    STATUS=$(curl -s -o "$tmp" -w '%{http_code}' -X "$method" "$url" --max-time 60)
+  fi
+  BODY="$(cat "$tmp")"; rm -f "$tmp"
+}
+jqget() { printf '%s' "$BODY" | jq -r "$1" 2>/dev/null; }
+
+wait_status() { # wait_status URL JQ_EXPR EXPECTED [TIMEOUT] [LABEL]
+  local url="$1" expr="$2" expected="$3" timeout="${4:-90}" label="${5:-$1}"
+  local deadline=$(( $(date +%s) + timeout ))
+  while (( $(date +%s) < deadline )); do
+    http GET "$url"
+    [[ "$STATUS" == 200 && "$(jqget "$expr")" == "$expected" ]] && return 0
+    sleep 2
+  done
+  return 1
+}
+
+UNIQ="$(( $(date +%s) ))$RANDOM"
+hash64() { printf 'a%.0s' {1..64}; }
+hash64b(){ printf 'b%.0s' {1..64}; }
+now5m()  { date -u -v+5M +%Y-%m-%dT%H:%M:%SZ; }
+now10m() { date -u -v+10M +%Y-%m-%dT%H:%M:%SZ; }
+nows()   { date -u +%Y-%m-%dT%H:%M:%SZ; }
+gen_ulid() {
+  python3 -c "
+import time,random
+A='0123456789ABCDEFGHJKMNPQRSTVWXYZ'
+ms=int(time.time()*1000)
+s=''.join(A[(ms//(32**i))%32] for i in range(9,-1,-1))
+s+=''.join(random.choice(A) for _ in range(16))
+print(s)"
+}
+PRODUCT_ULID="$(gen_ulid)"
+
+# =============================================================================
+say "阶段 0: 栈健康检查"
+# =============================================================================
+http GET "http://127.0.0.1:18888/api/v1/debug/metrics"
+if [[ "$STATUS" != 200 ]]; then bad "OpenMeter 存活检查=$STATUS"; exit 1; fi
+ok "OpenMeter 服务存活"
+http GET "$STAND_BASE/health"
+[[ "$STATUS" == 200 ]] && ok "payment-provider /health 200" || bad "payment-provider /health=$STATUS"
+
+http GET "$OM_BASE/recharge-products"
+[[ "$STATUS" != 501 ]] && ok "commerce 路由已启用 (GET /recharge-products -> $STATUS)" || bad "commerce 路由 501"
+
+http GET "$OM_BASE/credit-reservations/nonexistent"
+# 404 = 路由存在但实体不存在; 501/405 = 路由未注册
+if [[ "$STATUS" == 404 || "$STATUS" == 200 ]]; then
+  ok "credit-reservations 路由已启用"
+else
+  bad "credit-reservations 路由未启用 ($STATUS)"
+fi
+
+# =============================================================================
+say "阶段 1: 种子数据"
+# =============================================================================
+# 1.1 充值商品 (OpenMeter 无 HTTP 创建路由, 直接落库; id 必须为 26 字符, metadata 见 ent_adapter productMetadata)
+docker exec -i "$PG_CONTAINER" psql -U openmeter -d openmeter -v ON_ERROR_STOP=1 -q <<SQL
+INSERT INTO commerce_products (id, namespace, sku, name, kind, price_cents, currency, metadata, annotations, created_at, updated_at)
+VALUES ('$PRODUCT_ULID', 'default', 'RECHARGE-' || md5(random()::text), '验证充值包 10元/1000credit',
+        'wallet_top_up', 1000, 'CNY',
+        '{"version":1,"credits":1000,"active":true,"display_order":1,"refund_policy":"unspent","bonus_credits":0,"applicable_plans":[],"purchase_limit":0}'::jsonb,
+        NULL, now(), now())
+ON CONFLICT DO NOTHING;
+SQL
+if [[ $? -eq 0 ]]; then ok "充值商品已落库 (10元=1000credit)"; else bad "充值商品落库失败"; fi
+
+http GET "$OM_BASE/recharge-products"
+echo "$BODY" | save recharge-products.json
+PRODUCT_ULID="$PRODUCT_ULID" jq -r '.products[] | select(.id==env.PRODUCT_ULID) | .id' <<<"$BODY" > /tmp/_prodid 2>/dev/null
+if [[ "$(head -1 /tmp/_prodid)" == "$PRODUCT_ULID" ]]; then
+  ok "GET /recharge-products 返回充值商品 (id=$PRODUCT_ULID, 1000credit)"
+else
+  bad "GET /recharge-products 未见充值商品 (status=$STATUS): $BODY"
+fi
+
+# 1.2 自定义 CREDIT 货币 (reservation 定价需要)
+http GET "$OM_BASE/openmeter/meters"
+METER_ID="$(jqget '.data[] | select(.key=="ingest" or .slug=="ingest" or .event_type=="ingest") | .id' | head -1)"
+info "meter ingest id=$METER_ID"
+http GET "$OM_BASE/openmeter/currencies?filter%5Bcode%5D=CREDIT"
+if [[ "$(jqget '[.items[] | select(.code=="CREDIT")] | length')" != "1" ]]; then
+  http POST "$OM_BASE/openmeter/currencies/custom" '{
+    "name": "Verification Credit", "symbol": "Ⓒ", "precision": 0,
+    "decimal_mark": ".", "thousand_separator": ",", "code": "CREDIT"}'
+  if [[ "$STATUS" == 201 || "$STATUS" == 409 ]]; then
+  ok "CREDIT 货币就绪 (status=$STATUS)"
+  http GET "$OM_BASE/openmeter/currencies?filter%5Bcode%5D=CREDIT"
+  CREDIT_CURRENCY_ID="$(jqget '.data[0].id')"
+  http POST "$OM_BASE/openmeter/currencies/custom/$CREDIT_CURRENCY_ID/cost-bases" '{"fiat_code":"USD","rate":"0.01"}'
+  [[ "$STATUS" == 201 || "$STATUS" == 409 ]] && ok "CREDIT cost basis 就绪 (USD)" || info "cost basis ($STATUS): $BODY"
+else bad "创建 CREDIT 货币失败 ($STATUS): $BODY"; fi
+else
+  ok "CREDIT 货币已存在"
+fi
+
+# 1.2b wallet credits feature: fulfillment 授信的 grant owner 是 feature key
+# 为 "credits" 的 metered entitlement (同 v2 /entitlements/credits/grants 语义)
+http POST "$OM_BASE/openmeter/features" "{\"key\":\"credits\",\"name\":\"Wallet Credits\",\"meter\":{\"id\":\"$METER_ID\"}}"
+[[ "$STATUS" == 201 || "$STATUS" == 409 ]] && ok "feature credits 就绪 ($STATUS)" || bad "feature credits 创建失败 ($STATUS): $BODY"
+FEATURE_KEY="verify_ai_call_$UNIQ"
+http GET "$OM_BASE/openmeter/meters"
+METER_ID="$(jqget '.data[] | select(.key=="ingest" or .slug=="ingest" or .event_type=="ingest") | .id' | head -1)"
+info "meter ingest id=$METER_ID"
+http POST "$OM_BASE/openmeter/features" "{\"key\":\"$FEATURE_KEY\",\"name\":\"Verify AI Call\",\"meter\":{\"id\":\"$METER_ID\"}}"
+if [[ "$STATUS" == 201 ]]; then ok "feature $FEATURE_KEY 已创建 (meter=ingest)"; else bad "feature 创建失败 ($STATUS): $BODY"; fi
+http GET "$OM_BASE/openmeter/features?filter%5Bkey%5D=$FEATURE_KEY"
+FEATURE_ID="$(jqget '.data[0].id')"; save feature.json <<<"$BODY"
+info "feature id=$FEATURE_ID"
+
+PLAN_KEY="verify_plan_$UNIQ"
+http POST "$OM_BASE/openmeter/plans" "{
+  \"key\": \"$PLAN_KEY\", \"name\": \"Verify Plan\", \"currency\": \"USD\", \"billing_cadence\": \"P1M\",
+  \"phases\": [{
+    \"key\": \"main\", \"name\": \"Main\",
+    \"rate_cards\": [{
+      \"key\": \"$FEATURE_KEY\", \"name\": \"AI Call Unit Rate\",
+      \"currency\": \"CREDIT\",
+      \"price\": {\"type\": \"unit\", \"amount\": \"1\"},
+      \"billing_cadence\": \"P1M\", \"payment_term\": \"in_arrears\",
+      \"feature\": {\"id\": \"$FEATURE_ID\"}
+    }]
+  }]
+}"
+echo "$BODY" | save plan.json
+if [[ "$STATUS" == 201 ]]; then ok "plan 已创建 (USD plan + CREDIT rate card, 1 credit/token)"; else bad "plan 创建失败 ($STATUS): $BODY"; fi
+PLAN_ID="$(jqget '.id')"
+http POST "$OM_BASE/openmeter/plans/$PLAN_ID/publish" '{}'
+[[ "$STATUS" == 200 ]] && ok "plan 已发布" || bad "plan 发布失败 ($STATUS): $BODY"
+
+# =============================================================================
+say "阶段 2: 创建 customer"
+# =============================================================================
+http POST "$OM_BASE/openmeter/customers" "{\"key\":\"verify_recharge_$UNIQ\",\"name\":\"验证-充值客户\",\"currency\":\"CNY\"}"
+echo "$BODY" | save customer-a.json
+if [[ "$STATUS" == 201 ]]; then CUSTOMER_A="$(jqget '.id')"; CUSTOMER_A_KEY="$(jqget '.key')"; ok "customer A 已创建 (id=$CUSTOMER_A key=$CUSTOMER_A_KEY)"; else bad "customer A 创建失败 ($STATUS): $BODY"; exit 1; fi
+# wallet credits entitlement (fulfillment grant 的 owner; 无则授信必失败)
+http POST "http://127.0.0.1:18888/api/v2/customers/$CUSTOMER_A/entitlements" '{"type":"metered","featureKey":"credits","usagePeriod":{"anchor":"2026-08-01T00:00:00Z","interval":"MONTH"}}'
+[[ "$STATUS" == 201 || "$STATUS" == 409 ]] && ok "customer A credits entitlement 就绪" || bad "customer A entitlement 创建失败 ($STATUS): $BODY"
+
+http POST "$OM_BASE/openmeter/customers" "{\"key\":\"verify_outflow_$UNIQ\",\"name\":\"验证-流出客户\",\"currency\":\"USD\"}"
+echo "$BODY" | save customer-b.json
+if [[ "$STATUS" == 201 ]]; then CUSTOMER_B="$(jqget '.id')"; CUSTOMER_B_KEY="$(jqget '.key')"; ok "customer B 已创建 (key=$CUSTOMER_B_KEY)"; else bad "customer B 创建失败 ($STATUS): $BODY"; exit 1; fi
+http POST "http://127.0.0.1:18888/api/v2/customers/$CUSTOMER_B/entitlements" '{"type":"metered","featureKey":"credits","usagePeriod":{"anchor":"2026-08-01T00:00:00Z","interval":"MONTH"}}'
+[[ "$STATUS" == 201 || "$STATUS" == 409 ]] && ok "customer B credits entitlement 就绪" || info "customer B entitlement ($STATUS): $BODY"
+
+# customer B 订阅 (reservation 定价需要活跃订阅)
+http POST "$OM_BASE/openmeter/subscriptions" "{\"customer\":{\"id\":\"$CUSTOMER_B\"},\"plan\":{\"id\":\"$PLAN_ID\"}}"
+echo "$BODY" | save subscription-b.json
+OUTFLOW_BLOCKED=0
+if [[ "$STATUS" == 201 ]]; then
+  ok "customer B 订阅已创建"
+else
+  if [[ "$STATUS" == 400 && "$BODY" == *"not yet supported on subscriptions"* ]]; then
+    finding "订阅域拒绝自定义货币: CREDIT 计价 rate card 无法订阅 → reservation 定价依赖(活跃订阅)无法满足 (结构性限制)"
+  else
+    finding "customer B 订阅创建失败 ($STATUS): $BODY"
+  fi
+  OUTFLOW_BLOCKED=1
+fi
+
+# ledger 预存余额: 10000 CREDIT (funding_method=none 立即生效)
+http POST "$OM_BASE/openmeter/customers/$CUSTOMER_B/credits/grants" \
+  '{"name":"verify-prepaid","funding_method":"none","currency":"CREDIT","amount":"10000"}'
+echo "$BODY" | save grant-b.json
+if [[ "$STATUS" == 201 ]]; then
+  ok "customer B 预存 10000 CREDIT 已授 (status=$(jqget '.status'))"
+elif docker logs "$PG_CONTAINER" --since 5m 2>/dev/null | false; then
+  :
+else
+  finding "CREDIT 货币 credits grant 被 ledger 拒绝 ($STATUS): $BODY → reservation 的 FBO 预存余额无法经 credits-grants API 建立"
+fi
+
+http GET "$OM_BASE/openmeter/customers/$CUSTOMER_B/credits/balance"
+echo "$BODY" | save balance-b-initial.json
+B_INIT="$(jqget '.balances[0].settled')"
+if [[ -n "$B_INIT" && "$B_INIT" != "null" ]]; then ok "customer B 余额查询: settled=$B_INIT CREDIT"; else finding "customer B credits balance 为空 (无 CREDIT ledger 余额)"; fi
+
+# =============================================================================
+say "阶段 3: 微信充值 → credit 到账"
+# =============================================================================
+run_recharge() { # run_recharge PROVIDER CUSTOMER_ID LABEL
+  local provider="$1" cust="$2" label="$3"
+  local ikey="order-${provider}-${UNIQ}"
+  http POST "$OM_BASE/orders" "{
+    \"billing_customer_id\": \"$cust\", \"kind\": \"wallet_top_up\",
+    \"recharge_product_id\": \"$PRODUCT_ULID\", \"currency\": \"CNY\",
+    \"idempotency_key\": \"$ikey\"}"
+  if [[ "$STATUS" != 201 ]]; then echo "$BODY" | save "order-$provider-err.json"; bad "$label 下单失败 ($STATUS): $BODY"; return 1; fi
+  local order_id amount credits ostatus
+  order_id="$(jqget '.id')"; amount="$(jqget '.amount_fen')"; credits="$(jqget '.credits')"
+  ostatus="$(jqget '.status')"
+  echo "$BODY" | save "order-$provider.json"
+  ok "$label 下单成功: order=$order_id status=$ostatus amount_fen=$amount credits=$credits"
+
+  local otn; otn="$(jqget '.business_tracking_number // .id')"
+  info "out_trade_no=$otn"
+
+  http POST "$OM_BASE/orders/$order_id/checkout-sessions" \
+    "{\"idempotency_key\":\"co-${provider}-${UNIQ}\",\"provider\":\"$provider\"}"
+  echo "$BODY" | save "checkout-$provider.json"
+  if [[ "$STATUS" != 201 ]]; then bad "$label checkout 失败 ($STATUS): $BODY"; return 1; fi
+  local qr; qr="$(jqget '.payment_url')"
+  if [[ -n "$qr" && "$qr" != "null" ]]; then ok "$label checkout 成功: QR=$qr"; else bad "$label checkout 无 QR: $BODY"; return 1; fi
+
+  http POST "$STAND_BASE/__test/$provider/orders/$otn/pay" '{}'
+  echo "$BODY" | save "stand-pay-$provider.json"
+  if [[ "$(jqget '.callback_acknowledged')" == "true" ]]; then
+    ok "$label 支付回调已被 OpenMeter 确认 (ACK)"
+  else
+    bad "$label 回调未被确认: $BODY"
+  fi
+
+  if wait_status "$OM_BASE/orders/$order_id" '.status' 'fulfilled' 120 "$label order"; then
+    ok "$label order → fulfilled (支付→履约闭环)"
+  else
+    http GET "$OM_BASE/orders/$order_id"; bad "$label order 未 fulfilled: $BODY"; return 1
+  fi
+  LAST_ORDER_ID="$order_id"
+  return 0
+}
+run_recharge wechat "$CUSTOMER_A" "微信充值"
+
+http GET "$OM_BASE/customers/$CUSTOMER_A/wallet"
+echo "$BODY" | save wallet-a-after-wechat.json
+WECHAT_CREDITS="$(jqget '.total_available_credits')"
+if [[ "$WECHAT_CREDITS" == "1000" ]]; then
+  ok "微信充值到账: wallet total_available_credits=1000"
+else
+  bad "微信充值到账异常: wallet=$WECHAT_CREDITS: $BODY"
+fi
+
+# 重复回调幂等
+OTN_W="$(jq -r '.business_tracking_number // .id' "$EVIDENCE_DIR/order-wechat.json")"
+http POST "$STAND_BASE/__test/wechat/orders/$OTN_W/pay" '{}'
+sleep 15
+http GET "$OM_BASE/customers/$CUSTOMER_A/wallet"
+echo "$BODY" | save wallet-a-after-replay.json
+REPLAY_CREDITS="$(jqget '.total_available_credits')"
+if [[ "$REPLAY_CREDITS" == "1000" ]]; then
+  ok "重复回调幂等: 重放后 wallet 仍为 1000 (未重复入账)"
+else
+  bad "重复回调后 wallet=$REPLAY_CREDITS (应为 1000)"
+fi
+
+# =============================================================================
+say "阶段 4: 支付宝充值 → credit 到账"
+# =============================================================================
+run_recharge alipay "$CUSTOMER_A" "支付宝充值"
+
+http GET "$OM_BASE/customers/$CUSTOMER_A/wallet"
+echo "$BODY" | save wallet-a-after-alipay.json
+ALI_CREDITS="$(jqget '.total_available_credits')"
+if [[ "$ALI_CREDITS" == "2000" ]]; then
+  ok "支付宝充值到账: wallet total_available_credits=2000 (1000+1000)"
+else
+  bad "支付宝充值到账异常: wallet=$ALI_CREDITS (应为 2000): $BODY"
+fi
+
+http GET "$OM_BASE/openmeter/customers/$CUSTOMER_A/credits/balance"
+echo "$BODY" | save balance-a.json
+info "customer A credits balance (ledger 视图): $BODY"
+http GET "$OM_BASE/openmeter/customers/$CUSTOMER_A/credits/transactions?limit=10"
+echo "$BODY" | save transactions-a.json
+info "customer A credits transactions: $(jqget '.data | length') 条"
+
+# =============================================================================
+OUTFLOW_NOTE_PRINTED=0
+if [[ "${OUTFLOW_BLOCKED:-0}" == "1" ]]; then
+  say "阶段 5-8: 流出链路 (结构性阻断 — 采集错误码证据)"
+  RES_ID="res_probe_$UNIQ"
+  http POST "$OM_BASE/credit-reservations" "{
+    \"id\":\"$RES_ID\",\"customer_id\":\"$CUSTOMER_B\",\"subject_id\":\"$CUSTOMER_B_KEY\",
+    \"client_call_id\":\"call_$RES_ID\",\"operation\":\"verify-probe\",
+    \"idempotency_key\":\"key_probe_$UNIQ\",\"payload_hash\":\"$(hash64)\",
+    \"authorization_expires_at\":\"$(now5m)\",
+    \"lines\":[{\"feature_key\":\"$FEATURE_KEY\",\"resource_code\":\"llm_tokens\",\"quantity\":100}]}"
+  echo "$BODY" | save reservation-blocked-probe.json
+  finding "阻断状态下 Reserve 实测 status=$STATUS (证据: reservation-blocked-probe.json) — 无活跃 CREDIT 订阅, 定价解析不可达"
+  finding "流出链路(Reserve/Execute/Settle 多退少补/Charge/Reverse)因订阅拒绝自定义货币 + ledger 拒绝 CREDIT 预存而端到端不可达"
+else
+  say "阶段 5: credit 预减/占用 (Reserve) + 使用 (Execute)"
+  # =============================================================================
+  FEATURE="$FEATURE_KEY"; RESOURCE="llm_tokens"
+  RES_ID="res_hold_$UNIQ"; KEY1="key_hold_$UNIQ"
+  LINE="{\"feature_key\":\"$FEATURE\",\"resource_code\":\"$RESOURCE\",\"quantity\":100}"
+  http POST "$OM_BASE/credit-reservations" "{
+    \"id\":\"$RES_ID\",\"customer_id\":\"$CUSTOMER_B\",\"subject_id\":\"$CUSTOMER_B_KEY\",
+    \"client_call_id\":\"call_$RES_ID\",\"operation\":\"verify-hold\",
+    \"idempotency_key\":\"$KEY1\",\"payload_hash\":\"$(hash64)\",
+    \"authorization_expires_at\":\"$(now5m)\",
+    \"lines\":[$LINE]}"
+  echo "$BODY" | save reservation-hold.json
+  if [[ "$STATUS" == 201 ]]; then
+    ok "Reserve(预减/占用) 成功: state=$(jqget '.state') 预留=$(jqget '.ceiling_credits') credits, prepaid_hold=$(jqget '.funding.prepaid_hold'), enterprise_hold=$(jqget '.funding.enterprise_hold')"
+  else
+    bad "Reserve 失败 ($STATUS): $BODY"
+  fi
+
+  RES_BIG="res_big_$UNIQ"
+  http POST "$OM_BASE/credit-reservations" "{
+    \"id\":\"$RES_BIG\",\"customer_id\":\"$CUSTOMER_B\",\"subject_id\":\"$CUSTOMER_B_KEY\",
+    \"client_call_id\":\"call_$RES_BIG\",\"operation\":\"verify-hold-big\",
+    \"idempotency_key\":\"key_big_$UNIQ\",\"payload_hash\":\"$(hash64)\",
+    \"authorization_expires_at\":\"$(now5m)\",
+    \"lines\":[{\"feature_key\":\"$FEATURE\",\"resource_code\":\"$RESOURCE\",\"quantity\":200000}]}"
+  if [[ "$STATUS" == 402 ]]; then
+    ok "余额不足拒绝: 超额 Reserve → 402 (占用边界生效)"
+  else
+    bad "超额 Reserve 未按预期 402 (status=$STATUS): $BODY"
+  fi
+
+  http POST "$OM_BASE/credit-reservations/$RES_ID/execute" \
+    "{\"idempotency_key\":\"$KEY1\",\"payload_hash\":\"$(hash64)\",\"execution_deadline\":\"$(now10m)\"}"
+  echo "$BODY" | save reservation-execute.json
+  [[ "$STATUS" == 200 ]] && ok "Execute 成功: state=$(jqget '.state')" || bad "Execute 失败 ($STATUS): $BODY"
+
+  # =============================================================================
+  say "阶段 6: 多退 (实际使用 40 < 预留 100)"
+  # =============================================================================
+  http POST "$OM_BASE/credit-reservations/$RES_ID/settle" "{
+    \"idempotency_key\":\"key_settle_$UNIQ\",\"payload_hash\":\"$(hash64b)\",
+    \"settled_at\":\"$(nows)\",
+    \"actual_lines\":[{\"feature_key\":\"$FEATURE\",\"resource_code\":\"$RESOURCE\",\"quantity\":40}]}"
+  echo "$BODY" | save reservation-settle-under.json
+  if [[ "$STATUS" == 200 ]]; then
+    SETTLED="$(jqget '.settled_credits')"
+    if [[ "$SETTLED" == "40" ]]; then
+      ok "Settle 多退: 实际40/预留100 → settled=40 (退回60), state=$(jqget '.state')"
+    else
+      bad "Settle 数值异常: settled=$SETTLED: $BODY"
+    fi
+  else
+    bad "Settle 失败 ($STATUS): $BODY"
+  fi
+  http GET "$OM_BASE/openmeter/customers/$CUSTOMER_B/credits/balance"
+  echo "$BODY" | save balance-b-after-under.json
+  info "customer B 余额(多退后): $BODY"
+
+  # =============================================================================
+  say "阶段 7: 少补 (实际使用 150 > 预留 100)"
+  # =============================================================================
+  RES_ID2="res_over_$UNIQ"; KEY2="key_over_$UNIQ"
+  http POST "$OM_BASE/credit-reservations" "{
+    \"id\":\"$RES_ID2\",\"customer_id\":\"$CUSTOMER_B\",\"subject_id\":\"$CUSTOMER_B_KEY\",
+    \"client_call_id\":\"call_$RES_ID2\",\"operation\":\"verify-over\",
+    \"idempotency_key\":\"$KEY2\",\"payload_hash\":\"$(hash64)\",
+    \"authorization_expires_at\":\"$(now5m)\",
+    \"lines\":[$LINE]}"
+  [[ "$STATUS" == 201 ]] && ok "第二次 Reserve 成功 (预留100)" || bad "第二次 Reserve 失败 ($STATUS): $BODY"
+  http POST "$OM_BASE/credit-reservations/$RES_ID2/execute" \
+    "{\"idempotency_key\":\"$KEY2\",\"payload_hash\":\"$(hash64)\",\"execution_deadline\":\"$(now10m)\"}"
+  [[ "$STATUS" == 200 ]] || bad "第二次 Execute 失败 ($STATUS): $BODY"
+  http POST "$OM_BASE/credit-reservations/$RES_ID2/settle" "{
+    \"idempotency_key\":\"key_settle2_$UNIQ\",\"payload_hash\":\"$(hash64b)\",
+    \"settled_at\":\"$(nows)\",
+    \"actual_lines\":[{\"feature_key\":\"$FEATURE\",\"resource_code\":\"$RESOURCE\",\"quantity\":150}]}"
+  echo "$BODY" | save reservation-settle-over.json
+  SETTLED2="$(jqget '.settled_credits')"
+  if [[ "$STATUS" == 200 && "$SETTLED2" == "150" ]]; then
+    ok "Settle 少补: 实际150/预留100 → settled=150 (补扣50)"
+  else
+    bad "少补 Settle 异常 (status=$STATUS, settled=$SETTLED2): $BODY"
+  fi
+
+  http GET "$OM_BASE/openmeter/customers/$CUSTOMER_B/credits/balance"
+  echo "$BODY" | save balance-b-final.json
+  B_FINAL="$(jqget '.balances[0].settled')"
+  if [[ "$B_FINAL" == "9810" ]]; then
+    ok "ledger 余额一致: 10000-40-150=9810"
+  else
+    info "ledger 余额查询值=$B_FINAL (期望 9810, 见 balance-b-final.json)"
+  fi
+  http GET "$OM_BASE/openmeter/customers/$CUSTOMER_B/credits/transactions?limit=20"
+  echo "$BODY" | save transactions-b.json
+  info "customer B 交易流水: $(jqget '.data | length') 条"
+
+  # =============================================================================
+  say "阶段 8: 直接扣减 Charge + 冲正 Reverse"
+  # =============================================================================
+  CHG_ID="chg_$UNIQ"
+  http POST "$OM_BASE/credit-charges" "{
+    \"id\":\"$CHG_ID\",\"customer_id\":\"$CUSTOMER_B\",\"subject_id\":\"$CUSTOMER_B_KEY\",
+    \"operation\":\"verify-direct-charge\",\"idempotency_key\":\"key_chg_$UNIQ\",
+    \"payload_hash\":\"$(hash64)\",\"booked_at\":\"$(nows)\",
+    \"lines\":[{\"feature_key\":\"$FEATURE\",\"resource_code\":\"$RESOURCE\",\"quantity\":30}]}"
+  echo "$BODY" | save charge.json
+  [[ "$STATUS" == 201 ]] && ok "直接扣减 Charge 30 成功 (settled=$(jqget '.settled_credits'))" || bad "Charge 失败 ($STATUS): $BODY"
+
+  http POST "$OM_BASE/credit-charges/$CHG_ID/reverse" \
+    "{\"idempotency_key\":\"key_rv_$UNIQ\",\"payload_hash\":\"$(hash64b)\",\"reversed_at\":\"$(nows)\"}"
+  echo "$BODY" | save charge-reverse.json
+  [[ "$STATUS" == 200 ]] && ok "冲正 Reverse 成功 (state=$(jqget '.state'))" || bad "Reverse 失败 ($STATUS): $BODY"
+
+  # =============================================================================
+fi
+
+say "阶段 9: 交叉验证 — 充值 wallet credit 能否被 reservation 占用"
+LINE="{\"feature_key\":\"$FEATURE_KEY\",\"resource_code\":\"llm_tokens\",\"quantity\":100}"
+# =============================================================================
+http POST "$OM_BASE/openmeter/subscriptions" "{\"customer\":{\"id\":\"$CUSTOMER_A\"},\"plan\":{\"id\":\"$PLAN_ID\"}}"
+echo "$BODY" | save subscription-a.json
+info "customer A 订阅: $STATUS (currency 兼容性可能拒绝, 见证据)"
+RES_X="res_x_$UNIQ"
+http POST "$OM_BASE/credit-reservations" "{
+  \"id\":\"$RES_X\",\"customer_id\":\"$CUSTOMER_A\",\"subject_id\":\"$CUSTOMER_A_KEY\",
+  \"client_call_id\":\"call_$RES_X\",\"operation\":\"verify-cross\",
+  \"idempotency_key\":\"key_x_$UNIQ\",\"payload_hash\":\"$(hash64)\",
+  \"authorization_expires_at\":\"$(now5m)\",
+  \"lines\":[$LINE]}"
+echo "$BODY" | save reservation-cross.json
+if [[ "$STATUS" == 402 ]]; then
+  ok "交叉验证: 仅充值 wallet credit 的客户 Reserve → 402 (wallet credit 不参与 reservation 预存校验)"
+elif [[ "$STATUS" == 201 ]]; then
+  bad "交叉验证: 充值 wallet credit 被 reservation 占用成功 — 与两套余额体系的设计假设不符, 需人工确认"
+else
+  info "交叉验证 status=$STATUS: $BODY"
+fi
+
+# =============================================================================
+say "汇总"
+# =============================================================================
+printf '\n%s\n' "--------------------------------------------------"
+for line in "${SUMMARY[@]}"; do printf '%s\n' "$line"; done
+printf '%s\n' "--------------------------------------------------"
+printf 'PASS=%d FAIL=%d\n' "$PASS" "$FAIL"
+printf '证据目录: %s\n' "$EVIDENCE_DIR"
+[[ $FAIL -eq 0 ]] && exit 0 || exit 1

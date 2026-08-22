@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""手工构造微信 v3 签名回调, 直接 POST 到 OpenMeter, 打印响应体定位 400 根因."""
+import base64, json, secrets, sys, time, uuid
+import httpx
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+SEC = "/Users/wuyongjun/trea/WeKnora/deploy/billing-integration/secrets"
+OUT_TRADE_NO = sys.argv[1]          # e.g. 01M00NX8RXP0A0YV9B5AXPXZ6T
+AMOUNT_FEN = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
+
+platform_priv = open(f"{SEC}/wechat-merchant-private.pem").read()  # 仅占位, 真正签名用 platform 私钥
+platform_priv = open(f"{SEC}/wechat-platform-public.pem").read()   # 公钥, 不能签名 → 需要从 merchants.yaml 取 platform_private_key
+import yaml
+merchants = yaml.safe_load(open("/Users/wuyongjun/trea/WeKnora/deploy/billing-integration/payment-provider/merchants.yaml"))["merchants"]
+priv_pem = merchants["wechat"]["platform_private_key"]
+apiv3_key = merchants["wechat"]["apiv3_key"]
+
+priv = serialization.load_pem_private_key(priv_pem.encode(), password=None)
+tx_id = uuid.uuid4().hex[:24].upper()
+import os
+nonce_aes = secrets.token_hex(12) if os.environ.get('BAD_NONCE') else secrets.token_hex(6)
+resource_plaintext = json.dumps({
+    "mchid": "1900000109",
+    "appid": "wx1234567890abcdef",
+    "out_trade_no": OUT_TRADE_NO,
+    "transaction_id": tx_id,
+    "trade_type": "NATIVE",
+    "trade_state": "SUCCESS",
+    "success_time": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
+    "amount": {"total": AMOUNT_FEN, "payer_total": AMOUNT_FEN, "currency": "CNY", "payer_currency": "CNY"},
+}, separators=(",", ":")).encode()
+ciphertext = AESGCM(apiv3_key.encode()).encrypt(nonce_aes.encode(), resource_plaintext, b"")
+body = json.dumps({
+    "id": str(uuid.uuid4()),
+    "event_type": "TRANSACTION.SUCCESS",
+    "create_time": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
+    "resource_type": "encrypt-resource",
+    "summary": "支付成功",
+    "resource": {
+        "algorithm": "AEAD_AES_256_GCM",
+        "ciphertext": base64.b64encode(ciphertext).decode(),
+        "nonce": nonce_aes if isinstance(nonce_aes, str) else nonce_aes.hex(),
+        "associated_data": "",
+        "original_type": "transaction",
+    },
+}, separators=(",", ":"))
+
+ts = str(int(time.time()))
+nonce = secrets.token_hex(16)
+signature = base64.b64encode(priv.sign(f"{ts}\n{nonce}\n{body}\n".encode(), padding.PKCS1v15(), hashes.SHA256())).decode()
+
+resp = httpx.post(
+    "http://127.0.0.1:18888/api/v3/payment-providers/wechat/callback",
+    content=body.encode(),
+    headers={
+        "Content-Type": "application/json",
+        "Wechatpay-Timestamp": ts,
+        "Wechatpay-Nonce": nonce,
+        "Wechatpay-Signature": signature,
+        "Wechatpay-Serial": "merchant-serial",
+    },
+    timeout=15,
+)
+print("HTTP", resp.status_code)
+print(resp.text[:800])

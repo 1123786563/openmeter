@@ -16,6 +16,7 @@ import (
 	dbtaxcode "github.com/openmeterio/openmeter/openmeter/ent/db/taxcode"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog/unitconfig"
+	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/datetime"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -63,6 +64,10 @@ type SubscriptionItem struct {
 	Description *string `json:"description,omitempty"`
 	// FeatureKey holds the value of the "feature_key" field.
 	FeatureKey *string `json:"feature_key,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency *currencyx.Code `json:"currency,omitempty"`
+	// CustomCurrencyID holds the value of the "custom_currency_id" field.
+	CustomCurrencyID *string `json:"custom_currency_id,omitempty"`
 	// EntitlementTemplate holds the value of the "entitlement_template" field.
 	EntitlementTemplate *productcatalog.EntitlementTemplate `json:"entitlement_template,omitempty"`
 	// TaxConfig holds the value of the "tax_config" field.
@@ -202,7 +207,7 @@ func (*SubscriptionItem) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case subscriptionitem.FieldRestartsBillingPeriod:
 			values[i] = new(sql.NullBool)
-		case subscriptionitem.FieldID, subscriptionitem.FieldNamespace, subscriptionitem.FieldTaxCodeID, subscriptionitem.FieldTaxBehavior, subscriptionitem.FieldPhaseID, subscriptionitem.FieldKey, subscriptionitem.FieldEntitlementID, subscriptionitem.FieldActiveFromOverrideRelativeToPhaseStart, subscriptionitem.FieldActiveToOverrideRelativeToPhaseStart, subscriptionitem.FieldName, subscriptionitem.FieldDescription, subscriptionitem.FieldFeatureKey, subscriptionitem.FieldBillingCadence:
+		case subscriptionitem.FieldID, subscriptionitem.FieldNamespace, subscriptionitem.FieldTaxCodeID, subscriptionitem.FieldTaxBehavior, subscriptionitem.FieldPhaseID, subscriptionitem.FieldKey, subscriptionitem.FieldEntitlementID, subscriptionitem.FieldActiveFromOverrideRelativeToPhaseStart, subscriptionitem.FieldActiveToOverrideRelativeToPhaseStart, subscriptionitem.FieldName, subscriptionitem.FieldDescription, subscriptionitem.FieldFeatureKey, subscriptionitem.FieldCurrency, subscriptionitem.FieldCustomCurrencyID, subscriptionitem.FieldBillingCadence:
 			values[i] = new(sql.NullString)
 		case subscriptionitem.FieldCreatedAt, subscriptionitem.FieldUpdatedAt, subscriptionitem.FieldDeletedAt, subscriptionitem.FieldActiveFrom, subscriptionitem.FieldActiveTo:
 			values[i] = new(sql.NullTime)
@@ -364,6 +369,20 @@ func (_m *SubscriptionItem) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.FeatureKey = new(string)
 				*_m.FeatureKey = value.String
+			}
+		case subscriptionitem.FieldCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
+			} else if value.Valid {
+				_m.Currency = new(currencyx.Code)
+				*_m.Currency = currencyx.Code(value.String)
+			}
+		case subscriptionitem.FieldCustomCurrencyID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field custom_currency_id", values[i])
+			} else if value.Valid {
+				_m.CustomCurrencyID = new(string)
+				*_m.CustomCurrencyID = value.String
 			}
 		case subscriptionitem.FieldEntitlementTemplate:
 			if value, err := subscriptionitem.ValueScanner.EntitlementTemplate.FromValue(values[i]); err != nil {
@@ -557,6 +576,16 @@ func (_m *SubscriptionItem) String() string {
 	builder.WriteString(", ")
 	if v := _m.FeatureKey; v != nil {
 		builder.WriteString("feature_key=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.Currency; v != nil {
+		builder.WriteString("currency=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.CustomCurrencyID; v != nil {
+		builder.WriteString("custom_currency_id=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")

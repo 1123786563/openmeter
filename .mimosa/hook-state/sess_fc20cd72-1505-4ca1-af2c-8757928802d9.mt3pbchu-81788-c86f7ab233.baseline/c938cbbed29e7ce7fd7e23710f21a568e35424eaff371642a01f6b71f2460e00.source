@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# One-command Alipay sandbox verification against the production adapter.
+#
+#   ./run-sandbox.sh                    full flow: precreate QR -> poll -> refund
+#   ./run-sandbox.sh --page             web cashier fallback (page.pay) when the
+#                                       sandbox wallet is rate-limited (CA306);
+#                                       after paying in the browser, run --resume
+#   ./run-sandbox.sh --resume <order>   settle an existing order: poll payment,
+#                                       then refund and refund query
+set -euo pipefail
+cd "$(dirname "$0")"
+
+export ALIPAY_SANDBOX_APP_ID="${ALIPAY_SANDBOX_APP_ID:-9021000162655520}"
+export ALIPAY_SANDBOX_SELLER_ID="${ALIPAY_SANDBOX_SELLER_ID:-2088721099459284}"
+
+case "${1:-}" in
+  --page)
+    python3 page_pay.py
+    open secrets/page_pay.html
+    ;;
+  --resume)
+    [ -n "${2:-}" ] || { echo "usage: $0 --resume <order_id>" >&2; exit 1; }
+    export ALIPAY_SANDBOX_EXISTING_ORDER="$2"
+    go run .
+    ;;
+  *)
+    go run .
+    ;;
+esac

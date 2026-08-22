@@ -1,0 +1,149 @@
+package subscriptions
+
+import (
+	"context"
+	"errors"
+	"net/http"
+
+	"github.com/samber/lo"
+
+	api "github.com/openmeterio/openmeter/api/v3"
+	"github.com/openmeterio/openmeter/api/v3/apierrors"
+	"github.com/openmeterio/openmeter/api/v3/request"
+	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	plansubscription "github.com/openmeterio/openmeter/openmeter/productcatalog/subscription"
+	subscriptionworkflow "github.com/openmeterio/openmeter/openmeter/subscription/workflow"
+	"github.com/openmeterio/openmeter/pkg/framework/commonhttp"
+	"github.com/openmeterio/openmeter/pkg/framework/transport/httptransport"
+	models "github.com/openmeterio/openmeter/pkg/models"
+)
+
+type (
+	ChangeSubscriptionRequest struct {
+		ID             models.NamespacedID
+		PlanInput      plansubscription.PlanInput
+		WorkflowInput  subscriptionworkflow.ChangeSubscriptionWorkflowInput
+		SettlementMode *productcatalog.SettlementMode
+	}
+	ChangeSubscriptionResponse = api.BillingSubscriptionChangeResponse
+	ChangeSubscriptionParams   = string
+	ChangeSubscriptionHandler  httptransport.HandlerWithArgs[ChangeSubscriptionRequest, ChangeSubscriptionResponse, ChangeSubscriptionParams]
+)
+
+func (h *handler) ChangeSubscription() ChangeSubscriptionHandler {
+	return httptransport.NewHandlerWithArgs(
+		func(ctx context.Context, r *http.Request, subscriptionID ChangeSubscriptionParams) (ChangeSubscriptionRequest, error) {
+			// Parse body
+			body := api.BillingSubscriptionChange{}
+			if err := request.ParseBody(r, &body); err != nil {
+				return ChangeSubscriptionRequest{}, err
+			}
+
+			// Resolve namespace
+			ns, err := h.resolveNamespace(ctx)
+			if err != nil {
+				return ChangeSubscriptionRequest{}, err
+			}
+
+			var settlementMode *productcatalog.SettlementMode
+			if body.SettlementMode != nil {
+				settlementMode = lo.ToPtr(productcatalog.SettlementMode(*body.SettlementMode))
+			}
+
+			id := models.NamespacedID{
+				Namespace: ns,
+				ID:        subscriptionID,
+			}
+
+			// Fetch current subscription for defaults (name/desc/metadata)
+			curr, err := h.subscriptionService.Get(ctx, id)
+			if err != nil {
+				return ChangeSubscriptionRequest{}, err
+			}
+
+			// Currently only plan-based subscription change is supported, so plan ref is required.
+			if body.Plan.Id == nil && body.Plan.Key == nil {
+				reason := "one of plan.id or plan.key is required"
+				return ChangeSubscriptionRequest{}, apierrors.NewBadRequestError(
+					ctx,
+					errors.New(reason),
+					[]apierrors.InvalidParameter{
+						{
+							Field:  "plan.id",
+							Reason: reason,
+							Source: apierrors.InvalidParamSourceBody,
+							Rule:   "required",
+						},
+						{
+							Field:  "plan.key",
+							Reason: reason,
+							Source: apierrors.InvalidParamSourceBody,
+							Rule:   "required",
+						},
+					},
+				)
+			}
+
+			// Validate that plan exists and resolve to a concrete version
+			planEntity, err := h.getPlanByIDOrKey(ctx, ns, body.Plan.Id, body.Plan.Key, body.Plan.Version)
+			if err != nil {
+				return ChangeSubscriptionRequest{}, err
+			}
+
+			planInput := plansubscription.PlanInput{}
+			planInput.FromRef(&plansubscription.PlanRefInput{
+				Key:     planEntity.Key,
+				Version: &planEntity.Version,
+			})
+
+			timing, err := FromAPIBillingSubscriptionEditTiming(body.Timing)
+			if err != nil {
+				return ChangeSubscriptionRequest{}, err
+			}
+
+			metadataModel := curr.MetadataModel
+			if body.Labels != nil {
+				metadataModel = models.MetadataModel{
+					Metadata: models.Metadata(*body.Labels),
+				}
+			}
+
+			workflowInput := subscriptionworkflow.ChangeSubscriptionWorkflowInput{
+				Timing:        timing,
+				MetadataModel: metadataModel,
+				Name:          curr.Name,
+				Description:   curr.Description,
+				BillingAnchor: body.BillingAnchor,
+			}
+
+			return ChangeSubscriptionRequest{
+				ID:             id,
+				PlanInput:      planInput,
+				WorkflowInput:  workflowInput,
+				SettlementMode: settlementMode,
+			}, nil
+		},
+		func(ctx context.Context, req ChangeSubscriptionRequest) (ChangeSubscriptionResponse, error) {
+			resp, err := h.planSubscriptionService.Change(ctx, plansubscription.ChangeSubscriptionRequest{
+				ID:             req.ID,
+				WorkflowInput:  req.WorkflowInput,
+				PlanInput:      req.PlanInput,
+				SettlementMode: req.SettlementMode,
+			})
+			if err != nil {
+				return ChangeSubscriptionResponse{}, err
+			}
+
+			return ChangeSubscriptionResponse{
+				Current: ToAPIBillingSubscription(resp.Current),
+				Next:    ToAPIBillingSubscription(resp.Next.Subscription),
+			}, nil
+		},
+		commonhttp.JSONResponseEncoderWithStatus[ChangeSubscriptionResponse](http.StatusOK),
+		httptransport.AppendOptions(
+			h.options,
+			httptransport.WithOperationName("change-subscription"),
+			httptransport.WithErrorEncoder(apierrors.GenericErrorEncoder()),
+		)...,
+	)
+}

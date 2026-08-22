@@ -6699,6 +6699,34 @@ func (u *SubscriptionItemUpdateOne) SetOrClearFeatureKey(value *string) *Subscri
 	return u.SetFeatureKey(*value)
 }
 
+func (u *SubscriptionItemUpdate) SetOrClearCurrency(value *currencyx.Code) *SubscriptionItemUpdate {
+	if value == nil {
+		return u.ClearCurrency()
+	}
+	return u.SetCurrency(*value)
+}
+
+func (u *SubscriptionItemUpdateOne) SetOrClearCurrency(value *currencyx.Code) *SubscriptionItemUpdateOne {
+	if value == nil {
+		return u.ClearCurrency()
+	}
+	return u.SetCurrency(*value)
+}
+
+func (u *SubscriptionItemUpdate) SetOrClearCustomCurrencyID(value *string) *SubscriptionItemUpdate {
+	if value == nil {
+		return u.ClearCustomCurrencyID()
+	}
+	return u.SetCustomCurrencyID(*value)
+}
+
+func (u *SubscriptionItemUpdateOne) SetOrClearCustomCurrencyID(value *string) *SubscriptionItemUpdateOne {
+	if value == nil {
+		return u.ClearCustomCurrencyID()
+	}
+	return u.SetCustomCurrencyID(*value)
+}
+
 func (u *SubscriptionItemUpdate) SetOrClearEntitlementTemplate(value **productcatalog.EntitlementTemplate) *SubscriptionItemUpdate {
 	if value == nil {
 		return u.ClearEntitlementTemplate()

@@ -6521,6 +6521,8 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "feature_key", Type: field.TypeString, Nullable: true},
+		{Name: "currency", Type: field.TypeString, Nullable: true, Size: 24},
+		{Name: "custom_currency_id", Type: field.TypeString, Nullable: true},
 		{Name: "entitlement_template", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "tax_config", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
 		{Name: "billing_cadence", Type: field.TypeString, Nullable: true},
@@ -6539,19 +6541,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "subscription_items_entitlements_subscription_item",
-				Columns:    []*schema.Column{SubscriptionItemsColumns[23]},
+				Columns:    []*schema.Column{SubscriptionItemsColumns[25]},
 				RefColumns: []*schema.Column{EntitlementsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "subscription_items_subscription_phases_items",
-				Columns:    []*schema.Column{SubscriptionItemsColumns[24]},
+				Columns:    []*schema.Column{SubscriptionItemsColumns[26]},
 				RefColumns: []*schema.Column{SubscriptionPhasesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "subscription_items_tax_codes_subscription_items",
-				Columns:    []*schema.Column{SubscriptionItemsColumns[25]},
+				Columns:    []*schema.Column{SubscriptionItemsColumns[27]},
 				RefColumns: []*schema.Column{TaxCodesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -6570,7 +6572,7 @@ var (
 			{
 				Name:    "subscriptionitem_tax_code_id",
 				Unique:  false,
-				Columns: []*schema.Column{SubscriptionItemsColumns[25]},
+				Columns: []*schema.Column{SubscriptionItemsColumns[27]},
 			},
 			{
 				Name:    "subscriptionitem_namespace_id",
@@ -6580,7 +6582,7 @@ var (
 			{
 				Name:    "subscriptionitem_namespace_phase_id_key",
 				Unique:  false,
-				Columns: []*schema.Column{SubscriptionItemsColumns[1], SubscriptionItemsColumns[24], SubscriptionItemsColumns[10]},
+				Columns: []*schema.Column{SubscriptionItemsColumns[1], SubscriptionItemsColumns[26], SubscriptionItemsColumns[10]},
 			},
 		},
 	}

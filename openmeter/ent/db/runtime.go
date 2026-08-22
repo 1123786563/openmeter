@@ -3994,20 +3994,38 @@ func init() {
 	subscriptionitemDescName := subscriptionitemFields[9].Descriptor()
 	// subscriptionitem.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	subscriptionitem.NameValidator = subscriptionitemDescName.Validators[0].(func(string) error)
+	// subscriptionitemDescCurrency is the schema descriptor for currency field.
+	subscriptionitemDescCurrency := subscriptionitemFields[12].Descriptor()
+	// subscriptionitem.CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	subscriptionitem.CurrencyValidator = func() func(string) error {
+		validators := subscriptionitemDescCurrency.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(currency string) error {
+			for _, fn := range fns {
+				if err := fn(currency); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// subscriptionitemDescEntitlementTemplate is the schema descriptor for entitlement_template field.
-	subscriptionitemDescEntitlementTemplate := subscriptionitemFields[12].Descriptor()
+	subscriptionitemDescEntitlementTemplate := subscriptionitemFields[14].Descriptor()
 	subscriptionitem.ValueScanner.EntitlementTemplate = subscriptionitemDescEntitlementTemplate.ValueScanner.(field.TypeValueScanner[*productcatalog.EntitlementTemplate])
 	// subscriptionitemDescTaxConfig is the schema descriptor for tax_config field.
-	subscriptionitemDescTaxConfig := subscriptionitemFields[13].Descriptor()
+	subscriptionitemDescTaxConfig := subscriptionitemFields[15].Descriptor()
 	subscriptionitem.ValueScanner.TaxConfig = subscriptionitemDescTaxConfig.ValueScanner.(field.TypeValueScanner[*productcatalog.TaxConfig])
 	// subscriptionitemDescPrice is the schema descriptor for price field.
-	subscriptionitemDescPrice := subscriptionitemFields[15].Descriptor()
+	subscriptionitemDescPrice := subscriptionitemFields[17].Descriptor()
 	subscriptionitem.ValueScanner.Price = subscriptionitemDescPrice.ValueScanner.(field.TypeValueScanner[*productcatalog.Price])
 	// subscriptionitemDescDiscounts is the schema descriptor for discounts field.
-	subscriptionitemDescDiscounts := subscriptionitemFields[16].Descriptor()
+	subscriptionitemDescDiscounts := subscriptionitemFields[18].Descriptor()
 	subscriptionitem.ValueScanner.Discounts = subscriptionitemDescDiscounts.ValueScanner.(field.TypeValueScanner[*productcatalog.Discounts])
 	// subscriptionitemDescUnitConfig is the schema descriptor for unit_config field.
-	subscriptionitemDescUnitConfig := subscriptionitemFields[17].Descriptor()
+	subscriptionitemDescUnitConfig := subscriptionitemFields[19].Descriptor()
 	subscriptionitem.ValueScanner.UnitConfig = subscriptionitemDescUnitConfig.ValueScanner.(field.TypeValueScanner[*unitconfig.UnitConfig])
 	// subscriptionitemDescID is the schema descriptor for id field.
 	subscriptionitemDescID := subscriptionitemMixinFields0[0].Descriptor()

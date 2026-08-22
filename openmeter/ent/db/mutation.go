@@ -139381,6 +139381,8 @@ type SubscriptionItemMutation struct {
 	name                                         *string
 	description                                  *string
 	feature_key                                  *string
+	currency                                     *currencyx.Code
+	custom_currency_id                           *string
 	entitlement_template                         **productcatalog.EntitlementTemplate
 	tax_config                                   **productcatalog.TaxConfig
 	billing_cadence                              *datetime.ISODurationString
@@ -140361,6 +140363,104 @@ func (m *SubscriptionItemMutation) ResetFeatureKey() {
 	delete(m.clearedFields, subscriptionitem.FieldFeatureKey)
 }
 
+// SetCurrency sets the "currency" field.
+func (m *SubscriptionItemMutation) SetCurrency(c currencyx.Code) {
+	m.currency = &c
+}
+
+// Currency returns the value of the "currency" field in the mutation.
+func (m *SubscriptionItemMutation) Currency() (r currencyx.Code, exists bool) {
+	v := m.currency
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCurrency returns the old "currency" field's value of the SubscriptionItem entity.
+// If the SubscriptionItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionItemMutation) OldCurrency(ctx context.Context) (v *currencyx.Code, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCurrency is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCurrency requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCurrency: %w", err)
+	}
+	return oldValue.Currency, nil
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (m *SubscriptionItemMutation) ClearCurrency() {
+	m.currency = nil
+	m.clearedFields[subscriptionitem.FieldCurrency] = struct{}{}
+}
+
+// CurrencyCleared returns if the "currency" field was cleared in this mutation.
+func (m *SubscriptionItemMutation) CurrencyCleared() bool {
+	_, ok := m.clearedFields[subscriptionitem.FieldCurrency]
+	return ok
+}
+
+// ResetCurrency resets all changes to the "currency" field.
+func (m *SubscriptionItemMutation) ResetCurrency() {
+	m.currency = nil
+	delete(m.clearedFields, subscriptionitem.FieldCurrency)
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (m *SubscriptionItemMutation) SetCustomCurrencyID(s string) {
+	m.custom_currency_id = &s
+}
+
+// CustomCurrencyID returns the value of the "custom_currency_id" field in the mutation.
+func (m *SubscriptionItemMutation) CustomCurrencyID() (r string, exists bool) {
+	v := m.custom_currency_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomCurrencyID returns the old "custom_currency_id" field's value of the SubscriptionItem entity.
+// If the SubscriptionItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionItemMutation) OldCustomCurrencyID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomCurrencyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomCurrencyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomCurrencyID: %w", err)
+	}
+	return oldValue.CustomCurrencyID, nil
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (m *SubscriptionItemMutation) ClearCustomCurrencyID() {
+	m.custom_currency_id = nil
+	m.clearedFields[subscriptionitem.FieldCustomCurrencyID] = struct{}{}
+}
+
+// CustomCurrencyIDCleared returns if the "custom_currency_id" field was cleared in this mutation.
+func (m *SubscriptionItemMutation) CustomCurrencyIDCleared() bool {
+	_, ok := m.clearedFields[subscriptionitem.FieldCustomCurrencyID]
+	return ok
+}
+
+// ResetCustomCurrencyID resets all changes to the "custom_currency_id" field.
+func (m *SubscriptionItemMutation) ResetCustomCurrencyID() {
+	m.custom_currency_id = nil
+	delete(m.clearedFields, subscriptionitem.FieldCustomCurrencyID)
+}
+
 // SetEntitlementTemplate sets the "entitlement_template" field.
 func (m *SubscriptionItemMutation) SetEntitlementTemplate(pt *productcatalog.EntitlementTemplate) {
 	m.entitlement_template = &pt
@@ -141094,7 +141194,7 @@ func (m *SubscriptionItemMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionItemMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 27)
 	if m.namespace != nil {
 		fields = append(fields, subscriptionitem.FieldNamespace)
 	}
@@ -141151,6 +141251,12 @@ func (m *SubscriptionItemMutation) Fields() []string {
 	}
 	if m.feature_key != nil {
 		fields = append(fields, subscriptionitem.FieldFeatureKey)
+	}
+	if m.currency != nil {
+		fields = append(fields, subscriptionitem.FieldCurrency)
+	}
+	if m.custom_currency_id != nil {
+		fields = append(fields, subscriptionitem.FieldCustomCurrencyID)
 	}
 	if m.entitlement_template != nil {
 		fields = append(fields, subscriptionitem.FieldEntitlementTemplate)
@@ -141216,6 +141322,10 @@ func (m *SubscriptionItemMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case subscriptionitem.FieldFeatureKey:
 		return m.FeatureKey()
+	case subscriptionitem.FieldCurrency:
+		return m.Currency()
+	case subscriptionitem.FieldCustomCurrencyID:
+		return m.CustomCurrencyID()
 	case subscriptionitem.FieldEntitlementTemplate:
 		return m.EntitlementTemplate()
 	case subscriptionitem.FieldTaxConfig:
@@ -141275,6 +141385,10 @@ func (m *SubscriptionItemMutation) OldField(ctx context.Context, name string) (e
 		return m.OldDescription(ctx)
 	case subscriptionitem.FieldFeatureKey:
 		return m.OldFeatureKey(ctx)
+	case subscriptionitem.FieldCurrency:
+		return m.OldCurrency(ctx)
+	case subscriptionitem.FieldCustomCurrencyID:
+		return m.OldCustomCurrencyID(ctx)
 	case subscriptionitem.FieldEntitlementTemplate:
 		return m.OldEntitlementTemplate(ctx)
 	case subscriptionitem.FieldTaxConfig:
@@ -141429,6 +141543,20 @@ func (m *SubscriptionItemMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetFeatureKey(v)
 		return nil
+	case subscriptionitem.FieldCurrency:
+		v, ok := value.(currencyx.Code)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCurrency(v)
+		return nil
+	case subscriptionitem.FieldCustomCurrencyID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomCurrencyID(v)
+		return nil
 	case subscriptionitem.FieldEntitlementTemplate:
 		v, ok := value.(*productcatalog.EntitlementTemplate)
 		if !ok {
@@ -141537,6 +141665,12 @@ func (m *SubscriptionItemMutation) ClearedFields() []string {
 	if m.FieldCleared(subscriptionitem.FieldFeatureKey) {
 		fields = append(fields, subscriptionitem.FieldFeatureKey)
 	}
+	if m.FieldCleared(subscriptionitem.FieldCurrency) {
+		fields = append(fields, subscriptionitem.FieldCurrency)
+	}
+	if m.FieldCleared(subscriptionitem.FieldCustomCurrencyID) {
+		fields = append(fields, subscriptionitem.FieldCustomCurrencyID)
+	}
 	if m.FieldCleared(subscriptionitem.FieldEntitlementTemplate) {
 		fields = append(fields, subscriptionitem.FieldEntitlementTemplate)
 	}
@@ -141604,6 +141738,12 @@ func (m *SubscriptionItemMutation) ClearField(name string) error {
 		return nil
 	case subscriptionitem.FieldFeatureKey:
 		m.ClearFeatureKey()
+		return nil
+	case subscriptionitem.FieldCurrency:
+		m.ClearCurrency()
+		return nil
+	case subscriptionitem.FieldCustomCurrencyID:
+		m.ClearCustomCurrencyID()
 		return nil
 	case subscriptionitem.FieldEntitlementTemplate:
 		m.ClearEntitlementTemplate()
@@ -141687,6 +141827,12 @@ func (m *SubscriptionItemMutation) ResetField(name string) error {
 		return nil
 	case subscriptionitem.FieldFeatureKey:
 		m.ResetFeatureKey()
+		return nil
+	case subscriptionitem.FieldCurrency:
+		m.ResetCurrency()
+		return nil
+	case subscriptionitem.FieldCustomCurrencyID:
+		m.ResetCustomCurrencyID()
 		return nil
 	case subscriptionitem.FieldEntitlementTemplate:
 		m.ResetEntitlementTemplate()

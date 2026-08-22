@@ -123,9 +123,9 @@ func (i GetBalanceServiceInput) Validate() error {
 
 	if err := ledger.ValidateCurrency(i.Currency); err != nil {
 		errs = append(errs, fmt.Errorf("currency: %w", err))
-	} else if i.Currency.IsCustom() {
-		errs = append(errs, fmt.Errorf("currency: %w", meta.ErrCustomCurrencyNotSupported))
 	}
+	// WeKnora fork: balance queries for custom (prepaid credit) currencies
+	// aggregate by currency code with no fiat conversion — allowed.
 
 	if err := ValidateFeatureFilter(i.FeatureFilter); err != nil {
 		errs = append(errs, fmt.Errorf("feature filter: %w", err))
@@ -510,10 +510,8 @@ func (s *service) getPendingGrantCurrencies(
 			continue
 		}
 
-		if creditPurchaseCharge.Intent.Currency.IsCustom() {
-			return nil, fmt.Errorf("credit purchase charge with custom currency: %w", meta.ErrCustomCurrencyNotSupported)
-		}
-
+		// WeKnora fork: prepaid credit grants settle in their custom currency;
+		// include the code so pending balances are visible.
 		codes = append(codes, creditPurchaseCharge.Intent.Currency.GetCode())
 	}
 
@@ -717,9 +715,8 @@ func getFlatFeeChargePendingBalanceImpact(charge charges.Charge, currency curren
 		return nil, nil
 	}
 
-	if flatFeeCharge.Intent.GetCurrency().IsCustom() {
-		return nil, fmt.Errorf("flat fee charge with custom currency: %w", meta.ErrCustomCurrencyNotSupported)
-	}
+	// WeKnora fork: prepaid credit flat fees impact the balance in their own
+	// currency — no fiat conversion involved.
 
 	if !featureFilterMatchesChargeFeatureKey(featureFilter, flatFeeCharge.Intent.GetFeatureKey()) {
 		return nil, nil
@@ -738,10 +735,8 @@ func (s *service) getUsageBasedChargePendingBalanceImpact(ctx context.Context, c
 		return nil, nil
 	}
 
-	if usageBasedCharge.Intent.GetCurrency().IsCustom() {
-		return nil, fmt.Errorf("usage based charge with custom currency: %w", meta.ErrCustomCurrencyNotSupported)
-	}
-
+	// WeKnora fork: prepaid credit usage impacts the balance in its own
+	// currency — no fiat conversion involved.
 	if !featureFilterMatchesChargeFeatureKey(featureFilter, usageBasedCharge.Intent.GetFeatureKey()) {
 		return nil, nil
 	}

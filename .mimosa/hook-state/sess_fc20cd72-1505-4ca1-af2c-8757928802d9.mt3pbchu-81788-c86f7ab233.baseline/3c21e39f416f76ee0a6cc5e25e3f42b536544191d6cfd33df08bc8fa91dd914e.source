@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Create an alipay.trade.page.pay order on the sandbox and save the cashier
+page to secrets/page_pay.html. Fallback payment path when the sandbox wallet
+app is rate-limited (CA306): the buyer logs in and pays in a plain browser."""
+import base64
+import json
+import os
+import subprocess
+import time
+import urllib.parse
+import urllib.request
+
+APP_ID = os.environ.get("ALIPAY_SANDBOX_APP_ID", "9021000162655520")
+GATEWAY = os.environ.get("ALIPAY_SANDBOX_GATEWAY", "https://openapi-sandbox.dl.alipaydev.com/gateway.do")
+PRIV = os.environ.get("ALIPAY_SANDBOX_APP_PRIVATE_KEY_FILE", "secrets/app_private_key.pem")
+AMOUNT = os.environ.get("ALIPAY_SANDBOX_AMOUNT", "0.10")
+
+out_trade_no = "OMSBXPG" + time.strftime("%Y%m%d%H%M%S")
+biz = json.dumps(
+    {
+        "out_trade_no": out_trade_no,
+        "total_amount": AMOUNT,
+        "subject": "OpenMeter sandbox page pay",
+        "product_code": "FAST_INSTANT_TRADE_PAY",
+    },
+    separators=(",", ":"),
+    ensure_ascii=False,
+)
+values = {
+    "app_id": APP_ID,
+    "method": "alipay.trade.page.pay",
+    "format": "JSON",
+    "charset": "utf-8",
+    "sign_type": "RSA2",
+    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+    "version": "1.0",
+    "notify_url": "https://notify.invalid/openmeter/alipay/callback",
+    "return_url": "https://notify.invalid/openmeter/alipay/return",
+    "biz_content": biz,
+}
+content = "&".join(f"{k}={v}" for k, v in sorted(values.items()) if v)
+values["sign"] = base64.b64encode(
+    subprocess.run(
+        ["openssl", "dgst", "-sha256", "-sign", PRIV], input=content.encode(),
+        capture_output=True, check=True,
+    ).stdout
+).decode()
+
+request = urllib.request.Request(
+    GATEWAY + "?charset=utf-8",
+    data=urllib.parse.urlencode(values).encode(),
+    headers={"Content-Type": "application/x-www-form-urlencoded"},
+)
+body = urllib.request.urlopen(request, timeout=30).read()
+with open("secrets/page_pay.html", "w") as target:
+    target.write(body.decode("utf-8", errors="replace"))
+print(f"order: {out_trade_no}")
+print(f"cashier page saved: secrets/page_pay.html (open it in a browser)")
+print(f"then settle it with: ./run-sandbox.sh --resume {out_trade_no}")

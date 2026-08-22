@@ -24,6 +24,7 @@ import (
 	dbtaxcode "github.com/openmeterio/openmeter/openmeter/ent/db/taxcode"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog/unitconfig"
+	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/datetime"
 	"github.com/openmeterio/openmeter/pkg/models"
 )
@@ -242,6 +243,34 @@ func (_c *SubscriptionItemCreate) SetFeatureKey(v string) *SubscriptionItemCreat
 func (_c *SubscriptionItemCreate) SetNillableFeatureKey(v *string) *SubscriptionItemCreate {
 	if v != nil {
 		_c.SetFeatureKey(*v)
+	}
+	return _c
+}
+
+// SetCurrency sets the "currency" field.
+func (_c *SubscriptionItemCreate) SetCurrency(v currencyx.Code) *SubscriptionItemCreate {
+	_c.mutation.SetCurrency(v)
+	return _c
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (_c *SubscriptionItemCreate) SetNillableCurrency(v *currencyx.Code) *SubscriptionItemCreate {
+	if v != nil {
+		_c.SetCurrency(*v)
+	}
+	return _c
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (_c *SubscriptionItemCreate) SetCustomCurrencyID(v string) *SubscriptionItemCreate {
+	_c.mutation.SetCustomCurrencyID(v)
+	return _c
+}
+
+// SetNillableCustomCurrencyID sets the "custom_currency_id" field if the given value is not nil.
+func (_c *SubscriptionItemCreate) SetNillableCustomCurrencyID(v *string) *SubscriptionItemCreate {
+	if v != nil {
+		_c.SetCustomCurrencyID(*v)
 	}
 	return _c
 }
@@ -506,6 +535,11 @@ func (_c *SubscriptionItemCreate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.name": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.Currency(); ok {
+		if err := subscriptionitem.CurrencyValidator(string(v)); err != nil {
+			return &ValidationError{Name: "currency", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.currency": %w`, err)}
+		}
+	}
 	if v, ok := _c.mutation.EntitlementTemplate(); ok {
 		if err := v.Validate(); err != nil {
 			return &ValidationError{Name: "entitlement_template", err: fmt.Errorf(`db: validator failed for field "SubscriptionItem.entitlement_template": %w`, err)}
@@ -640,6 +674,14 @@ func (_c *SubscriptionItemCreate) createSpec() (*SubscriptionItem, *sqlgraph.Cre
 	if value, ok := _c.mutation.FeatureKey(); ok {
 		_spec.SetField(subscriptionitem.FieldFeatureKey, field.TypeString, value)
 		_node.FeatureKey = &value
+	}
+	if value, ok := _c.mutation.Currency(); ok {
+		_spec.SetField(subscriptionitem.FieldCurrency, field.TypeString, value)
+		_node.Currency = &value
+	}
+	if value, ok := _c.mutation.CustomCurrencyID(); ok {
+		_spec.SetField(subscriptionitem.FieldCustomCurrencyID, field.TypeString, value)
+		_node.CustomCurrencyID = &value
 	}
 	if value, ok := _c.mutation.EntitlementTemplate(); ok {
 		vv, err := subscriptionitem.ValueScanner.EntitlementTemplate.Value(value)
@@ -1136,6 +1178,42 @@ func (u *SubscriptionItemUpsert) ClearFeatureKey() *SubscriptionItemUpsert {
 	return u
 }
 
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionItemUpsert) SetCurrency(v currencyx.Code) *SubscriptionItemUpsert {
+	u.Set(subscriptionitem.FieldCurrency, v)
+	return u
+}
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionItemUpsert) UpdateCurrency() *SubscriptionItemUpsert {
+	u.SetExcluded(subscriptionitem.FieldCurrency)
+	return u
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (u *SubscriptionItemUpsert) ClearCurrency() *SubscriptionItemUpsert {
+	u.SetNull(subscriptionitem.FieldCurrency)
+	return u
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (u *SubscriptionItemUpsert) SetCustomCurrencyID(v string) *SubscriptionItemUpsert {
+	u.Set(subscriptionitem.FieldCustomCurrencyID, v)
+	return u
+}
+
+// UpdateCustomCurrencyID sets the "custom_currency_id" field to the value that was provided on create.
+func (u *SubscriptionItemUpsert) UpdateCustomCurrencyID() *SubscriptionItemUpsert {
+	u.SetExcluded(subscriptionitem.FieldCustomCurrencyID)
+	return u
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (u *SubscriptionItemUpsert) ClearCustomCurrencyID() *SubscriptionItemUpsert {
+	u.SetNull(subscriptionitem.FieldCustomCurrencyID)
+	return u
+}
+
 // SetEntitlementTemplate sets the "entitlement_template" field.
 func (u *SubscriptionItemUpsert) SetEntitlementTemplate(v *productcatalog.EntitlementTemplate) *SubscriptionItemUpsert {
 	u.Set(subscriptionitem.FieldEntitlementTemplate, v)
@@ -1595,6 +1673,48 @@ func (u *SubscriptionItemUpsertOne) UpdateFeatureKey() *SubscriptionItemUpsertOn
 func (u *SubscriptionItemUpsertOne) ClearFeatureKey() *SubscriptionItemUpsertOne {
 	return u.Update(func(s *SubscriptionItemUpsert) {
 		s.ClearFeatureKey()
+	})
+}
+
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionItemUpsertOne) SetCurrency(v currencyx.Code) *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.SetCurrency(v)
+	})
+}
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionItemUpsertOne) UpdateCurrency() *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.UpdateCurrency()
+	})
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (u *SubscriptionItemUpsertOne) ClearCurrency() *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.ClearCurrency()
+	})
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (u *SubscriptionItemUpsertOne) SetCustomCurrencyID(v string) *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.SetCustomCurrencyID(v)
+	})
+}
+
+// UpdateCustomCurrencyID sets the "custom_currency_id" field to the value that was provided on create.
+func (u *SubscriptionItemUpsertOne) UpdateCustomCurrencyID() *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.UpdateCustomCurrencyID()
+	})
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (u *SubscriptionItemUpsertOne) ClearCustomCurrencyID() *SubscriptionItemUpsertOne {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.ClearCustomCurrencyID()
 	})
 }
 
@@ -2245,6 +2365,48 @@ func (u *SubscriptionItemUpsertBulk) UpdateFeatureKey() *SubscriptionItemUpsertB
 func (u *SubscriptionItemUpsertBulk) ClearFeatureKey() *SubscriptionItemUpsertBulk {
 	return u.Update(func(s *SubscriptionItemUpsert) {
 		s.ClearFeatureKey()
+	})
+}
+
+// SetCurrency sets the "currency" field.
+func (u *SubscriptionItemUpsertBulk) SetCurrency(v currencyx.Code) *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.SetCurrency(v)
+	})
+}
+
+// UpdateCurrency sets the "currency" field to the value that was provided on create.
+func (u *SubscriptionItemUpsertBulk) UpdateCurrency() *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.UpdateCurrency()
+	})
+}
+
+// ClearCurrency clears the value of the "currency" field.
+func (u *SubscriptionItemUpsertBulk) ClearCurrency() *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.ClearCurrency()
+	})
+}
+
+// SetCustomCurrencyID sets the "custom_currency_id" field.
+func (u *SubscriptionItemUpsertBulk) SetCustomCurrencyID(v string) *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.SetCustomCurrencyID(v)
+	})
+}
+
+// UpdateCustomCurrencyID sets the "custom_currency_id" field to the value that was provided on create.
+func (u *SubscriptionItemUpsertBulk) UpdateCustomCurrencyID() *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.UpdateCustomCurrencyID()
+	})
+}
+
+// ClearCustomCurrencyID clears the value of the "custom_currency_id" field.
+func (u *SubscriptionItemUpsertBulk) ClearCustomCurrencyID() *SubscriptionItemUpsertBulk {
+	return u.Update(func(s *SubscriptionItemUpsert) {
+		s.ClearCustomCurrencyID()
 	})
 }
 

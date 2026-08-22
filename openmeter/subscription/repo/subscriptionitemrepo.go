@@ -149,6 +149,13 @@ func (r *subscriptionItemRepo) Create(ctx context.Context, input subscription.Cr
 			cmd.SetEntitlementTemplate(input.RateCard.AsMeta().EntitlementTemplate)
 		}
 
+		// WeKnora fork: persist the rate card currency snapshot so reservation
+		// pricing can resolve managed CREDIT without re-reading the catalog.
+		if rcCurrency := input.RateCard.AsMeta().Currency; rcCurrency != nil {
+			cmd.SetCurrency(rcCurrency.Code)
+			cmd.SetNillableCustomCurrencyID(rcCurrency.CustomCurrencyID)
+		}
+
 		if input.RateCard.AsMeta().TaxConfig != nil {
 			cmd.SetTaxConfig(input.RateCard.AsMeta().TaxConfig)
 			cmd.SetNillableTaxCodeID(input.RateCard.AsMeta().TaxConfig.TaxCodeID)

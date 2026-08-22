@@ -16,6 +16,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/ledger/breakage"
 	"github.com/openmeterio/openmeter/openmeter/ledger/transactions"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/framework/entutils"
 	"github.com/openmeterio/openmeter/pkg/framework/transaction"
 	"github.com/openmeterio/openmeter/pkg/models"
 	"github.com/openmeterio/openmeter/pkg/timeutil"
@@ -166,6 +167,21 @@ func (s *service) GetCollectableAmount(ctx context.Context, input GetCollectable
 	}
 	if input.AsOf.IsZero() {
 		return alpacadecimal.Zero, fmt.Errorf("as of is required")
+	}
+
+	// WeKnora fork: the read path locks the customer FBO account for posting
+	// (lockr), which only works inside a transaction. Callers that invoke this
+	// outside a tx (credit reservation charge performs its own tx wrapping but
+	// this read runs on the outer context) hit "tx driver not found". Wrap the
+	// read in a short transaction when one is not already present.
+	if _, err := entutils.GetDriverFromContext(ctx); err != nil {
+		amount, rerr := transaction.RunInNewTransaction(ctx, s.collector.transactionManager, func(ctx context.Context) (alpacadecimal.Decimal, error) {
+			return s.collector.getCollectableAmount(ctx, input)
+		})
+		if rerr != nil {
+			return alpacadecimal.Zero, rerr
+		}
+		return amount, nil
 	}
 
 	return s.collector.getCollectableAmount(ctx, input)

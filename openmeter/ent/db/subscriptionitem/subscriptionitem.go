@@ -57,6 +57,10 @@ const (
 	FieldDescription = "description"
 	// FieldFeatureKey holds the string denoting the feature_key field in the database.
 	FieldFeatureKey = "feature_key"
+	// FieldCurrency holds the string denoting the currency field in the database.
+	FieldCurrency = "currency"
+	// FieldCustomCurrencyID holds the string denoting the custom_currency_id field in the database.
+	FieldCustomCurrencyID = "custom_currency_id"
 	// FieldEntitlementTemplate holds the string denoting the entitlement_template field in the database.
 	FieldEntitlementTemplate = "entitlement_template"
 	// FieldTaxConfig holds the string denoting the tax_config field in the database.
@@ -176,6 +180,8 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldFeatureKey,
+	FieldCurrency,
+	FieldCustomCurrencyID,
 	FieldEntitlementTemplate,
 	FieldTaxConfig,
 	FieldBillingCadence,
@@ -209,6 +215,8 @@ var (
 	KeyValidator func(string) error
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
+	// CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
+	CurrencyValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() string
 	// ValueScanner of all SubscriptionItem fields.
@@ -328,6 +336,16 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByFeatureKey orders the results by the feature_key field.
 func ByFeatureKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFeatureKey, opts...).ToFunc()
+}
+
+// ByCurrency orders the results by the currency field.
+func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCurrency, opts...).ToFunc()
+}
+
+// ByCustomCurrencyID orders the results by the custom_currency_id field.
+func ByCustomCurrencyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomCurrencyID, opts...).ToFunc()
 }
 
 // ByEntitlementTemplate orders the results by the entitlement_template field.
