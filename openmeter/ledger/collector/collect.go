@@ -9,11 +9,13 @@ import (
 
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/creditrealization"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/models/ledgertransaction"
+	"github.com/openmeterio/openmeter/openmeter/currencies"
 	"github.com/openmeterio/openmeter/openmeter/customer"
 	"github.com/openmeterio/openmeter/openmeter/ledger"
 	"github.com/openmeterio/openmeter/openmeter/ledger/breakage"
 	"github.com/openmeterio/openmeter/openmeter/ledger/transactions"
 	"github.com/openmeterio/openmeter/openmeter/productcatalog"
+	"github.com/openmeterio/openmeter/pkg/currencyx"
 	"github.com/openmeterio/openmeter/pkg/framework/transaction"
 	"github.com/openmeterio/openmeter/pkg/models"
 	"github.com/openmeterio/openmeter/pkg/timeutil"
@@ -113,6 +115,25 @@ func (c *accrualCollector) resolveCollectedInputs(ctx context.Context, input Col
 
 	if err := input.Currency.Validate(); err != nil {
 		return resolvedCollectedInputs{}, fmt.Errorf("currency: %w", err)
+	}
+	// WeKnora fork: custom currencies arrive as persisted references (code +
+	// custom_currency_id) with the runtime hydration dropped by the JSON
+	// round-trip through the charges table. Re-hydrate a resolved reference so
+	// downstream IsResolved checks pass; fiat references resolve by code.
+	if input.Currency.IsCustom() && !input.Currency.IsResolved() && input.Currency.CustomCurrencyID != nil {
+		hydrated := currencies.NewCurrencyReference(input.Currency.Code)
+		hydrated.CustomCurrencyID = input.Currency.CustomCurrencyID
+		if built, berr := currencyx.NewCurrencyBuilder(currencyx.CurrencyTypeCustom).
+			WithCode(input.Currency.Code).
+			WithName(input.Currency.Code.String()).
+			Build(); berr == nil {
+			if resolvedRef, herr := hydrated.WithCurrency(&currencies.Currency{
+				NamespacedID: models.NamespacedID{Namespace: "default", ID: *input.Currency.CustomCurrencyID},
+				Currency:     built,
+			}); herr == nil {
+				input.Currency = resolvedRef
+			}
+		}
 	}
 	if input.Currency.IsCustom() && !input.Currency.IsResolved() {
 		return resolvedCollectedInputs{}, fmt.Errorf("currency: custom currency must be resolved")
