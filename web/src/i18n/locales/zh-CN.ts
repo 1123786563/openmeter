@@ -59,6 +59,7 @@ export default {
       metering: '计量',
       credits: '额度',
       commerce: '商务',
+      config: '配置',
     },
     dashboard: '仪表板',
     customers: '客户',
@@ -70,6 +71,15 @@ export default {
     orders: '订单',
     refunds: '退款',
     rechargeProducts: '充值产品',
+    plans: '计划',
+    features: '功能',
+    addons: '附加组件',
+    notificationChannels: '通知',
+    currencies: '货币',
+    taxCodes: '税码',
+    apps: '应用',
+    portalTokens: '门户令牌',
+    billingProfiles: '账单档案',
   },
   auth: {
     signIn: {
@@ -86,6 +96,54 @@ export default {
   placeholder: {
     title: '建设中',
     description: '该功能正在开发中，敬请期待。',
+  },
+  config: {
+    plans: {
+      title: '计划',
+      description: '管理计费计划、阶段与价目卡。',
+    },
+    features: {
+      title: '功能',
+      description: '管理功能目录与成本查询。',
+    },
+    addons: {
+      title: '附加组件',
+      description: '管理可单独购买的附加组件。',
+    },
+    notification: {
+      channels: {
+        title: '通知渠道',
+        description: '管理 Webhook 通知渠道。',
+      },
+      rules: {
+        title: '通知规则',
+        description: '管理通知触发规则与发送测试。',
+      },
+      events: {
+        title: '通知事件',
+        description: '查看通知事件流并重发。',
+      },
+    },
+    currencies: {
+      title: '货币',
+      description: '查看法币与管理自定义货币。',
+    },
+    taxCodes: {
+      title: '税码',
+      description: '管理税码与组织默认税码。',
+    },
+    apps: {
+      title: '应用',
+      description: '管理应用集成的安装与配置。',
+    },
+    portalTokens: {
+      title: '门户令牌',
+      description: '发放与管理客户门户令牌。',
+    },
+    billingProfiles: {
+      title: '账单档案',
+      description: '管理账单档案与开票工作流。',
+    },
   },
   dashboard: {
     title: '仪表板',

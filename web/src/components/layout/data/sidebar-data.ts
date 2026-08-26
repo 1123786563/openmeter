@@ -1,9 +1,16 @@
 import {
+  Bell,
+  Blocks,
   Coins,
   FileText,
   Gauge,
+  KeyRound,
   LayoutDashboard,
+  ListChecks,
   PackageOpen,
+  Plug,
+  Puzzle,
+  ReceiptText,
   RefreshCw,
   ShoppingCart,
   Undo2,
@@ -89,6 +96,60 @@ export const sidebarData: SidebarData = {
           title: 'sidebar.refunds',
           url: '/commerce/refunds',
           icon: Undo2,
+        },
+      ],
+    },
+    {
+      // Configuration domain (issues #1-#29): plans/features/add-ons,
+      // notification center, currencies & tax codes, apps/portal tokens/
+      // billing profiles. Placeholder routes for now; issues #2-#28
+      // replace the components with the real pages.
+      title: 'sidebar.groups.config',
+      items: [
+        {
+          title: 'sidebar.plans',
+          url: '/config/plans',
+          icon: ListChecks,
+        },
+        {
+          title: 'sidebar.features',
+          url: '/config/features',
+          icon: Blocks,
+        },
+        {
+          title: 'sidebar.addons',
+          url: '/config/addons',
+          icon: Puzzle,
+        },
+        {
+          title: 'sidebar.notificationChannels',
+          url: '/config/notification/channels',
+          icon: Bell,
+        },
+        {
+          title: 'sidebar.currencies',
+          url: '/config/currencies',
+          icon: Coins,
+        },
+        {
+          title: 'sidebar.taxCodes',
+          url: '/config/tax-codes',
+          icon: ReceiptText,
+        },
+        {
+          title: 'sidebar.apps',
+          url: '/config/apps',
+          icon: Plug,
+        },
+        {
+          title: 'sidebar.portalTokens',
+          url: '/config/portal-tokens',
+          icon: KeyRound,
+        },
+        {
+          title: 'sidebar.billingProfiles',
+          url: '/config/billing-profiles',
+          icon: FileText,
         },
       ],
     },

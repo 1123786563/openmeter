@@ -60,6 +60,7 @@ export default {
       metering: 'Metering',
       credits: 'Credits',
       commerce: 'Commerce',
+      config: 'Configuration',
     },
     dashboard: 'Dashboard',
     customers: 'Customers',
@@ -71,6 +72,15 @@ export default {
     orders: 'Orders',
     refunds: 'Refunds',
     rechargeProducts: 'Recharge Products',
+    plans: 'Plans',
+    features: 'Features',
+    addons: 'Add-ons',
+    notificationChannels: 'Notifications',
+    currencies: 'Currencies',
+    taxCodes: 'Tax Codes',
+    apps: 'Apps',
+    portalTokens: 'Portal Tokens',
+    billingProfiles: 'Billing Profiles',
   },
   auth: {
     signIn: {
@@ -88,6 +98,54 @@ export default {
   placeholder: {
     title: 'Under Construction',
     description: 'This feature is still in development. Stay tuned.',
+  },
+  config: {
+    plans: {
+      title: 'Plans',
+      description: 'Manage billing plans, phases, and rate cards.',
+    },
+    features: {
+      title: 'Features',
+      description: 'Manage the feature catalog and cost queries.',
+    },
+    addons: {
+      title: 'Add-ons',
+      description: 'Manage add-ons that can be purchased standalone.',
+    },
+    notification: {
+      channels: {
+        title: 'Notification Channels',
+        description: 'Manage webhook notification channels.',
+      },
+      rules: {
+        title: 'Notification Rules',
+        description: 'Manage notification rules and send tests.',
+      },
+      events: {
+        title: 'Notification Events',
+        description: 'Browse the notification event stream and resend.',
+      },
+    },
+    currencies: {
+      title: 'Currencies',
+      description: 'Browse fiat and manage custom currencies.',
+    },
+    taxCodes: {
+      title: 'Tax Codes',
+      description: 'Manage tax codes and organization defaults.',
+    },
+    apps: {
+      title: 'Apps',
+      description: 'Manage app integrations and installations.',
+    },
+    portalTokens: {
+      title: 'Portal Tokens',
+      description: 'Issue and manage customer portal tokens.',
+    },
+    billingProfiles: {
+      title: 'Billing Profiles',
+      description: 'Manage billing profiles and invoicing workflows.',
+    },
   },
   dashboard: {
     title: 'Dashboard',

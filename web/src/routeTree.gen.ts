@@ -35,11 +35,22 @@ import { Route as AuthenticatedMetersMeterIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedInvoicesInvoiceIdRouteImport } from './routes/_authenticated/invoices/$invoiceId'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedCustomersCustomerIdRouteImport } from './routes/_authenticated/customers/$customerId'
+import { Route as AuthenticatedConfigTaxCodesIndexRouteImport } from './routes/_authenticated/config/tax-codes/index'
+import { Route as AuthenticatedConfigPortalTokensIndexRouteImport } from './routes/_authenticated/config/portal-tokens/index'
+import { Route as AuthenticatedConfigPlansIndexRouteImport } from './routes/_authenticated/config/plans/index'
+import { Route as AuthenticatedConfigFeaturesIndexRouteImport } from './routes/_authenticated/config/features/index'
+import { Route as AuthenticatedConfigCurrenciesIndexRouteImport } from './routes/_authenticated/config/currencies/index'
+import { Route as AuthenticatedConfigBillingProfilesIndexRouteImport } from './routes/_authenticated/config/billing-profiles/index'
+import { Route as AuthenticatedConfigAppsIndexRouteImport } from './routes/_authenticated/config/apps/index'
+import { Route as AuthenticatedConfigAddonsIndexRouteImport } from './routes/_authenticated/config/addons/index'
 import { Route as AuthenticatedCommerceRefundsIndexRouteImport } from './routes/_authenticated/commerce/refunds/index'
 import { Route as AuthenticatedCommerceRechargeProductsIndexRouteImport } from './routes/_authenticated/commerce/recharge-products/index'
 import { Route as AuthenticatedCommerceOrdersIndexRouteImport } from './routes/_authenticated/commerce/orders/index'
 import { Route as AuthenticatedCommerceRefundsRefundIdRouteImport } from './routes/_authenticated/commerce/refunds/$refundId'
 import { Route as AuthenticatedCommerceOrdersOrderIdRouteImport } from './routes/_authenticated/commerce/orders/$orderId'
+import { Route as AuthenticatedConfigNotificationRulesIndexRouteImport } from './routes/_authenticated/config/notification/rules/index'
+import { Route as AuthenticatedConfigNotificationEventsIndexRouteImport } from './routes/_authenticated/config/notification/events/index'
+import { Route as AuthenticatedConfigNotificationChannelsIndexRouteImport } from './routes/_authenticated/config/notification/channels/index'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -187,6 +198,54 @@ const AuthenticatedCustomersCustomerIdRoute =
     path: '/customers/$customerId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedConfigTaxCodesIndexRoute =
+  AuthenticatedConfigTaxCodesIndexRouteImport.update({
+    id: '/config/tax-codes/',
+    path: '/config/tax-codes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigPortalTokensIndexRoute =
+  AuthenticatedConfigPortalTokensIndexRouteImport.update({
+    id: '/config/portal-tokens/',
+    path: '/config/portal-tokens/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigPlansIndexRoute =
+  AuthenticatedConfigPlansIndexRouteImport.update({
+    id: '/config/plans/',
+    path: '/config/plans/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigFeaturesIndexRoute =
+  AuthenticatedConfigFeaturesIndexRouteImport.update({
+    id: '/config/features/',
+    path: '/config/features/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigCurrenciesIndexRoute =
+  AuthenticatedConfigCurrenciesIndexRouteImport.update({
+    id: '/config/currencies/',
+    path: '/config/currencies/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigBillingProfilesIndexRoute =
+  AuthenticatedConfigBillingProfilesIndexRouteImport.update({
+    id: '/config/billing-profiles/',
+    path: '/config/billing-profiles/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigAppsIndexRoute =
+  AuthenticatedConfigAppsIndexRouteImport.update({
+    id: '/config/apps/',
+    path: '/config/apps/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigAddonsIndexRoute =
+  AuthenticatedConfigAddonsIndexRouteImport.update({
+    id: '/config/addons/',
+    path: '/config/addons/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCommerceRefundsIndexRoute =
   AuthenticatedCommerceRefundsIndexRouteImport.update({
     id: '/commerce/refunds/',
@@ -215,6 +274,24 @@ const AuthenticatedCommerceOrdersOrderIdRoute =
   AuthenticatedCommerceOrdersOrderIdRouteImport.update({
     id: '/commerce/orders/$orderId',
     path: '/commerce/orders/$orderId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigNotificationRulesIndexRoute =
+  AuthenticatedConfigNotificationRulesIndexRouteImport.update({
+    id: '/config/notification/rules/',
+    path: '/config/notification/rules/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigNotificationEventsIndexRoute =
+  AuthenticatedConfigNotificationEventsIndexRouteImport.update({
+    id: '/config/notification/events/',
+    path: '/config/notification/events/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConfigNotificationChannelsIndexRoute =
+  AuthenticatedConfigNotificationChannelsIndexRouteImport.update({
+    id: '/config/notification/channels/',
+    path: '/config/notification/channels/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
@@ -249,6 +326,17 @@ export interface FileRoutesByFullPath {
   '/commerce/orders/': typeof AuthenticatedCommerceOrdersIndexRoute
   '/commerce/recharge-products/': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/commerce/refunds/': typeof AuthenticatedCommerceRefundsIndexRoute
+  '/config/addons/': typeof AuthenticatedConfigAddonsIndexRoute
+  '/config/apps/': typeof AuthenticatedConfigAppsIndexRoute
+  '/config/billing-profiles/': typeof AuthenticatedConfigBillingProfilesIndexRoute
+  '/config/currencies/': typeof AuthenticatedConfigCurrenciesIndexRoute
+  '/config/features/': typeof AuthenticatedConfigFeaturesIndexRoute
+  '/config/plans/': typeof AuthenticatedConfigPlansIndexRoute
+  '/config/portal-tokens/': typeof AuthenticatedConfigPortalTokensIndexRoute
+  '/config/tax-codes/': typeof AuthenticatedConfigTaxCodesIndexRoute
+  '/config/notification/channels/': typeof AuthenticatedConfigNotificationChannelsIndexRoute
+  '/config/notification/events/': typeof AuthenticatedConfigNotificationEventsIndexRoute
+  '/config/notification/rules/': typeof AuthenticatedConfigNotificationRulesIndexRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
@@ -280,6 +368,17 @@ export interface FileRoutesByTo {
   '/commerce/orders': typeof AuthenticatedCommerceOrdersIndexRoute
   '/commerce/recharge-products': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/commerce/refunds': typeof AuthenticatedCommerceRefundsIndexRoute
+  '/config/addons': typeof AuthenticatedConfigAddonsIndexRoute
+  '/config/apps': typeof AuthenticatedConfigAppsIndexRoute
+  '/config/billing-profiles': typeof AuthenticatedConfigBillingProfilesIndexRoute
+  '/config/currencies': typeof AuthenticatedConfigCurrenciesIndexRoute
+  '/config/features': typeof AuthenticatedConfigFeaturesIndexRoute
+  '/config/plans': typeof AuthenticatedConfigPlansIndexRoute
+  '/config/portal-tokens': typeof AuthenticatedConfigPortalTokensIndexRoute
+  '/config/tax-codes': typeof AuthenticatedConfigTaxCodesIndexRoute
+  '/config/notification/channels': typeof AuthenticatedConfigNotificationChannelsIndexRoute
+  '/config/notification/events': typeof AuthenticatedConfigNotificationEventsIndexRoute
+  '/config/notification/rules': typeof AuthenticatedConfigNotificationRulesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -314,6 +413,17 @@ export interface FileRoutesById {
   '/_authenticated/commerce/orders/': typeof AuthenticatedCommerceOrdersIndexRoute
   '/_authenticated/commerce/recharge-products/': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/_authenticated/commerce/refunds/': typeof AuthenticatedCommerceRefundsIndexRoute
+  '/_authenticated/config/addons/': typeof AuthenticatedConfigAddonsIndexRoute
+  '/_authenticated/config/apps/': typeof AuthenticatedConfigAppsIndexRoute
+  '/_authenticated/config/billing-profiles/': typeof AuthenticatedConfigBillingProfilesIndexRoute
+  '/_authenticated/config/currencies/': typeof AuthenticatedConfigCurrenciesIndexRoute
+  '/_authenticated/config/features/': typeof AuthenticatedConfigFeaturesIndexRoute
+  '/_authenticated/config/plans/': typeof AuthenticatedConfigPlansIndexRoute
+  '/_authenticated/config/portal-tokens/': typeof AuthenticatedConfigPortalTokensIndexRoute
+  '/_authenticated/config/tax-codes/': typeof AuthenticatedConfigTaxCodesIndexRoute
+  '/_authenticated/config/notification/channels/': typeof AuthenticatedConfigNotificationChannelsIndexRoute
+  '/_authenticated/config/notification/events/': typeof AuthenticatedConfigNotificationEventsIndexRoute
+  '/_authenticated/config/notification/rules/': typeof AuthenticatedConfigNotificationRulesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -348,6 +458,17 @@ export interface FileRouteTypes {
     | '/commerce/orders/'
     | '/commerce/recharge-products/'
     | '/commerce/refunds/'
+    | '/config/addons/'
+    | '/config/apps/'
+    | '/config/billing-profiles/'
+    | '/config/currencies/'
+    | '/config/features/'
+    | '/config/plans/'
+    | '/config/portal-tokens/'
+    | '/config/tax-codes/'
+    | '/config/notification/channels/'
+    | '/config/notification/events/'
+    | '/config/notification/rules/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -379,6 +500,17 @@ export interface FileRouteTypes {
     | '/commerce/orders'
     | '/commerce/recharge-products'
     | '/commerce/refunds'
+    | '/config/addons'
+    | '/config/apps'
+    | '/config/billing-profiles'
+    | '/config/currencies'
+    | '/config/features'
+    | '/config/plans'
+    | '/config/portal-tokens'
+    | '/config/tax-codes'
+    | '/config/notification/channels'
+    | '/config/notification/events'
+    | '/config/notification/rules'
   id:
     | '__root__'
     | '/_authenticated'
@@ -412,6 +544,17 @@ export interface FileRouteTypes {
     | '/_authenticated/commerce/orders/'
     | '/_authenticated/commerce/recharge-products/'
     | '/_authenticated/commerce/refunds/'
+    | '/_authenticated/config/addons/'
+    | '/_authenticated/config/apps/'
+    | '/_authenticated/config/billing-profiles/'
+    | '/_authenticated/config/currencies/'
+    | '/_authenticated/config/features/'
+    | '/_authenticated/config/plans/'
+    | '/_authenticated/config/portal-tokens/'
+    | '/_authenticated/config/tax-codes/'
+    | '/_authenticated/config/notification/channels/'
+    | '/_authenticated/config/notification/events/'
+    | '/_authenticated/config/notification/rules/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -609,6 +752,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCustomersCustomerIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/config/tax-codes/': {
+      id: '/_authenticated/config/tax-codes/'
+      path: '/config/tax-codes'
+      fullPath: '/config/tax-codes/'
+      preLoaderRoute: typeof AuthenticatedConfigTaxCodesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/portal-tokens/': {
+      id: '/_authenticated/config/portal-tokens/'
+      path: '/config/portal-tokens'
+      fullPath: '/config/portal-tokens/'
+      preLoaderRoute: typeof AuthenticatedConfigPortalTokensIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/plans/': {
+      id: '/_authenticated/config/plans/'
+      path: '/config/plans'
+      fullPath: '/config/plans/'
+      preLoaderRoute: typeof AuthenticatedConfigPlansIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/features/': {
+      id: '/_authenticated/config/features/'
+      path: '/config/features'
+      fullPath: '/config/features/'
+      preLoaderRoute: typeof AuthenticatedConfigFeaturesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/currencies/': {
+      id: '/_authenticated/config/currencies/'
+      path: '/config/currencies'
+      fullPath: '/config/currencies/'
+      preLoaderRoute: typeof AuthenticatedConfigCurrenciesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/billing-profiles/': {
+      id: '/_authenticated/config/billing-profiles/'
+      path: '/config/billing-profiles'
+      fullPath: '/config/billing-profiles/'
+      preLoaderRoute: typeof AuthenticatedConfigBillingProfilesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/apps/': {
+      id: '/_authenticated/config/apps/'
+      path: '/config/apps'
+      fullPath: '/config/apps/'
+      preLoaderRoute: typeof AuthenticatedConfigAppsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/addons/': {
+      id: '/_authenticated/config/addons/'
+      path: '/config/addons'
+      fullPath: '/config/addons/'
+      preLoaderRoute: typeof AuthenticatedConfigAddonsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/commerce/refunds/': {
       id: '/_authenticated/commerce/refunds/'
       path: '/commerce/refunds'
@@ -642,6 +841,27 @@ declare module '@tanstack/react-router' {
       path: '/commerce/orders/$orderId'
       fullPath: '/commerce/orders/$orderId'
       preLoaderRoute: typeof AuthenticatedCommerceOrdersOrderIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/notification/rules/': {
+      id: '/_authenticated/config/notification/rules/'
+      path: '/config/notification/rules'
+      fullPath: '/config/notification/rules/'
+      preLoaderRoute: typeof AuthenticatedConfigNotificationRulesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/notification/events/': {
+      id: '/_authenticated/config/notification/events/'
+      path: '/config/notification/events'
+      fullPath: '/config/notification/events/'
+      preLoaderRoute: typeof AuthenticatedConfigNotificationEventsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/config/notification/channels/': {
+      id: '/_authenticated/config/notification/channels/'
+      path: '/config/notification/channels'
+      fullPath: '/config/notification/channels/'
+      preLoaderRoute: typeof AuthenticatedConfigNotificationChannelsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -689,6 +909,17 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCommerceOrdersIndexRoute: typeof AuthenticatedCommerceOrdersIndexRoute
   AuthenticatedCommerceRechargeProductsIndexRoute: typeof AuthenticatedCommerceRechargeProductsIndexRoute
   AuthenticatedCommerceRefundsIndexRoute: typeof AuthenticatedCommerceRefundsIndexRoute
+  AuthenticatedConfigAddonsIndexRoute: typeof AuthenticatedConfigAddonsIndexRoute
+  AuthenticatedConfigAppsIndexRoute: typeof AuthenticatedConfigAppsIndexRoute
+  AuthenticatedConfigBillingProfilesIndexRoute: typeof AuthenticatedConfigBillingProfilesIndexRoute
+  AuthenticatedConfigCurrenciesIndexRoute: typeof AuthenticatedConfigCurrenciesIndexRoute
+  AuthenticatedConfigFeaturesIndexRoute: typeof AuthenticatedConfigFeaturesIndexRoute
+  AuthenticatedConfigPlansIndexRoute: typeof AuthenticatedConfigPlansIndexRoute
+  AuthenticatedConfigPortalTokensIndexRoute: typeof AuthenticatedConfigPortalTokensIndexRoute
+  AuthenticatedConfigTaxCodesIndexRoute: typeof AuthenticatedConfigTaxCodesIndexRoute
+  AuthenticatedConfigNotificationChannelsIndexRoute: typeof AuthenticatedConfigNotificationChannelsIndexRoute
+  AuthenticatedConfigNotificationEventsIndexRoute: typeof AuthenticatedConfigNotificationEventsIndexRoute
+  AuthenticatedConfigNotificationRulesIndexRoute: typeof AuthenticatedConfigNotificationRulesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -715,6 +946,23 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedCommerceRechargeProductsIndexRoute,
   AuthenticatedCommerceRefundsIndexRoute:
     AuthenticatedCommerceRefundsIndexRoute,
+  AuthenticatedConfigAddonsIndexRoute: AuthenticatedConfigAddonsIndexRoute,
+  AuthenticatedConfigAppsIndexRoute: AuthenticatedConfigAppsIndexRoute,
+  AuthenticatedConfigBillingProfilesIndexRoute:
+    AuthenticatedConfigBillingProfilesIndexRoute,
+  AuthenticatedConfigCurrenciesIndexRoute:
+    AuthenticatedConfigCurrenciesIndexRoute,
+  AuthenticatedConfigFeaturesIndexRoute: AuthenticatedConfigFeaturesIndexRoute,
+  AuthenticatedConfigPlansIndexRoute: AuthenticatedConfigPlansIndexRoute,
+  AuthenticatedConfigPortalTokensIndexRoute:
+    AuthenticatedConfigPortalTokensIndexRoute,
+  AuthenticatedConfigTaxCodesIndexRoute: AuthenticatedConfigTaxCodesIndexRoute,
+  AuthenticatedConfigNotificationChannelsIndexRoute:
+    AuthenticatedConfigNotificationChannelsIndexRoute,
+  AuthenticatedConfigNotificationEventsIndexRoute:
+    AuthenticatedConfigNotificationEventsIndexRoute,
+  AuthenticatedConfigNotificationRulesIndexRoute:
+    AuthenticatedConfigNotificationRulesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
