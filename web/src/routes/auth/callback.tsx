@@ -22,7 +22,6 @@ export const Route = createFileRoute('/auth/callback')({
 // code is single-use: a second signinRedirectCallback would fail with
 // invalid_grant after the first already consumed it. Share one in-flight
 // exchange across effect runs so the code is redeemed exactly once.
-// eslint-disable-next-line react-refresh/only-export-components
 let signinCallbackPromise: ReturnType<
   typeof userManager.signinRedirectCallback
 > | null = null

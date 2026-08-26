@@ -94,13 +94,14 @@ func TestWireCommerceDisabledRejectsAllMutationHandlers(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Recharge product catalog maintenance stays available with commerce
+	// disabled (admin console need, no payment/refund runtime involved);
+	// every other mutation stays a hard 501 boundary.
 	mutations := []struct {
 		name    string
 		method  string
 		handler http.HandlerFunc
 	}{
-		{name: "create product", method: http.MethodPost, handler: wiring.Handler.CreateProduct()},
-		{name: "update product", method: http.MethodPut, handler: wiring.Handler.UpdateProduct()},
 		{name: "create order", method: http.MethodPost, handler: wiring.Handler.CreateOrder()},
 		{name: "create checkout", method: http.MethodPost, handler: wiring.Handler.CreateCheckoutSession()},
 		{name: "alipay callback", method: http.MethodPost, handler: wiring.Handler.AlipayPaymentCallback()},

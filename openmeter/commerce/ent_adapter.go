@@ -560,6 +560,22 @@ func productMetadata(p Product) map[string]any {
 	return meta
 }
 
+// metaNumber reads a numeric metadata value in either representation: freshly
+// created entities carry the in-memory int64/int form, while values read back
+// from the database come as float64 after the JSON round-trip.
+func metaNumber[T int | int64](meta map[string]any, key string) (T, bool) {
+	switch v := meta[key].(type) {
+	case float64:
+		return T(v), true
+	case int64:
+		return T(v), true
+	case int:
+		return T(v), true
+	default:
+		return 0, false
+	}
+}
+
 // mapEntProduct converts an Ent CommerceProduct to a domain Product.
 func mapEntProduct(ep *entdb.CommerceProduct) *Product {
 	p := &Product{
@@ -582,26 +598,26 @@ func mapEntProduct(ep *entdb.CommerceProduct) *Product {
 		p.Description = *ep.Description
 	}
 	if ep.Metadata != nil {
-		if v, ok := ep.Metadata["version"].(float64); ok {
-			p.Version = int(v)
+		if v, ok := metaNumber[int](ep.Metadata, "version"); ok {
+			p.Version = v
 		}
-		if v, ok := ep.Metadata["credits"].(float64); ok {
-			p.Credits = int64(v)
+		if v, ok := metaNumber[int64](ep.Metadata, "credits"); ok {
+			p.Credits = v
 		}
 		if v, ok := ep.Metadata["active"].(bool); ok {
 			p.Active = v
 		}
-		if v, ok := ep.Metadata["display_order"].(float64); ok {
-			p.DisplayOrder = int(v)
+		if v, ok := metaNumber[int](ep.Metadata, "display_order"); ok {
+			p.DisplayOrder = v
 		}
-		if v, ok := ep.Metadata["bonus_credits"].(float64); ok {
-			p.BonusCredits = int64(v)
+		if v, ok := metaNumber[int64](ep.Metadata, "bonus_credits"); ok {
+			p.BonusCredits = v
 		}
 		if v, ok := ep.Metadata["refund_policy"].(string); ok {
 			p.RefundPolicy = RefundPolicy(v)
 		}
-		if v, ok := ep.Metadata["purchase_limit"].(float64); ok {
-			p.PurchaseLimit = int(v)
+		if v, ok := metaNumber[int](ep.Metadata, "purchase_limit"); ok {
+			p.PurchaseLimit = v
 		}
 		if v, ok := ep.Metadata["applicable_plans"].([]any); ok {
 			for _, item := range v {

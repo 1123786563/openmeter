@@ -76,8 +76,16 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     },
 
     signout: async () => {
+      // Clear the local session first so the guard holds even when the IdP
+      // logout redirect fails (missing end-session endpoint, IdP down).
       get().reset()
-      await userManager.signoutRedirect()
+      try {
+        await userManager.signoutRedirect()
+      } catch (error) {
+        // eslint-disable-next-line no-console -- mirrors the signin failure log
+        console.error('[auth] signout redirect failed', error)
+        window.location.assign('/sign-in')
+      }
     },
   }
 })

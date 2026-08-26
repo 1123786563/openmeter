@@ -188,6 +188,21 @@ func wireCommerceWithRuntimeDependencies(
 		}
 	}
 
+	// A read-capable refund service is constructed even with commerce disabled
+	// so the admin console can list refunds; creation stays behind the enabled
+	// flag and the runtime fence validation either way.
+	if refundSvc == nil {
+		refundSvc, err = refund.New(refund.Config{
+			Repo:   refundRepoAdapter{entAdapter},
+			Orders: refundOrderReader{entAdapter},
+			Wallet: refundWalletAdapter{entAdapter},
+			Logger: logger,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("refund service: %w", err)
+		}
+	}
+
 	// Namespace resolver backed by the static default namespace.
 	nsDecoder := namespacedriver.StaticNamespaceDecoder(defaultNamespace)
 	resolveNamespace := func(ctx context.Context) (string, error) {
@@ -261,9 +276,17 @@ func (h readOnlyCommerceHandler) ListRechargeProducts() http.HandlerFunc {
 	return h.delegate.ListRechargeProducts()
 }
 
-func (readOnlyCommerceHandler) CreateProduct() http.HandlerFunc { return commerceDisabledMutation() }
+// Recharge product catalog maintenance only touches the catalog tables and
+// needs neither payment channels nor the automatic-refund runtime, so the
+// admin console keeps create/update available while commerce is disabled.
+// Order, checkout and refund mutations stay hard-disabled below.
+func (h readOnlyCommerceHandler) CreateProduct() http.HandlerFunc {
+	return h.delegate.CreateProduct()
+}
 
-func (readOnlyCommerceHandler) UpdateProduct() http.HandlerFunc { return commerceDisabledMutation() }
+func (h readOnlyCommerceHandler) UpdateProduct() http.HandlerFunc {
+	return h.delegate.UpdateProduct()
+}
 
 func (readOnlyCommerceHandler) CreateOrder() http.HandlerFunc { return commerceDisabledMutation() }
 

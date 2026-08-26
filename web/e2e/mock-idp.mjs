@@ -79,6 +79,7 @@ function handleDiscovery(res) {
     authorization_endpoint: `${ISSUER}/authorize`,
     token_endpoint: `${ISSUER}/token`,
     jwks_uri: `${ISSUER}/jwks.json`,
+    end_session_endpoint: `${ISSUER}/logout`,
     response_types_supported: ['code'],
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256'],
@@ -189,6 +190,13 @@ const server = createServer((req, res) => {
 
   if (req.method === 'GET' && path === '/.well-known/openid-configuration') {
     handleDiscovery(res)
+  } else if (req.method === 'GET' && path === '/logout') {
+    // RP-initiated logout: bounce back to the post-logout redirect target so
+    // the SPA logout round-trip completes like Casdoor's.
+    const query = new URL(req.url, ISSUER).searchParams
+    const target = query.get('post_logout_redirect_uri') || ISSUER
+    res.writeHead(302, { Location: target })
+    res.end()
   } else if (req.method === 'GET' && path === '/authorize') {
     handleAuthorize(req, res)
   } else if (req.method === 'POST' && path === '/token') {

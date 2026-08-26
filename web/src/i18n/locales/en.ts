@@ -479,6 +479,7 @@ export default {
         sku: 'SKU',
         displayName: 'Product name',
         kind: 'Business kind',
+        credits: 'Credits',
         currency: 'Currency',
         amountYuan: 'Price ({{currency}})',
         displayOrder: 'Display order',

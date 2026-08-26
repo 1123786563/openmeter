@@ -468,6 +468,7 @@ export default {
         sku: 'SKU',
         displayName: '商品名称',
         kind: '业务类型',
+        credits: '额度数量',
         currency: '币种',
         amountYuan: '售价（{{currency}}）',
         displayOrder: '展示排序',
