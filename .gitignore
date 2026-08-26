@@ -43,3 +43,4 @@ server
 e2e/alipay-sandbox/
 e2e/commerce-verify/
 .playwright-mcp/
+.mimosa/
