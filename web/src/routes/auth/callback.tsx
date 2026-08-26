@@ -18,6 +18,25 @@ export const Route = createFileRoute('/auth/callback')({
   component: AuthCallback,
 })
 
+// React StrictMode runs effects twice in development, but the authorization
+// code is single-use: a second signinRedirectCallback would fail with
+// invalid_grant after the first already consumed it. Share one in-flight
+// exchange across effect runs so the code is redeemed exactly once.
+// eslint-disable-next-line react-refresh/only-export-components
+let signinCallbackPromise: ReturnType<
+  typeof userManager.signinRedirectCallback
+> | null = null
+
+function completeSignin(): ReturnType<typeof userManager.signinRedirectCallback> {
+  signinCallbackPromise ??= userManager
+    .signinRedirectCallback()
+    .finally(() => {
+      signinCallbackPromise = null
+    })
+
+  return signinCallbackPromise
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 function AuthCallback() {
   const { t } = useTranslation()
@@ -29,7 +48,7 @@ function AuthCallback() {
 
     void (async () => {
       try {
-        const user = await userManager.signinRedirectCallback()
+        const user = await completeSignin()
         if (cancelled) return
         useAuthStore.getState().setOidcUser(user)
 
