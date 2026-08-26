@@ -56,17 +56,13 @@ const NON_NEGATIVE_INT = /^\d+$/
  * mutable subset (display name, price, listing state) — `sku`, `kind`,
  * `credits`, `currency`, and the policy/description fields are immutable and
  * rendered read-only (or omitted) in edit mode.
+ *
+ * The schemas must stay split: edit mode resets hidden immutable fields to
+ * placeholders (e.g. sku ''), and one shared schema with required sku/credits
+ * would fail validation invisibly and silently block the submit.
  */
-const productSchema = z.object({
-  sku: z.string().min(1).max(64),
+const baseSchema = z.object({
   displayName: z.string().min(1).max(256),
-  kind: z.enum(PRODUCT_KINDS),
-  credits: z
-    .string()
-    .refine(
-      (value) => NON_NEGATIVE_INT.test(value) && Number(value) > 0,
-      'invalid'
-    ),
   amountYuan: z
     .string()
     .refine(
@@ -82,7 +78,28 @@ const productSchema = z.object({
   active: z.boolean(),
 })
 
-type ProductFormValues = z.infer<typeof productSchema>
+const createSchema = baseSchema.extend({
+  sku: z.string().min(1).max(64),
+  kind: z.enum(PRODUCT_KINDS),
+  credits: z
+    .string()
+    .refine(
+      (value) => NON_NEGATIVE_INT.test(value) && Number(value) > 0,
+      'invalid'
+    ),
+})
+
+// Edit keeps the exact createSchema shape (so the control's generics stay
+// unified) but relaxes the immutable fields: they are reset to placeholders
+// and never rendered, and required rules would fail validation invisibly and
+// silently block the submit.
+const editSchema = baseSchema.extend({
+  sku: z.string(),
+  kind: z.enum(PRODUCT_KINDS),
+  credits: z.string(),
+})
+
+type ProductFormValues = z.infer<typeof createSchema>
 
 const EMPTY_VALUES: ProductFormValues = {
   sku: '',
@@ -116,7 +133,9 @@ export function RechargeProductFormDialog({
   const updateMutation = useUpdateRechargeProduct()
 
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    // Edit drops the immutable-field rules; assert the shared value shape so
+    // the union resolver does not fork the control's generics.
+    resolver: zodResolver(isCreate ? createSchema : editSchema),
     defaultValues: EMPTY_VALUES,
   })
 

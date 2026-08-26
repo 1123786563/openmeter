@@ -47,11 +47,30 @@ function CustomerCell({ customerId }: { customerId: string }) {
   )
 }
 
-/** Resolves the plan name for a subscription row. */
-function PlanCell({ planId }: { planId: string | undefined }) {
+/** Resolves the plan name for a subscription row, linking to the
+ * subscription detail. */
+function PlanCell({
+  planId,
+  subscriptionId,
+}: {
+  planId: string | undefined
+  subscriptionId: string
+}) {
   const { data: plans } = usePlans()
   const plan = plans?.find((candidate) => candidate.id === planId)
-  return plan ? plan.name : <span className='text-muted-foreground'>—</span>
+  if (!plan) {
+    return <span className='text-muted-foreground'>—</span>
+  }
+
+  return (
+    <Link
+      to='/subscriptions/$subscriptionId'
+      params={{ subscriptionId }}
+      className='hover:underline'
+    >
+      {plan.name}
+    </Link>
+  )
 }
 
 const STATUS_OPTIONS = ['active', 'inactive', 'canceled', 'scheduled']
@@ -81,7 +100,12 @@ export function SubscriptionsPage() {
     {
       accessorKey: 'plan',
       header: t('subscriptions.fields.plan'),
-      cell: ({ row }) => <PlanCell planId={row.original.planId} />,
+      cell: ({ row }) => (
+        <PlanCell
+          planId={row.original.planId}
+          subscriptionId={row.original.id}
+        />
+      ),
     },
     {
       accessorKey: 'status',
