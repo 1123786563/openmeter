@@ -60,6 +60,83 @@ model RechargeProductWithBonus {
   bonus_credits?: int64;
 }
 /**
+ * Request body for creating a new recharge product.
+ */
+@friendlyName("CommerceRechargeProductCreate")
+model RechargeProductCreate {
+  /**
+   * Unique stock keeping unit for the product within the namespace.
+   */
+  sku: string;
+
+  /**
+   * Human-readable product name (e.g. "1,000 Points Pack").
+   */
+  display_name: string;
+
+  /**
+   * The business kind of the product. It must match the order kind the product can
+   * fulfill (`wallet_top_up` for recharge products).
+   */
+  kind: OrderKind;
+
+  /**
+   * Number of Credits granted on successful purchase.
+   */
+  credits: int64;
+
+  /**
+   * Retail price in the smallest currency unit (fen).
+   */
+  amount_fen: FenAmount;
+
+  /**
+   * Three-letter ISO 4217 currency code for the price.
+   */
+  currency: Shared.CurrencyCode;
+
+  /**
+   * Sort order for display.
+   */
+  display_order?: int32;
+
+  /**
+   * Refund policy for purchases of this product (`none`, `unspent`, or
+   * `full_window`). Omit to use the default policy.
+   */
+  refund_policy?: string;
+
+  /**
+   * Longer marketing description of the product.
+   */
+  description?: string;
+}
+
+/**
+ * Request body for updating a recharge product's mutable fields. Omitted fields
+ * keep their current values; `sku`, `kind`, and `credits` are immutable.
+ */
+@friendlyName("CommerceRechargeProductUpdate")
+model RechargeProductUpdate {
+  /**
+   * New human-readable product name.
+   */
+  display_name?: string;
+
+  /**
+   * New retail price in the smallest currency unit (fen). Existing orders keep their
+   * creation-time price snapshot.
+   */
+  amount_fen?: FenAmount;
+
+  /**
+   * Whether the product is currently available for purchase (listing or delisting
+   * the product).
+   */
+  active?: boolean;
+}
+
+/**
  * Response body for listing recharge products.
  */
 @friendlyName("CommerceRechargeProductList")

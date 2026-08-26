@@ -11,8 +11,14 @@ import type {
   GetCustomerWalletResponse,
   ListRechargeProductsRequest,
   ListRechargeProductsResponse,
+  CreateRechargeProductRequest,
+  CreateRechargeProductResponse,
+  UpdateRechargeProductRequest,
+  UpdateRechargeProductResponse,
   CreateOrderRequest,
   CreateOrderResponse,
+  ListOrdersRequest,
+  ListOrdersResponse,
   GetOrderRequest,
   GetOrderResponse,
   CreateCheckoutSessionRequest,
@@ -21,6 +27,8 @@ import type {
   GetCheckoutSessionResponse,
   CreateRefundRequest,
   CreateRefundResponse,
+  ListRefundsRequest,
+  ListRefundsResponse,
   GetRefundRequest,
   GetRefundResponse,
   WechatPaymentCallbackRequest,
@@ -81,7 +89,9 @@ export function getCustomerWallet(
 /**
  * List recharge products
  *
- * List all active recharge products available for purchase.
+ * List recharge products available for purchase. By default only active
+ * products are returned; pass `include_inactive` to also list delisted
+ * products (for the admin catalog management view).
  *
  * GET /recharge-products
  */
@@ -94,6 +104,7 @@ export function listRechargeProducts(
     const query = toWire(
       {
         currency: req.currency,
+        includeInactive: req.includeInactive,
       },
       schemas.listRechargeProductsQueryParams,
     )
@@ -109,6 +120,80 @@ export function listRechargeProducts(
           assertValid(schemas.listRechargeProductsResponseWire, data)
         }
         return fromWire(data, schemas.listRechargeProductsResponse)
+      })
+  })
+}
+
+/**
+ * Create recharge product
+ *
+ * Create a new recharge product in the catalog. Admin-only mutation.
+ *
+ * POST /recharge-products
+ */
+export function createRechargeProduct(
+  client: Client,
+  req: CreateRechargeProductRequest,
+  options?: RequestOptions,
+): Promise<Result<CreateRechargeProductResponse>> {
+  return request(() => {
+    const body = toWire(req, schemas.createRechargeProductBody)
+    if (client._options.validate) {
+      assertValid(schemas.createRechargeProductBodyWire, body)
+    }
+    return http(client)
+      .post('recharge-products', { ...options, json: body })
+      .json()
+      .then((data) => {
+        if (client._options.validate) {
+          assertValid(schemas.createRechargeProductResponseWire, data)
+        }
+        return fromWire(data, schemas.createRechargeProductResponse)
+      })
+  })
+}
+
+/**
+ * Update recharge product
+ *
+ * Update a recharge product's mutable fields (name, price, active listing state).
+ * Admin-only mutation; `sku`, `kind`, and `credits` are immutable.
+ *
+ * PATCH /recharge-products/{productId}
+ */
+export function updateRechargeProduct(
+  client: Client,
+  req: UpdateRechargeProductRequest,
+  options?: RequestOptions,
+): Promise<Result<UpdateRechargeProductResponse>> {
+  return request(() => {
+    const pathParamsInput = {
+      productId: req.productId,
+    }
+    const pathParams = client._options.validate
+      ? toPathWire(pathParamsInput, schemas.updateRechargeProductPathParams)
+      : pathParamsInput
+    if (client._options.validate) {
+      assertValid(schemas.updateRechargeProductPathParamsWire, pathParams)
+    }
+    const path = `recharge-products/${(() => {
+      if (pathParams.productId === undefined) {
+        throw new Error('missing path parameter: productId')
+      }
+      return encodeURIComponent(String(pathParams.productId))
+    })()}`
+    const body = toWire(req.body, schemas.updateRechargeProductBody)
+    if (client._options.validate) {
+      assertValid(schemas.updateRechargeProductBodyWire, body)
+    }
+    return http(client)
+      .patch(path, { ...options, json: body })
+      .json()
+      .then((data) => {
+        if (client._options.validate) {
+          assertValid(schemas.updateRechargeProductResponseWire, data)
+        }
+        return fromWire(data, schemas.updateRechargeProductResponse)
       })
   })
 }
@@ -141,6 +226,44 @@ export function createOrder(
           assertValid(schemas.createOrderResponseWire, data)
         }
         return fromWire(data, schemas.createOrderResponse)
+      })
+  })
+}
+
+/**
+ * List orders
+ *
+ * List orders in the namespace, newest first. Supports pagination and optional
+ * customer and status filters.
+ *
+ * GET /orders
+ */
+export function listOrders(
+  client: Client,
+  req: ListOrdersRequest = {},
+  options?: RequestOptions,
+): Promise<Result<ListOrdersResponse>> {
+  return request(() => {
+    const query = toWire(
+      {
+        page: req.page,
+        customerId: req.customerId,
+        status: req.status,
+      },
+      schemas.listOrdersQueryParams,
+    )
+    if (client._options.validate) {
+      assertValid(schemas.listOrdersQueryParamsWire, query)
+    }
+    const searchParams = toURLSearchParams(query)
+    return http(client)
+      .get('orders', { ...options, searchParams })
+      .json()
+      .then((data) => {
+        if (client._options.validate) {
+          assertValid(schemas.listOrdersResponseWire, data)
+        }
+        return fromWire(data, schemas.listOrdersResponse)
       })
   })
 }
@@ -301,6 +424,44 @@ export function createRefund(
 }
 
 /**
+ * List refunds
+ *
+ * List refund requests in the namespace, newest first. Supports pagination and
+ * optional customer and status filters.
+ *
+ * GET /refunds
+ */
+export function listRefunds(
+  client: Client,
+  req: ListRefundsRequest = {},
+  options?: RequestOptions,
+): Promise<Result<ListRefundsResponse>> {
+  return request(() => {
+    const query = toWire(
+      {
+        page: req.page,
+        customerId: req.customerId,
+        status: req.status,
+      },
+      schemas.listRefundsQueryParams,
+    )
+    if (client._options.validate) {
+      assertValid(schemas.listRefundsQueryParamsWire, query)
+    }
+    const searchParams = toURLSearchParams(query)
+    return http(client)
+      .get('refunds', { ...options, searchParams })
+      .json()
+      .then((data) => {
+        if (client._options.validate) {
+          assertValid(schemas.listRefundsResponseWire, data)
+        }
+        return fromWire(data, schemas.listRefundsResponse)
+      })
+  })
+}
+
+/**
  * Get refund
  *
  * Retrieve a refund by its ID.
@@ -347,9 +508,9 @@ export function getRefund(
  * payment fact, and fulfills the order.
  *
  * The request body is the provider-signed WeChat Pay v3 notification: a JSON
- * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
- * verifies the RSA signature over the raw bytes, so the body is intentionally
- * not modeled with a schema and must be forwarded byte-for-byte.
+ * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies
+ * the RSA signature over the raw bytes, so the body is intentionally not modeled
+ * with a schema and must be forwarded byte-for-byte.
  *
  * POST /payment-providers/wechat/callback
  */
@@ -371,8 +532,7 @@ export function wechatPaymentCallback(
  *
  * The request body is the provider-signed WeChat Pay v3 refund notification.
  * OpenMeter verifies the RSA signature over the raw bytes, so the body is
- * intentionally not modeled with a schema and must be forwarded
- * byte-for-byte.
+ * intentionally not modeled with a schema and must be forwarded byte-for-byte.
  *
  * POST /payment-providers/wechat/refund-callback
  */
@@ -392,11 +552,10 @@ export function wechatRefundCallback(
  * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
  * fact, and fulfills the order.
  *
- * The request body is the `application/x-www-form-urlencoded` Alipay
- * notification whose field set varies by trade type. OpenMeter verifies the
- * RSA2 signature over the canonicalized raw form fields, so the body is
- * intentionally not modeled with a schema and must be forwarded
- * byte-for-byte.
+ * The request body is the `application/x-www-form-urlencoded` Alipay notification
+ * whose field set varies by trade type. OpenMeter verifies the RSA2 signature over
+ * the canonicalized raw form fields, so the body is intentionally not modeled with
+ * a schema and must be forwarded byte-for-byte.
  *
  * POST /payment-providers/alipay/callback
  */

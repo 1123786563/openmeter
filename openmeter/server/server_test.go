@@ -23,6 +23,8 @@ import (
 
 	"github.com/openmeterio/openmeter/api"
 	apiv3 "github.com/openmeterio/openmeter/api/v3"
+	namespaceshandler "github.com/openmeterio/openmeter/api/v3/handlers/namespaces"
+	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appcustominvoicing "github.com/openmeterio/openmeter/openmeter/app/custominvoicing"
 	appstripe "github.com/openmeterio/openmeter/openmeter/app/stripe"
@@ -698,6 +700,12 @@ func TestRoutes(t *testing.T) {
 // getTestServer returns a test server and its streaming connector mock.
 // Optional opts functions are applied to the router.Config before the server is created.
 func getTestServer(t *testing.T, opts ...func(*router.Config)) (*Server, *MockStreamingConnector) {
+	return getTestServerWithServerOptions(t, opts)
+}
+
+// getTestServerWithServerOptions additionally applies server-level Config
+// options before the server is created, used to mount test middlewares.
+func getTestServerWithServerOptions(t *testing.T, opts []func(*router.Config), serverOpts ...func(*Config)) (*Server, *MockStreamingConnector) {
 	portal, err := portaladapter.New(portaladapter.Config{
 		Secret: "12345",
 		Expire: time.Hour,
@@ -802,16 +810,53 @@ func getTestServer(t *testing.T, opts ...func(*router.Config)) (*Server, *MockSt
 		},
 		RouterHooks:        RouterHooks{},
 		ClientIPMiddleware: middleware.ClientIPFromRemoteAddr,
+		NamespacesHandler:  namespaceshandler.New(config.NamespaceConfiguration{Default: DefaultNamespace}),
 	}
 
 	for _, opt := range opts {
 		opt(&config.RouterConfig)
 	}
 
+	for _, opt := range serverOpts {
+		opt(config)
+	}
+
 	// Create server
 	server, err := NewServer(config)
 	assert.NoError(t, err, "failed to create server")
 	return server, mockStreamingConnector
+}
+
+// TestOIDCMiddlewareCoversV1AndV3Routes guards the root-router mounting: with
+// an authentication middleware configured, representative v1 and v3 routes
+// must sit behind it (see docs/adr/0001-casdoor-oidc-auth-middleware.md).
+func TestOIDCMiddlewareCoversV1AndV3Routes(t *testing.T) {
+	unauthorized := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		})
+	}
+
+	server, _ := getTestServerWithServerOptions(t, nil, func(c *Config) {
+		c.OIDCAuth = unauthorized
+	})
+
+	paths := []string{
+		"/api/v1/customers",
+		"/api/v3/openmeter/customers",
+		"/api/v3/openmeter/namespaces",
+	}
+
+	for _, path := range paths {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil).WithContext(t.Context())
+			recorder := httptest.NewRecorder()
+
+			server.ServeHTTP(recorder, req)
+
+			assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+		})
+	}
 }
 
 func TestListCustomerChargesRoute(t *testing.T) {

@@ -1,0 +1,6 @@
+singleProject: true
+
+# pnpm v10+ blocks dependency build scripts by default; esbuild's postinstall
+# installs the platform binary required by Vite.
+allowBuilds:
+  esbuild: true

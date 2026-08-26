@@ -235,6 +235,60 @@ jobs:
             exit 1
           fi
 
+  web:
+    name: Web
+    runs-on: depot-ubuntu-latest-4
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # web/package.json has no packageManager field, so pin pnpm explicitly
+      # (same version as the api/client/javascript SDK).
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 11.1.2
+          package_json_file: web/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Run linters
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      # Starts the mock OIDC IdP and the preview server itself
+      # (see playwright.config.ts webServer entries).
+      - name: Run e2e smoke tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: "[${{ github.job }}] Playwright report"
+          path: web/playwright-report/
+          retention-days: 14
+
   generators-go:
     name: Code Generators / Go
     runs-on: depot-ubuntu-latest-8

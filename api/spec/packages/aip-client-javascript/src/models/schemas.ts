@@ -1142,6 +1142,26 @@ export const governanceQueryErrorCode = z
   .enum(['unknown', 'customer_not_found'])
   .describe('Error code for a governance query failure.')
 
+export const namespaceList = z
+  .object({
+    default: z
+      .string()
+
+      .describe(
+        'The namespace used for requests that do not select one explicitly.',
+      ),
+    namespaces: z
+      .array(z.string())
+
+      .describe(
+        'All selectable namespaces, sorted alphabetically. Always includes the default namespace.',
+      ),
+  })
+
+  .describe(
+    'The namespaces available on this deployment. The list is sourced from the server configuration: the default namespace plus the configured namespace allowlist, deduplicated and sorted. When request-level namespace selection is disabled (empty allowlist), only the default namespace is listed.',
+  )
+
 export const creditResourceLine = z.object({
   featureKey: z.string(),
   resourceCode: z.string(),
@@ -3569,6 +3589,26 @@ export const commerceRechargeProduct = z
     'A recharge product (SKU) available for purchase. Each product defines a credit package and its retail price in integer fen.',
   )
 
+export const commerceRechargeProductUpdate = z
+  .object({
+    displayName: z
+      .string()
+      .optional()
+      .describe('New human-readable product name.'),
+    amountFen: commerceFenAmount.optional(),
+    active: z
+      .boolean()
+      .optional()
+
+      .describe(
+        'Whether the product is currently available for purchase (listing or delisting the product).',
+      ),
+  })
+
+  .describe(
+    "Request body for updating a recharge product's mutable fields. Omitted fields keep their current values; `sku`, `kind`, and `credits` are immutable.",
+  )
+
 export const commerceRefundCreate = z
   .object({
     idempotencyKey: z.string().describe('Client-generated idempotency key.'),
@@ -3654,6 +3694,46 @@ export const commerceRechargeProductWithBonus = z
   .describe(
     'A recharge product with promotional bonus credits (e.g. "buy 1000 get 100 extra"). Bonus credits are granted as a separate gift-source bucket.',
   )
+
+export const commerceRechargeProductCreate = z
+  .object({
+    sku: z
+      .string()
+
+      .describe(
+        'Unique stock keeping unit for the product within the namespace.',
+      ),
+    displayName: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    kind: commerceOrderKind,
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    amountFen: commerceFenAmount,
+    currency: currencyCode,
+    displayOrder: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+    refundPolicy: z
+      .string()
+      .optional()
+
+      .describe(
+        'Refund policy for purchases of this product (`none`, `unspent`, or `full_window`). Omit to use the default policy.',
+      ),
+    description: z
+      .string()
+      .optional()
+      .describe('Longer marketing description of the product.'),
+  })
+  .describe('Request body for creating a new recharge product.')
 
 export const commerceCheckoutSessionCreate = z
   .object({
@@ -4899,6 +4979,13 @@ export const commerceRechargeProductList = z
   })
   .describe('Response body for listing recharge products.')
 
+export const refundPagePaginatedResponse = z
+  .object({
+    data: z.array(commerceRefund),
+    meta: paginatedMeta,
+  })
+  .describe('Page paginated response.')
+
 export const receivablePeriodPaginatedResponse = z
   .object({
     data: z.array(commerceReceivablePeriod),
@@ -5164,6 +5251,13 @@ export const workflowTaxSettings = z
 export const planAddonPagePaginatedResponse = z
   .object({
     data: z.array(planAddon),
+    meta: paginatedMeta,
+  })
+  .describe('Page paginated response.')
+
+export const orderPagePaginatedResponse = z
+  .object({
+    data: z.array(commerceOrder),
     meta: paginatedMeta,
   })
   .describe('Page paginated response.')
@@ -7568,6 +7662,8 @@ export const queryGovernanceAccessBody = governanceQueryRequest
 
 export const queryGovernanceAccessResponse = governanceQueryResponse
 
+export const listNamespacesResponse = namespaceList
+
 export const createCreditReservationBody = creditReservationCreate
 
 export const createCreditReservationResponse = creditReservation
@@ -7630,13 +7726,53 @@ export const getCustomerWalletResponse = commerceWallet
 
 export const listRechargeProductsQueryParams = z.object({
   currency: currencyCode.optional(),
+  includeInactive: z.coerce
+    .boolean()
+    .optional()
+
+    .describe(
+      'Include inactive (delisted) products in the response. Defaults to false so public callers keep seeing only purchasable products.',
+    ),
 })
 
 export const listRechargeProductsResponse = commerceRechargeProductList
 
+export const createRechargeProductBody = commerceRechargeProductCreate
+
+export const createRechargeProductResponse = commerceRechargeProduct
+
+export const updateRechargeProductPathParams = z.object({
+  productId: ulid,
+})
+
+export const updateRechargeProductBody = commerceRechargeProductUpdate
+
+export const updateRechargeProductResponse = commerceRechargeProduct
+
 export const createOrderBody = commerceOrderCreate
 
 export const createOrderResponse = commerceOrder
+
+export const listOrdersQueryParams = z.object({
+  page: z
+    .object({
+      size: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('The number of items to include per page.'),
+      number: z.coerce.number().int().optional().describe('The page number.'),
+    })
+    .optional()
+    .describe('Determines which page of the collection to retrieve.'),
+  customerId: ulid.optional(),
+  status: commerceOrderStatus.optional(),
+})
+
+export const listOrdersResponse = z.object({
+  data: z.array(commerceOrder),
+  meta: paginatedMeta,
+})
 
 export const getOrderPathParams = z.object({
   orderId: ulid,
@@ -7661,6 +7797,27 @@ export const getCheckoutSessionResponse = commerceCheckoutSession
 export const createRefundBody = commerceRefundCreate
 
 export const createRefundResponse = commerceRefund
+
+export const listRefundsQueryParams = z.object({
+  page: z
+    .object({
+      size: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('The number of items to include per page.'),
+      number: z.coerce.number().int().optional().describe('The page number.'),
+    })
+    .optional()
+    .describe('Determines which page of the collection to retrieve.'),
+  customerId: ulid.optional(),
+  status: commerceRefundStatus.optional(),
+})
+
+export const listRefundsResponse = z.object({
+  data: z.array(commerceRefund),
+  meta: paginatedMeta,
+})
 
 export const getRefundPathParams = z.object({
   refundId: ulid,
@@ -8833,6 +8990,26 @@ export const governanceFeatureAccessReasonCodeWire = z
 export const governanceQueryErrorCodeWire = z
   .enum(['unknown', 'customer_not_found'])
   .describe('Error code for a governance query failure.')
+
+export const namespaceListWire = z
+  .strictObject({
+    default: z
+      .string()
+
+      .describe(
+        'The namespace used for requests that do not select one explicitly.',
+      ),
+    namespaces: z
+      .array(z.string())
+
+      .describe(
+        'All selectable namespaces, sorted alphabetically. Always includes the default namespace.',
+      ),
+  })
+
+  .describe(
+    'The namespaces available on this deployment. The list is sourced from the server configuration: the default namespace plus the configured namespace allowlist, deduplicated and sorted. When request-level namespace selection is disabled (empty allowlist), only the default namespace is listed.',
+  )
 
 export const creditResourceLineWire = z.strictObject({
   feature_key: z.string(),
@@ -11245,6 +11422,26 @@ export const commerceRechargeProductWire = z
     'A recharge product (SKU) available for purchase. Each product defines a credit package and its retail price in integer fen.',
   )
 
+export const commerceRechargeProductUpdateWire = z
+  .strictObject({
+    display_name: z
+      .string()
+      .optional()
+      .describe('New human-readable product name.'),
+    amount_fen: commerceFenAmountWire.optional(),
+    active: z
+      .boolean()
+      .optional()
+
+      .describe(
+        'Whether the product is currently available for purchase (listing or delisting the product).',
+      ),
+  })
+
+  .describe(
+    "Request body for updating a recharge product's mutable fields. Omitted fields keep their current values; `sku`, `kind`, and `credits` are immutable.",
+  )
+
 export const commerceRefundCreateWire = z
   .strictObject({
     idempotency_key: z.string().describe('Client-generated idempotency key.'),
@@ -11330,6 +11527,46 @@ export const commerceRechargeProductWithBonusWire = z
   .describe(
     'A recharge product with promotional bonus credits (e.g. "buy 1000 get 100 extra"). Bonus credits are granted as a separate gift-source bucket.',
   )
+
+export const commerceRechargeProductCreateWire = z
+  .strictObject({
+    sku: z
+      .string()
+
+      .describe(
+        'Unique stock keeping unit for the product within the namespace.',
+      ),
+    display_name: z
+      .string()
+      .describe('Human-readable product name (e.g. "1,000 Points Pack").'),
+    kind: commerceOrderKindWire,
+    credits: z.coerce
+      .bigint()
+      .gte(-9223372036854775808n)
+      .lte(9223372036854775807n)
+      .describe('Number of Credits granted on successful purchase.'),
+    amount_fen: commerceFenAmountWire,
+    currency: currencyCodeWire,
+    display_order: z
+      .number()
+      .int()
+      .gte(-2147483648)
+      .lte(2147483647)
+      .optional()
+      .describe('Sort order for display.'),
+    refund_policy: z
+      .string()
+      .optional()
+
+      .describe(
+        'Refund policy for purchases of this product (`none`, `unspent`, or `full_window`). Omit to use the default policy.',
+      ),
+    description: z
+      .string()
+      .optional()
+      .describe('Longer marketing description of the product.'),
+  })
+  .describe('Request body for creating a new recharge product.')
 
 export const commerceCheckoutSessionCreateWire = z
   .strictObject({
@@ -12579,6 +12816,13 @@ export const commerceRechargeProductListWire = z
   })
   .describe('Response body for listing recharge products.')
 
+export const refundPagePaginatedResponseWire = z
+  .strictObject({
+    data: z.array(commerceRefundWire),
+    meta: paginatedMetaWire,
+  })
+  .describe('Page paginated response.')
+
 export const receivablePeriodPaginatedResponseWire = z
   .strictObject({
     data: z.array(commerceReceivablePeriodWire),
@@ -12845,6 +13089,13 @@ export const workflowTaxSettingsWire = z
 export const planAddonPagePaginatedResponseWire = z
   .strictObject({
     data: z.array(planAddonWire),
+    meta: paginatedMetaWire,
+  })
+  .describe('Page paginated response.')
+
+export const orderPagePaginatedResponseWire = z
+  .strictObject({
+    data: z.array(commerceOrderWire),
     meta: paginatedMetaWire,
   })
   .describe('Page paginated response.')
@@ -15326,6 +15577,8 @@ export const queryGovernanceAccessBodyWire = governanceQueryRequestWire
 
 export const queryGovernanceAccessResponseWire = governanceQueryResponseWire
 
+export const listNamespacesResponseWire = namespaceListWire
+
 export const createCreditReservationBodyWire = creditReservationCreateWire
 
 export const createCreditReservationResponseWire = creditReservationWire
@@ -15388,13 +15641,53 @@ export const getCustomerWalletResponseWire = commerceWalletWire
 
 export const listRechargeProductsQueryParamsWire = z.object({
   currency: currencyCodeWire.optional(),
+  include_inactive: z.coerce
+    .boolean()
+    .optional()
+
+    .describe(
+      'Include inactive (delisted) products in the response. Defaults to false so public callers keep seeing only purchasable products.',
+    ),
 })
 
 export const listRechargeProductsResponseWire = commerceRechargeProductListWire
 
+export const createRechargeProductBodyWire = commerceRechargeProductCreateWire
+
+export const createRechargeProductResponseWire = commerceRechargeProductWire
+
+export const updateRechargeProductPathParamsWire = z.object({
+  productId: ulidWire,
+})
+
+export const updateRechargeProductBodyWire = commerceRechargeProductUpdateWire
+
+export const updateRechargeProductResponseWire = commerceRechargeProductWire
+
 export const createOrderBodyWire = commerceOrderCreateWire
 
 export const createOrderResponseWire = commerceOrderWire
+
+export const listOrdersQueryParamsWire = z.object({
+  page: z
+    .strictObject({
+      size: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('The number of items to include per page.'),
+      number: z.coerce.number().int().optional().describe('The page number.'),
+    })
+    .optional()
+    .describe('Determines which page of the collection to retrieve.'),
+  customer_id: ulidWire.optional(),
+  status: commerceOrderStatusWire.optional(),
+})
+
+export const listOrdersResponseWire = z.strictObject({
+  data: z.array(commerceOrderWire),
+  meta: paginatedMetaWire,
+})
 
 export const getOrderPathParamsWire = z.object({
   orderId: ulidWire,
@@ -15419,6 +15712,27 @@ export const getCheckoutSessionResponseWire = commerceCheckoutSessionWire
 export const createRefundBodyWire = commerceRefundCreateWire
 
 export const createRefundResponseWire = commerceRefundWire
+
+export const listRefundsQueryParamsWire = z.object({
+  page: z
+    .strictObject({
+      size: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe('The number of items to include per page.'),
+      number: z.coerce.number().int().optional().describe('The page number.'),
+    })
+    .optional()
+    .describe('Determines which page of the collection to retrieve.'),
+  customer_id: ulidWire.optional(),
+  status: commerceRefundStatusWire.optional(),
+})
+
+export const listRefundsResponseWire = z.strictObject({
+  data: z.array(commerceRefundWire),
+  meta: paginatedMetaWire,
+})
 
 export const getRefundPathParamsWire = z.object({
   refundId: ulidWire,

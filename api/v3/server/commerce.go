@@ -29,12 +29,37 @@ func (s *Server) ListRechargeProducts(w http.ResponseWriter, r *http.Request, pa
 	s.commerceHandler.ListRechargeProducts().ServeHTTP(w, r)
 }
 
+func (s *Server) CreateRechargeProduct(w http.ResponseWriter, r *http.Request) {
+	if s.commerceHandler == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+	s.commerceHandler.CreateProduct().ServeHTTP(w, r)
+}
+
+func (s *Server) UpdateRechargeProduct(w http.ResponseWriter, r *http.Request, productId api.ULID) {
+	if s.commerceHandler == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+	r.SetPathValue("productId", productId)
+	s.commerceHandler.UpdateProduct().ServeHTTP(w, r)
+}
+
 func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if s.commerceHandler == nil {
 		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
 	s.commerceHandler.CreateOrder().ServeHTTP(w, r)
+}
+
+func (s *Server) ListOrders(w http.ResponseWriter, r *http.Request, params api.ListOrdersParams) {
+	if s.commerceHandler == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+	s.commerceHandler.ListOrders().ServeHTTP(w, r)
 }
 
 func (s *Server) GetOrder(w http.ResponseWriter, r *http.Request, orderId api.ULID) {
@@ -94,6 +119,14 @@ func (s *Server) CreateRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.commerceHandler.CreateRefund().ServeHTTP(w, r)
+}
+
+func (s *Server) ListRefunds(w http.ResponseWriter, r *http.Request, params api.ListRefundsParams) {
+	if s.commerceHandler == nil {
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+	s.commerceHandler.ListRefunds().ServeHTTP(w, r)
 }
 
 func (s *Server) GetRefund(w http.ResponseWriter, r *http.Request, refundId api.ULID) {

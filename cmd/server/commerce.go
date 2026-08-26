@@ -267,7 +267,10 @@ func (readOnlyCommerceHandler) UpdateProduct() http.HandlerFunc { return commerc
 
 func (readOnlyCommerceHandler) CreateOrder() http.HandlerFunc { return commerceDisabledMutation() }
 
-func (h readOnlyCommerceHandler) GetOrder() http.HandlerFunc { return h.delegate.GetOrder() }
+func (h readOnlyCommerceHandler) GetOrder() http.HandlerFunc    { return h.delegate.GetOrder() }
+func (h readOnlyCommerceHandler) ListOrders() http.HandlerFunc  { return h.delegate.ListOrders() }
+func (h readOnlyCommerceHandler) GetRefund() http.HandlerFunc   { return h.delegate.GetRefund() }
+func (h readOnlyCommerceHandler) ListRefunds() http.HandlerFunc { return h.delegate.ListRefunds() }
 
 func (readOnlyCommerceHandler) CreateCheckoutSession() http.HandlerFunc {
 	return commerceDisabledMutation()
@@ -290,8 +293,6 @@ func (readOnlyCommerceHandler) WechatRefundCallback() http.HandlerFunc {
 }
 
 func (readOnlyCommerceHandler) CreateRefund() http.HandlerFunc { return commerceDisabledMutation() }
-
-func (h readOnlyCommerceHandler) GetRefund() http.HandlerFunc { return h.delegate.GetRefund() }
 
 func (readOnlyCommerceHandler) CreateOfflinePayment() http.HandlerFunc {
 	return commerceDisabledMutation()
@@ -949,6 +950,27 @@ func (a refundRepoAdapter) GetFacts(ctx context.Context, namespace, refundID str
 		result[i] = *mapWireToRefundFact(&w)
 	}
 	return result, nil
+}
+
+func (a refundRepoAdapter) ListRefunds(ctx context.Context, in refund.ListRefundsInput) ([]refund.RefundRequest, int, error) {
+	query := commerce.RefundRequestListQuery{
+		Namespace:  in.Namespace,
+		CustomerID: in.CustomerID,
+		Limit:      in.Limit,
+		Offset:     in.Offset,
+	}
+	if in.Status != nil {
+		query.Status = string(*in.Status)
+	}
+	ws, total, err := a.EntAdapter.ListRefundRequests(ctx, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	result := make([]refund.RefundRequest, len(ws))
+	for i := range ws {
+		result[i] = *mapWireToRefundRequest(&ws[i])
+	}
+	return result, total, nil
 }
 
 func mapWireToRefundRequest(w *commerce.RefundRequestWire) *refund.RefundRequest {

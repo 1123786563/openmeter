@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 
 	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
+	namespaceshandler "github.com/openmeterio/openmeter/api/v3/handlers/namespaces"
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/creditreservation"
@@ -26,8 +27,8 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/debug"
 	"github.com/openmeterio/openmeter/openmeter/ingest/kafkaingest"
 	"github.com/openmeterio/openmeter/openmeter/namespace"
-	"github.com/openmeterio/openmeter/openmeter/namespace/namespacedriver"
 	"github.com/openmeterio/openmeter/openmeter/server"
+	"github.com/openmeterio/openmeter/openmeter/server/auth"
 	"github.com/openmeterio/openmeter/openmeter/server/router"
 	"github.com/openmeterio/openmeter/pkg/errorsx"
 	"github.com/openmeterio/openmeter/pkg/log"
@@ -226,9 +227,36 @@ func main() {
 		logger.Info("credit reservation service enabled")
 	}
 
+	// Wire Casdoor OIDC bearer authentication (fork addition). Disabled
+	// configurations yield a nil middleware that the server skips entirely.
+	oidcAuth, err := auth.NewOptional(conf.Auth.OIDC.Enabled, auth.Config{
+		Logger:               logger,
+		Issuer:               conf.Auth.OIDC.Issuer,
+		JwksURL:              conf.Auth.OIDC.JwksURL,
+		Audience:             conf.Auth.OIDC.Audience,
+		AllowedOrganizations: conf.Auth.OIDC.AllowedOrganizations,
+		OrganizationClaim:    conf.Auth.OIDC.OrganizationClaim,
+		ViewerRoles:          conf.Auth.OIDC.ViewerRoles,
+		OperatorRoles:        conf.Auth.OIDC.OperatorRoles,
+		RoleClaim:            conf.Auth.OIDC.RoleClaim,
+	})
+	if err != nil {
+		logger.Error("failed to create OIDC auth middleware", "error", err)
+		os.Exit(1)
+	}
+
+	// Request-level namespace selection (fork addition): a non-empty namespace
+	// allowlist opts in; an empty one yields a nil middleware and keeps the
+	// static default-namespace behavior.
+	requestNamespace, err := common.NewRequestNamespaceMiddleware(conf.Namespace, logger)
+	if err != nil {
+		logger.Error("failed to create request namespace middleware", "error", err)
+		os.Exit(1)
+	}
+
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{
-			NamespaceDecoder:            namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace()),
+			NamespaceDecoder:            common.NewNamespaceDecoder(conf.Namespace),
 			Addon:                       app.Addon,
 			App:                         app.AppRegistry.Service,
 			AppStripe:                   app.AppRegistry.Stripe,
@@ -278,8 +306,12 @@ func main() {
 		PostAuthMiddlewares:       app.PostAuthMiddlewares,
 		ResponseValidation:        conf.Server.ResponseValidation,
 		ClientIPMiddleware:        pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
+		OIDCAuth:                  oidcAuth,
+		RequestNamespace:          requestNamespace,
+		CORSMiddleware:            server.NewAPICORSMiddleware(conf.CORS.AllowedOrigins),
 		CommerceHandler:           commerceWiring.Handler,
 		CreditReservationsHandler: creditReservationsHandler,
+		NamespacesHandler:         namespaceshandler.New(conf.Namespace),
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)

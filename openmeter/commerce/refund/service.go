@@ -142,6 +142,16 @@ type CreateRefundInput struct {
 	IdempotencyKey string
 }
 
+// ListRefundsInput is the namespace-scoped refund list query. CustomerID and
+// Status are optional filters; Limit and Offset carry the page window.
+type ListRefundsInput struct {
+	Namespace  string
+	CustomerID string
+	Status     *RefundStatus
+	Limit      int
+	Offset     int
+}
+
 // ---------------------------------------------------------------------------
 // Repository
 // ---------------------------------------------------------------------------
@@ -167,6 +177,10 @@ type Repository interface {
 
 	AppendFact(ctx context.Context, fact RefundFactRecord) (*RefundFactRecord, bool, error)
 	GetFacts(ctx context.Context, namespace, refundID string) ([]RefundFactRecord, error)
+
+	// ListRefunds returns one page of the namespace's refunds plus the total
+	// matching count, newest first.
+	ListRefunds(ctx context.Context, in ListRefundsInput) ([]RefundRequest, int, error)
 }
 
 // QuantumReservation carries the computed quantum and reservation values.
@@ -312,6 +326,10 @@ type Service interface {
 	CreateRefund(ctx context.Context, in CreateRefundInput) (*RefundRequest, bool, error)
 	ProcessOne(ctx context.Context, namespace, refundID string) (*RefundRequest, error)
 	GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error)
+
+	// ListRefunds returns one page of the namespace's refunds plus the total
+	// matching count, newest first.
+	ListRefunds(ctx context.Context, in ListRefundsInput) ([]RefundRequest, int, error)
 
 	// HandleCallback verifies a provider-native refund callback before applying
 	// its fact. Only WeChat refund callbacks are accepted; Alipay remains
@@ -725,6 +743,33 @@ func (s *service) processLedgerReversing(ctx context.Context, rec *RefundRequest
 // GetRefund retrieves a refund by ID.
 func (s *service) GetRefund(ctx context.Context, namespace, id string) (*RefundRequest, error) {
 	return s.repo.GetRefund(ctx, namespace, id)
+}
+
+// listPageSizeBounds are the defaults and bounds applied to ListRefunds input:
+// page size defaults to 100 and is clamped to [1, 1000]; negative offsets are
+// normalized to 0.
+const (
+	defaultListLimit = 100
+	maxListLimit     = 1000
+)
+
+// ListRefunds returns one page of the namespace's refunds plus the total
+// matching count. The page window defaults are applied here so every caller
+// (API or worker) gets the same bounds.
+func (s *service) ListRefunds(ctx context.Context, in ListRefundsInput) ([]RefundRequest, int, error) {
+	if in.Namespace == "" {
+		return nil, 0, fmt.Errorf("refund: namespace is required")
+	}
+	if in.Limit <= 0 {
+		in.Limit = defaultListLimit
+	}
+	if in.Limit > maxListLimit {
+		in.Limit = maxListLimit
+	}
+	if in.Offset < 0 {
+		in.Offset = 0
+	}
+	return s.repo.ListRefunds(ctx, in)
 }
 
 // HandleCallback verifies and applies a WeChat refund callback. The raw request

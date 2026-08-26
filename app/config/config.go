@@ -25,6 +25,10 @@ type Configuration struct {
 	Address     string
 	Environment string
 
+	Auth AuthConfiguration
+
+	CORS CORSConfiguration
+
 	Telemetry TelemetryConfig
 
 	Termination TerminationConfig
@@ -64,6 +68,14 @@ func (c Configuration) Validate() error {
 
 	if c.Address == "" {
 		errs = append(errs, errors.New("server address is required"))
+	}
+
+	if err := c.Auth.OIDC.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "auth.oidc"))
+	}
+
+	if err := c.CORS.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "cors"))
 	}
 
 	if err := c.Telemetry.Validate(); err != nil {
@@ -221,6 +233,10 @@ func SetViperDefaults(v *viper.Viper, flags *pflag.FlagSet) {
 
 	// Environment used for identifying the service environment
 	v.SetDefault("environment", "unknown")
+
+	ConfigureAuth(v)
+
+	ConfigureCORS(v)
 
 	ConfigureTelemetry(v, flags)
 

@@ -408,6 +408,24 @@ export interface GovernanceQueryRequestFeatures {
   keys: string[]
 }
 
+/**
+ * The namespaces available on this deployment.
+ *
+ * The list is sourced from the server configuration: the default namespace plus
+ * the configured namespace allowlist, deduplicated and sorted. When request-level
+ * namespace selection is disabled (empty allowlist), only the default namespace is
+ * listed.
+ */
+export interface NamespaceList {
+  /** The namespace used for requests that do not select one explicitly. */
+  default: string
+  /**
+   * All selectable namespaces, sorted alphabetically. Always includes the default
+   * namespace.
+   */
+  namespaces: string[]
+}
+
 export interface CreditResourceLine {
   featureKey: string
   resourceCode: string
@@ -2509,6 +2527,25 @@ export interface CommerceRechargeProduct {
 }
 
 /**
+ * Request body for updating a recharge product's mutable fields. Omitted fields
+ * keep their current values; `sku`, `kind`, and `credits` are immutable.
+ */
+export interface CommerceRechargeProductUpdate {
+  /** New human-readable product name. */
+  displayName?: string
+  /**
+   * New retail price in the smallest currency unit (fen). Existing orders keep their
+   * creation-time price snapshot.
+   */
+  amountFen?: bigint
+  /**
+   * Whether the product is currently available for purchase (listing or delisting
+   * the product).
+   */
+  active?: boolean
+}
+
+/**
  * Request body for creating a refund.
  *
  * Refunds are only permitted for unspent recharge-source credits. The system
@@ -2588,6 +2625,34 @@ export interface CommerceRechargeProductWithBonus {
   displayOrder?: number
   /** Bonus gift credits granted on purchase, if any. */
   bonusCredits?: bigint
+}
+
+/** Request body for creating a new recharge product. */
+export interface CommerceRechargeProductCreate {
+  /** Unique stock keeping unit for the product within the namespace. */
+  sku: string
+  /** Human-readable product name (e.g. "1,000 Points Pack"). */
+  displayName: string
+  /**
+   * The business kind of the product. It must match the order kind the product can
+   * fulfill (`wallet_top_up` for recharge products).
+   */
+  kind: 'plan_purchase' | 'subscription_renewal' | 'wallet_top_up'
+  /** Number of Credits granted on successful purchase. */
+  credits: bigint
+  /** Retail price in the smallest currency unit (fen). */
+  amountFen: bigint
+  /** Three-letter ISO 4217 currency code for the price. */
+  currency: string
+  /** Sort order for display. */
+  displayOrder?: number
+  /**
+   * Refund policy for purchases of this product (`none`, `unspent`, or
+   * `full_window`). Omit to use the default policy.
+   */
+  refundPolicy?: string
+  /** Longer marketing description of the product. */
+  description?: string
 }
 
 /** Request body for creating a checkout session for an order. */
@@ -3937,6 +4002,12 @@ export interface CommerceRechargeProductList {
   products: CommerceRechargeProduct[]
 }
 
+/** Page paginated response. */
+export interface RefundPagePaginatedResponse {
+  data: CommerceRefund[]
+  meta: PaginatedMeta
+}
+
 /** Cursor paginated response. */
 export interface ReceivablePeriodPaginatedResponse {
   data: CommerceReceivablePeriod[]
@@ -4256,6 +4327,12 @@ export interface WorkflowTaxSettings {
 /** Page paginated response. */
 export interface PlanAddonPagePaginatedResponse {
   data: PlanAddon[]
+  meta: PaginatedMeta
+}
+
+/** Page paginated response. */
+export interface OrderPagePaginatedResponse {
+  data: CommerceOrder[]
   meta: PaginatedMeta
 }
 

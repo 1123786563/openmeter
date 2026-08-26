@@ -18,6 +18,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,6 +47,7 @@ type Handler interface {
 	CreateProduct() http.HandlerFunc
 	UpdateProduct() http.HandlerFunc
 	CreateOrder() http.HandlerFunc
+	ListOrders() http.HandlerFunc
 	GetOrder() http.HandlerFunc
 	CreateCheckoutSession() http.HandlerFunc
 	GetCheckoutSession() http.HandlerFunc
@@ -53,6 +55,7 @@ type Handler interface {
 	WechatPaymentCallback() http.HandlerFunc
 	WechatRefundCallback() http.HandlerFunc
 	CreateRefund() http.HandlerFunc
+	ListRefunds() http.HandlerFunc
 	GetRefund() http.HandlerFunc
 	CreateOfflinePayment() http.HandlerFunc
 	ListReceivablePeriods() http.HandlerFunc
@@ -221,7 +224,13 @@ func (h *handler) ListRechargeProducts() http.HandlerFunc {
 			return
 		}
 		kind := commerce.ProductKindWalletTopUp
-		products, err := h.svc.Catalog.ListProducts(ctx, ns, &kind, true)
+		// The generated request middleware rejects type-invalid values before the
+		// handler runs; ParseBool here only defaults the absent flag to false.
+		includeInactive := false
+		if v := r.URL.Query().Get("include_inactive"); v != "" {
+			includeInactive, _ = strconv.ParseBool(v)
+		}
+		products, err := h.svc.Catalog.ListProducts(ctx, ns, &kind, !includeInactive)
 		if err != nil {
 			writeCommerceError(ctx, w, err)
 			return
@@ -252,31 +261,34 @@ func (h *handler) CreateProduct() http.HandlerFunc {
 		if !h.requireAdmin(ctx, w) {
 			return
 		}
-		var body struct {
-			SKU          string                `json:"sku"`
-			DisplayName  string                `json:"display_name"`
-			Kind         api.CommerceOrderKind `json:"kind"`
-			Credits      int64                 `json:"credits"`
-			AmountFen    api.CommerceFenAmount `json:"amount_fen"`
-			Currency     api.CurrencyCode      `json:"currency"`
-			DisplayOrder int                   `json:"display_order"`
-			RefundPolicy string                `json:"refund_policy"`
-			Description  string                `json:"description"`
-		}
+		var body api.CommerceRechargeProductCreate
 		if err := decodeJSON(r, &body); err != nil {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
 		}
+		displayOrder := 0
+		if body.DisplayOrder != nil {
+			displayOrder = int(*body.DisplayOrder)
+		}
+		refundPolicy := ""
+		if body.RefundPolicy != nil {
+			refundPolicy = *body.RefundPolicy
+		}
+		description := ""
+		if body.Description != nil {
+			description = *body.Description
+		}
 		product, err := h.svc.Catalog.CreateProduct(ctx, commerce.CreateProductInput{
 			Namespace:    ns,
-			SKU:          body.SKU,
+			SKU:          body.Sku,
 			DisplayName:  body.DisplayName,
 			Kind:         commerce.ProductKind(body.Kind),
 			Credits:      body.Credits,
 			AmountMinor:  body.AmountFen,
 			Currency:     body.Currency,
-			DisplayOrder: body.DisplayOrder,
-			Description:  body.Description,
+			DisplayOrder: displayOrder,
+			RefundPolicy: commerce.RefundPolicy(refundPolicy),
+			Description:  description,
 		})
 		if err != nil {
 			writeCommerceError(ctx, w, err)
@@ -286,7 +298,8 @@ func (h *handler) CreateProduct() http.HandlerFunc {
 	}
 }
 
-// UpdateProduct updates a catalog product's mutable fields. Admin-only.
+// UpdateProduct updates a catalog product's mutable fields (name, price, and
+// the active listing state). Admin-only.
 func (h *handler) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -304,11 +317,7 @@ func (h *handler) UpdateProduct() http.HandlerFunc {
 			writeStatus(ctx, w, http.StatusBadRequest, errors.New("productId is required"))
 			return
 		}
-		var body struct {
-			DisplayName *string                `json:"display_name,omitempty"`
-			AmountFen   *api.CommerceFenAmount `json:"amount_fen,omitempty"`
-			Active      *bool                  `json:"active,omitempty"`
-		}
+		var body api.CommerceRechargeProductUpdate
 		if err := decodeJSON(r, &body); err != nil {
 			writeStatus(ctx, w, http.StatusBadRequest, err)
 			return
@@ -437,6 +446,110 @@ func planSKU(ref api.CommerceOrderCreatePlanRef) (string, error) {
 		return "", commerce.ErrInvalidPlanReference
 	}
 	return "PLAN-" + key + "-" + version, nil
+}
+
+// listPageSizeBounds bound the page window read from the page[number] and
+// page[size] query parameters: number defaults to 1 (minimum 1), size defaults
+// to 100 and is clamped to [1, 1000]. Unparseable values fall back to the
+// defaults; the generated request middleware rejects type-invalid values
+// before the handler runs.
+const (
+	defaultListPageSize = 100
+	maxListPageSize     = 1000
+)
+
+// parseListPage reads the deep-object page query parameters.
+func parseListPage(r *http.Request) (number, size int) {
+	number, size = 1, defaultListPageSize
+	if v := r.URL.Query().Get("page[number]"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			number = n
+		}
+	}
+	if v := r.URL.Query().Get("page[size]"); v != "" {
+		if s, err := strconv.Atoi(v); err == nil && s > 0 {
+			size = s
+		}
+	}
+	if size > maxListPageSize {
+		size = maxListPageSize
+	}
+	return number, size
+}
+
+// constrainListCustomer enforces the C4 ownership rule on namespace-level list
+// endpoints: an authenticated non-admin customer is pinned to their own
+// customer filter. It returns false (and writes a 403) when such a subject
+// explicitly requests another customer's data. Permissive when no auth context
+// exists.
+func (h *handler) constrainListCustomer(ctx context.Context, w http.ResponseWriter, requested string) (string, bool) {
+	if h.rbac == nil {
+		return requested, true
+	}
+	authCustomerID, hasAuth := h.rbac.AuthenticatedCustomerID(ctx)
+	if !hasAuth {
+		return requested, true
+	}
+	if h.rbac.IsAdmin(ctx) {
+		return requested, true
+	}
+	if requested != "" && requested != authCustomerID {
+		writeStatus(ctx, w, http.StatusForbidden, errors.New("access denied: resource does not belong to the authenticated customer"))
+		return "", false
+	}
+	return authCustomerID, true
+}
+
+// ListOrders lists orders in the namespace (admin/backoffice view), newest
+// first, with pagination and optional customer_id / status filters.
+func (h *handler) ListOrders() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		page, size := parseListPage(r)
+		in := commerce.ListOrdersInput{
+			Namespace:  ns,
+			CustomerID: r.URL.Query().Get("customer_id"),
+			Limit:      size,
+			Offset:     (page - 1) * size,
+		}
+		if s := r.URL.Query().Get("status"); s != "" {
+			if !validOrderStatus(commerce.OrderStatus(s)) {
+				writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid status filter: %s", s))
+				return
+			}
+			status := commerce.OrderStatus(s)
+			in.Status = &status
+		}
+		// C4: an authenticated non-admin customer only sees their own orders.
+		customerFilter, ok := h.constrainListCustomer(ctx, w, in.CustomerID)
+		if !ok {
+			return
+		}
+		in.CustomerID = customerFilter
+
+		orders, total, err := h.svc.Orders.ListOrders(ctx, in)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		data := make([]api.CommerceOrder, 0, len(orders))
+		for i := range orders {
+			data = append(data, toAPIOrder(&orders[i]))
+		}
+		writeJSON(ctx, w, http.StatusOK, api.OrderPagePaginatedResponse{
+			Data: data,
+			Meta: api.PaginatedMeta{Page: api.PageMeta{
+				Number: float32(page),
+				Size:   float32(size),
+				Total:  float32(total),
+			}},
+		})
+	}
 }
 
 func (h *handler) GetOrder() http.HandlerFunc {
@@ -786,6 +899,62 @@ func (h *handler) CreateRefund() http.HandlerFunc {
 	}
 }
 
+// ListRefunds lists refund requests in the namespace (admin/backoffice view),
+// newest first, with pagination and optional customer_id / status filters.
+func (h *handler) ListRefunds() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if h.svc.Refund == nil {
+			writeStatus(ctx, w, http.StatusNotImplemented, errors.New("refund service not configured"))
+			return
+		}
+		ns, err := h.resolveNamespace(ctx)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		page, size := parseListPage(r)
+		in := refund.ListRefundsInput{
+			Namespace:  ns,
+			CustomerID: r.URL.Query().Get("customer_id"),
+			Limit:      size,
+			Offset:     (page - 1) * size,
+		}
+		if s := r.URL.Query().Get("status"); s != "" {
+			if !validRefundStatus(refund.RefundStatus(s)) {
+				writeStatus(ctx, w, http.StatusBadRequest, fmt.Errorf("invalid status filter: %s", s))
+				return
+			}
+			status := refund.RefundStatus(s)
+			in.Status = &status
+		}
+		// C4: an authenticated non-admin customer only sees their own refunds.
+		customerFilter, ok := h.constrainListCustomer(ctx, w, in.CustomerID)
+		if !ok {
+			return
+		}
+		in.CustomerID = customerFilter
+
+		refunds, total, err := h.svc.Refund.ListRefunds(ctx, in)
+		if err != nil {
+			writeCommerceError(ctx, w, err)
+			return
+		}
+		data := make([]api.CommerceRefund, 0, len(refunds))
+		for i := range refunds {
+			data = append(data, toAPIRefund(&refunds[i]))
+		}
+		writeJSON(ctx, w, http.StatusOK, api.RefundPagePaginatedResponse{
+			Data: data,
+			Meta: api.PaginatedMeta{Page: api.PageMeta{
+				Number: float32(page),
+				Size:   float32(size),
+				Total:  float32(total),
+			}},
+		})
+	}
+}
+
 func (h *handler) GetRefund() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -1094,6 +1263,41 @@ func httpStatusForIssue(vi models.ValidationIssue) int {
 
 func mapAPIOrderKind(k api.CommerceOrderKind) commerce.OrderKind {
 	return commerce.OrderKind(k)
+}
+
+// validOrderStatus reports whether s is a known order lifecycle status. The
+// generated request middleware rejects unknown enum values on routed requests;
+// this keeps direct handler invocations from reaching the repository mapper
+// with an unmappable status.
+func validOrderStatus(s commerce.OrderStatus) bool {
+	switch s {
+	case commerce.OrderStatusCreated,
+		commerce.OrderStatusAwaitingPayment,
+		commerce.OrderStatusPaid,
+		commerce.OrderStatusFulfilled,
+		commerce.OrderStatusCancelled,
+		commerce.OrderStatusExpired,
+		commerce.OrderStatusRefundPending,
+		commerce.OrderStatusPartiallyRefunded,
+		commerce.OrderStatusRefunded:
+		return true
+	default:
+		return false
+	}
+}
+
+// validRefundStatus reports whether s is a known refund lifecycle status.
+func validRefundStatus(s refund.RefundStatus) bool {
+	switch s {
+	case refund.RefundStatusPendingFence,
+		refund.RefundStatusProviderProcessing,
+		refund.RefundStatusLedgerReversing,
+		refund.RefundStatusFulfilled,
+		refund.RefundStatusFailed:
+		return true
+	default:
+		return false
+	}
 }
 
 func mapAPIProvider(p api.CommercePaymentProvider) payment.Provider {

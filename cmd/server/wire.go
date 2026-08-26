@@ -134,7 +134,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 		common.MeterManageWithConfigMeters,
 		common.MeterEvent,
 		common.Namespace,
-		common.StaticNamespace,
+		common.NamespaceDecoder,
 		common.NewDefaultTextMapPropagator,
 		common.NewKafkaIngestCollector,
 		common.NewIngestCollector,

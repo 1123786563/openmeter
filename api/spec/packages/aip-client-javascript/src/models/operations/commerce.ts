@@ -12,12 +12,17 @@ import type {
   CommerceOfflinePaymentCreate,
   CommerceOrder,
   CommerceOrderCreate,
+  CommerceRechargeProduct,
+  CommerceRechargeProductCreate,
   CommerceRechargeProductList,
+  CommerceRechargeProductUpdate,
   CommerceRefund,
   CommerceRefundCreate,
   CommerceWallet,
   CursorPaginationQueryPage,
+  OrderPagePaginatedResponse,
   ReceivablePeriodPaginatedResponse,
+  RefundPagePaginatedResponse,
 } from '../types.js'
 
 export type GetCustomerWalletRequest = {
@@ -28,14 +33,50 @@ export type GetCustomerWalletResponse = CommerceWallet
 export interface ListRechargeProductsQuery {
   /** Filter by currency to show only products priced in the customer's currency. */
   currency?: string
+  /**
+   * Include inactive (delisted) products in the response. Defaults to false so
+   * public callers keep seeing only purchasable products.
+   */
+  includeInactive?: boolean
 }
 
 export type ListRechargeProductsRequest =
   AcceptDateStrings<ListRechargeProductsQuery>
 export type ListRechargeProductsResponse = CommerceRechargeProductList
 
+export type CreateRechargeProductRequest =
+  AcceptDateStrings<CommerceRechargeProductCreate>
+export type CreateRechargeProductResponse = CommerceRechargeProduct
+
+export type UpdateRechargeProductRequest = AcceptDateStrings<{
+  productId: string
+  body: CommerceRechargeProductUpdate
+}>
+export type UpdateRechargeProductResponse = CommerceRechargeProduct
+
 export type CreateOrderRequest = AcceptDateStrings<CommerceOrderCreate>
 export type CreateOrderResponse = CommerceOrder
+
+export interface ListOrdersQuery {
+  /** Determines which page of the collection to retrieve. */
+  page?: { size?: number; number?: number }
+  /** Filter orders by their billing customer. */
+  customerId?: string
+  /** Filter orders by lifecycle status. */
+  status?:
+    | 'created'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'fulfilled'
+    | 'cancelled'
+    | 'expired'
+    | 'refund_pending'
+    | 'partially_refunded'
+    | 'refunded'
+}
+
+export type ListOrdersRequest = AcceptDateStrings<ListOrdersQuery>
+export type ListOrdersResponse = OrderPagePaginatedResponse
 
 export type GetOrderRequest = {
   orderId: string
@@ -55,6 +96,23 @@ export type GetCheckoutSessionResponse = CommerceCheckoutSession
 
 export type CreateRefundRequest = AcceptDateStrings<CommerceRefundCreate>
 export type CreateRefundResponse = CommerceRefund
+
+export interface ListRefundsQuery {
+  /** Determines which page of the collection to retrieve. */
+  page?: { size?: number; number?: number }
+  /** Filter refunds by their billing customer. */
+  customerId?: string
+  /** Filter refunds by lifecycle status. */
+  status?:
+    | 'pending_fence'
+    | 'provider_processing'
+    | 'ledger_reversing'
+    | 'fulfilled'
+    | 'failed'
+}
+
+export type ListRefundsRequest = AcceptDateStrings<ListRefundsQuery>
+export type ListRefundsResponse = RefundPagePaginatedResponse
 
 export type GetRefundRequest = {
   refundId: string

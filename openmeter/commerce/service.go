@@ -33,6 +33,20 @@ type OrderService interface {
 	CreateOrder(ctx context.Context, in CreateOrderInput) (*Order, bool, error)
 	GetOrder(ctx context.Context, namespace, id string) (*Order, error)
 	TransitionStatus(ctx context.Context, namespace, id string, to OrderStatus) (*Order, error)
+
+	// ListOrders returns one page of the namespace's orders plus the total
+	// matching count. Newest orders come first.
+	ListOrders(ctx context.Context, in ListOrdersInput) ([]Order, int, error)
+}
+
+// ListOrdersInput is the namespace-scoped order list query. CustomerID and
+// Status are optional filters; Limit and Offset carry the page window.
+type ListOrdersInput struct {
+	Namespace  string
+	CustomerID string
+	Status     *OrderStatus
+	Limit      int
+	Offset     int
 }
 
 // CreateProductInput is the request for creating a catalog product.

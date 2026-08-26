@@ -31,6 +31,13 @@ telemetry:
 
 namespace:
   default: default
+  allowlist:
+    - tenant-a
+    - tenant-b
+
+cors:
+  allowed_origins:
+    - https://admin.example.com
 
 ingest:
   kafka:
@@ -183,6 +190,21 @@ featureGate:
   enabled: true
   flags:
     om_ff_credits_enabled: "credits"
+
+auth:
+  oidc:
+    enabled: true
+    issuer: https://casdoor.example.com
+    jwks_url: https://casdoor.example.com/api/certs
+    audience: openmeter-api
+    allowed_organizations:
+      - built-in
+    organization_claim: owner
+    viewer_roles:
+      - viewer
+    operator_roles:
+      - admin
+    role_claim: roles
 
 server:
   readHeaderTimeout: 10s

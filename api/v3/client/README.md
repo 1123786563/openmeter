@@ -34,6 +34,7 @@ TypeSpec definitions and ships typed request and response models.
   - [PlanAddons](#planaddons)
   - [Defaults](#defaults)
   - [Governance](#governance)
+  - [Namespaces](#namespaces)
   - [CreditReservations](#creditreservations)
   - [Commerce](#commerce)
 - [Error Handling](#error-handling)
@@ -321,6 +322,12 @@ The full call path, HTTP route, and a short description are listed below.
 | --- | --- | --- |
 | `om.Governance.QueryAccess` | `POST /openmeter/governance/query` | Query feature access for a list of customers. The endpoint resolves each provided identifier to a customer and returns the access status for the requested features, plus optional credit balance availability. _Designed to be called on a fixed refresh interval and the query response is intended to be cached._ |
 
+### Namespaces
+
+| Method | HTTP | Description |
+| --- | --- | --- |
+| `om.Namespaces.List` | `GET /openmeter/namespaces` | List the namespaces available on this deployment. The default namespace is always included in the response. |
+
 ### CreditReservations
 
 | Method | HTTP | Description |
@@ -339,12 +346,16 @@ The full call path, HTTP route, and a short description are listed below.
 | Method | HTTP | Description |
 | --- | --- | --- |
 | `om.Commerce.GetCustomerWallet` | `GET /customers/{customerId}/wallet` | Get a customer's Wallet view, including all credit buckets and recent transactions. |
-| `om.Commerce.ListRechargeProducts` | `GET /recharge-products` | List all active recharge products available for purchase. |
+| `om.Commerce.ListRechargeProducts` | `GET /recharge-products` | List recharge products available for purchase. By default only active products are returned; pass `include_inactive` to also list delisted products (for the admin catalog management view). |
+| `om.Commerce.CreateRechargeProduct` | `POST /recharge-products` | Create a new recharge product in the catalog. Admin-only mutation. |
+| `om.Commerce.UpdateRechargeProduct` | `PATCH /recharge-products/{productId}` | Update a recharge product's mutable fields (name, price, active listing state). Admin-only mutation; `sku`, `kind`, and `credits` are immutable. |
 | `om.Commerce.CreateOrder` | `POST /orders` | Create a new order (plan purchase, subscription renewal, or wallet top-up). Returns HTTP 201 on first creation. Replaying the same idempotency key returns the stored order with HTTP 200. |
+| `om.Commerce.ListOrders` | `GET /orders` | List orders in the namespace, newest first. Supports pagination and optional customer and status filters. |
 | `om.Commerce.GetOrder` | `GET /orders/{orderId}` | Retrieve an order by its ID. |
 | `om.Commerce.CreateCheckoutSession` | `POST /orders/{orderId}/checkout-sessions` | Create a checkout session for an order, initiating a payment attempt with the specified provider. |
 | `om.Commerce.GetCheckoutSession` | `GET /checkout-sessions/{sessionId}` | Retrieve a checkout session by its ID (for polling payment status after QR code expiry or page reload). |
 | `om.Commerce.CreateRefund` | `POST /refunds` | Create a refund request for an order. |
+| `om.Commerce.ListRefunds` | `GET /refunds` | List refund requests in the namespace, newest first. Supports pagination and optional customer and status filters. |
 | `om.Commerce.GetRefund` | `GET /refunds/{refundId}` | Retrieve a refund by its ID. |
 | `om.Commerce.WechatPaymentCallback` | `POST /payment-providers/wechat/callback` | WeChat Pay payment callback. OpenMeter verifies the signature, confirms the payment fact, and fulfills the order. The request body is the provider-signed WeChat Pay v3 notification: a JSON envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies the RSA signature over the raw bytes, so the body is intentionally not modeled with a schema and must be forwarded byte-for-byte. |
 | `om.Commerce.WechatRefundCallback` | `POST /payment-providers/wechat/refund-callback` | WeChat Pay refund callback. OpenMeter verifies and decrypts the notification, then applies the authoritative refund fact. The request body is the provider-signed WeChat Pay v3 refund notification. OpenMeter verifies the RSA signature over the raw bytes, so the body is intentionally not modeled with a schema and must be forwarded byte-for-byte. |

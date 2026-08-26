@@ -313,7 +313,9 @@ func TestValidateFlagRunsProductionProviderAssembly(t *testing.T) {
 
 func TestValidateFlagAllowsDisabledCommerceWithoutProviderFiles(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "openmeter.yaml")
-	require.NoError(t, os.WriteFile(configPath, []byte("commerce:\n  enabled: false\n"), 0o600))
+	// OIDC auth defaults to enabled and would fail validation without an
+	// issuer; these harness configs have no Casdoor to talk to.
+	require.NoError(t, os.WriteFile(configPath, []byte("commerce:\n  enabled: false\nauth:\n  oidc:\n    enabled: false\n"), 0o600))
 	output, err := runValidateSubprocess(t, configPath)
 	require.NoError(t, err, output)
 }
@@ -329,7 +331,12 @@ func runValidateSubprocess(t *testing.T, configPath string) (string, error) {
 func writeCommerceValidationConfig(t *testing.T, cfg config.CommerceConfiguration) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "openmeter.yaml")
-	contents := fmt.Sprintf(`commerce:
+	contents := fmt.Sprintf(`auth:
+  # OIDC auth defaults to enabled and would fail validation without an issuer;
+  # this harness config has no Casdoor to talk to.
+  oidc:
+    enabled: false
+commerce:
   enabled: true
   payment:
     httpTimeout: %q

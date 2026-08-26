@@ -16,10 +16,11 @@ import (
 // --- Mock implementations ---
 
 type mockRepo struct {
-	mu      sync.Mutex
-	orders  map[string]*commerce.Order
-	byIdem  map[string]string // (namespace+customerID+key) -> orderID
-	statusN atomic.Int64      // count of status updates
+	mu            sync.Mutex
+	orders        map[string]*commerce.Order
+	byIdem        map[string]string // (namespace+customerID+key) -> orderID
+	statusN       atomic.Int64      // count of status updates
+	lastListInput commerce.ListOrdersInput
 }
 
 func newMockRepo() *mockRepo {
@@ -100,6 +101,35 @@ func (m *mockRepo) ListOrdersByCustomer(_ context.Context, namespace, customerID
 		result = append(result, *o)
 	}
 	return result, nil
+}
+
+func (m *mockRepo) ListOrders(_ context.Context, in commerce.ListOrdersInput) ([]commerce.Order, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastListInput = in
+	var result []commerce.Order
+	for _, o := range m.orders {
+		if o.Namespace != in.Namespace {
+			continue
+		}
+		if in.CustomerID != "" && o.CustomerID != in.CustomerID {
+			continue
+		}
+		if in.Status != nil && o.Status != *in.Status {
+			continue
+		}
+		result = append(result, *o)
+	}
+	total := len(result)
+	if in.Offset < len(result) {
+		result = result[in.Offset:]
+	} else {
+		result = nil
+	}
+	if in.Limit > 0 && len(result) > in.Limit {
+		result = result[:in.Limit]
+	}
+	return result, total, nil
 }
 
 type mockProductLookup struct {
@@ -709,5 +739,116 @@ func TestConsumptionPriorityConstants(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("SourcePriority(%s) = %d, want %d", tt.source, got, tt.want)
 		}
+	}
+}
+
+// TestListOrdersFiltersAndPageWindow verifies the namespace-level order list:
+// customer and status filters, the applied page-window defaults/bounds, and
+// the reported total count.
+func TestListOrdersFiltersAndPageWindow(t *testing.T) {
+	repo := newMockRepo()
+	lookup := &mockProductLookup{
+		products: map[string]*commerce.Product{
+			"p1": makeProduct("p1", "RECHARGE-100", "100 Points", commerce.ProductKindWalletTopUp, 100, 1000),
+		},
+	}
+	svc := New(Config{Repo: repo, Products: lookup})
+
+	seed := []struct {
+		customer string
+		idem     string
+	}{
+		{"cust-1", "list-idem-a"},
+		{"cust-1", "list-idem-b"},
+		{"cust-2", "list-idem-c"},
+	}
+	ids := make([]string, 0, len(seed))
+	for _, s := range seed {
+		order, _, err := svc.CreateOrder(t.Context(), commerce.CreateOrderInput{
+			Namespace:      "ns",
+			CustomerID:     s.customer,
+			Kind:           commerce.OrderKindWalletTopUp,
+			IdempotencyKey: s.idem,
+			Currency:       "CNY",
+			ProductIDs:     []string{"p1"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, order.ID)
+	}
+
+	// given: one of cust-1's orders advances to fulfilled via the legal path
+	for _, to := range []commerce.OrderStatus{
+		commerce.OrderStatusAwaitingPayment,
+		commerce.OrderStatusPaid,
+		commerce.OrderStatusFulfilled,
+	} {
+		if _, err := svc.TransitionStatus(t.Context(), "ns", ids[0], to); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fulfilled := commerce.OrderStatusFulfilled
+
+	orders, total, err := svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 3 || len(orders) != 3 {
+		t.Fatalf("unfiltered list = %d items, total %d; want 3/3", len(orders), total)
+	}
+
+	orders, total, err = svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", CustomerID: "cust-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 || len(orders) != 2 {
+		t.Fatalf("cust-1 list = %d items, total %d; want 2/2", len(orders), total)
+	}
+
+	created := commerce.OrderStatusCreated
+	orders, total, err = svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", Status: &created})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 {
+		t.Fatalf("created-status total = %d, want 2", total)
+	}
+
+	// then: filters combine
+	orders, total, err = svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", CustomerID: "cust-1", Status: &fulfilled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(orders) != 1 {
+		t.Fatalf("cust-1 fulfilled list = %d items, total %d; want 1/1", len(orders), total)
+	}
+
+	// then: page window slices the result while total stays whole
+	orders, total, err = svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", Limit: 2, Offset: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(orders) != 2 || total != 3 {
+		t.Fatalf("paged list = %d items, total %d; want 2/3", len(orders), total)
+	}
+
+	// then: input bounds are applied (defaults and clamps)
+	if _, _, err := svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", Limit: -5, Offset: -3}); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.lastListInput; got.Limit != 100 || got.Offset != 0 {
+		t.Errorf("bounded input = (%d, %d); want (100, 0)", got.Limit, got.Offset)
+	}
+	if _, _, err := svc.ListOrders(t.Context(), commerce.ListOrdersInput{Namespace: "ns", Limit: 5000}); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.lastListInput.Limit; got != 1000 {
+		t.Errorf("clamped limit = %d, want 1000", got)
+	}
+
+	// then: missing namespace is a validation error, not a query
+	if _, _, err := svc.ListOrders(t.Context(), commerce.ListOrdersInput{}); err == nil {
+		t.Fatal("expected an error for missing namespace")
 	}
 }

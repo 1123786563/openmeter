@@ -328,9 +328,46 @@ type CommerceRechargeProduct struct {
 	DisplayOrder *int32 `json:"display_order,omitempty"`
 }
 
+// Request body for creating a new recharge product.
+type CommerceRechargeProductCreate struct {
+	// Unique stock keeping unit for the product within the namespace.
+	Sku string `json:"sku"`
+	// Human-readable product name (e.g. "1,000 Points Pack").
+	DisplayName string `json:"display_name"`
+	// The business kind of the product. It must match the order kind the product can
+	// fulfill (`wallet_top_up` for recharge products).
+	Kind CommerceOrderKind `json:"kind"`
+	// Number of Credits granted on successful purchase.
+	Credits int64 `json:"credits"`
+	// Retail price in the smallest currency unit (fen).
+	AmountFen int64 `json:"amount_fen"`
+	// Three-letter ISO 4217 currency code for the price.
+	Currency string `json:"currency"`
+	// Sort order for display.
+	DisplayOrder *int32 `json:"display_order,omitempty"`
+	// Refund policy for purchases of this product (`none`, `unspent`, or
+	// `full_window`). Omit to use the default policy.
+	RefundPolicy *string `json:"refund_policy,omitempty"`
+	// Longer marketing description of the product.
+	Description *string `json:"description,omitempty"`
+}
+
 // Response body for listing recharge products.
 type CommerceRechargeProductList struct {
 	Products []CommerceRechargeProduct `json:"products"`
+}
+
+// Request body for updating a recharge product's mutable fields. Omitted fields
+// keep their current values; `sku`, `kind`, and `credits` are immutable.
+type CommerceRechargeProductUpdate struct {
+	// New human-readable product name.
+	DisplayName *string `json:"display_name,omitempty"`
+	// New retail price in the smallest currency unit (fen). Existing orders keep their
+	// creation-time price snapshot.
+	AmountFen *int64 `json:"amount_fen,omitempty"`
+	// Whether the product is currently available for purchase (listing or delisting
+	// the product).
+	Active *bool `json:"active,omitempty"`
 }
 
 // A refund request, progressing through the billing fence and provider processing
@@ -511,8 +548,20 @@ func (value CommerceWalletTransactionKind) Valid() bool {
 	}
 }
 
+// Page paginated response.
+type OrderPagePaginatedResponse struct {
+	Data []CommerceOrder `json:"data"`
+	Meta PaginatedMeta   `json:"meta"`
+}
+
 // Cursor paginated response.
 type ReceivablePeriodPaginatedResponse struct {
 	Data []CommerceReceivablePeriod `json:"data"`
 	Meta CursorMeta                 `json:"meta"`
+}
+
+// Page paginated response.
+type RefundPagePaginatedResponse struct {
+	Data []CommerceRefund `json:"data"`
+	Meta PaginatedMeta    `json:"meta"`
 }

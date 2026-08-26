@@ -2,15 +2,19 @@
 
 import { type Client } from '../core.js'
 import { unwrap, type RequestOptions } from '../lib/types.js'
-import { paginateCursor } from '../lib/paginate.js'
+import { paginateCursor, paginatePages } from '../lib/paginate.js'
 import {
   getCustomerWallet,
   listRechargeProducts,
+  createRechargeProduct,
+  updateRechargeProduct,
   createOrder,
+  listOrders,
   getOrder,
   createCheckoutSession,
   getCheckoutSession,
   createRefund,
+  listRefunds,
   getRefund,
   wechatPaymentCallback,
   wechatRefundCallback,
@@ -24,8 +28,14 @@ import type {
   GetCustomerWalletResponse,
   ListRechargeProductsRequest,
   ListRechargeProductsResponse,
+  CreateRechargeProductRequest,
+  CreateRechargeProductResponse,
+  UpdateRechargeProductRequest,
+  UpdateRechargeProductResponse,
   CreateOrderRequest,
   CreateOrderResponse,
+  ListOrdersRequest,
+  ListOrdersResponse,
   GetOrderRequest,
   GetOrderResponse,
   CreateCheckoutSessionRequest,
@@ -34,6 +44,8 @@ import type {
   GetCheckoutSessionResponse,
   CreateRefundRequest,
   CreateRefundResponse,
+  ListRefundsRequest,
+  ListRefundsResponse,
   GetRefundRequest,
   GetRefundResponse,
   WechatPaymentCallbackRequest,
@@ -49,7 +61,11 @@ import type {
   UpdateExternalInvoiceRequest,
   UpdateExternalInvoiceResponse,
 } from '../models/operations/commerce.js'
-import type { CommerceReceivablePeriod } from '../models/types.js'
+import type {
+  CommerceOrder,
+  CommerceReceivablePeriod,
+  CommerceRefund,
+} from '../models/types.js'
 
 export class Commerce {
   constructor(private readonly _client: Client) {}
@@ -72,7 +88,9 @@ export class Commerce {
   /**
    * List recharge products
    *
-   * List all active recharge products available for purchase.
+   * List recharge products available for purchase. By default only active
+   * products are returned; pass `include_inactive` to also list delisted
+   * products (for the admin catalog management view).
    *
    * GET /recharge-products
    */
@@ -81,6 +99,35 @@ export class Commerce {
     options?: RequestOptions,
   ): Promise<ListRechargeProductsResponse> {
     return unwrap(await listRechargeProducts(this._client, request, options))
+  }
+
+  /**
+   * Create recharge product
+   *
+   * Create a new recharge product in the catalog. Admin-only mutation.
+   *
+   * POST /recharge-products
+   */
+  async createRechargeProduct(
+    request: CreateRechargeProductRequest,
+    options?: RequestOptions,
+  ): Promise<CreateRechargeProductResponse> {
+    return unwrap(await createRechargeProduct(this._client, request, options))
+  }
+
+  /**
+   * Update recharge product
+   *
+   * Update a recharge product's mutable fields (name, price, active listing state).
+   * Admin-only mutation; `sku`, `kind`, and `credits` are immutable.
+   *
+   * PATCH /recharge-products/{productId}
+   */
+  async updateRechargeProduct(
+    request: UpdateRechargeProductRequest,
+    options?: RequestOptions,
+  ): Promise<UpdateRechargeProductResponse> {
+    return unwrap(await updateRechargeProduct(this._client, request, options))
   }
 
   /**
@@ -98,6 +145,42 @@ export class Commerce {
     options?: RequestOptions,
   ): Promise<CreateOrderResponse> {
     return unwrap(await createOrder(this._client, request, options))
+  }
+
+  /**
+   * List orders
+   *
+   * List orders in the namespace, newest first. Supports pagination and optional
+   * customer and status filters.
+   *
+   * GET /orders
+   */
+  async listOrders(
+    request?: ListOrdersRequest,
+    options?: RequestOptions,
+  ): Promise<ListOrdersResponse> {
+    return unwrap(await listOrders(this._client, request, options))
+  }
+
+  /**
+   * List orders
+   *
+   * List orders in the namespace, newest first. Supports pagination and optional
+   * customer and status filters.
+   *
+   * Iterates every item across all pages, fetching more as the returned iterable is consumed.
+   *
+   * GET /orders
+   */
+  listOrdersAll(
+    request?: ListOrdersRequest,
+    options?: RequestOptions,
+  ): AsyncIterable<CommerceOrder> {
+    return paginatePages(
+      (req, opts) => listOrders(this._client, req, opts),
+      request ?? {},
+      options,
+    )
   }
 
   /**
@@ -159,6 +242,42 @@ export class Commerce {
   }
 
   /**
+   * List refunds
+   *
+   * List refund requests in the namespace, newest first. Supports pagination and
+   * optional customer and status filters.
+   *
+   * GET /refunds
+   */
+  async listRefunds(
+    request?: ListRefundsRequest,
+    options?: RequestOptions,
+  ): Promise<ListRefundsResponse> {
+    return unwrap(await listRefunds(this._client, request, options))
+  }
+
+  /**
+   * List refunds
+   *
+   * List refund requests in the namespace, newest first. Supports pagination and
+   * optional customer and status filters.
+   *
+   * Iterates every item across all pages, fetching more as the returned iterable is consumed.
+   *
+   * GET /refunds
+   */
+  listRefundsAll(
+    request?: ListRefundsRequest,
+    options?: RequestOptions,
+  ): AsyncIterable<CommerceRefund> {
+    return paginatePages(
+      (req, opts) => listRefunds(this._client, req, opts),
+      request ?? {},
+      options,
+    )
+  }
+
+  /**
    * Get refund
    *
    * Retrieve a refund by its ID.
@@ -179,9 +298,9 @@ export class Commerce {
    * payment fact, and fulfills the order.
    *
    * The request body is the provider-signed WeChat Pay v3 notification: a JSON
-   * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
-   * verifies the RSA signature over the raw bytes, so the body is intentionally
-   * not modeled with a schema and must be forwarded byte-for-byte.
+   * envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies
+   * the RSA signature over the raw bytes, so the body is intentionally not modeled
+   * with a schema and must be forwarded byte-for-byte.
    *
    * POST /payment-providers/wechat/callback
    */
@@ -200,8 +319,7 @@ export class Commerce {
    *
    * The request body is the provider-signed WeChat Pay v3 refund notification.
    * OpenMeter verifies the RSA signature over the raw bytes, so the body is
-   * intentionally not modeled with a schema and must be forwarded
-   * byte-for-byte.
+   * intentionally not modeled with a schema and must be forwarded byte-for-byte.
    *
    * POST /payment-providers/wechat/refund-callback
    */
@@ -218,11 +336,10 @@ export class Commerce {
    * Alipay payment callback. OpenMeter verifies the signature, confirms the payment
    * fact, and fulfills the order.
    *
-   * The request body is the `application/x-www-form-urlencoded` Alipay
-   * notification whose field set varies by trade type. OpenMeter verifies the
-   * RSA2 signature over the canonicalized raw form fields, so the body is
-   * intentionally not modeled with a schema and must be forwarded
-   * byte-for-byte.
+   * The request body is the `application/x-www-form-urlencoded` Alipay notification
+   * whose field set varies by trade type. OpenMeter verifies the RSA2 signature over
+   * the canonicalized raw form fields, so the body is intentionally not modeled with
+   * a schema and must be forwarded byte-for-byte.
    *
    * POST /payment-providers/alipay/callback
    */

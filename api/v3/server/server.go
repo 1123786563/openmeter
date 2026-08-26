@@ -33,6 +33,7 @@ import (
 	governancehandler "github.com/openmeterio/openmeter/api/v3/handlers/governance"
 	llmcosthandler "github.com/openmeterio/openmeter/api/v3/handlers/llmcost"
 	metershandler "github.com/openmeterio/openmeter/api/v3/handlers/meters"
+	namespaceshandler "github.com/openmeterio/openmeter/api/v3/handlers/namespaces"
 	planshandler "github.com/openmeterio/openmeter/api/v3/handlers/plans"
 	planaddonshandler "github.com/openmeterio/openmeter/api/v3/handlers/plans/planaddons"
 	subscriptionshandler "github.com/openmeterio/openmeter/api/v3/handlers/subscriptions"
@@ -120,6 +121,11 @@ type Config struct {
 	// Commerce
 	CommerceHandler commercehandler.Handler
 
+	// NamespacesHandler serves the fork's namespace introspection endpoint
+	// (GET /openmeter/namespaces), the data source of the admin UI's namespace
+	// selector. It serves static server configuration and resolves no service.
+	NamespacesHandler namespaceshandler.Handler
+
 	// Credit reservations are an opt-in unstable API surface. The application
 	// supplies the handler when the synchronous reservation service is wired.
 	CreditReservationsHandler creditreservationshandler.Handler
@@ -130,6 +136,10 @@ func (c *Config) Validate() error {
 
 	if c.CreditReservation.Enabled && c.CreditReservationsHandler == nil {
 		errs = append(errs, errors.New("credit reservation handler is required when credit reservations are enabled"))
+	}
+
+	if c.NamespacesHandler == nil {
+		errs = append(errs, errors.New("namespaces handler is required"))
 	}
 
 	if err := c.ResponseValidation.Mode.Validate(); err != nil {
@@ -284,6 +294,7 @@ type Server struct {
 	currenciesHandler           currencieshandler.Handler
 	featuresHandler             featureshandler.Handler
 	featureCostHandler          featurecosthandler.Handler
+	namespacesHandler           namespaceshandler.Handler
 
 	commerceHandler commercehandler.Handler
 
@@ -393,6 +404,7 @@ func NewServer(config *Config) (*Server, error) {
 		currenciesHandler:           currenciesHandler,
 		featuresHandler:             featuresH,
 		featureCostHandler:          featureCostH,
+		namespacesHandler:           config.NamespacesHandler,
 		governanceHandler:           governanceHandler,
 		commerceHandler:             config.CommerceHandler,
 		creditReservationsHandler:   config.CreditReservationsHandler,

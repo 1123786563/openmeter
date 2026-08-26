@@ -45,6 +45,9 @@ const DefaultsDescription = "Organization-level default configuration.";
 const GovernanceTag = "OpenMeter Governance";
 const GovernanceDescription = "Governance evaluation of customers to check their feature access.";
 
+const NamespacesTag = "Namespaces";
+const NamespacesDescription = "Namespace introspection for multi-tenant deployments: the default namespace and the selectable namespace allowlist.";
+
 const CommerceTag = "Commerce";
 const CommerceDescription = "Wallet aggregation, recharge catalog, orders, checkout, payments (WeChat/Alipay), refunds, and enterprise monthly settlement for WeKnora Standard SaaS.";
 

@@ -43,6 +43,7 @@ type mockCatalog struct {
 	productBySKU           *commerce.Product
 	lastRequestedProductID string
 	lastRequestedSKU       string
+	lastActiveOnly         bool
 	err                    error
 }
 
@@ -63,8 +64,23 @@ func (m *mockCatalog) GetProductBySKU(_ context.Context, _, sku string) (*commer
 	return m.product, m.err
 }
 
-func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, _ bool) ([]commerce.Product, error) {
-	return m.products, m.err
+// ListProducts mirrors the ent adapter: activeOnly drops inactive products from
+// the returned slice and records the flag for handler assertions.
+func (m *mockCatalog) ListProducts(_ context.Context, _ string, _ *commerce.ProductKind, activeOnly bool) ([]commerce.Product, error) {
+	m.lastActiveOnly = activeOnly
+	if m.err != nil {
+		return nil, m.err
+	}
+	if !activeOnly {
+		return m.products, nil
+	}
+	active := make([]commerce.Product, 0, len(m.products))
+	for _, p := range m.products {
+		if p.Active {
+			active = append(active, p)
+		}
+	}
+	return active, nil
 }
 
 func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductInput) (*commerce.Product, error) {
@@ -72,11 +88,13 @@ func (m *mockCatalog) UpdateProduct(_ context.Context, _ commerce.UpdateProductI
 }
 
 type mockOrders struct {
-	order     *commerce.Order
-	created   bool
-	err       error
-	conflict  bool
-	lastInput commerce.CreateOrderInput
+	order         *commerce.Order
+	created       bool
+	err           error
+	conflict      bool
+	lastInput     commerce.CreateOrderInput
+	lastListInput commerce.ListOrdersInput
+	listTotal     int
 }
 
 func (m *mockOrders) CreateOrder(_ context.Context, input commerce.CreateOrderInput) (*commerce.Order, bool, error) {
@@ -90,6 +108,17 @@ func (m *mockOrders) GetOrder(_ context.Context, _, _ string) (*commerce.Order, 
 
 func (m *mockOrders) TransitionStatus(_ context.Context, _, _ string, _ commerce.OrderStatus) (*commerce.Order, error) {
 	return m.order, m.err
+}
+
+func (m *mockOrders) ListOrders(_ context.Context, in commerce.ListOrdersInput) ([]commerce.Order, int, error) {
+	m.lastListInput = in
+	if m.err != nil {
+		return nil, 0, m.err
+	}
+	if m.order == nil {
+		return []commerce.Order{}, m.listTotal, nil
+	}
+	return []commerce.Order{*m.order}, m.listTotal, nil
 }
 
 type mockPayment struct {
@@ -123,12 +152,15 @@ func (m *mockPayment) ConfirmPayment(_ context.Context, _, _ string) (payment.Ca
 
 type mockRefund struct {
 	rec              *refund.RefundRequest
+	recs             []refund.RefundRequest
+	listTotal        int
 	created          bool
 	err              error
 	callbackCalls    int
 	callbackProvider payment.Provider
 	callbackHeaders  http.Header
 	callbackBody     []byte
+	lastListInput    refund.ListRefundsInput
 }
 
 func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput) (*refund.RefundRequest, bool, error) {
@@ -137,6 +169,17 @@ func (m *mockRefund) CreateRefund(_ context.Context, _ refund.CreateRefundInput)
 
 func (m *mockRefund) GetRefund(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
 	return m.rec, m.err
+}
+
+func (m *mockRefund) ListRefunds(_ context.Context, in refund.ListRefundsInput) ([]refund.RefundRequest, int, error) {
+	m.lastListInput = in
+	if m.err != nil {
+		return nil, 0, m.err
+	}
+	if m.recs == nil {
+		return []refund.RefundRequest{}, m.listTotal, nil
+	}
+	return m.recs, m.listTotal, nil
 }
 
 func (m *mockRefund) ProcessOne(_ context.Context, _, _ string) (*refund.RefundRequest, error) {
@@ -298,12 +341,56 @@ func TestListRechargeProducts_CurrencyFilter(t *testing.T) {
 	})
 	rr := doRequest(t, h.ListRechargeProducts(), http.MethodGet, "/recharge-products?currency=CNY", nil, nil)
 	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 	var list api.CommerceRechargeProductList
 	_ = json.NewDecoder(rr.Body).Decode(&list)
 	if len(list.Products) != 1 {
 		t.Errorf("expected 1 product after filter, got %d", len(list.Products))
+	}
+}
+
+func TestListRechargeProducts_IncludeInactive(t *testing.T) {
+	catalog := &mockCatalog{products: []commerce.Product{
+		{DisplayName: "Active Pack", AmountMinor: 1000, Currency: "CNY", Credits: 100, Active: true},
+		{DisplayName: "Delisted Pack", AmountMinor: 500, Currency: "CNY", Credits: 50, Active: false},
+	}}
+	h := testHandler(Services{Catalog: catalog})
+
+	// When include_inactive=true, the catalog service is asked without the
+	// active-only filter and delisted products are returned for relisting.
+	rr := doRequest(t, h.ListRechargeProducts(), http.MethodGet, "/recharge-products?include_inactive=true", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var list api.CommerceRechargeProductList
+	if err := json.NewDecoder(rr.Body).Decode(&list); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(list.Products) != 2 {
+		t.Fatalf("expected 2 products including inactive, got %d", len(list.Products))
+	}
+	if list.Products[1].Active {
+		t.Errorf("expected second product to be the inactive one")
+	}
+	if catalog.lastActiveOnly {
+		t.Errorf("catalog activeOnly = true, want false when include_inactive=true")
+	}
+
+	// Without the flag the public behavior is unchanged: active products only.
+	rr = doRequest(t, h.ListRechargeProducts(), http.MethodGet, "/recharge-products", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	list = api.CommerceRechargeProductList{}
+	if err := json.NewDecoder(rr.Body).Decode(&list); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(list.Products) != 1 {
+		t.Fatalf("expected 1 active product by default, got %d", len(list.Products))
+	}
+	if !catalog.lastActiveOnly {
+		t.Errorf("catalog activeOnly = false, want true by default")
 	}
 }
 
@@ -587,6 +674,114 @@ func TestGetOrder_NotFound(t *testing.T) {
 		map[string]string{"orderId": "nonexistent"})
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestListOrders_Success(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Orders: &mockOrders{
+			order: &commerce.Order{
+				NamespacedID: models.NamespacedID{Namespace: "test-ns", ID: "01INTERNALORDERID0000000000"},
+				ManagedModel: models.ManagedModel{CreatedAt: now, UpdatedAt: now},
+				PublicID:     "ord-1",
+				CustomerID:   "cust-1",
+				Kind:         commerce.OrderKindWalletTopUp,
+				Status:       commerce.OrderStatusFulfilled,
+				AmountMinor:  1000,
+				Currency:     "CNY",
+			},
+			listTotal: 7,
+		},
+	})
+	rr := doRequest(t, h.ListOrders(), http.MethodGet, "/orders?page[number]=2&page[size]=50&customer_id=cust-1&status=fulfilled", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp api.OrderPagePaginatedResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Data) != 1 {
+		t.Fatalf("expected 1 order, got %d", len(resp.Data))
+	}
+	if resp.Data[0].BillingCustomerId != "cust-1" {
+		t.Errorf("billing_customer_id = %s, want cust-1", resp.Data[0].BillingCustomerId)
+	}
+	if resp.Meta.Page.Number != 2 || resp.Meta.Page.Size != 50 || resp.Meta.Page.Total != 7 {
+		t.Errorf("page meta = %+v, want number=2 size=50 total=7", resp.Meta.Page)
+	}
+	if !resp.Data[0].CreatedAt.Equal(now) {
+		t.Errorf("created_at = %v, want %v", resp.Data[0].CreatedAt, now)
+	}
+}
+
+func TestListOrders_DefaultsAndFilters(t *testing.T) {
+	orders := &mockOrders{listTotal: 3}
+	h := testHandler(Services{Orders: orders})
+	rr := doRequest(t, h.ListOrders(), http.MethodGet, "/orders", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := orders.lastListInput; got.CustomerID != "" || got.Status != nil {
+		t.Errorf("expected empty filters, got %+v", got)
+	}
+	if got := orders.lastListInput; got.Limit != 100 || got.Offset != 0 {
+		t.Errorf("expected default page window (100, 0), got (%d, %d)", got.Limit, got.Offset)
+	}
+
+	rr = doRequest(t, h.ListOrders(), http.MethodGet, "/orders?page[size]=2&page[number]=3", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if got := orders.lastListInput; got.Limit != 2 || got.Offset != 4 {
+		t.Errorf("expected page window (2, 4), got (%d, %d)", got.Limit, got.Offset)
+	}
+
+	rr = doRequest(t, h.ListOrders(), http.MethodGet, "/orders?customer_id=cust-9&status=created", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 with filters, got %d", rr.Code)
+	}
+	if got := orders.lastListInput; got.CustomerID != "cust-9" || got.Status == nil || *got.Status != commerce.OrderStatusCreated {
+		t.Errorf("expected customer/status filters, got %+v", got)
+	}
+}
+
+func TestListOrders_RejectsInvalidStatus(t *testing.T) {
+	orders := &mockOrders{}
+	h := testHandler(Services{Orders: orders})
+	rr := doRequest(t, h.ListOrders(), http.MethodGet, "/orders?status=nonsense", nil, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid status filter, got %d", rr.Code)
+	}
+	if orders.lastListInput.Namespace != "" {
+		t.Errorf("service was reached with an invalid status filter: %+v", orders.lastListInput)
+	}
+}
+
+func TestListOrders_NonAdminPinnedToOwnCustomer(t *testing.T) {
+	orders := &mockOrders{listTotal: 1}
+	h := testHandler(Services{Orders: orders})
+	// Authenticated non-admin without an explicit filter sees only their own orders.
+	rr := doRequestWithAuth(t, h.ListOrders(), http.MethodGet, "/orders", nil, nil, "cust-1", false)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := orders.lastListInput.CustomerID; got != "cust-1" {
+		t.Errorf("non-admin customer filter = %q, want cust-1", got)
+	}
+	// Requesting another customer's orders is forbidden.
+	rr = doRequestWithAuth(t, h.ListOrders(), http.MethodGet, "/orders?customer_id=cust-2", nil, nil, "cust-1", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer list, got %d", rr.Code)
+	}
+	// An admin may list any customer.
+	rr = doRequestWithAuth(t, h.ListOrders(), http.MethodGet, "/orders?customer_id=cust-2", nil, nil, "admin-user", true)
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected 200 for admin list, got %d", rr.Code)
+	}
+	if got := orders.lastListInput.CustomerID; got != "cust-2" {
+		t.Errorf("admin customer filter = %q, want cust-2", got)
 	}
 }
 
@@ -916,6 +1111,94 @@ func TestGetRefund_Success(t *testing.T) {
 		map[string]string{"refundId": "ref-1"})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestListRefunds_Success(t *testing.T) {
+	now := time.Now().UTC()
+	h := testHandler(Services{
+		Refund: &mockRefund{
+			recs: []refund.RefundRequest{
+				{
+					ID:              "ref-1",
+					CommerceOrderID: "ord-1",
+					CustomerID:      "cust-1",
+					Status:          refund.RefundStatusPendingFence,
+					Currency:        "CNY",
+					CreatedAt:       now,
+					UpdatedAt:       now,
+				},
+				{
+					ID:              "ref-2",
+					CommerceOrderID: "ord-2",
+					CustomerID:      "cust-2",
+					Status:          refund.RefundStatusFulfilled,
+					Currency:        "CNY",
+					CreatedAt:       now,
+					UpdatedAt:       now,
+				},
+			},
+			listTotal: 2,
+		},
+	})
+	rr := doRequest(t, h.ListRefunds(), http.MethodGet, "/refunds?page[number]=1&page[size]=20", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	var resp api.RefundPagePaginatedResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Data) != 2 {
+		t.Fatalf("expected 2 refunds, got %d", len(resp.Data))
+	}
+	if resp.Meta.Page.Number != 1 || resp.Meta.Page.Size != 20 || resp.Meta.Page.Total != 2 {
+		t.Errorf("page meta = %+v, want number=1 size=20 total=2", resp.Meta.Page)
+	}
+}
+
+func TestListRefunds_FiltersForwarded(t *testing.T) {
+	refunds := &mockRefund{}
+	h := testHandler(Services{Refund: refunds})
+	rr := doRequest(t, h.ListRefunds(), http.MethodGet, "/refunds?customer_id=cust-1&status=pending_fence", nil, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := refunds.lastListInput; got.CustomerID != "cust-1" || got.Status == nil || *got.Status != refund.RefundStatusPendingFence {
+		t.Errorf("expected customer/status filters, got %+v", got)
+	}
+}
+
+func TestListRefunds_RejectsInvalidStatus(t *testing.T) {
+	refunds := &mockRefund{}
+	h := testHandler(Services{Refund: refunds})
+	rr := doRequest(t, h.ListRefunds(), http.MethodGet, "/refunds?status=nonsense", nil, nil)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid status filter, got %d", rr.Code)
+	}
+}
+
+func TestListRefunds_NilRefund_501(t *testing.T) {
+	h := testHandler(Services{})
+	rr := doRequest(t, h.ListRefunds(), http.MethodGet, "/refunds", nil, nil)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("expected 501 for nil refund service, got %d", rr.Code)
+	}
+}
+
+func TestListRefunds_NonAdminPinnedToOwnCustomer(t *testing.T) {
+	refunds := &mockRefund{}
+	h := testHandler(Services{Refund: refunds})
+	rr := doRequestWithAuth(t, h.ListRefunds(), http.MethodGet, "/refunds", nil, nil, "cust-1", false)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := refunds.lastListInput.CustomerID; got != "cust-1" {
+		t.Errorf("non-admin customer filter = %q, want cust-1", got)
+	}
+	rr = doRequestWithAuth(t, h.ListRefunds(), http.MethodGet, "/refunds?customer_id=cust-2", nil, nil, "cust-1", false)
+	if rr.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for cross-customer refund list, got %d", rr.Code)
 	}
 }
 

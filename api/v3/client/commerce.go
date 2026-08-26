@@ -9,6 +9,7 @@ import (
 	"iter"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 type CommerceService struct {
@@ -16,7 +17,8 @@ type CommerceService struct {
 }
 
 type ListRechargeProductsParams struct {
-	Currency *string
+	Currency        *string
+	IncludeInactive *bool
 }
 
 func (p ListRechargeProductsParams) values() url.Values {
@@ -24,6 +26,54 @@ func (p ListRechargeProductsParams) values() url.Values {
 
 	if p.Currency != nil {
 		q.Set("currency", *p.Currency)
+	}
+
+	if p.IncludeInactive != nil {
+		q.Set("include_inactive", strconv.FormatBool(*p.IncludeInactive))
+	}
+
+	return q
+}
+
+type CommerceOrderListParams struct {
+	Page       *PageParams
+	CustomerID *string
+	Status     *CommerceOrderStatus
+}
+
+func (p CommerceOrderListParams) values() url.Values {
+	q := url.Values{}
+
+	addPageParams(q, p.Page)
+
+	if p.CustomerID != nil {
+		q.Set("customer_id", *p.CustomerID)
+	}
+
+	if p.Status != nil {
+		q.Set("status", string(*p.Status))
+	}
+
+	return q
+}
+
+type CommerceRefundListParams struct {
+	Page       *PageParams
+	CustomerID *string
+	Status     *CommerceRefundStatus
+}
+
+func (p CommerceRefundListParams) values() url.Values {
+	q := url.Values{}
+
+	addPageParams(q, p.Page)
+
+	if p.CustomerID != nil {
+		q.Set("customer_id", *p.CustomerID)
+	}
+
+	if p.Status != nil {
+		q.Set("status", string(*p.Status))
 	}
 
 	return q
@@ -65,7 +115,9 @@ func (s *CommerceService) GetCustomerWallet(ctx context.Context, customerID stri
 	return &out, nil
 }
 
-// List all active recharge products available for purchase.
+// List recharge products available for purchase. By default only active
+// products are returned; pass `include_inactive` to also list delisted
+// products (for the admin catalog management view).
 func (s *CommerceService) ListRechargeProducts(ctx context.Context, params ListRechargeProductsParams) (*CommerceRechargeProductList, error) {
 	path := "/recharge-products"
 
@@ -75,6 +127,47 @@ func (s *CommerceService) ListRechargeProducts(ctx context.Context, params ListR
 	}
 
 	var out CommerceRechargeProductList
+	if err := s.client.doJSON(req, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// Create a new recharge product in the catalog. Admin-only mutation.
+func (s *CommerceService) CreateRechargeProduct(ctx context.Context, request CommerceRechargeProductCreate) (*CommerceRechargeProduct, error) {
+	path := "/recharge-products"
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPost, path, nil, request, "application/json", "application/json")
+	if err != nil {
+		return nil, err
+	}
+
+	var out CommerceRechargeProduct
+	if err := s.client.doJSON(req, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// Update a recharge product's mutable fields (name, price, active listing state).
+// Admin-only mutation; `sku`, `kind`, and `credits` are immutable.
+func (s *CommerceService) UpdateRechargeProduct(ctx context.Context, productID string, request CommerceRechargeProductUpdate) (*CommerceRechargeProduct, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("openmeter: %s must not be empty: %w", "productID", ErrEmptyID)
+	}
+
+	path := "/recharge-products/{productId}"
+
+	path = replacePathParam(path, "productId", productID)
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodPatch, path, nil, request, "application/json", "application/json")
+	if err != nil {
+		return nil, err
+	}
+
+	var out CommerceRechargeProduct
 	if err := s.client.doJSON(req, &out); err != nil {
 		return nil, err
 	}
@@ -100,6 +193,39 @@ func (s *CommerceService) CreateOrder(ctx context.Context, request CommerceOrder
 	}
 
 	return &out, nil
+}
+
+// List orders in the namespace, newest first. Supports pagination and optional
+// customer and status filters.
+func (s *CommerceService) ListOrders(ctx context.Context, params CommerceOrderListParams) (*OrderPagePaginatedResponse, error) {
+	path := "/orders"
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodGet, path, params.values(), nil, "", "application/json")
+	if err != nil {
+		return nil, err
+	}
+
+	var out OrderPagePaginatedResponse
+	if err := s.client.doJSON(req, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// ListOrdersAll returns an iterator over all CommerceOrder results, fetching pages of ListOrders transparently. Iteration stops at the first error, which is yielded as the second value.
+func (s *CommerceService) ListOrdersAll(ctx context.Context, params CommerceOrderListParams) iter.Seq2[CommerceOrder, error] {
+	return paginate(params.Page, func(page, size int) ([]CommerceOrder, int, error) {
+		pageParams := params
+		pageParams.Page = &PageParams{Size: Int(size), Number: Int(page)}
+
+		resp, err := s.ListOrders(ctx, pageParams)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		return resp.Data, resp.Meta.Page.Total, nil
+	})
 }
 
 // Retrieve an order by its ID.
@@ -188,6 +314,39 @@ func (s *CommerceService) CreateRefund(ctx context.Context, request CommerceRefu
 	}
 
 	return &out, nil
+}
+
+// List refund requests in the namespace, newest first. Supports pagination and
+// optional customer and status filters.
+func (s *CommerceService) ListRefunds(ctx context.Context, params CommerceRefundListParams) (*RefundPagePaginatedResponse, error) {
+	path := "/refunds"
+
+	req, err := s.client.newRequestWithContentType(ctx, http.MethodGet, path, params.values(), nil, "", "application/json")
+	if err != nil {
+		return nil, err
+	}
+
+	var out RefundPagePaginatedResponse
+	if err := s.client.doJSON(req, &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// ListRefundsAll returns an iterator over all CommerceRefund results, fetching pages of ListRefunds transparently. Iteration stops at the first error, which is yielded as the second value.
+func (s *CommerceService) ListRefundsAll(ctx context.Context, params CommerceRefundListParams) iter.Seq2[CommerceRefund, error] {
+	return paginate(params.Page, func(page, size int) ([]CommerceRefund, int, error) {
+		pageParams := params
+		pageParams.Page = &PageParams{Size: Int(size), Number: Int(page)}
+
+		resp, err := s.ListRefunds(ctx, pageParams)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		return resp.Data, resp.Meta.Page.Total, nil
+	})
 }
 
 // Retrieve a refund by its ID.

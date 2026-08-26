@@ -3,6 +3,11 @@ credits:
   enableCreditThenInvoice: true
   reservationsEnabled: true
 
+# Quickstart has no Casdoor; API authentication is explicitly disabled.
+auth:
+  oidc:
+    enabled: false
+
 creditReservation:
   enabled: true
   authorizationTTL: 5m

@@ -28,6 +28,8 @@ servers:
 tags:
   - name: Commerce
     description: Wallet aggregation, recharge catalog, orders, checkout, payments (WeChat/Alipay), refunds, and enterprise monthly settlement for WeKnora Standard SaaS.
+  - name: Namespaces
+    description: 'Namespace introspection for multi-tenant deployments: the default namespace and the selectable namespace allowlist.'
   - name: OpenMeter Governance
     description: Governance evaluation of customers to check their feature access.
   - name: OpenMeter Defaults
@@ -3047,6 +3049,29 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/MeterQueryRequest'
+  /openmeter/namespaces:
+    get:
+      operationId: list-namespaces
+      summary: List namespaces
+      description: |-
+        List the namespaces available on this deployment. The default namespace is
+        always included in the response.
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NamespaceList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      tags:
+        - Namespaces
+      x-unstable: true
   /openmeter/plans:
     get:
       operationId: list-plans
@@ -4082,6 +4107,46 @@ paths:
             schema:
               $ref: '#/components/schemas/CommerceOrderCreate'
       x-unstable: true
+    get:
+      operationId: list-orders
+      summary: List orders
+      description: |-
+        List orders in the namespace, newest first. Supports pagination and optional
+        customer and status filters.
+      parameters:
+        - $ref: '#/components/parameters/PagePaginationQuery'
+        - name: customer_id
+          in: query
+          required: false
+          description: Filter orders by their billing customer.
+          schema:
+            $ref: '#/components/schemas/ULID'
+          explode: false
+          style: form
+        - name: status
+          in: query
+          required: false
+          description: Filter orders by lifecycle status.
+          schema:
+            $ref: '#/components/schemas/CommerceOrderStatus'
+          explode: false
+          style: form
+      responses:
+        '200':
+          description: Page paginated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPagePaginatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      tags:
+        - Commerce
+      x-unstable: true
   /orders/{orderId}:
     get:
       operationId: get-order
@@ -4156,11 +4221,10 @@ paths:
         Alipay payment callback. OpenMeter verifies the signature, confirms the payment
         fact, and fulfills the order.
 
-        The request body is the `application/x-www-form-urlencoded` Alipay
-        notification whose field set varies by trade type. OpenMeter verifies the
-        RSA2 signature over the canonicalized raw form fields, so the body is
-        intentionally not modeled with a schema and must be forwarded
-        byte-for-byte.
+        The request body is the `application/x-www-form-urlencoded` Alipay notification
+        whose field set varies by trade type. OpenMeter verifies the RSA2 signature over
+        the canonicalized raw form fields, so the body is intentionally not modeled with
+        a schema and must be forwarded byte-for-byte.
       responses:
         '200':
           description: |-
@@ -4192,9 +4256,9 @@ paths:
         payment fact, and fulfills the order.
 
         The request body is the provider-signed WeChat Pay v3 notification: a JSON
-        envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter
-        verifies the RSA signature over the raw bytes, so the body is intentionally
-        not modeled with a schema and must be forwarded byte-for-byte.
+        envelope whose `resource` payload is AES-256-GCM encrypted. OpenMeter verifies
+        the RSA signature over the raw bytes, so the body is intentionally not modeled
+        with a schema and must be forwarded byte-for-byte.
       responses:
         '204':
           description: |-
@@ -4223,8 +4287,7 @@ paths:
 
         The request body is the provider-signed WeChat Pay v3 refund notification.
         OpenMeter verifies the RSA signature over the raw bytes, so the body is
-        intentionally not modeled with a schema and must be forwarded
-        byte-for-byte.
+        intentionally not modeled with a schema and must be forwarded byte-for-byte.
       responses:
         '204':
           description: |-
@@ -4247,7 +4310,10 @@ paths:
     get:
       operationId: list-recharge-products
       summary: List recharge products
-      description: List all active recharge products available for purchase.
+      description: |-
+        List recharge products available for purchase. By default only active
+        products are returned; pass `include_inactive` to also list delisted
+        products (for the admin catalog management view).
       parameters:
         - name: currency
           in: query
@@ -4255,6 +4321,16 @@ paths:
           description: Filter by currency to show only products priced in the customer's currency.
           schema:
             $ref: '#/components/schemas/CurrencyCode'
+          explode: false
+          style: form
+        - name: include_inactive
+          in: query
+          required: false
+          description: |-
+            Include inactive (delisted) products in the response. Defaults to false so
+            public callers keep seeing only purchasable products.
+          schema:
+            type: boolean
           explode: false
           style: form
       responses:
@@ -4272,6 +4348,71 @@ paths:
           $ref: '#/components/responses/Forbidden'
       tags:
         - Commerce
+      x-unstable: true
+    post:
+      operationId: create-recharge-product
+      summary: Create recharge product
+      description: Create a new recharge product in the catalog. Admin-only mutation.
+      responses:
+        '201':
+          description: RechargeProduct created response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommerceRechargeProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+      tags:
+        - Commerce
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommerceRechargeProductCreate'
+      x-unstable: true
+  /recharge-products/{productId}:
+    patch:
+      operationId: update-recharge-product
+      summary: Update recharge product
+      description: |-
+        Update a recharge product's mutable fields (name, price, active listing state).
+        Admin-only mutation; `sku`, `kind`, and `credits` are immutable.
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ULID'
+      responses:
+        '200':
+          description: RechargeProduct updated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommerceRechargeProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Commerce
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommerceRechargeProductUpdate'
       x-unstable: true
   /refunds:
     post:
@@ -4301,6 +4442,46 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CommerceRefundCreate'
+      x-unstable: true
+    get:
+      operationId: list-refunds
+      summary: List refunds
+      description: |-
+        List refund requests in the namespace, newest first. Supports pagination and
+        optional customer and status filters.
+      parameters:
+        - $ref: '#/components/parameters/PagePaginationQuery'
+        - name: customer_id
+          in: query
+          required: false
+          description: Filter refunds by their billing customer.
+          schema:
+            $ref: '#/components/schemas/ULID'
+          explode: false
+          style: form
+        - name: status
+          in: query
+          required: false
+          description: Filter refunds by lifecycle status.
+          schema:
+            $ref: '#/components/schemas/CommerceRefundStatus'
+          explode: false
+          style: form
+      responses:
+        '200':
+          description: Page paginated response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundPagePaginatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      tags:
+        - Commerce
       x-unstable: true
   /refunds/{refundId}:
     get:
@@ -10463,6 +10644,54 @@ components:
       description: |-
         A recharge product (SKU) available for purchase. Each product defines a credit
         package and its retail price in integer fen.
+    CommerceRechargeProductCreate:
+      type: object
+      required:
+        - sku
+        - display_name
+        - kind
+        - credits
+        - amount_fen
+        - currency
+      properties:
+        sku:
+          type: string
+          description: Unique stock keeping unit for the product within the namespace.
+        display_name:
+          type: string
+          description: Human-readable product name (e.g. "1,000 Points Pack").
+        kind:
+          allOf:
+            - $ref: '#/components/schemas/CommerceOrderKind'
+          description: |-
+            The business kind of the product. It must match the order kind the product can
+            fulfill (`wallet_top_up` for recharge products).
+        credits:
+          type: integer
+          format: int64
+          description: Number of Credits granted on successful purchase.
+        amount_fen:
+          allOf:
+            - $ref: '#/components/schemas/CommerceFenAmount'
+          description: Retail price in the smallest currency unit (fen).
+        currency:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyCode'
+          description: Three-letter ISO 4217 currency code for the price.
+        display_order:
+          type: integer
+          format: int32
+          description: Sort order for display.
+        refund_policy:
+          type: string
+          description: |-
+            Refund policy for purchases of this product (`none`, `unspent`, or
+            `full_window`). Omit to use the default policy.
+        description:
+          type: string
+          description: Longer marketing description of the product.
+      additionalProperties: false
+      description: Request body for creating a new recharge product.
     CommerceRechargeProductList:
       type: object
       required:
@@ -10474,6 +10703,27 @@ components:
             $ref: '#/components/schemas/CommerceRechargeProduct'
       additionalProperties: false
       description: Response body for listing recharge products.
+    CommerceRechargeProductUpdate:
+      type: object
+      properties:
+        display_name:
+          type: string
+          description: New human-readable product name.
+        amount_fen:
+          allOf:
+            - $ref: '#/components/schemas/CommerceFenAmount'
+          description: |-
+            New retail price in the smallest currency unit (fen). Existing orders keep their
+            creation-time price snapshot.
+        active:
+          type: boolean
+          description: |-
+            Whether the product is currently available for purchase (listing or delisting
+            the product).
+      additionalProperties: false
+      description: |-
+        Request body for updating a recharge product's mutable fields. Omitted fields
+        keep their current values; `sku`, `kind`, and `credits` are immutable.
     CommerceRefund:
       type: object
       required:
@@ -13666,10 +13916,50 @@ components:
           readOnly: true
       additionalProperties: false
       description: Event validation errors.
+    NamespaceList:
+      type: object
+      required:
+        - default
+        - namespaces
+      properties:
+        default:
+          type: string
+          description: The namespace used for requests that do not select one explicitly.
+          title: Default namespace
+        namespaces:
+          type: array
+          items:
+            type: string
+          description: |-
+            All selectable namespaces, sorted alphabetically. Always includes the default
+            namespace.
+          title: Namespaces
+      additionalProperties: false
+      description: |-
+        The namespaces available on this deployment.
+
+        The list is sourced from the server configuration: the default namespace plus
+        the configured namespace allowlist, deduplicated and sorted. When request-level
+        namespace selection is disabled (empty allowlist), only the default namespace is
+        listed.
     Numeric:
       type: string
       pattern: ^\-?[0-9]+(\.[0-9]+)?$
       description: Numeric represents an arbitrary precision number.
+    OrderPagePaginatedResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommerceOrder'
+        meta:
+          $ref: '#/components/schemas/PaginatedMeta'
+      additionalProperties: false
+      description: Page paginated response.
     OrganizationDefaultTaxCodes:
       type: object
       required:
@@ -13985,6 +14275,20 @@ components:
           example: P1M
       additionalProperties: false
       description: Recurring period with an anchor and an interval.
+    RefundPagePaginatedResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommerceRefund'
+        meta:
+          $ref: '#/components/schemas/PaginatedMeta'
+      additionalProperties: false
+      description: Page paginated response.
     ResourceKey:
       type: string
       minLength: 1

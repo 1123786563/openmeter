@@ -1,5 +1,10 @@
 address: 0.0.0.0:8080
 
+# The e2e stack has no Casdoor; API authentication is explicitly disabled.
+auth:
+  oidc:
+    enabled: false
+
 telemetry:
   address: 0.0.0.0:10000
   log:

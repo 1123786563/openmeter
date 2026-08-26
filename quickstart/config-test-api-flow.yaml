@@ -3,6 +3,11 @@ credits:
   enableCreditThenInvoice: true
   reservationsEnabled: true
 
+# The test API flow runs without Casdoor; API authentication is explicitly disabled.
+auth:
+  oidc:
+    enabled: false
+
 creditReservation:
   enabled: true
   authorizationTTL: 5m

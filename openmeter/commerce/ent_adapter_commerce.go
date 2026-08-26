@@ -779,6 +779,60 @@ func (a *EntAdapter) ListProcessableRefundRequests(ctx context.Context, namespac
 	return result, nil
 }
 
+// RefundRequestListQuery is the wire input for a namespace-scoped refund list:
+// CustomerID and Status are optional filters, Limit and Offset carry the page
+// window.
+type RefundRequestListQuery struct {
+	Namespace  string
+	CustomerID string
+	Status     RefundStatusWire
+	Limit      int
+	Offset     int
+}
+
+// ListRefundRequests lists refunds across a namespace with optional customer
+// and status filters, returning one page plus the total matching count.
+// Refunds are returned newest first (created_at DESC, id DESC as tiebreaker).
+// An empty Status means no status filter.
+func (a *EntAdapter) ListRefundRequests(ctx context.Context, in RefundRequestListQuery) ([]RefundRequestWire, int, error) {
+	q := a.db.RefundRequest.Query().
+		Where(refundrequest.NamespaceEQ(in.Namespace))
+
+	if in.CustomerID != "" {
+		q = q.Where(refundrequest.CustomerIDEQ(in.CustomerID))
+	}
+	if in.Status != "" {
+		entStatus, err := mapRefundStatusToEnt(in.Status)
+		if err != nil {
+			return nil, 0, err
+		}
+		q = q.Where(refundrequest.StatusEQ(entStatus))
+	}
+
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ent: count refunds: %w", err)
+	}
+
+	requests, err := q.
+		Order(
+			refundrequest.ByCreatedAt(entsql.OrderDesc()),
+			refundrequest.ByID(entsql.OrderDesc()),
+		).
+		Limit(in.Limit).
+		Offset(in.Offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ent: list refunds: %w", err)
+	}
+
+	result := make([]RefundRequestWire, len(requests))
+	for i, request := range requests {
+		result[i] = *mapEntRefundRequest(request)
+	}
+	return result, total, nil
+}
+
 func (a *EntAdapter) UpdateRefundStatus(ctx context.Context, namespace, id string, to RefundStatusWire) (*RefundRequestWire, error) {
 	entTo, err := mapRefundStatusToEnt(to)
 	if err != nil {

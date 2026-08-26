@@ -23,6 +23,10 @@ type Repository interface {
 	GetOrderByIdempotencyKey(ctx context.Context, namespace, customerID, key string) (*commerce.Order, error)
 	UpdateOrderStatus(ctx context.Context, namespace, id string, expectedFrom, to commerce.OrderStatus) (*commerce.Order, error)
 	ListOrdersByCustomer(ctx context.Context, namespace, customerID string, status *commerce.OrderStatus) ([]commerce.Order, error)
+
+	// ListOrders returns one page of the namespace's orders plus the total
+	// matching count, newest first.
+	ListOrders(ctx context.Context, in commerce.ListOrdersInput) ([]commerce.Order, int, error)
 }
 
 // ProductLookup resolves product IDs to Product snapshots at order creation time.
@@ -42,6 +46,10 @@ type Service interface {
 	CreateOrder(ctx context.Context, in commerce.CreateOrderInput) (*commerce.Order, bool, error)
 	GetOrder(ctx context.Context, namespace, id string) (*commerce.Order, error)
 	TransitionStatus(ctx context.Context, namespace, id string, to commerce.OrderStatus) (*commerce.Order, error)
+
+	// ListOrders returns one page of the namespace's orders plus the total
+	// matching count, newest first.
+	ListOrders(ctx context.Context, in commerce.ListOrdersInput) ([]commerce.Order, int, error)
 }
 
 type service struct {
@@ -163,6 +171,33 @@ func (s *service) GetOrder(ctx context.Context, namespace, id string) (*commerce
 		return nil, fmt.Errorf("order id is required")
 	}
 	return s.repo.GetOrder(ctx, namespace, id)
+}
+
+// listPageSizeBounds are the defaults and bounds applied to ListOrders input:
+// page size defaults to 100 and is clamped to [1, 1000]; negative offsets are
+// normalized to 0.
+const (
+	defaultListLimit = 100
+	maxListLimit     = 1000
+)
+
+// ListOrders returns one page of the namespace's orders plus the total matching
+// count. The page window defaults are applied here so every caller (API or
+// worker) gets the same bounds.
+func (s *service) ListOrders(ctx context.Context, in commerce.ListOrdersInput) ([]commerce.Order, int, error) {
+	if in.Namespace == "" {
+		return nil, 0, models.NewNillableGenericValidationError(errors.New("namespace is required"))
+	}
+	if in.Limit <= 0 {
+		in.Limit = defaultListLimit
+	}
+	if in.Limit > maxListLimit {
+		in.Limit = maxListLimit
+	}
+	if in.Offset < 0 {
+		in.Offset = 0
+	}
+	return s.repo.ListOrders(ctx, in)
 }
 
 // TransitionStatus applies a state-machine-validated status transition. If the

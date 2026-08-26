@@ -372,6 +372,45 @@ func (a *EntAdapter) ListOrdersByCustomer(ctx context.Context, namespace, custom
 	return result, nil
 }
 
+// ListOrders lists orders across a namespace with optional customer and status
+// filters, returning one page plus the total matching count. Orders are
+// returned newest first (created_at DESC, id DESC as tiebreaker).
+func (a *EntAdapter) ListOrders(ctx context.Context, in ListOrdersInput) ([]Order, int, error) {
+	q := a.db.CommerceOrder.Query().
+		Where(commerceorder.NamespaceEQ(in.Namespace)).
+		WithLines()
+
+	if in.CustomerID != "" {
+		q = q.Where(commerceorder.CustomerIDEQ(in.CustomerID))
+	}
+	if in.Status != nil {
+		q = q.Where(commerceorder.StatusEQ(must1(mapOrderStatusToEnt(*in.Status))))
+	}
+
+	total, err := q.Clone().Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ent: count orders: %w", err)
+	}
+
+	eos, err := q.
+		Order(
+			commerceorder.ByCreatedAt(entsql.OrderDesc()),
+			commerceorder.ByID(entsql.OrderDesc()),
+		).
+		Limit(in.Limit).
+		Offset(in.Offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ent: list orders: %w", err)
+	}
+
+	result := make([]Order, 0, len(eos))
+	for _, eo := range eos {
+		result = append(result, *mapEntOrder(eo))
+	}
+	return result, total, nil
+}
+
 // ---------------------------------------------------------------------------
 // WalletDataPort (read-only)
 // ---------------------------------------------------------------------------

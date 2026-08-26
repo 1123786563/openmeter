@@ -768,7 +768,7 @@ func initializeApplication(ctx context.Context, conf config.Configuration) (Appl
 	routerHooks := common.NewRouterHooks(telemetryMiddlewareHook)
 	productCatalogConfiguration := conf.ProductCatalog
 	subscriptionConfiguration := productCatalogConfiguration.Subscription
-	namespaceDecoder := common.NewStaticNamespaceDecoder(namespaceConfiguration)
+	namespaceDecoder := common.NewNamespaceDecoder(namespaceConfiguration)
 	ffxConfigContextMiddleware := common.NewFFXConfigContextMiddleware(subscriptionConfiguration, namespaceDecoder, logger)
 	postAuthMiddlewares := common.NewPostAuthMiddlewares(ffxConfigContextMiddleware)
 	v9, err := common.NewSubjectCustomerHook(subjectService, customerService, logger, tracer)

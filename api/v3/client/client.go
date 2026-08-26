@@ -31,6 +31,7 @@ type Client struct {
 	PlanAddons         *PlanAddonsService
 	Defaults           *DefaultsService
 	Governance         *GovernanceService
+	Namespaces         *NamespacesService
 	CreditReservations *CreditReservationsService
 	Commerce           *CommerceService
 }
@@ -79,6 +80,7 @@ func New(baseURL string, opts ...Option) (*Client, error) {
 	c.PlanAddons = &PlanAddonsService{client: c}
 	c.Defaults = &DefaultsService{client: c}
 	c.Governance = &GovernanceService{client: c}
+	c.Namespaces = &NamespacesService{client: c}
 	c.CreditReservations = &CreditReservationsService{client: c}
 	c.Commerce = &CommerceService{client: c}
 	c.Customers.Billing = &CustomersBillingService{client: c}

@@ -1,0 +1,64 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Basic security headers. CSP is intentionally not forced here so
+    # deployments can overlay stricter directives at the ingress level.
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    gzip on;
+    gzip_vary on;
+    gzip_comp_level 5;
+    gzip_min_length 256;
+    gzip_types
+        application/javascript
+        application/json
+        application/manifest+json
+        image/svg+xml
+        text/css
+        text/javascript
+        text/plain;
+
+    # Hashed build artifacts never change; cache them aggressively.
+    # add_header inside a location drops inherited server-level headers,
+    # so the security headers are repeated wherever we add Cache-Control.
+    location /assets/ {
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Reverse proxy API calls to the OpenMeter backend. The upstream is
+    # parameterized via the OPENMETER_UPSTREAM env var (substituted by the
+    # nginx image envsubst entrypoint); without a URI part on proxy_pass the
+    # original /api/... path is forwarded unchanged. nginx resolves the
+    # upstream at startup, so the name must be resolvable from the container
+    # network (compose service name, or an override like host.docker.internal).
+    location /api/ {
+        proxy_pass http://${OPENMETER_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SPA fallback: unknown paths serve the app shell.
+    location / {
+        try_files $uri /index.html;
+    }
+
+    # Never cache the app shell so new deploys propagate immediately.
+    location = /index.html {
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Cache-Control "no-cache";
+    }
+}

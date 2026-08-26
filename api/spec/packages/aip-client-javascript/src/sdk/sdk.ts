@@ -14,6 +14,7 @@ import { Plans } from './plans.js'
 import { Addons } from './addons.js'
 import { PlanAddons } from './planAddons.js'
 import { Defaults } from './defaults.js'
+import { Namespaces } from './namespaces.js'
 import { CreditReservations } from './creditReservations.js'
 import { Commerce } from './commerce.js'
 import { Internal } from './internal.js'
@@ -82,6 +83,11 @@ export class OpenMeter extends Client {
   private _defaults?: Defaults
   get defaults(): Defaults {
     return (this._defaults ??= new Defaults(this))
+  }
+
+  private _namespaces?: Namespaces
+  get namespaces(): Namespaces {
+    return (this._namespaces ??= new Namespaces(this))
   }
 
   private _creditReservations?: CreditReservations

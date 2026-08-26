@@ -39,11 +39,14 @@ interface WalletOperations {
 }
 
 /**
- * Recharge catalog operations. Lists purchasable credit packages.
+ * Recharge catalog operations. Lists purchasable credit packages and manages the
+ * product catalog (admin mutations).
  */
 interface CatalogOperations {
   /**
-   * List all active recharge products available for purchase.
+   * List recharge products available for purchase. By default only active products
+   * are returned; pass `include_inactive` to also list delisted products (for the
+   * admin catalog management view).
    */
   @extension(Shared.UnstableExtension, true)
   @get
@@ -55,11 +58,45 @@ interface CatalogOperations {
      */
     @query
     currency?: Shared.CurrencyCode,
+
+    /**
+     * Include inactive (delisted) products in the response. Defaults to false so
+     * public callers keep seeing only purchasable products.
+     */
+    @query
+    include_inactive?: boolean,
   ): Shared.GetResponse<RechargeProductList> | Common.ErrorResponses;
+
+  /**
+   * Create a new recharge product in the catalog. Admin-only mutation.
+   */
+  @extension(Shared.UnstableExtension, true)
+  @post
+  @operationId("create-recharge-product")
+  @summary("Create recharge product")
+  create(@body product: RechargeProductCreate):
+    | Shared.CreateResponse<RechargeProduct>
+    | Common.BadRequest
+    | Common.Conflict
+    | Common.ErrorResponses;
+
+  /**
+   * Update a recharge product's mutable fields (name, price, active listing state).
+   * Admin-only mutation; `sku`, `kind`, and `credits` are immutable.
+   */
+  @extension(Shared.UnstableExtension, true)
+  @patch
+  @operationId("update-recharge-product")
+  @summary("Update recharge product")
+  update(@path productId: Shared.ULID, @body product: RechargeProductUpdate):
+    | Shared.UpdateResponse<RechargeProduct>
+    | Common.BadRequest
+    | Common.NotFound
+    | Common.ErrorResponses;
 }
 
 /**
- * Order creation and retrieval operations.
+ * Order creation, retrieval, and listing operations.
  */
 interface OrderOperations {
   /**
@@ -78,6 +115,30 @@ interface OrderOperations {
     | Common.BadRequest
     | Common.Conflict
     | Common.ErrorResponses;
+
+  /**
+   * List orders in the namespace, newest first. Supports pagination and optional
+   * customer and status filters.
+   */
+  @extension(Shared.UnstableExtension, true)
+  @get
+  @operationId("list-orders")
+  @summary("List orders")
+  list(
+    ...Common.PagePaginationQuery,
+
+    /**
+     * Filter orders by their billing customer.
+     */
+    @query
+    customer_id?: Shared.ULID,
+
+    /**
+     * Filter orders by lifecycle status.
+     */
+    @query
+    status?: OrderStatus,
+  ): Shared.PagePaginatedResponse<Order> | Common.ErrorResponses;
 
   /**
    * Retrieve an order by its ID.
@@ -145,6 +206,30 @@ interface RefundOperations {
     | Common.BadRequest
     | Common.Conflict
     | Common.ErrorResponses;
+
+  /**
+   * List refund requests in the namespace, newest first. Supports pagination and
+   * optional customer and status filters.
+   */
+  @extension(Shared.UnstableExtension, true)
+  @get
+  @operationId("list-refunds")
+  @summary("List refunds")
+  list(
+    ...Common.PagePaginationQuery,
+
+    /**
+     * Filter refunds by their billing customer.
+     */
+    @query
+    customer_id?: Shared.ULID,
+
+    /**
+     * Filter refunds by lifecycle status.
+     */
+    @query
+    status?: RefundStatus,
+  ): Shared.PagePaginatedResponse<Refund> | Common.ErrorResponses;
 
   /**
    * Retrieve a refund by its ID.

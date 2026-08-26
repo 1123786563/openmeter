@@ -1,5 +1,52 @@
 address: 127.0.0.1:8888
 
+# API 认证（fork 新增，详见 docs/adr/0001-casdoor-oidc-auth-middleware.md）。
+auth:
+  oidc:
+    # 本地开发无需 Casdoor，显式关闭；生产管理端环境必须开启并补全 issuer/jwks_url。
+    # 注意：代码默认值为 true（未配置的部署按开启处理），因此非管理端环境要显式写 false。
+    enabled: false
+    # Casdoor 的 issuer，用于 JWT iss 校验；enabled 时必填。
+    issuer: ""
+    # JWKS 端点，Casdoor 通常为 {endpoint}/api/certs；enabled 时必填。
+    jwks_url: ""
+    # 可选；非空才校验 JWT aud claim。
+    audience: ""
+    # 组织白名单（授权边界）；enabled 时必填——缺失会在启动时校验失败，
+    # 避免任何 Casdoor 用户都获得全量 Operator 权限。
+    allowed_organizations: []
+    # allowed_organizations:
+    #   - "ops"
+    # token 中携带组织名的 claim，Casdoor 默认为 owner。
+    organization_claim: "owner"
+    # 映射为 Viewer（仅读）的 Casdoor 角色。
+    viewer_roles: []
+    # 映射为 Operator（读写）的 Casdoor 角色。
+    operator_roles: []
+    # token 中携带角色列表的 claim。
+    role_claim: "roles"
+
+# 主 API（v1+v3）跨域配置（fork 新增）。
+cors:
+  # 允许跨域调用 API 的来源列表；默认空 = 不启用 CORS（不加任何 CORS 头）。
+  # 配置 "*" 允许任意来源；本 API 使用 Bearer 头而非 Cookie，因此通配符按无凭证处理。
+  # 允许的方法为全量；允许的请求头为 Authorization/Content-Type/X-Namespace 等。
+  allowed_origins: []
+  # allowed_origins:
+  #   - "https://admin.example.com"
+
+# 多租户 namespace 配置（fork 新增请求级选择）。
+namespace:
+  default: "default"
+  # 请求级 namespace 选择白名单；默认空 = 禁用（所有请求走 default，与现状一致）。
+  # 非空时：请求可通过 X-Namespace 头选择 namespace，取值必须在白名单内
+  # （default 恒被允许），否则返回 403；缺省头时使用 default。
+  # GET /api/v3/openmeter/namespaces 返回 default 与该白名单的合并列表。
+  allowlist: []
+  # allowlist:
+  #   - "tenant-a"
+  #   - "tenant-b"
+
 telemetry:
   log:
     level: debug

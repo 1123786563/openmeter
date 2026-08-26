@@ -22,12 +22,13 @@ import (
 // ---------------------------------------------------------------------------
 
 type mockRepo struct {
-	mu         sync.Mutex
-	refunds    map[string]*RefundRequest
-	facts      map[string]*RefundFactRecord // keyed by RawHash
-	appendErr  error
-	idCounter  atomic.Int64
-	grantStore *mockWallet // shared grant store for atomic reserve
+	mu            sync.Mutex
+	refunds       map[string]*RefundRequest
+	facts         map[string]*RefundFactRecord // keyed by RawHash
+	appendErr     error
+	idCounter     atomic.Int64
+	grantStore    *mockWallet // shared grant store for atomic reserve
+	lastListInput ListRefundsInput
 }
 
 func newMockRepo(wallet *mockWallet) *mockRepo {
@@ -245,6 +246,35 @@ func (m *mockRepo) GetFacts(_ context.Context, namespace, refundID string) ([]Re
 		}
 	}
 	return result, nil
+}
+
+func (m *mockRepo) ListRefunds(_ context.Context, in ListRefundsInput) ([]RefundRequest, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastListInput = in
+	var result []RefundRequest
+	for _, r := range m.refunds {
+		if r.Namespace != in.Namespace {
+			continue
+		}
+		if in.CustomerID != "" && r.CustomerID != in.CustomerID {
+			continue
+		}
+		if in.Status != nil && r.Status != *in.Status {
+			continue
+		}
+		result = append(result, *r)
+	}
+	total := len(result)
+	if in.Offset < len(result) {
+		result = result[in.Offset:]
+	} else {
+		result = nil
+	}
+	if in.Limit > 0 && len(result) > in.Limit {
+		result = result[:in.Limit]
+	}
+	return result, total, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -2365,4 +2395,84 @@ func (p *mockProvider) VerifyRefundCallback(_ context.Context, headers http.Head
 	p.callbackHeaders = headers.Clone()
 	p.callbackBody = append([]byte(nil), body...)
 	return p.callbackFact, p.callbackErr
+}
+
+// TestListRefundsFiltersAndPageWindow verifies the namespace-level refund
+// list: customer and status filters, the applied page-window bounds, and the
+// reported total count.
+func TestListRefundsFiltersAndPageWindow(t *testing.T) {
+	h := newTestHarness(t)
+	h.orders.addFulfilledOrder("ns", "order-list-1", "cust-1", 10000)
+	h.orders.addFulfilledOrder("ns", "order-list-2", "cust-2", 10000)
+	for _, in := range []CreateRefundInput{
+		{Namespace: "ns", OrderID: "order-list-1", CustomerID: "cust-1", Currency: "CNY", IdempotencyKey: "list-idem-1"},
+		{Namespace: "ns", OrderID: "order-list-2", CustomerID: "cust-2", Currency: "CNY", IdempotencyKey: "list-idem-2"},
+	} {
+		if _, _, err := h.svc.CreateRefund(t.Context(), in); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// given: two pending_fence refunds across two customers
+	refunds, total, err := h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 || len(refunds) != 2 {
+		t.Fatalf("unfiltered list = %d items, total %d; want 2/2", len(refunds), total)
+	}
+
+	refunds, total, err = h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", CustomerID: "cust-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 1 || len(refunds) != 1 {
+		t.Fatalf("cust-1 list = %d items, total %d; want 1/1", len(refunds), total)
+	}
+
+	pending := RefundStatusPendingFence
+	refunds, total, err = h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", Status: &pending})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 {
+		t.Fatalf("pending-fence total = %d, want 2", total)
+	}
+
+	fulfilled := RefundStatusFulfilled
+	refunds, total, err = h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", CustomerID: "cust-1", Status: &fulfilled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 0 || len(refunds) != 0 {
+		t.Fatalf("cust-1 fulfilled list = %d items, total %d; want 0/0", len(refunds), total)
+	}
+
+	// then: page window slices the result while total stays whole
+	refunds, total, err = h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", Limit: 1, Offset: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(refunds) != 1 || total != 2 {
+		t.Fatalf("paged list = %d items, total %d; want 1/2", len(refunds), total)
+	}
+
+	// then: input bounds are applied (defaults and clamps)
+	if _, _, err := h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", Limit: -5, Offset: -3}); err != nil {
+		t.Fatal(err)
+	}
+	if got := h.repo.lastListInput; got.Limit != 100 || got.Offset != 0 {
+		t.Errorf("bounded input = (%d, %d); want (100, 0)", got.Limit, got.Offset)
+	}
+	if _, _, err := h.svc.ListRefunds(t.Context(), ListRefundsInput{Namespace: "ns", Limit: 5000}); err != nil {
+		t.Fatal(err)
+	}
+	if got := h.repo.lastListInput.Limit; got != 1000 {
+		t.Errorf("clamped limit = %d, want 1000", got)
+	}
+
+	// then: missing namespace is rejected before the query
+	if _, _, err := h.svc.ListRefunds(t.Context(), ListRefundsInput{}); err == nil {
+		t.Fatal("expected an error for missing namespace")
+	}
 }

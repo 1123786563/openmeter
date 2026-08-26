@@ -101,6 +101,10 @@ func TestComplete(t *testing.T) {
 		Namespace: NamespaceConfiguration{
 			Default:           "default",
 			DisableManagement: false,
+			Allowlist:         []string{"tenant-a", "tenant-b"},
+		},
+		CORS: CORSConfiguration{
+			AllowedOrigins: []string{"https://admin.example.com"},
 		},
 		Ingest: IngestConfiguration{
 			Kafka: KafkaIngestConfiguration{
@@ -431,6 +435,19 @@ func TestComplete(t *testing.T) {
 			CheckInterval:           7 * time.Second,
 			GracefulShutdownTimeout: 43 * time.Second,
 			PropagationTimeout:      18 * time.Second,
+		},
+		Auth: AuthConfiguration{
+			OIDC: OIDCAuthConfiguration{
+				Enabled:              true,
+				Issuer:               "https://casdoor.example.com",
+				JwksURL:              "https://casdoor.example.com/api/certs",
+				Audience:             "openmeter-api",
+				AllowedOrganizations: []string{"built-in"},
+				OrganizationClaim:    "owner",
+				ViewerRoles:          []string{"viewer"},
+				OperatorRoles:        []string{"admin"},
+				RoleClaim:            "roles",
+			},
 		},
 		Server: ServerConfig{
 			ReadHeaderTimeout: 10 * time.Second,

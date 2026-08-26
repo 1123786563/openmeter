@@ -3,6 +3,11 @@ credits:
   enableCreditThenInvoice: true
   reservationsEnabled: true
 
+# Local quickstart runs have no Casdoor; API authentication is explicitly disabled.
+auth:
+  oidc:
+    enabled: false
+
 ingest:
   kafka:
     broker: localhost:29092

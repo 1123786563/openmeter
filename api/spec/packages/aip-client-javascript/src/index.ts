@@ -14,6 +14,7 @@ export { Plans } from './sdk/plans.js'
 export { Addons } from './sdk/addons.js'
 export { PlanAddons } from './sdk/planAddons.js'
 export { Defaults } from './sdk/defaults.js'
+export { Namespaces } from './sdk/namespaces.js'
 export { CreditReservations } from './sdk/creditReservations.js'
 export { Commerce } from './sdk/commerce.js'
 export { Client } from './core.js'
@@ -57,6 +58,7 @@ export type * from './models/operations/addons.js'
 export type * from './models/operations/planAddons.js'
 export type * from './models/operations/defaults.js'
 export type * from './models/operations/governance.js'
+export type * from './models/operations/namespaces.js'
 export type * from './models/operations/creditReservations.js'
 export type * from './models/operations/commerce.js'
 
@@ -98,6 +100,7 @@ export type {
   ProductCatalogValidationError,
   GovernanceQueryRequestCustomers,
   GovernanceQueryRequestFeatures,
+  NamespaceList,
   CreditResourceLine,
   CreditCurrency,
   CreditRatedLine,
@@ -239,10 +242,12 @@ export type {
   CommerceWalletBucket,
   CommerceLedgerProvenance,
   CommerceRechargeProduct,
+  CommerceRechargeProductUpdate,
   CommerceRefundCreate,
   CommerceOfflinePaymentCreate,
   CommerceOfflinePayment,
   CommerceRechargeProductWithBonus,
+  CommerceRechargeProductCreate,
   CommerceCheckoutSessionCreate,
   CommerceCheckoutSession,
   CommercePaymentFact,
@@ -310,6 +315,7 @@ export type {
   GovernanceFeatureAccess,
   CommerceWalletTransaction,
   CommerceRechargeProductList,
+  RefundPagePaginatedResponse,
   ReceivablePeriodPaginatedResponse,
   CustomerData,
   UpsertCustomerBillingDataRequest,
@@ -324,6 +330,7 @@ export type {
   CreateChargeFlatFeeRequest,
   WorkflowTaxSettings,
   PlanAddonPagePaginatedResponse,
+  OrderPagePaginatedResponse,
   IngestedEventPaginatedResponse,
   InvalidParameters,
   MeterQueryRequest,

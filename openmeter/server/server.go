@@ -18,6 +18,7 @@ import (
 	"github.com/openmeterio/openmeter/api"
 	commercehandler "github.com/openmeterio/openmeter/api/v3/handlers/commerce"
 	creditreservationshandler "github.com/openmeterio/openmeter/api/v3/handlers/creditreservations"
+	namespaceshandler "github.com/openmeterio/openmeter/api/v3/handlers/namespaces"
 	v3server "github.com/openmeterio/openmeter/api/v3/server"
 	appconfig "github.com/openmeterio/openmeter/app/config"
 	"github.com/openmeterio/openmeter/openmeter/portal/authenticator"
@@ -74,10 +75,35 @@ type Config struct {
 	ResponseValidation  appconfig.ResponseValidationConfig
 	ClientIPMiddleware  server.MiddlewareFunc
 
+	// OIDCAuth optionally authenticates requests with Casdoor-issued OIDC bearer
+	// tokens (fork addition, see docs/adr/0001-casdoor-oidc-auth-middleware.md).
+	// It is mounted on the root router, covering the v1 and v3 API groups alike;
+	// public paths (portal, health, OpenAPI documents, metrics) are exempted
+	// inside the middleware. Nil fully bypasses authentication.
+	OIDCAuth server.MiddlewareFunc
+
+	// RequestNamespace optionally resolves the request namespace from the
+	// X-Namespace header (fork addition). It is mounted on the root router
+	// after authentication, so tenancy is resolved only for authenticated
+	// requests. Nil fully bypasses request-level namespace selection.
+	RequestNamespace server.MiddlewareFunc
+
+	// CORSMiddleware optionally adds CORS headers to the main API surface (fork
+	// addition). It is mounted on the root router in front of both API versions
+	// and in front of authentication, so preflight and rejected requests carry
+	// CORS headers too. Nil adds no CORS behavior.
+	CORSMiddleware server.MiddlewareFunc
+
 	// CommerceHandler is the optional Phase 2 commerce handler. When nil,
 	// commerce routes return 501 Not Implemented.
 	CommerceHandler           commercehandler.Handler
 	CreditReservationsHandler creditreservationshandler.Handler
+
+	// NamespacesHandler serves the fork's namespace introspection endpoint
+	// (GET /api/v3/openmeter/namespaces), the data source of the admin UI's
+	// namespace selector. Required: mount it unconditionally, the endpoint
+	// carries no service dependencies.
+	NamespacesHandler namespaceshandler.Handler
 }
 
 func (c Config) Validate() error {
@@ -89,6 +115,10 @@ func (c Config) Validate() error {
 
 	if c.ClientIPMiddleware == nil {
 		errs = append(errs, errors.New("client IP middleware is required"))
+	}
+
+	if c.NamespacesHandler == nil {
+		errs = append(errs, errors.New("namespaces handler is required"))
 	}
 
 	return errors.Join(errs...)
@@ -116,6 +146,27 @@ func NewServer(config *Config) (*Server, error) {
 
 	r := chi.NewRouter()
 	r.Use(server.NewPoweredByMiddleware())
+
+	// Fork addition: configurable CORS in front of both API versions. Mounted
+	// outermost (before authentication) so preflight and rejected requests
+	// carry CORS headers too.
+	if config.CORSMiddleware != nil {
+		r.Use(config.CORSMiddleware)
+	}
+
+	// Fork addition: Casdoor OIDC bearer authentication in front of both API
+	// versions. Mounted before any route registration so it also guards the
+	// routes mounted by the groups below.
+	if config.OIDCAuth != nil {
+		r.Use(config.OIDCAuth)
+	}
+
+	// Fork addition: request-level namespace selection (X-Namespace header).
+	// Mounted after authentication so tenancy is resolved only for
+	// authenticated requests.
+	if config.RequestNamespace != nil {
+		r.Use(config.RequestNamespace)
+	}
 
 	// Materialize the router-hook middlewares once (running each hook body a single
 	// time) and apply the same slice to both the v3 and v1 groups below. Invoking the
@@ -181,6 +232,7 @@ func NewServer(config *Config) (*Server, error) {
 		FeatureGate:                 config.RouterConfig.FeatureGate,
 		CommerceHandler:             config.CommerceHandler,
 		CreditReservationsHandler:   config.CreditReservationsHandler,
+		NamespacesHandler:           config.NamespacesHandler,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create v3 API: %w", err)

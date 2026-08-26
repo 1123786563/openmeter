@@ -15,6 +15,7 @@ import "./llmcost/index.tsp";
 import "./productcatalog/index.tsp";
 import "./defaults/index.tsp";
 import "./governance/index.tsp";
+import "./namespaces/index.tsp";
 import "./invoices/index.tsp";
 import "./commerce/index.tsp";
 import "./creditreservations/index.tsp";
@@ -71,6 +72,10 @@ using TypeSpec.OpenAPI;
 @tagMetadata(
   Shared.GovernanceTag,
   #{ description: Shared.GovernanceDescription }
+)
+@tagMetadata(
+  Shared.NamespacesTag,
+  #{ description: Shared.NamespacesDescription }
 )
 @tagMetadata(Shared.CommerceTag, #{ description: Shared.CommerceDescription })
 namespace OpenMeter;
@@ -217,6 +222,10 @@ interface OrganizationDefaultTaxCodesEndpoints
 @route("/openmeter/governance")
 @tag(Shared.GovernanceTag)
 interface GovernanceEndpoints extends Governance.GovernanceOperations {}
+
+@route("/openmeter/namespaces")
+@tag(Shared.NamespacesTag)
+interface NamespacesEndpoints extends Namespaces.NamespacesOperations {}
 
 @route("/credit-reservations")
 @tag(Shared.BillingTag)
