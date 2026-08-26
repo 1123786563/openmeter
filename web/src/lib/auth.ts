@@ -3,17 +3,21 @@ import { UserManager, type User } from 'oidc-client-ts'
 /**
  * Casdoor OIDC configuration (authorization code flow + PKCE).
  *
- * All values come from Vite env vars so each environment (local, staging,
- * production) can point at its own Casdoor instance without code changes.
+ * Issuer and client id come from Vite env vars so each environment (local,
+ * staging, production) can point at its own Casdoor instance. Redirect URIs
+ * default to the current origin: the dev server may run on any port (5173 is
+ * often taken and Vite silently moves to 5174/5175), and a hardcoded port
+ * would send the post-login and post-logout redirects to whatever app owns
+ * that port instead of back here.
  */
 const issuer = import.meta.env.VITE_CASDOOR_ISSUER ?? ''
 const clientId = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? ''
 const redirectUri =
   import.meta.env.VITE_CASDOOR_REDIRECT_URI ??
-  'http://localhost:5173/auth/callback'
+  `${window.location.origin}/auth/callback`
 const logoutRedirectUri =
   import.meta.env.VITE_CASDOOR_LOGOUT_REDIRECT_URI ??
-  'http://localhost:5173/sign-in'
+  `${window.location.origin}/sign-in`
 
 if (!issuer || !clientId) {
   // Missing config breaks every login attempt; surface it early instead of
