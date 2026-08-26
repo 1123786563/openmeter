@@ -67,3 +67,55 @@ _Avoid_: 撤销
 **线下支付（Offline Payment）**:
 人工登记的非线上渠道支付入账（如对公转账）。
 _Avoid_: 人工订单
+
+**计划（Plan）**:
+可被订阅的计费套餐定义，由阶段与价目卡构成，须发布后方可被订阅。
+_Avoid_: 套餐（Recharge Product 语境）、商品
+
+**阶段（Phase）**:
+计划生效时间线上的一个区段，持有该区段适用的价目卡集合。
+_Avoid_: 周期（Billing Cadence）
+
+**价目卡（Rate Card）**:
+计划内一条计价定义：固定费、用量单价或权益额度。
+_Avoid_: 价格表
+
+**功能（Feature）**:
+产品能力目录项，可关联计价并被权益授予客户。
+_Avoid_: 特性、开关
+
+**附加组件（Addon）**:
+计划的可选增购项，独立于主阶段计价。
+_Avoid_: 插件
+
+**通知渠道（Notification Channel）**:
+通知的投递目的地（如 Slack、Webhook、邮件）。
+_Avoid_: 群、机器人
+
+**通知规则（Notification Rule）**:
+决定何种事件经何渠道投递的配置。
+_Avoid_: 告警策略
+
+**自定义货币（Custom Currency）**:
+ISO 货币之外、由运营定义的内部计价货币（如 CREDIT 额度货币）。
+_Avoid_: 虚拟币、积分
+
+**税码（Tax Code）**:
+发票税务处理的分类标识。
+_Avoid_: 税率
+
+**账单档案（Billing Profile）**:
+计费客户的开票信息集合（抬头、地址、税号等）。
+_Avoid_: 客户资料
+
+**门户令牌（Portal Token）**:
+供计费客户访问客户门户的限时凭据。
+_Avoid_: API Key
+
+**应收周期（Receivable Period）**:
+客户维度的应收账款账期区间。
+_Avoid_: 账单周期
+
+**应用（App）**:
+与计费域集成的外部系统连接（如 Stripe 收单、自定义开票、沙箱）。
+_Avoid_: 插件、集成（口语可用，命名不用）
