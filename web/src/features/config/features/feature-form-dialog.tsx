@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,13 +30,11 @@ import { Textarea } from '@/components/ui/textarea'
 /** ResourceKey pattern from the v3 spec: ^[a-z0-9]+(?:_[a-z0-9]+)*$ */
 const FEATURE_KEY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/
 
-const featureFormSchema = z.object({
-  name: z.string().min(1).max(256),
-  key: z.string().min(1).max(64).regex(FEATURE_KEY),
-  description: z.string().max(1024).optional(),
-})
-
-type FeatureFormValues = z.infer<typeof featureFormSchema>
+type FeatureFormValues = {
+  name: string
+  key: string
+  description?: string
+}
 
 const EMPTY_VALUES: FeatureFormValues = {
   name: '',
@@ -55,6 +53,26 @@ export function FeatureFormDialog({
 }: FeatureFormDialogProps) {
   const { t } = useTranslation()
   const createMutation = useCreateFeature()
+
+  // shadcn's FormMessage renders error.message, so the validation copy must
+  // live on the zod checks themselves; rebuilding per language keeps it in
+  // sync with the active locale.
+  const featureFormSchema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, t('config.features.form.validation.name'))
+          .max(256, t('config.features.form.validation.name')),
+        key: z
+          .string()
+          .min(1, t('config.features.form.validation.key'))
+          .max(64, t('config.features.form.validation.key'))
+          .regex(FEATURE_KEY, t('config.features.form.validation.key')),
+        description: z.string().max(1024).optional(),
+      }),
+    [t]
+  )
 
   const form = useForm<FeatureFormValues>({
     resolver: zodResolver(featureFormSchema),
