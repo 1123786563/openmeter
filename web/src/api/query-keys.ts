@@ -22,6 +22,8 @@ export const queryKeys = {
   subscriptions: (params: object = {}) => ns('subscriptions', params),
   subscription: (id: string) => ns('subscription', id),
   plans: () => ns('plans'),
+  plansPage: (params: object = {}) => ns('plans-page', params),
+  plan: (id: string) => ns('plan', id),
   invoices: (params: object = {}) => ns('invoices', params),
   invoice: (id: string) => ns('invoice', id),
   meters: () => ns('meters'),

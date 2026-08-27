@@ -170,6 +170,36 @@ export function usePlans() {
   })
 }
 
+export interface PlanListParams {
+  page: number
+  pageSize: number
+  status?: 'draft' | 'active' | 'archived' | 'scheduled'
+}
+
+/** Admin paginated plan list (the existing `usePlans` stays for the subscription wizard's listAll). */
+export function usePlansPage(params: PlanListParams) {
+  return useQuery({
+    queryKey: queryKeys.plansPage(params),
+    queryFn: ({ signal }) =>
+      api.plans.list(
+        {
+          page: { number: params.page, size: params.pageSize },
+          sort: { by: 'created_at', order: 'desc' },
+          filter: params.status ? { status: params.status } : undefined,
+        },
+        { signal }
+      ),
+  })
+}
+
+export function usePlan(planId: string) {
+  return useQuery({
+    queryKey: queryKeys.plan(planId),
+    queryFn: ({ signal }) => api.plans.get({ planId }, { signal }),
+    enabled: Boolean(planId),
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Invoices                                                            */
 /* ------------------------------------------------------------------ */

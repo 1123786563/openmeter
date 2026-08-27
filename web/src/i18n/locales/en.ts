@@ -103,7 +103,40 @@ export default {
   config: {
     plans: {
       title: 'Plans',
-      description: 'Manage billing plans, phases, and rate cards.',
+      description:
+        'Manage product plans: phases, rate cards, and version status.',
+      empty: 'No plans yet',
+      filter: {
+        status: 'Filter by status',
+        allStatuses: 'All statuses',
+      },
+      fields: {
+        name: 'Name',
+        key: 'Key',
+        version: 'Version',
+        status: 'Status',
+        currency: 'Currency',
+        billingCadence: 'Billing cadence',
+        createdAt: 'Created',
+        updatedAt: 'Updated',
+        description: 'Description',
+      },
+      detail: {
+        back: 'Back to plans',
+        notFound: 'Plan not found or deleted.',
+        phases: 'Phases & rate cards',
+        phaseIndex: 'Phase {{index}}',
+        duration: 'Duration {{duration}}',
+        noDuration: 'Indefinite (last phase)',
+        rateCardName: 'Rate card',
+        priceType: 'Price type',
+        feature: 'Feature',
+        price: 'Price',
+        cadence: 'Cadence',
+        key: 'Key',
+        unit: 'unit',
+        tierSummary: '{{count}}-tier pricing',
+      },
     },
     features: {
       title: 'Features',
@@ -258,6 +291,24 @@ export default {
       inactive: 'Inactive',
       canceled: 'Canceled',
       scheduled: 'Scheduled',
+    },
+  },
+  plan: {
+    status: {
+      draft: 'Draft',
+      active: 'Published',
+      archived: 'Archived',
+      scheduled: 'Scheduled',
+    },
+    priceType: {
+      free: 'Free',
+      flat: 'Flat fee',
+      unit: 'Per unit',
+      graduated: 'Graduated',
+      volume: 'Volume',
+    },
+    price: {
+      free: 'Free',
     },
   },
   subscriptions: {

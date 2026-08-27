@@ -101,7 +101,39 @@ export default {
   config: {
     plans: {
       title: '计划',
-      description: '管理计费计划、阶段与价目卡。',
+      description: '管理产品计划：阶段、价目卡与版本状态。',
+      empty: '暂无计划',
+      filter: {
+        status: '按状态筛选',
+        allStatuses: '全部状态',
+      },
+      fields: {
+        name: '名称',
+        key: 'Key',
+        version: '版本',
+        status: '状态',
+        currency: '币种',
+        billingCadence: '计费周期',
+        createdAt: '创建时间',
+        updatedAt: '更新时间',
+        description: '描述',
+      },
+      detail: {
+        back: '返回计划列表',
+        notFound: '计划不存在或已被删除。',
+        phases: '阶段与价目卡',
+        phaseIndex: '阶段 {{index}}',
+        duration: '期限 {{duration}}',
+        noDuration: '无限期（最后阶段）',
+        rateCardName: '价目卡',
+        priceType: '价格类型',
+        feature: '功能',
+        price: '价格',
+        cadence: '计费周期',
+        key: 'Key',
+        unit: '单位',
+        tierSummary: '{{count}} 档阶梯价',
+      },
     },
     features: {
       title: '功能目录',
@@ -251,6 +283,24 @@ export default {
       inactive: '未激活',
       canceled: '已取消',
       scheduled: '已排期',
+    },
+  },
+  plan: {
+    status: {
+      draft: '草稿',
+      active: '已发布',
+      archived: '已归档',
+      scheduled: '待生效',
+    },
+    priceType: {
+      free: '免费',
+      flat: '固定费',
+      unit: '单价',
+      graduated: '阶梯（累计）',
+      volume: '阶梯（整单）',
+    },
+    price: {
+      free: '免费',
     },
   },
   subscriptions: {

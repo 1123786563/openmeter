@@ -49,6 +49,12 @@ const tones: Record<
     canceled: 'outline',
     scheduled: 'info',
   },
+  plan: {
+    draft: 'secondary',
+    active: 'success',
+    archived: 'outline',
+    scheduled: 'info',
+  },
   order: {
     created: 'secondary',
     awaiting_payment: 'warn',

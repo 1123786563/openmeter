@@ -46,6 +46,7 @@ import { Route as AuthenticatedConfigAddonsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedCommerceRefundsIndexRouteImport } from './routes/_authenticated/commerce/refunds/index'
 import { Route as AuthenticatedCommerceRechargeProductsIndexRouteImport } from './routes/_authenticated/commerce/recharge-products/index'
 import { Route as AuthenticatedCommerceOrdersIndexRouteImport } from './routes/_authenticated/commerce/orders/index'
+import { Route as AuthenticatedConfigPlansPlanIdRouteImport } from './routes/_authenticated/config/plans/$planId'
 import { Route as AuthenticatedConfigFeaturesFeatureIdRouteImport } from './routes/_authenticated/config/features/$featureId'
 import { Route as AuthenticatedCommerceRefundsRefundIdRouteImport } from './routes/_authenticated/commerce/refunds/$refundId'
 import { Route as AuthenticatedCommerceOrdersOrderIdRouteImport } from './routes/_authenticated/commerce/orders/$orderId'
@@ -265,6 +266,12 @@ const AuthenticatedCommerceOrdersIndexRoute =
     path: '/commerce/orders/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedConfigPlansPlanIdRoute =
+  AuthenticatedConfigPlansPlanIdRouteImport.update({
+    id: '/config/plans/$planId',
+    path: '/config/plans/$planId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConfigFeaturesFeatureIdRoute =
   AuthenticatedConfigFeaturesFeatureIdRouteImport.update({
     id: '/config/features/$featureId',
@@ -331,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/commerce/orders/$orderId': typeof AuthenticatedCommerceOrdersOrderIdRoute
   '/commerce/refunds/$refundId': typeof AuthenticatedCommerceRefundsRefundIdRoute
   '/config/features/$featureId': typeof AuthenticatedConfigFeaturesFeatureIdRoute
+  '/config/plans/$planId': typeof AuthenticatedConfigPlansPlanIdRoute
   '/commerce/orders/': typeof AuthenticatedCommerceOrdersIndexRoute
   '/commerce/recharge-products/': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/commerce/refunds/': typeof AuthenticatedCommerceRefundsIndexRoute
@@ -374,6 +382,7 @@ export interface FileRoutesByTo {
   '/commerce/orders/$orderId': typeof AuthenticatedCommerceOrdersOrderIdRoute
   '/commerce/refunds/$refundId': typeof AuthenticatedCommerceRefundsRefundIdRoute
   '/config/features/$featureId': typeof AuthenticatedConfigFeaturesFeatureIdRoute
+  '/config/plans/$planId': typeof AuthenticatedConfigPlansPlanIdRoute
   '/commerce/orders': typeof AuthenticatedCommerceOrdersIndexRoute
   '/commerce/recharge-products': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/commerce/refunds': typeof AuthenticatedCommerceRefundsIndexRoute
@@ -420,6 +429,7 @@ export interface FileRoutesById {
   '/_authenticated/commerce/orders/$orderId': typeof AuthenticatedCommerceOrdersOrderIdRoute
   '/_authenticated/commerce/refunds/$refundId': typeof AuthenticatedCommerceRefundsRefundIdRoute
   '/_authenticated/config/features/$featureId': typeof AuthenticatedConfigFeaturesFeatureIdRoute
+  '/_authenticated/config/plans/$planId': typeof AuthenticatedConfigPlansPlanIdRoute
   '/_authenticated/commerce/orders/': typeof AuthenticatedCommerceOrdersIndexRoute
   '/_authenticated/commerce/recharge-products/': typeof AuthenticatedCommerceRechargeProductsIndexRoute
   '/_authenticated/commerce/refunds/': typeof AuthenticatedCommerceRefundsIndexRoute
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/commerce/orders/$orderId'
     | '/commerce/refunds/$refundId'
     | '/config/features/$featureId'
+    | '/config/plans/$planId'
     | '/commerce/orders/'
     | '/commerce/recharge-products/'
     | '/commerce/refunds/'
@@ -509,6 +520,7 @@ export interface FileRouteTypes {
     | '/commerce/orders/$orderId'
     | '/commerce/refunds/$refundId'
     | '/config/features/$featureId'
+    | '/config/plans/$planId'
     | '/commerce/orders'
     | '/commerce/recharge-products'
     | '/commerce/refunds'
@@ -554,6 +566,7 @@ export interface FileRouteTypes {
     | '/_authenticated/commerce/orders/$orderId'
     | '/_authenticated/commerce/refunds/$refundId'
     | '/_authenticated/config/features/$featureId'
+    | '/_authenticated/config/plans/$planId'
     | '/_authenticated/commerce/orders/'
     | '/_authenticated/commerce/recharge-products/'
     | '/_authenticated/commerce/refunds/'
@@ -842,6 +855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCommerceOrdersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/config/plans/$planId': {
+      id: '/_authenticated/config/plans/$planId'
+      path: '/config/plans/$planId'
+      fullPath: '/config/plans/$planId'
+      preLoaderRoute: typeof AuthenticatedConfigPlansPlanIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/config/features/$featureId': {
       id: '/_authenticated/config/features/$featureId'
       path: '/config/features/$featureId'
@@ -927,6 +947,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCommerceOrdersOrderIdRoute: typeof AuthenticatedCommerceOrdersOrderIdRoute
   AuthenticatedCommerceRefundsRefundIdRoute: typeof AuthenticatedCommerceRefundsRefundIdRoute
   AuthenticatedConfigFeaturesFeatureIdRoute: typeof AuthenticatedConfigFeaturesFeatureIdRoute
+  AuthenticatedConfigPlansPlanIdRoute: typeof AuthenticatedConfigPlansPlanIdRoute
   AuthenticatedCommerceOrdersIndexRoute: typeof AuthenticatedCommerceOrdersIndexRoute
   AuthenticatedCommerceRechargeProductsIndexRoute: typeof AuthenticatedCommerceRechargeProductsIndexRoute
   AuthenticatedCommerceRefundsIndexRoute: typeof AuthenticatedCommerceRefundsIndexRoute
@@ -964,6 +985,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedCommerceRefundsRefundIdRoute,
   AuthenticatedConfigFeaturesFeatureIdRoute:
     AuthenticatedConfigFeaturesFeatureIdRoute,
+  AuthenticatedConfigPlansPlanIdRoute: AuthenticatedConfigPlansPlanIdRoute,
   AuthenticatedCommerceOrdersIndexRoute: AuthenticatedCommerceOrdersIndexRoute,
   AuthenticatedCommerceRechargeProductsIndexRoute:
     AuthenticatedCommerceRechargeProductsIndexRoute,
