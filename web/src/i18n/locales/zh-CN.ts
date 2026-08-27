@@ -5,6 +5,7 @@ export default {
     viewAll: '查看全部',
     cancel: '取消',
     confirm: '确定',
+    delete: '删除',
     edit: '编辑',
     back: '上一步',
     next: '下一步',
@@ -103,8 +104,36 @@ export default {
       description: '管理计费计划、阶段与价目卡。',
     },
     features: {
-      title: '功能',
-      description: '管理功能目录与成本查询。',
+      title: '功能目录',
+      description: '管理可售卖与可授权的功能定义。',
+      create: '新建功能',
+      actions: '操作',
+      searchPlaceholder: '搜索功能名称...',
+      empty: '暂无功能',
+      fields: {
+        name: '名称',
+        key: '标识（key）',
+        description: '描述',
+        createdAt: '创建时间',
+      },
+      form: {
+        createTitle: '新建功能',
+        createDescription: '创建功能；key 创建后不可修改。',
+        keyHint: '仅小写字母、数字与下划线，例如 token_api。',
+        validation: {
+          name: '必填，长度 1-256',
+          key: '仅允许小写字母/数字/下划线，段间用单个下划线分隔，长度 1-64',
+        },
+      },
+      deleteConfirm: {
+        title: '删除功能',
+        description:
+          '确定删除功能「{{name}}」（{{key}}）吗？该操作不可恢复，已被价目卡或授权引用时将被服务端拒绝。',
+      },
+      toast: {
+        created: '功能已创建',
+        deleted: '功能已删除',
+      },
     },
     addons: {
       title: '附加组件',

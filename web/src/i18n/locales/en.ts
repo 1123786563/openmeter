@@ -5,6 +5,7 @@ export default {
     viewAll: 'View all',
     cancel: 'Cancel',
     confirm: 'Confirm',
+    delete: 'Delete',
     edit: 'Edit',
     back: 'Back',
     next: 'Next',
@@ -106,7 +107,37 @@ export default {
     },
     features: {
       title: 'Features',
-      description: 'Manage the feature catalog and cost queries.',
+      description: 'Manage sellable and grantable feature definitions.',
+      create: 'Create Feature',
+      actions: 'Actions',
+      searchPlaceholder: 'Search features by name...',
+      empty: 'No features yet',
+      fields: {
+        name: 'Name',
+        key: 'Key',
+        description: 'Description',
+        createdAt: 'Created At',
+      },
+      form: {
+        createTitle: 'Create Feature',
+        createDescription:
+          'Create a feature; the key is immutable after creation.',
+        keyHint:
+          'Lowercase letters, digits and underscores only, e.g. token_api.',
+        validation: {
+          name: 'Required, 1-256 characters',
+          key: 'Lowercase letters/digits/underscore, single underscores between segments, 1-64 characters',
+        },
+      },
+      deleteConfirm: {
+        title: 'Delete feature',
+        description:
+          'Delete feature "{{name}}" ({{key}})? This cannot be undone; the server rejects it while referenced by rate cards or entitlements.',
+      },
+      toast: {
+        created: 'Feature created',
+        deleted: 'Feature deleted',
+      },
     },
     addons: {
       title: 'Add-ons',

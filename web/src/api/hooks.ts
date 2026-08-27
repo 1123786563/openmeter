@@ -571,6 +571,95 @@ export function useCustomerWallet(customerId: string) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Features                                                            */
+/* ------------------------------------------------------------------ */
+
+export interface FeatureListParams {
+  page: number
+  pageSize: number
+  search?: string
+}
+
+export function useFeatures(params: FeatureListParams) {
+  return useQuery({
+    queryKey: queryKeys.features(params),
+    queryFn: ({ signal }) =>
+      api.features.list(
+        {
+          page: { number: params.page, size: params.pageSize },
+          sort: { by: 'created_at', order: 'desc' },
+          filter: params.search
+            ? { name: { contains: params.search } }
+            : undefined,
+        },
+        { signal }
+      ),
+  })
+}
+
+export function useFeature(featureId: string) {
+  return useQuery({
+    queryKey: queryKeys.feature(featureId),
+    queryFn: ({ signal }) => api.features.get({ featureId }, { signal }),
+    enabled: Boolean(featureId),
+  })
+}
+
+/** All features for pickers (wizard rate cards, addon rate cards). */
+export function useAllFeatures() {
+  return useQuery({
+    queryKey: queryKeys.features({ all: true }),
+    queryFn: async ({ signal }) => {
+      const features = []
+      for await (const feature of api.features.listAll({}, { signal })) {
+        features.push(feature)
+      }
+      return features
+    },
+  })
+}
+
+export function useCreateFeature() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.features.create>[0]) =>
+      api.features.create(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('features') })
+    },
+  })
+}
+
+/**
+ * v3 PATCH update only accepts unit_cost (UpdateFeatureRequest); name, key,
+ * and description have no update endpoint.
+ */
+export function useUpdateFeature() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.features.update>[0]) =>
+      api.features.update(input),
+    onSuccess: (feature) => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('features') })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.feature(feature.id),
+      })
+    },
+  })
+}
+
+export function useDeleteFeature() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.features.delete>[0]) =>
+      api.features.delete(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('features') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
