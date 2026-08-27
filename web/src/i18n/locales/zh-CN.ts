@@ -115,6 +115,7 @@ export default {
         key: '标识（key）',
         description: '描述',
         createdAt: '创建时间',
+        updatedAt: '更新时间',
       },
       form: {
         createTitle: '新建功能',
@@ -133,6 +134,21 @@ export default {
       toast: {
         created: '功能已创建',
         deleted: '功能已删除',
+      },
+    },
+    featureDetail: {
+      costQuery: {
+        title: '成本查询',
+        customer: '客户',
+        from: '开始时间',
+        to: '结束时间',
+        run: '查询',
+        period: '时段',
+        usage: '用量',
+        cost: '成本',
+        dimensions: '维度',
+        noPrice: '无定价',
+        empty: '该时间窗内无用量数据',
       },
     },
     addons: {

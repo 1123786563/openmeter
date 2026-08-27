@@ -117,6 +117,7 @@ export default {
         key: 'Key',
         description: 'Description',
         createdAt: 'Created At',
+        updatedAt: 'Updated At',
       },
       form: {
         createTitle: 'Create Feature',
@@ -137,6 +138,21 @@ export default {
       toast: {
         created: 'Feature created',
         deleted: 'Feature deleted',
+      },
+    },
+    featureDetail: {
+      costQuery: {
+        title: 'Cost Query',
+        customer: 'Customer',
+        from: 'From',
+        to: 'To',
+        run: 'Query',
+        period: 'Period',
+        usage: 'Usage',
+        cost: 'Cost',
+        dimensions: 'Dimensions',
+        noPrice: 'No price',
+        empty: 'No usage data in this time window',
       },
     },
     addons: {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { Feature } from '@openmeter/client'
 import { Plus, Trash2 } from 'lucide-react'
@@ -38,7 +39,13 @@ export function FeaturesPage() {
       accessorKey: 'key',
       header: t('config.features.fields.key'),
       cell: ({ row }) => (
-        <code className='font-mono text-xs'>{row.original.key}</code>
+        <Link
+          to='/config/features/$featureId'
+          params={{ featureId: row.original.id }}
+          className='font-mono text-xs hover:underline'
+        >
+          {row.original.key}
+        </Link>
       ),
     },
     {

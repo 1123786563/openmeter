@@ -659,6 +659,47 @@ export function useDeleteFeature() {
   })
 }
 
+export interface FeatureCostQueryParams {
+  customerId?: string
+  from?: Date
+  to?: Date
+}
+
+/**
+ * Feature cost query (POST /features/{id}/cost/query). Body is a
+ * MeterQueryRequest; customer filtering uses the reserved `customer_id`
+ * dimension which only supports eq/in comparisons.
+ */
+export function useFeatureCostQuery(
+  featureId: string,
+  params: FeatureCostQueryParams,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: queryKeys.featureCostQuery(featureId, {
+      customerId: params.customerId,
+      from: params.from?.toISOString(),
+      to: params.to?.toISOString(),
+    }),
+    queryFn: ({ signal }) =>
+      api.features.queryCost(
+        {
+          featureId,
+          body: {
+            from: params.from,
+            to: params.to,
+            timeZone: 'UTC',
+            filters: params.customerId
+              ? { dimensions: { customer_id: { eq: params.customerId } } }
+              : undefined,
+          },
+        },
+        { signal }
+      ),
+    enabled: Boolean(featureId) && (options?.enabled ?? true),
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
