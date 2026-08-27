@@ -51,7 +51,9 @@ export function FeatureDetailPage({ featureId }: { featureId: string }) {
     toLocalInputValue(subDays(new Date(), 30))
   )
   const [toInput, setToInput] = useState(toLocalInputValue(new Date()))
-  // Filters only hit the API after the user presses the query button.
+  // Submitted filters drive the query; filter changes only take effect
+  // after the user presses the query button (the initial window fires
+  // once on mount, matching meter-detail).
   const [submitted, setSubmitted] = useState<FeatureCostQueryParams>({
     from: subDays(new Date(), 30),
     to: new Date(),
