@@ -30,6 +30,18 @@ function toLocalInputValue(date: Date): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
 
+/**
+ * Parse a datetime-local input value into a submitted filter date. While
+ * typing, the input emits partial values (e.g. '2026-08-27T0') that parse
+ * to Invalid Date; such values are treated exactly like an empty input.
+ */
+function toSubmittedDate(input: string): Date | undefined {
+  if (!input) return undefined
+  const date = new Date(input)
+  // Invalid Date from partial input hardens the issue snippet to undefined.
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
 export function FeatureDetailPage({ featureId }: { featureId: string }) {
   const { t } = useTranslation()
   const { data: feature, isLoading } = useFeature(featureId)
@@ -166,8 +178,8 @@ export function FeatureDetailPage({ featureId }: { featureId: string }) {
                 onClick={() =>
                   setSubmitted({
                     customerId: customer?.id,
-                    from: fromInput ? new Date(fromInput) : undefined,
-                    to: toInput ? new Date(toInput) : undefined,
+                    from: toSubmittedDate(fromInput),
+                    to: toSubmittedDate(toInput),
                   })
                 }
               >
