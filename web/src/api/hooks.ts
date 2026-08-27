@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/api/client'
 import {
+  clonePlanNextVersion,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
   listSubjects,
@@ -197,6 +198,46 @@ export function usePlan(planId: string) {
     queryKey: queryKeys.plan(planId),
     queryFn: ({ signal }) => api.plans.get({ planId }, { signal }),
     enabled: Boolean(planId),
+  })
+}
+
+export function usePublishPlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.plans.publish>[0]) =>
+      api.plans.publish(input),
+    onSuccess: (plan) => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans') })
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans-page') })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plan(plan.id) })
+    },
+  })
+}
+
+export function useArchivePlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.plans.archive>[0]) =>
+      api.plans.archive(input),
+    onSuccess: (plan) => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans') })
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans-page') })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plan(plan.id) })
+    },
+  })
+}
+
+export function useClonePlanNext() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ planIdOrKey }: { planIdOrKey: string }) =>
+      clonePlanNextVersion(planIdOrKey),
+    onSuccess: (plan) => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans') })
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans-page') })
+      // v1 id 是 v3 同一资源 id；新 draft 详情可直接用它进入。
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plan(plan.id) })
+    },
   })
 }
 

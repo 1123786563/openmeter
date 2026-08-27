@@ -1,9 +1,17 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import type { RateCard } from '@openmeter/client'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { usePlan } from '@/api/hooks'
+import { toast } from 'sonner'
+import {
+  useArchivePlan,
+  useClonePlanNext,
+  usePlan,
+  usePublishPlan,
+} from '@/api/hooks'
 import { formatAmount, formatDateTime } from '@/lib/format'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { EnumBadge, StatusBadge } from '@/components/status-badge'
@@ -79,6 +88,20 @@ export function PlanDetail() {
   const { planId } = useParams({ from: '/_authenticated/config/plans/$planId' })
   const { data: plan, isLoading } = usePlan(planId)
 
+  const navigate = useNavigate()
+  const [confirming, setConfirming] = useState<
+    'publish' | 'archive' | 'clone' | null
+  >(null)
+
+  const publishMutation = usePublishPlan()
+  const archiveMutation = useArchivePlan()
+  const cloneMutation = useClonePlanNext()
+
+  const statusBusy =
+    publishMutation.isPending ||
+    archiveMutation.isPending ||
+    cloneMutation.isPending
+
   if (isLoading) {
     return (
       <>
@@ -119,6 +142,29 @@ export function PlanDetail() {
           <h1 className='text-2xl font-bold tracking-tight'>{plan.name}</h1>
           <StatusBadge domain='plan' value={plan.status} />
           <span className='text-sm text-muted-foreground'>v{plan.version}</span>
+          {!statusBusy && plan.status === 'draft' && (
+            <Button size='sm' onClick={() => setConfirming('publish')}>
+              {t('config.plans.actions.publish')}
+            </Button>
+          )}
+          {!statusBusy && plan.status === 'active' && (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => setConfirming('archive')}
+            >
+              {t('config.plans.actions.archive')}
+            </Button>
+          )}
+          {!statusBusy && plan.status !== 'draft' && (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => setConfirming('clone')}
+            >
+              {t('config.plans.actions.cloneNext')}
+            </Button>
+          )}
         </div>
 
         <Card className='mt-6 py-0'>
@@ -218,6 +264,86 @@ export function PlanDetail() {
           </Card>
         ))}
       </Main>
+
+      <ConfirmDialog
+        open={confirming === 'publish'}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title={t('config.plans.publishConfirm.title')}
+        desc={t('config.plans.publishConfirm.description', {
+          name: plan.name,
+        })}
+        confirmText={t('config.plans.actions.publish')}
+        cancelBtnText={t('common.cancel')}
+        isLoading={publishMutation.isPending}
+        handleConfirm={() => {
+          publishMutation.mutate(
+            { planId: plan.id },
+            {
+              onSuccess: () => {
+                toast.success(t('config.plans.toast.published'))
+                setConfirming(null)
+              },
+              onError: handleServerError,
+            }
+          )
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirming === 'archive'}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title={t('config.plans.archiveConfirm.title')}
+        desc={t('config.plans.archiveConfirm.description', {
+          name: plan.name,
+        })}
+        confirmText={t('config.plans.actions.archive')}
+        cancelBtnText={t('common.cancel')}
+        destructive
+        isLoading={archiveMutation.isPending}
+        handleConfirm={() => {
+          archiveMutation.mutate(
+            { planId: plan.id },
+            {
+              onSuccess: () => {
+                toast.success(t('config.plans.toast.archived'))
+                setConfirming(null)
+              },
+              onError: handleServerError,
+            }
+          )
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirming === 'clone'}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title={t('config.plans.cloneConfirm.title')}
+        desc={t('config.plans.cloneConfirm.description', {
+          name: plan.name,
+          version: plan.version,
+        })}
+        confirmText={t('config.plans.actions.cloneNext')}
+        cancelBtnText={t('common.cancel')}
+        isLoading={cloneMutation.isPending}
+        handleConfirm={() => {
+          cloneMutation.mutate(
+            { planIdOrKey: plan.id },
+            {
+              onSuccess: (draft) => {
+                toast.success(
+                  t('config.plans.toast.cloned', { version: draft.version })
+                )
+                setConfirming(null)
+                void navigate({
+                  to: '/config/plans/$planId',
+                  params: { planId: draft.id },
+                })
+              },
+              onError: handleServerError,
+            }
+          )
+        }}
+      />
     </>
   )
 }

@@ -134,6 +134,31 @@ export default {
         unit: '单位',
         tierSummary: '{{count}} 档阶梯价',
       },
+      actions: {
+        publish: '发布',
+        archive: '归档',
+        cloneNext: '克隆新版本',
+      },
+      publishConfirm: {
+        title: '发布计划',
+        description:
+          '确定要发布「{{name}}」吗？发布后计划进入生效状态，客户可订阅该版本。',
+      },
+      archiveConfirm: {
+        title: '归档计划',
+        description:
+          '确定要归档「{{name}}」吗？归档后该版本不再可被新订阅引用，且无法恢复。',
+      },
+      cloneConfirm: {
+        title: '克隆新版本',
+        description:
+          '将以「{{name}}」v{{version}}（最新发布版）为底本创建新的草稿版本。仅当该计划当前没有其他草稿时可用。',
+      },
+      toast: {
+        published: '计划已发布',
+        archived: '计划已归档',
+        cloned: '已创建新草稿 v{{version}}',
+      },
     },
     features: {
       title: '功能目录',

@@ -137,6 +137,31 @@ export default {
         unit: 'unit',
         tierSummary: '{{count}}-tier pricing',
       },
+      actions: {
+        publish: 'Publish',
+        archive: 'Archive',
+        cloneNext: 'Clone next version',
+      },
+      publishConfirm: {
+        title: 'Publish plan',
+        description:
+          'Publish "{{name}}"? The plan becomes active and subscribable at this version.',
+      },
+      archiveConfirm: {
+        title: 'Archive plan',
+        description:
+          'Archive "{{name}}"? The version can no longer be referenced by new subscriptions and cannot be restored.',
+      },
+      cloneConfirm: {
+        title: 'Clone next version',
+        description:
+          'Creates a new draft from "{{name}}" v{{version}} (latest published). Only available when no other draft exists for this plan.',
+      },
+      toast: {
+        published: 'Plan published',
+        archived: 'Plan archived',
+        cloned: 'New draft v{{version}} created',
+      },
     },
     features: {
       title: 'Features',

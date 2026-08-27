@@ -90,3 +90,27 @@ export async function getCustomerEntitlementValueV2(
     `/v2/customers/${encodeURIComponent(customerId)}/entitlements/${encodeURIComponent(entitlementIdOrFeatureKey)}/value`
   )
 }
+
+/** POST /api/v1/plans/{planIdOrKey}/next — clone the latest published version into a new draft. */
+export interface LegacyPlan {
+  id: string
+  name: string
+  key: string
+  version: number
+  currency: string
+  billingCadence: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export async function clonePlanNextVersion(
+  planIdOrKey: string
+): Promise<LegacyPlan> {
+  return apiFetch<LegacyPlan>(
+    `/v1/plans/${encodeURIComponent(planIdOrKey)}/next`,
+    {
+      method: 'POST',
+    }
+  )
+}
