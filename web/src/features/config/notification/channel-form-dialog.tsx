@@ -23,7 +23,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -31,30 +30,34 @@ import { Switch } from '@/components/ui/switch'
 /** Spec: ^(whsec_)?[a-zA-Z0-9+/=]{32,100}$ (base64, optional whsec_ prefix). */
 const SIGNING_SECRET_PATTERN = /^(whsec_)?[a-zA-Z0-9+/=]{32,100}$/
 
+// zod message 一律是 i18n key，由下方 FieldError 翻译（FormMessage 在有
+// 错误时只渲染原始 error.message，children 会被忽略——见 issue #2 修复轮 1）。
+const V = 'config.notification.channels.form.validation'
+
 /**
  * Header rows are free-form; rows with an empty key are dropped on submit and
  * only non-empty keys are checked for duplicates, so users can leave a blank
  * trailing row without being blocked.
  */
 const channelFormSchema = z.object({
-  name: z.string().min(1).max(256),
+  name: z.string().min(1, `${V}.required`).max(256, `${V}.required`),
   url: z
     .string()
     .trim()
-    .min(1)
-    .url()
-    .refine((value) => value.startsWith('https://'), 'https'),
+    .min(1, `${V}.required`)
+    .url(`${V}.url`)
+    .refine((value) => value.startsWith('https://'), `${V}.https`),
   signingSecret: z
     .string()
     .trim()
     .refine(
       (value) => value === '' || SIGNING_SECRET_PATTERN.test(value),
-      'format'
+      `${V}.signingSecret`
     ),
   disabled: z.boolean(),
   customHeaders: z.array(
     z.object({
-      key: z.string().max(256),
+      key: z.string().max(256, `${V}.headerKey`),
       value: z.string().max(1024),
     })
   ),
@@ -73,6 +76,17 @@ const EMPTY_VALUES: ChannelFormValues = {
 type ChannelFormDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+/** FormMessage 的替代：zod message 是 i18n key，这里完成翻译。 */
+function FieldError({ message }: { message?: string }) {
+  const { t } = useTranslation()
+  if (!message) return null
+  return (
+    <p className='text-sm font-medium text-destructive'>
+      {t(message, { defaultValue: message })}
+    </p>
+  )
 }
 
 export function ChannelFormDialog({
@@ -141,7 +155,7 @@ export function ChannelFormDialog({
             <FormField
               control={form.control}
               name='name'
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
                     {t('config.notification.channels.fields.name')}
@@ -149,20 +163,14 @@ export function ChannelFormDialog({
                   <FormControl>
                     <Input placeholder='customer-webhook' {...field} />
                   </FormControl>
-                  <FormMessage>
-                    {form.formState.errors.name
-                      ? t(
-                          'config.notification.channels.form.validation.required'
-                        )
-                      : undefined}
-                  </FormMessage>
+                  <FieldError message={fieldState.error?.message} />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
               name='url'
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
                     {t('config.notification.channels.fields.url')}
@@ -176,22 +184,14 @@ export function ChannelFormDialog({
                   <FormDescription>
                     {t('config.notification.channels.form.urlHint')}
                   </FormDescription>
-                  <FormMessage>
-                    {form.formState.errors.url
-                      ? form.formState.errors.url.message === 'https'
-                        ? t(
-                            'config.notification.channels.form.validation.https'
-                          )
-                        : t('config.notification.channels.form.validation.url')
-                      : undefined}
-                  </FormMessage>
+                  <FieldError message={fieldState.error?.message} />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
               name='signingSecret'
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
                     {t('config.notification.channels.fields.signingSecret')}
@@ -206,13 +206,7 @@ export function ChannelFormDialog({
                   <FormDescription>
                     {t('config.notification.channels.form.signingSecretHint')}
                   </FormDescription>
-                  <FormMessage>
-                    {form.formState.errors.signingSecret
-                      ? t(
-                          'config.notification.channels.form.validation.signingSecret'
-                        )
-                      : undefined}
-                  </FormMessage>
+                  <FieldError message={fieldState.error?.message} />
                 </FormItem>
               )}
             />
