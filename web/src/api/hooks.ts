@@ -7,11 +7,14 @@ import {
 import { api } from '@/api/client'
 import {
   clonePlanNextVersion,
+  createNotificationChannel,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
+  listNotificationChannels,
   listSubjects,
   type EntitlementValueV2,
   type EntitlementV2,
+  type NotificationChannelCreateRequest,
   type Subject,
 } from '@/api/legacy'
 import { queryKeys } from '@/api/query-keys'
@@ -781,6 +784,36 @@ export function useFeatureCostQuery(
         { signal }
       ),
     enabled: Boolean(featureId) && (options?.enabled ?? true),
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Notification channels (v1)                                          */
+/* ------------------------------------------------------------------ */
+
+export interface NotificationChannelsParams {
+  page: number
+  pageSize: number
+}
+
+export function useNotificationChannels(params: NotificationChannelsParams) {
+  return useQuery({
+    queryKey: queryKeys.notificationChannels(params),
+    queryFn: () =>
+      listNotificationChannels({ ...params, includeDisabled: true }),
+  })
+}
+
+export function useCreateChannel() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NotificationChannelCreateRequest) =>
+      createNotificationChannel(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.channels'),
+      })
+    },
   })
 }
 
