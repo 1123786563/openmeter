@@ -10,6 +10,7 @@ export default {
     back: '上一步',
     next: '下一步',
     submitting: '提交中...',
+    optional: '可选',
     loading: '加载中...',
     commandMenu: {
       placeholder: '输入命令或搜索...',
@@ -272,7 +273,44 @@ export default {
     },
     currencies: {
       title: '货币',
-      description: '查看法币与管理自定义货币。',
+      description: '法币与自定义货币管理；自定义货币用于额度等内部计价场景。',
+      tabs: { fiat: '法币', custom: '自定义货币' },
+      fiat: {
+        code: '代码',
+        name: '名称',
+        symbol: '符号',
+        subunits: '小数位',
+        empty: '暂无法币数据',
+      },
+      custom: {
+        create: '新建自定义货币',
+        immutableTitle: '自定义货币创建后不可编辑或删除',
+        immutableDescription:
+          'API 未提供自定义货币的更新与删除端点，创建前请确认各项字段无误。',
+        code: '代码',
+        name: '名称',
+        symbol: '符号',
+        precision: '小数位',
+        decimalMark: '小数分隔符',
+        thousandSeparator: '千位分隔符',
+        costBasisCount: '成本基准',
+        createdAt: '创建时间',
+        empty: '暂无自定义货币，点击右上角创建',
+        toast: { created: '自定义货币已创建' },
+        form: {
+          createTitle: '新建自定义货币',
+          createDescription:
+            '代码长度 4-24 个字符，且不能与法币或已有自定义货币的代码冲突。',
+          codeHint: '用于 API 与账单的唯一货币代码，创建后不可修改。',
+          validation: {
+            required: '必填',
+            codeLength: '长度需为 4-24 个字符',
+            codeConflict: '与已有货币代码冲突，请更换',
+            precision: '0-12 的整数',
+            singleChar: '仅限单个字符',
+          },
+        },
+      },
     },
     taxCodes: {
       title: '税码',

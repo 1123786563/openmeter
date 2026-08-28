@@ -10,6 +10,7 @@ export default {
     back: 'Back',
     next: 'Next',
     submitting: 'Submitting...',
+    optional: 'Optional',
     loading: 'Loading...',
     commandMenu: {
       placeholder: 'Type a command or search...',
@@ -278,7 +279,46 @@ export default {
     },
     currencies: {
       title: 'Currencies',
-      description: 'Browse fiat and manage custom currencies.',
+      description:
+        'Manage fiat and custom currencies; custom currencies price internal constructs such as credits.',
+      tabs: { fiat: 'Fiat', custom: 'Custom' },
+      fiat: {
+        code: 'Code',
+        name: 'Name',
+        symbol: 'Symbol',
+        subunits: 'Subunits',
+        empty: 'No fiat currencies',
+      },
+      custom: {
+        create: 'New custom currency',
+        immutableTitle: 'Custom currencies cannot be edited or deleted after creation',
+        immutableDescription:
+          'The API exposes no update/delete endpoint for custom currencies — double-check every field before creating.',
+        code: 'Code',
+        name: 'Name',
+        symbol: 'Symbol',
+        precision: 'Precision',
+        decimalMark: 'Decimal mark',
+        thousandSeparator: 'Thousand separator',
+        costBasisCount: 'Cost bases',
+        createdAt: 'Created at',
+        empty: 'No custom currencies yet — create one from the top right',
+        toast: { created: 'Custom currency created' },
+        form: {
+          createTitle: 'New custom currency',
+          createDescription:
+            'The code is 4-24 characters and must not conflict with fiat or existing custom currency codes.',
+          codeHint:
+            'Unique currency code used by the API and invoices; immutable after creation.',
+          validation: {
+            required: 'Required',
+            codeLength: 'Must be 4-24 characters',
+            codeConflict: 'Conflicts with an existing currency code',
+            precision: 'Integer between 0 and 12',
+            singleChar: 'Exactly one character',
+          },
+        },
+      },
     },
     taxCodes: {
       title: 'Tax Codes',

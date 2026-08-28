@@ -9,6 +9,7 @@ import {
   clonePlanNextVersion,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
+  listFiatCurrencies,
   listSubjects,
   type EntitlementValueV2,
   type EntitlementV2,
@@ -781,6 +782,59 @@ export function useFeatureCostQuery(
         { signal }
       ),
     enabled: Boolean(featureId) && (options?.enabled ?? true),
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Currencies (config)                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Fiat currency list from the v1 info endpoint (reference data). */
+export function useFiatCurrencies() {
+  return useQuery({
+    queryKey: queryKeys.fiatCurrencies(),
+    queryFn: () => listFiatCurrencies(),
+    // Reference data that only changes on backend upgrades.
+    staleTime: 24 * 60 * 60 * 1000,
+  })
+}
+
+export interface CurrencyListParams {
+  type?: 'fiat' | 'custom'
+  expandCostBasis?: boolean
+}
+
+/**
+ * v3 currency list. The custom tab passes filter[type]=custom plus
+ * expand=cost_basis so each row also carries its active/scheduled cost bases.
+ */
+export function useCurrencies(params: CurrencyListParams) {
+  return useQuery({
+    queryKey: queryKeys.currencies({
+      type: params.type,
+      expandCostBasis: params.expandCostBasis,
+    }),
+    queryFn: ({ signal }) =>
+      api.internal.currencies.list(
+        {
+          page: { number: 1, size: 100 },
+          ...(params.type ? { filter: { type: params.type } } : {}),
+          expand: params.expandCostBasis ? ['cost_basis'] : undefined,
+        },
+        { signal }
+      ),
+  })
+}
+
+export function useCreateCustomCurrency() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      body: Parameters<typeof api.internal.currencies.createCustomCurrency>[0]
+    ) => api.internal.currencies.createCustomCurrency(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('currencies') })
+    },
   })
 }
 
