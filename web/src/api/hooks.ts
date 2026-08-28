@@ -8,6 +8,7 @@ import { api } from '@/api/client'
 import {
   clonePlanNextVersion,
   createNotificationChannel,
+  createPortalToken,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
   listNotificationChannels,
@@ -812,6 +813,23 @@ export function useCreateChannel() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('notification.channels'),
+      })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Portal tokens (v1, via legacy layer)                                */
+/* ------------------------------------------------------------------ */
+
+export function useCreatePortalToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
+      createPortalToken(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('portal-tokens'),
       })
     },
   })

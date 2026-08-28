@@ -187,3 +187,33 @@ export async function createNotificationChannel(
     body: JSON.stringify(body),
   })
 }
+
+/* ------------------------------------------------------------------ */
+/* Portal tokens (v1)                                                  */
+/* ------------------------------------------------------------------ */
+
+/** GET/POST /api/v1/portal/tokens 响应（api/openapi.yaml PortalToken，camelCase）。 */
+export interface PortalToken {
+  id: string
+  subject: string
+  expiresAt?: string
+  expired?: boolean
+  createdAt?: string
+  /** 仅创建响应携带的一次性明文（om_portal_ 前缀）；列表响应不含此字段。 */
+  token?: string
+  allowedMeterSlugs?: string[]
+}
+
+/**
+ * POST /api/v1/portal/tokens — 发放 consumer portal token。
+ * 可写字段仅 subject（必填）与 allowedMeterSlugs（可选，缺省=全部 meter）。
+ */
+export async function createPortalToken(body: {
+  subject: string
+  allowedMeterSlugs?: string[]
+}): Promise<PortalToken> {
+  return apiFetch<PortalToken>('/v1/portal/tokens', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
