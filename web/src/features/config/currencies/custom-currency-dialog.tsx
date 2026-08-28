@@ -51,28 +51,46 @@ const EMPTY_VALUES: CustomCurrencyFormValues = {
 }
 
 /**
- * The schema is rebuilt whenever the fetched lists change so the code field
- * is validated against live data: the custom code (4-24 chars) must not equal
- * an existing fiat code (v1 list; belt-and-braces since fiat codes are 3
- * chars) nor an already-created custom code (v3 list, case-insensitive).
+ * The schema is rebuilt whenever the fetched lists or active locale change:
+ * the code field is validated against live data (the custom code, 4-24
+ * chars, must not equal an existing fiat code from the v1 list —
+ * belt-and-braces since fiat codes are 3 chars — nor an already-created
+ * custom code, case-insensitive), and shadcn's FormMessage renders
+ * error.message, so the validation copy must live on the zod checks
+ * themselves.
  */
-function buildSchema(conflictingCodes: string[]) {
+function buildSchema(conflictingCodes: string[], t: (key: string) => string) {
   return z.object({
-    name: z.string().trim().min(1).max(256),
+    name: z
+      .string()
+      .trim()
+      .min(1, t('config.currencies.custom.form.validation.required'))
+      .max(256, t('config.currencies.custom.form.validation.required')),
     code: z
       .string()
       .trim()
-      .min(4)
-      .max(24)
+      .min(4, t('config.currencies.custom.form.validation.codeLength'))
+      .max(24, t('config.currencies.custom.form.validation.codeLength'))
       .refine(
         (code) => !conflictingCodes.includes(code.toUpperCase()),
-        'conflict'
+        t('config.currencies.custom.form.validation.codeConflict')
       ),
     precision: z
       .string()
-      .refine((value) => NON_NEGATIVE_INT.test(value) && Number(value) <= 12, 'invalid'),
-    decimalMark: z.string().trim().min(1).max(1),
-    thousandSeparator: z.string().trim().min(1).max(1),
+      .refine(
+        (value) => NON_NEGATIVE_INT.test(value) && Number(value) <= 12,
+        t('config.currencies.custom.form.validation.precision')
+      ),
+    decimalMark: z
+      .string()
+      .trim()
+      .min(1, t('config.currencies.custom.form.validation.singleChar'))
+      .max(1, t('config.currencies.custom.form.validation.singleChar')),
+    thousandSeparator: z
+      .string()
+      .trim()
+      .min(1, t('config.currencies.custom.form.validation.singleChar'))
+      .max(1, t('config.currencies.custom.form.validation.singleChar')),
     symbol: z.string().trim().max(16),
   })
 }
@@ -104,7 +122,10 @@ export function CustomCurrencyDialog({
     return [...codes]
   }, [fiat, custom])
 
-  const schema = useMemo(() => buildSchema(conflictingCodes), [conflictingCodes])
+  const schema = useMemo(
+    () => buildSchema(conflictingCodes, t),
+    [conflictingCodes, t]
+  )
 
   const form = useForm<CustomCurrencyFormValues>({
     resolver: zodResolver(schema),
@@ -157,11 +178,7 @@ export function CustomCurrencyDialog({
                   <FormControl>
                     <Input placeholder='Credit Points' {...field} />
                   </FormControl>
-                  <FormMessage>
-                    {form.formState.errors.name
-                      ? t('config.currencies.custom.form.validation.required')
-                      : undefined}
-                  </FormMessage>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -181,13 +198,7 @@ export function CustomCurrencyDialog({
                   <FormDescription>
                     {t('config.currencies.custom.form.codeHint')}
                   </FormDescription>
-                  <FormMessage>
-                    {form.formState.errors.code?.message === 'conflict'
-                      ? t('config.currencies.custom.form.validation.codeConflict')
-                      : form.formState.errors.code
-                        ? t('config.currencies.custom.form.validation.codeLength')
-                        : undefined}
-                  </FormMessage>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -201,11 +212,7 @@ export function CustomCurrencyDialog({
                     <FormControl>
                       <Input inputMode='numeric' placeholder='2' {...field} />
                     </FormControl>
-                    <FormMessage>
-                      {form.formState.errors.precision
-                        ? t('config.currencies.custom.form.validation.precision')
-                        : undefined}
-                    </FormMessage>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -220,11 +227,7 @@ export function CustomCurrencyDialog({
                     <FormControl>
                       <Input maxLength={1} placeholder='.' {...field} />
                     </FormControl>
-                    <FormMessage>
-                      {form.formState.errors.decimalMark
-                        ? t('config.currencies.custom.form.validation.singleChar')
-                        : undefined}
-                    </FormMessage>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -239,11 +242,7 @@ export function CustomCurrencyDialog({
                     <FormControl>
                       <Input maxLength={1} placeholder=',' {...field} />
                     </FormControl>
-                    <FormMessage>
-                      {form.formState.errors.thousandSeparator
-                        ? t('config.currencies.custom.form.validation.singleChar')
-                        : undefined}
-                    </FormMessage>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
