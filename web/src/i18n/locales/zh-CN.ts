@@ -270,6 +270,22 @@ export default {
         empty: '暂无通知渠道',
         enabled: '启用',
         disabled: '已禁用',
+        actions: '操作',
+        enable: '启用',
+        disable: '禁用',
+        delete: '删除',
+        toggleConfirm: {
+          enableTitle: '启用通知渠道',
+          enableDescription: '启用后，{{name}} 将恢复接收所有通知事件。',
+          disableTitle: '禁用通知渠道',
+          disableDescription:
+            '禁用后，{{name}} 将暂停接收所有通知事件，已禁用的渠道默认不在列表过滤范围外可见（本页已显式包含）。',
+        },
+        deleteConfirm: {
+          title: '删除通知渠道',
+          description:
+            '确定删除「{{name}}」吗？删除为软删除且不可恢复，引用它的通知规则将无法再向该渠道投递。',
+        },
         pagination: { total: '共 {{total}} 条' },
         fields: {
           name: '名称',
@@ -283,6 +299,9 @@ export default {
         form: {
           createTitle: '新建通知渠道',
           createDescription: '创建一个 Webhook 渠道，通知事件将推送到该地址。',
+          editTitle: '编辑通知渠道',
+          editDescription:
+            '保存为全量替换：未填写的签名密钥将被清空，请保留回填的原值。',
           urlHint: '必须为 https:// 地址。',
           signingSecretHint:
             '可选。base64 编码（可带 whsec_ 前缀），32-100 字符，用于接收端验签。',
@@ -299,7 +318,13 @@ export default {
             headerKey: '请求头名称不得超过 256 字符。',
           },
         },
-        toast: { created: '通知渠道已创建。' },
+        toast: {
+          created: '通知渠道已创建。',
+          updated: '通知渠道已更新。',
+          enabled: '通知渠道已启用。',
+          disabled: '通知渠道已禁用。',
+          deleted: '通知渠道已删除。',
+        },
       },
       rules: {
         title: '通知规则',
