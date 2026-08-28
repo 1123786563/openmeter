@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { useCreateChannel } from '@/api/hooks'
+import type { NotificationChannel } from '@/api/legacy'
+import { useCreateChannel, useUpdateChannel } from '@/api/hooks'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
 import {
@@ -76,6 +77,8 @@ const EMPTY_VALUES: ChannelFormValues = {
 type ChannelFormDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Present when editing an existing channel. */
+  channel?: NotificationChannel
 }
 
 /** FormMessage 的替代：zod message 是 i18n key，这里完成翻译。 */
@@ -92,9 +95,13 @@ function FieldError({ message }: { message?: string }) {
 export function ChannelFormDialog({
   open,
   onOpenChange,
+  channel,
 }: ChannelFormDialogProps) {
   const { t } = useTranslation()
+  const isCreate = !channel
+
   const createMutation = useCreateChannel()
+  const updateMutation = useUpdateChannel()
 
   const form = useForm<ChannelFormValues>({
     resolver: zodResolver(channelFormSchema),
@@ -107,8 +114,25 @@ export function ChannelFormDialog({
   })
 
   useEffect(() => {
-    if (open) form.reset(EMPTY_VALUES)
-  }, [open, form])
+    if (!open) return
+    form.reset(
+      channel
+        ? {
+            // PUT is a full replacement and clears omitted fields, so the
+            // secret is backfilled and resubmitted as-is unless edited.
+            name: channel.name,
+            url: channel.url,
+            signingSecret: channel.signingSecret ?? '',
+            disabled: channel.disabled,
+            customHeaders: Object.entries(channel.customHeaders ?? {}).map(
+              ([key, value]) => ({ key, value })
+            ),
+          }
+        : EMPTY_VALUES
+    )
+  }, [open, channel, form])
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   const onSubmit = (values: ChannelFormValues) => {
     const customHeaders = Object.fromEntries(
@@ -118,25 +142,35 @@ export function ChannelFormDialog({
     )
     const hasHeaders = Object.keys(customHeaders).length > 0
 
-    createMutation.mutate(
-      {
-        type: 'WEBHOOK',
-        name: values.name.trim(),
-        url: values.url.trim(),
-        disabled: values.disabled,
-        ...(hasHeaders ? { customHeaders } : {}),
-        ...(values.signingSecret
-          ? { signingSecret: values.signingSecret }
-          : {}),
-      },
-      {
+    const body = {
+      type: 'WEBHOOK' as const,
+      name: values.name.trim(),
+      url: values.url.trim(),
+      disabled: values.disabled,
+      ...(hasHeaders ? { customHeaders } : {}),
+      ...(values.signingSecret ? { signingSecret: values.signingSecret } : {}),
+    }
+
+    if (isCreate) {
+      createMutation.mutate(body, {
         onSuccess: () => {
           toast.success(t('config.notification.channels.toast.created'))
           onOpenChange(false)
         },
         onError: handleServerError,
-      }
-    )
+      })
+    } else if (channel) {
+      updateMutation.mutate(
+        { channelId: channel.id, body },
+        {
+          onSuccess: () => {
+            toast.success(t('config.notification.channels.toast.updated'))
+            onOpenChange(false)
+          },
+          onError: handleServerError,
+        }
+      )
+    }
   }
 
   return (
@@ -144,10 +178,14 @@ export function ChannelFormDialog({
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
         <DialogHeader>
           <DialogTitle>
-            {t('config.notification.channels.form.createTitle')}
+            {isCreate
+              ? t('config.notification.channels.form.createTitle')
+              : t('config.notification.channels.form.editTitle')}
           </DialogTitle>
           <DialogDescription>
-            {t('config.notification.channels.form.createDescription')}
+            {isCreate
+              ? t('config.notification.channels.form.createDescription')
+              : t('config.notification.channels.form.editDescription')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -304,8 +342,8 @@ export function ChannelFormDialog({
               >
                 {t('common.cancel')}
               </Button>
-              <Button type='submit' disabled={createMutation.isPending}>
-                {createMutation.isPending
+              <Button type='submit' disabled={isSubmitting}>
+                {isSubmitting
                   ? t('common.submitting')
                   : t('common.confirm')}
               </Button>
