@@ -114,3 +114,76 @@ export async function clonePlanNextVersion(
     }
   )
 }
+
+/* ------------------------------------------------------------------ */
+/* Notifications (v1) — channels                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * GET /api/v1/notification/channels — spec only defines the WEBHOOK variant
+ * (NotificationChannelWebhook), so the hand-written type is not a union.
+ */
+export interface NotificationChannel {
+  id: string
+  type: 'WEBHOOK'
+  name: string
+  url: string
+  disabled: boolean
+  customHeaders?: Record<string, string>
+  signingSecret?: string
+  metadata?: Record<string, string> | null
+  createdAt: string
+  updatedAt: string
+  deletedAt?: string | null
+}
+
+export interface NotificationChannelPaginatedResponse {
+  totalCount: number
+  page: number
+  pageSize: number
+  items: NotificationChannel[]
+}
+
+export interface NotificationChannelListParams {
+  includeDeleted?: boolean
+  includeDisabled?: boolean
+  page?: number
+  pageSize?: number
+}
+
+export async function listNotificationChannels(
+  params: NotificationChannelListParams = {}
+): Promise<NotificationChannelPaginatedResponse> {
+  const search = new URLSearchParams()
+  if (params.includeDeleted) search.set('includeDeleted', 'true')
+  // The endpoint hides disabled channels unless asked; the admin view needs them.
+  if (params.includeDisabled !== undefined) {
+    search.set('includeDisabled', String(params.includeDisabled))
+  }
+  if (params.page) search.set('page', String(params.page))
+  if (params.pageSize) search.set('pageSize', String(params.pageSize))
+  const qs = search.toString()
+  return apiFetch<NotificationChannelPaginatedResponse>(
+    `/v1/notification/channels${qs ? `?${qs}` : ''}`
+  )
+}
+
+/** POST /api/v1/notification/channels — body mirrors NotificationChannelWebhookCreateRequest. */
+export interface NotificationChannelCreateRequest {
+  type: 'WEBHOOK'
+  name: string
+  url: string
+  disabled?: boolean
+  customHeaders?: Record<string, string>
+  signingSecret?: string
+  metadata?: Record<string, string>
+}
+
+export async function createNotificationChannel(
+  body: NotificationChannelCreateRequest
+): Promise<NotificationChannel> {
+  return apiFetch<NotificationChannel>('/v1/notification/channels', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}

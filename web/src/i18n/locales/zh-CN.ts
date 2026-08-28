@@ -259,7 +259,41 @@ export default {
     notification: {
       channels: {
         title: '通知渠道',
-        description: '管理 Webhook 通知渠道。',
+        description: '管理接收通知事件的 Webhook 渠道。',
+        create: '新建渠道',
+        empty: '暂无通知渠道',
+        enabled: '启用',
+        disabled: '已禁用',
+        pagination: { total: '共 {{total}} 条' },
+        fields: {
+          name: '名称',
+          url: 'Webhook URL',
+          status: '状态',
+          createdAt: '创建时间',
+          signingSecret: '签名密钥',
+          customHeaders: '自定义请求头',
+          disabled: '禁用渠道',
+        },
+        form: {
+          createTitle: '新建通知渠道',
+          createDescription: '创建一个 Webhook 渠道，通知事件将推送到该地址。',
+          urlHint: '必须为 https:// 地址。',
+          signingSecretHint:
+            '可选。base64 编码（可带 whsec_ 前缀），32-100 字符，用于接收端验签。',
+          customHeadersHint:
+            '随 Webhook 请求一并发送的自定义 HTTP 头；空键的行会被忽略。',
+          disabledHint: '禁用后该渠道暂停接收所有通知。',
+          addHeader: '添加请求头',
+          removeHeader: '移除该行',
+          validation: {
+            required: '必填，1-256 字符。',
+            url: '请输入合法的 URL。',
+            https: '仅支持 https:// 地址。',
+            signingSecret: '格式：base64（可带 whsec_ 前缀），32-100 字符。',
+            headerKey: '请求头名称不得超过 256 字符。',
+          },
+        },
+        toast: { created: '通知渠道已创建。' },
       },
       rules: {
         title: '通知规则',

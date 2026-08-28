@@ -265,7 +265,44 @@ export default {
     notification: {
       channels: {
         title: 'Notification Channels',
-        description: 'Manage webhook notification channels.',
+        description:
+          'Manage webhook channels that receive notification events.',
+        create: 'New Channel',
+        empty: 'No notification channels yet',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        pagination: { total: '{{total}} total' },
+        fields: {
+          name: 'Name',
+          url: 'Webhook URL',
+          status: 'Status',
+          createdAt: 'Created At',
+          signingSecret: 'Signing Secret',
+          customHeaders: 'Custom Headers',
+          disabled: 'Disable channel',
+        },
+        form: {
+          createTitle: 'New Notification Channel',
+          createDescription:
+            'Create a webhook channel; notification events will be pushed to this URL.',
+          urlHint: 'Must be an https:// URL.',
+          signingSecretHint:
+            'Optional. Base64 (optionally whsec_-prefixed), 32-100 chars, used by receivers to verify signatures.',
+          customHeadersHint:
+            'Custom HTTP headers sent with every webhook request; rows with an empty key are ignored.',
+          disabledHint: 'A disabled channel stops receiving all notifications.',
+          addHeader: 'Add header',
+          removeHeader: 'Remove row',
+          validation: {
+            required: 'Required, 1-256 characters.',
+            url: 'Enter a valid URL.',
+            https: 'Only https:// URLs are supported.',
+            signingSecret:
+              'Format: base64 (optional whsec_ prefix), 32-100 chars.',
+            headerKey: 'Header name must be at most 256 characters.',
+          },
+        },
+        toast: { created: 'Notification channel created.' },
       },
       rules: {
         title: 'Notification Rules',

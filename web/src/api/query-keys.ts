@@ -42,6 +42,8 @@ export const queryKeys = {
   orders: (params: object = {}) => ns('orders', params),
   refund: (id: string) => ns('refund', id),
   refunds: (params: object = {}) => ns('refunds', params),
+  notificationChannels: (params: object = {}) =>
+    ns('notification.channels', params),
   features: (params: object = {}) => ns('features', params),
   feature: (id: string) => ns('feature', id),
   featureCostQuery: (id: string, params: object) =>
