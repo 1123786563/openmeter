@@ -10,6 +10,7 @@ export default {
     back: '上一步',
     next: '下一步',
     submitting: '提交中...',
+    optional: '可选',
     loading: '加载中...',
     commandMenu: {
       placeholder: '输入命令或搜索...',
@@ -276,7 +277,50 @@ export default {
     },
     taxCodes: {
       title: '税码',
-      description: '管理税码与组织默认税码。',
+      description: '税码目录与各计费应用（Sandbox/Stripe/外部开票）的税码映射。',
+      create: '新建税码',
+      includeDeleted: '显示已删除',
+      deleted: '已删除',
+      actions: '操作',
+      updatedAt: '更新时间',
+      delete: '删除',
+      empty: '暂无税码',
+      appType: {
+        sandbox: 'Sandbox',
+        stripe: 'Stripe',
+        external_invoicing: '外部开票',
+      },
+      fields: {
+        name: '名称',
+        key: '标识（key）',
+        description: '描述',
+        appMappings: '应用映射',
+      },
+      form: {
+        createTitle: '新建税码',
+        createDescription:
+          'key 创建后不可修改；应用映射为每个计费应用填写对应的提供商税码。',
+        editTitle: '编辑税码',
+        editDescription: 'key 不可修改；保存后立即生效。',
+        keyImmutable: 'key 创建后不可修改',
+        addMapping: '添加映射',
+        removeMapping: '移除该行',
+        noMappings: '暂无应用映射，点击「添加映射」新增。',
+        validation: {
+          required: '必填',
+          key: '小写字母/数字/下划线，形如 digital_services',
+          duplicateAppType: '每种应用类型只能有一条映射',
+        },
+      },
+      deleteConfirm: {
+        title: '删除税码',
+        description: '确定删除税码「{{name}}」吗？删除后可开启「显示已删除」查看。',
+      },
+      toast: {
+        created: '税码已创建',
+        updated: '税码已更新',
+        deleted: '税码已删除',
+      },
     },
     apps: {
       title: '应用',

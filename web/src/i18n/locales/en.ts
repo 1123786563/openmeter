@@ -10,6 +10,7 @@ export default {
     back: 'Back',
     next: 'Next',
     submitting: 'Submitting...',
+    optional: 'Optional',
     loading: 'Loading...',
     commandMenu: {
       placeholder: 'Type a command or search...',
@@ -281,8 +282,53 @@ export default {
       description: 'Browse fiat and manage custom currencies.',
     },
     taxCodes: {
-      title: 'Tax Codes',
-      description: 'Manage tax codes and organization defaults.',
+      title: 'Tax codes',
+      description:
+        'Tax code catalog and per-app mappings (Sandbox/Stripe/external invoicing).',
+      create: 'New tax code',
+      includeDeleted: 'Show deleted',
+      deleted: 'Deleted',
+      actions: 'Actions',
+      updatedAt: 'Updated at',
+      delete: 'Delete',
+      empty: 'No tax codes',
+      appType: {
+        sandbox: 'Sandbox',
+        stripe: 'Stripe',
+        external_invoicing: 'External invoicing',
+      },
+      fields: {
+        name: 'Name',
+        key: 'Key',
+        description: 'Description',
+        appMappings: 'App mappings',
+      },
+      form: {
+        createTitle: 'New tax code',
+        createDescription:
+          "The key is immutable after creation; map the internal code to each billing app's provider tax code.",
+        editTitle: 'Edit tax code',
+        editDescription: 'The key cannot change; changes apply immediately.',
+        keyImmutable: 'Immutable after creation',
+        addMapping: 'Add mapping',
+        removeMapping: 'Remove row',
+        noMappings: 'No app mappings yet — add one with "Add mapping".',
+        validation: {
+          required: 'Required',
+          key: 'Lowercase snake_case, e.g. digital_services',
+          duplicateAppType: 'Only one mapping per app type',
+        },
+      },
+      deleteConfirm: {
+        title: 'Delete tax code',
+        description:
+          'Delete tax code "{{name}}"? Enable "Show deleted" to review it afterwards.',
+      },
+      toast: {
+        created: 'Tax code created',
+        updated: 'Tax code updated',
+        deleted: 'Tax code deleted',
+      },
     },
     apps: {
       title: 'Apps',
