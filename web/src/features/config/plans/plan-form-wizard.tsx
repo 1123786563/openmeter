@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import {
   useFieldArray,
   useForm,
   useWatch,
+  type FieldPath,
   type UseFormReturn,
 } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useCreatePlan } from '@/api/hooks'
@@ -38,7 +39,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { FieldError, PriceEditor } from './price-editor'
 import {
   EMPTY_PLAN,
   defaultPhase,
@@ -47,6 +47,7 @@ import {
   toCreatePlanRequest,
   type PlanWizardValues,
 } from './plan-form-schema'
+import { FieldError, PriceEditor } from './price-editor'
 
 const STEPS = ['basics', 'phases', 'rateCards'] as const
 type Step = (typeof STEPS)[number]
@@ -79,34 +80,52 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
     }
   }, [open, form])
 
-  const { fields: phaseFields, append: appendPhase, remove: removePhase } =
-    useFieldArray({ control: form.control, name: 'phases' })
+  const {
+    fields: phaseFields,
+    append: appendPhase,
+    remove: removePhase,
+  } = useFieldArray({ control: form.control, name: 'phases' })
 
   const currency = useWatch({ control: form.control, name: 'currency' })
 
   const next = async () => {
     if (step === 'basics') {
-      if (await form.trigger(['name', 'key', 'currency', 'billingCadence'])) {
+      if (
+        await form.trigger([
+          'name',
+          'key',
+          'currency',
+          'billingCadence',
+          'description',
+        ])
+      ) {
         setStep('phases')
       }
     } else if (step === 'phases') {
-      if (await form.trigger('phases')) {
+      // Gate on the leaf paths mounted in this step. Triggering the whole
+      // 'phases' subtree would always fail here: the resolver returns the full
+      // error tree and default rate cards are only fixable in the next step.
+      const phaseFieldNames = phaseFields.flatMap<FieldPath<PlanWizardValues>>(
+        (_, i) => [
+          `phases.${i}.name`,
+          `phases.${i}.key`,
+          `phases.${i}.duration`,
+        ]
+      )
+      if (await form.trigger(phaseFieldNames)) {
         setStep('rateCards')
       }
     }
   }
 
   const onSubmit = (values: PlanWizardValues) => {
-    createPlan.mutate(
-      toCreatePlanRequest(values),
-      {
-        onSuccess: () => {
-          toast.success(t('config.plans.wizard.toast.created'))
-          onOpenChange(false)
-        },
-        onError: handleServerError,
-      }
-    )
+    createPlan.mutate(toCreatePlanRequest(values), {
+      onSuccess: () => {
+        toast.success(t('config.plans.wizard.toast.created'))
+        onOpenChange(false)
+      },
+      onError: handleServerError,
+    })
   }
 
   const stepIndex = STEPS.indexOf(step)
@@ -117,7 +136,8 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
         <DialogHeader>
           <DialogTitle>{t('config.plans.wizard.createTitle')}</DialogTitle>
           <DialogDescription>
-            {t(`config.plans.wizard.steps.${step}`)} ({stepIndex + 1}/{STEPS.length})
+            {t(`config.plans.wizard.steps.${step}`)} ({stepIndex + 1}/
+            {STEPS.length})
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +170,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                       <FormItem>
                         <FormLabel>{t('config.plans.fields.key')}</FormLabel>
                         <FormControl>
-                          <Input placeholder='pro_plan' autoComplete='off' {...field} />
+                          <Input
+                            placeholder='pro_plan'
+                            autoComplete='off'
+                            {...field}
+                          />
                         </FormControl>
                         <FieldError message={fieldState.error?.message} />
                       </FormItem>
@@ -163,7 +187,9 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                     name='currency'
                     render={({ field, fieldState }) => (
                       <FormItem>
-                        <FormLabel>{t('config.plans.fields.currency')}</FormLabel>
+                        <FormLabel>
+                          {t('config.plans.fields.currency')}
+                        </FormLabel>
                         <FormControl>
                           <Input placeholder='CNY' maxLength={24} {...field} />
                         </FormControl>
@@ -187,18 +213,24 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                         >
                           <div className='flex items-center gap-2'>
                             <RadioGroupItem value='P1M' id='cadence-p1m' />
-                            <Label htmlFor='cadence-p1m' className='font-normal'>
+                            <Label
+                              htmlFor='cadence-p1m'
+                              className='font-normal'
+                            >
                               {t('config.plans.wizard.cadence.P1M')}
                             </Label>
                           </div>
                           <div className='flex items-center gap-2'>
                             <RadioGroupItem value='P1Y' id='cadence-p1y' />
-                            <Label htmlFor='cadence-p1y' className='font-normal'>
+                            <Label
+                              htmlFor='cadence-p1y'
+                              className='font-normal'
+                            >
                               {t('config.plans.wizard.cadence.P1Y')}
                             </Label>
                           </div>
                         </RadioGroup>
-              <FieldError message={fieldState.error?.message} />
+                        <FieldError message={fieldState.error?.message} />
                       </FormItem>
                     )}
                   />
@@ -208,11 +240,18 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                   name='description'
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel>{t('config.plans.fields.description')}</FormLabel>
+                      <FormLabel>
+                        {t('config.plans.fields.description')}
+                      </FormLabel>
                       <FormControl>
-                        <Textarea rows={2} {...field} value={field.value ?? ''} />
+                        <Textarea
+                          rows={2}
+                          maxLength={1024}
+                          {...field}
+                          value={field.value ?? ''}
+                        />
                       </FormControl>
-              <FieldError message={fieldState.error?.message} />
+                      <FieldError message={fieldState.error?.message} />
                     </FormItem>
                   )}
                 />
@@ -232,7 +271,9 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                       render={({ field, fieldState }) => (
                         <FormItem>
                           <FormLabel>
-                            {t('config.plans.wizard.phaseName', { index: index + 1 })}
+                            {t('config.plans.wizard.phaseName', {
+                              index: index + 1,
+                            })}
                           </FormLabel>
                           <FormControl>
                             <Input placeholder='标准期' {...field} />
@@ -248,7 +289,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                         <FormItem>
                           <FormLabel>{t('config.plans.fields.key')}</FormLabel>
                           <FormControl>
-                            <Input placeholder='standard' autoComplete='off' {...field} />
+                            <Input
+                              placeholder='standard'
+                              autoComplete='off'
+                              {...field}
+                            />
                           </FormControl>
                           <FieldError message={fieldState.error?.message} />
                         </FormItem>
@@ -259,7 +304,9 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                       name={`phases.${index}.duration`}
                       render={({ field, fieldState }) => (
                         <FormItem>
-                          <FormLabel>{t('config.plans.wizard.fields.duration')}</FormLabel>
+                          <FormLabel>
+                            {t('config.plans.wizard.fields.duration')}
+                          </FormLabel>
                           <FormControl>
                             <Input placeholder='P1M' {...field} />
                           </FormControl>
@@ -285,7 +332,9 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                   </div>
                 ))}
                 <FieldError
-                  message={form.formState.errors.phases?.message as string | undefined}
+                  message={
+                    form.formState.errors.phases?.message as string | undefined
+                  }
                 />
                 <Button
                   type='button'
@@ -313,7 +362,10 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
 
         <DialogFooter className='gap-2 sm:gap-0'>
           {stepIndex > 0 && (
-            <Button variant='outline' onClick={() => setStep(STEPS[stepIndex - 1])}>
+            <Button
+              variant='outline'
+              onClick={() => setStep(STEPS[stepIndex - 1])}
+            >
               <ArrowLeft className='size-4' />
               {t('common.back')}
             </Button>
@@ -374,14 +426,19 @@ function PhaseRateCardsSection({
         </span>
       </div>
       {fields.map((cardField, cardIndex) => (
-        <div key={cardField.id} className='space-y-3 rounded-md border bg-muted/30 p-3'>
+        <div
+          key={cardField.id}
+          className='space-y-3 rounded-md border bg-muted/30 p-3'
+        >
           <div className='grid grid-cols-3 gap-3'>
             <FormField
               control={form.control}
               name={`phases.${phaseIndex}.rateCards.${cardIndex}.type`}
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel>{t('config.plans.wizard.fields.rateCardType')}</FormLabel>
+                  <FormLabel>
+                    {t('config.plans.wizard.fields.rateCardType')}
+                  </FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className='w-full'>
@@ -420,7 +477,11 @@ function PhaseRateCardsSection({
                 <FormItem>
                   <FormLabel>{t('config.plans.fields.key')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='platform_fee' autoComplete='off' {...field} />
+                    <Input
+                      placeholder='platform_fee'
+                      autoComplete='off'
+                      {...field}
+                    />
                   </FormControl>
                   <FieldError message={fieldState.error?.message} />
                 </FormItem>
@@ -437,7 +498,9 @@ function PhaseRateCardsSection({
                   <Select
                     value={field.value ?? 'one_time'}
                     onValueChange={(value) =>
-                      field.onChange(value === 'one_time' ? null : (value as 'P1M' | 'P1Y'))
+                      field.onChange(
+                        value === 'one_time' ? null : (value as 'P1M' | 'P1Y')
+                      )
                     }
                   >
                     <FormControl>
@@ -457,7 +520,7 @@ function PhaseRateCardsSection({
                       </SelectItem>
                     </SelectContent>
                   </Select>
-              <FieldError message={fieldState.error?.message} />
+                  <FieldError message={fieldState.error?.message} />
                 </FormItem>
               )}
             />

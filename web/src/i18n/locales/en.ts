@@ -193,7 +193,8 @@ export default {
         },
         errors: {
           required: 'Required',
-          keyFormat: 'Lowercase letters, digits and underscores only, e.g. pro_plan',
+          keyFormat:
+            'Lowercase letters, digits and underscores only, e.g. pro_plan',
           amount: 'Enter a non-negative amount',
           currency: 'Currency is a 3-letter code or a 4-24 char custom code',
           durationFormat: 'Enter an ISO8601 duration, e.g. P1M / P3M / P1Y',

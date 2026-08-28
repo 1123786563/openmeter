@@ -24,7 +24,10 @@ export const priceFormSchema = z.discriminatedUnion('kind', [
     kind: z.literal('flat'),
     amount: z
       .string()
-      .refine((value) => AMOUNT.test(value), 'config.plans.wizard.errors.amount'),
+      .refine(
+        (value) => AMOUNT.test(value),
+        'config.plans.wizard.errors.amount'
+      ),
   }),
 ])
 
@@ -36,7 +39,10 @@ export const rateCardSchema = z
       .string()
       .min(1, 'config.plans.wizard.errors.required')
       .max(64)
-      .refine((value) => RESOURCE_KEY.test(value), 'config.plans.wizard.errors.keyFormat'),
+      .refine(
+        (value) => RESOURCE_KEY.test(value),
+        'config.plans.wizard.errors.keyFormat'
+      ),
     name: z.string().min(1, 'config.plans.wizard.errors.required').max(256),
     // 契约含两个值；#6 的 UI 只提供 flat_fee 选项，usage_based 在 #7 接入。
     type: z.enum(['flat_fee', 'usage_based']),
@@ -68,7 +74,10 @@ export const phaseSchema = z.object({
     .string()
     .min(1, 'config.plans.wizard.errors.required')
     .max(64)
-    .refine((value) => RESOURCE_KEY.test(value), 'config.plans.wizard.errors.keyFormat'),
+    .refine(
+      (value) => RESOURCE_KEY.test(value),
+      'config.plans.wizard.errors.keyFormat'
+    ),
   name: z.string().min(1, 'config.plans.wizard.errors.required').max(256),
   // '' = 无期限（仅最后阶段允许，由 phasesSchema refine 定位到具体行）。
   duration: z
@@ -106,12 +115,18 @@ export const planWizardSchema = z.object({
     .string()
     .min(1, 'config.plans.wizard.errors.required')
     .max(64)
-    .refine((value) => RESOURCE_KEY.test(value), 'config.plans.wizard.errors.keyFormat'),
+    .refine(
+      (value) => RESOURCE_KEY.test(value),
+      'config.plans.wizard.errors.keyFormat'
+    ),
   description: z.string().max(1024).optional(),
   // 法币 3 位大写，或自定义货币代码 4-24 位（BillingCurrencyCode）。
   currency: z
     .string()
-    .refine((value) => CURRENCY.test(value), 'config.plans.wizard.errors.currency'),
+    .refine(
+      (value) => CURRENCY.test(value),
+      'config.plans.wizard.errors.currency'
+    ),
   billingCadence: z.enum(['P1M', 'P1Y']),
   phases: phasesSchema,
 })

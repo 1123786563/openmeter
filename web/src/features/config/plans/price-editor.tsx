@@ -79,7 +79,7 @@ export function PriceEditor({
                 <SelectItem value='flat'>{t('plan.priceType.flat')}</SelectItem>
               </SelectContent>
             </Select>
-              <FieldError message={fieldState.error?.message} />
+            <FieldError message={fieldState.error?.message} />
           </FormItem>
         )}
       />
