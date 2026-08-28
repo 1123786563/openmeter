@@ -48,4 +48,7 @@ export const queryKeys = {
   feature: (id: string) => ns('feature', id),
   featureCostQuery: (id: string, params: object) =>
     ns('feature-cost-query', id, params),
+  billingProfiles: (params: object = {}) => ns('billing-profiles', params),
+  billingProfile: (id: string) => ns('billing-profile', id),
+  apps: () => ns('apps'),
 }

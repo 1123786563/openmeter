@@ -818,6 +818,55 @@ export function useCreateChannel() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Billing profiles (v3)                                               */
+/* ------------------------------------------------------------------ */
+
+export function useBillingProfiles() {
+  return useQuery({
+    queryKey: queryKeys.billingProfiles({ page: 1, pageSize: 100 }),
+    queryFn: ({ signal }) =>
+      api.billing.listProfiles(
+        { page: { number: 1, size: 100 } },
+        { signal }
+      ),
+  })
+}
+
+export function useBillingProfile(id: string) {
+  return useQuery({
+    queryKey: queryKeys.billingProfile(id),
+    queryFn: ({ signal }) => api.billing.getProfile({ id }, { signal }),
+    enabled: Boolean(id),
+  })
+}
+
+export function useCreateBillingProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.billing.createProfile>[0]) =>
+      api.billing.createProfile(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('billing-profiles'),
+      })
+    },
+  })
+}
+
+/**
+ * Installed apps (v3 GET /openmeter/apps) — feeds the billing-profile app
+ * slots. Lives under api.internal.apps: the root client exposes no `apps`
+ * namespace.
+ */
+export function useApps() {
+  return useQuery({
+    queryKey: queryKeys.apps(),
+    queryFn: ({ signal }) =>
+      api.internal.apps.list({ page: { number: 1, size: 100 } }, { signal }),
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
