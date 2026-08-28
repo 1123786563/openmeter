@@ -186,7 +186,10 @@ export default {
           duration: '期限（ISO8601）',
           priceKind: '价格类型',
           amount: '金额（{{currency}}）',
+          unitAmount: '单价（{{currency}}/单位）',
           rateCardType: '价目卡类型',
+          feature: '计量功能',
+          featurePlaceholder: '选择要计量的功能',
         },
         errors: {
           required: '必填项',
@@ -198,6 +201,9 @@ export default {
           rateCardsRequired: '每个阶段至少需要一张价目卡',
           phaseDurationRequired: '仅最后一个阶段可以无期限',
           flatFeePriceKind: '固定费价目卡只能选择免费或固定价',
+          featureRequired: '用量计费价目卡必须选择功能',
+          usagePriceKind: '用量计费价目卡只能选择单价',
+          oneTimeFlatOnly: '一次性计费仅适用于固定费价目卡',
         },
         toast: {
           created: '计划已创建（草稿）',

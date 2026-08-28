@@ -189,7 +189,10 @@ export default {
           duration: 'Duration (ISO8601)',
           priceKind: 'Price kind',
           amount: 'Amount ({{currency}})',
+          unitAmount: 'Unit price ({{currency}}/unit)',
           rateCardType: 'Rate card type',
+          feature: 'Metered feature',
+          featurePlaceholder: 'Select a feature to meter',
         },
         errors: {
           required: 'Required',
@@ -202,6 +205,9 @@ export default {
           rateCardsRequired: 'Each phase needs at least one rate card',
           phaseDurationRequired: 'Only the last phase may be indefinite',
           flatFeePriceKind: 'A flat-fee card only accepts free or flat prices',
+          featureRequired: 'A usage-based rate card requires a feature',
+          usagePriceKind: 'A usage-based rate card only accepts a unit price',
+          oneTimeFlatOnly: 'One-time billing only applies to flat-fee cards',
         },
         toast: {
           created: 'Plan created (draft)',
