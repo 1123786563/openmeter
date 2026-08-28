@@ -395,6 +395,35 @@ export default {
         wallet: 'Wallet',
         credits: 'Credits',
         entitlements: 'Entitlements',
+        receivablePeriods: 'Receivable Periods',
+      },
+    },
+    receivablePeriods: {
+      fields: {
+        period: 'Period',
+        creditsConsumed: 'Credits consumed',
+        amountDue: 'Amount due',
+        amountPaid: 'Amount paid',
+        status: 'Status',
+        closedAt: 'Closed at',
+        actions: 'Actions',
+      },
+      loadMore: 'Load more',
+      empty: 'No receivable periods',
+      externalInvoice: {
+        action: 'External Invoice',
+        title: 'Register External Invoice',
+        description:
+          'Attach or update the external invoice reference for period {{from}} ~ {{to}}.',
+        number: 'Invoice number (required)',
+        url: 'Invoice URL (optional)',
+        urlHint: 'URL or identifier of the external invoice document',
+        issuer: 'Issuer (optional)',
+        issuedAt: 'Issued at (optional)',
+        idempotencyKey: 'Idempotency key',
+        idempotencyHint:
+          'A UUID by default, editable; replaying the same key will not duplicate the update.',
+        toast: 'External invoice registered',
       },
     },
   },
@@ -725,6 +754,15 @@ export default {
       ledger_reversing: 'Ledger reversing',
       fulfilled: 'Fulfilled',
       failed: 'Failed',
+    },
+  },
+  receivablePeriod: {
+    status: {
+      open: 'Open',
+      closed: 'Closed',
+      partially_paid: 'Partially paid',
+      paid: 'Paid',
+      overdue: 'Overdue',
     },
   },
   commerce: {
