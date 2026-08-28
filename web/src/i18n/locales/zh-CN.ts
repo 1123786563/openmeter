@@ -324,7 +324,30 @@ export default {
     },
     portalTokens: {
       title: '门户令牌',
-      description: '发放与管理客户门户令牌。',
+      description: '为客户发放 Consumer Portal 访问令牌；明文仅发放时可见。',
+      issue: '发放令牌',
+      onceTitle: '令牌已发放',
+      onceDescription: '请立即复制保存——令牌明文仅此一次展示。',
+      onceWarning:
+        '关闭后无法再次查看；列表中也不会显示明文。丢失只能重新发放并失效旧令牌。',
+      copy: '复制',
+      copied: '已复制',
+      copyFailed: '复制失败，请手动选中文本复制。',
+      copiedClose: '我已保存，关闭',
+      form: {
+        title: '发放门户令牌',
+        description: '不勾选 meter 表示允许访问全部 meter。',
+        customer: '客户',
+        allowedMeters: '允许的 meter',
+        allMeters: '全部 meter（不限制）',
+        meterSearch: '搜索 meter…',
+        noMeters: '未找到 meter',
+        customerRequired: '请选择客户',
+      },
+      toast: {
+        issued: '令牌已发放',
+        noPlaintext: '创建响应未包含令牌明文（异常）',
+      },
     },
     billingProfiles: {
       title: '账单档案',
