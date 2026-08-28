@@ -818,6 +818,40 @@ export function useCreateChannel() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Apps (config)                                                       */
+/* ------------------------------------------------------------------ */
+
+export function useApps() {
+  return useQuery({
+    queryKey: queryKeys.apps(),
+    queryFn: ({ signal }) =>
+      api.internal.apps.list({ page: { number: 1, size: 100 } }, { signal }),
+  })
+}
+
+export function useUpdateApp() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.internal.apps.update>[0]) =>
+      api.internal.apps.update(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+    },
+  })
+}
+
+export function useUninstallApp() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ appId }: { appId: string }) =>
+      api.internal.apps.uninstall({ appId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
