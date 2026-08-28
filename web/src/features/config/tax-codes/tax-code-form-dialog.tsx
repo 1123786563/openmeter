@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -44,36 +44,57 @@ const APP_TYPES = ['sandbox', 'stripe', 'external_invoicing'] as const
 /** ResourceKey from the v3 spec: lowercase snake_case, 1-64 chars. */
 const RESOURCE_KEY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/
 
-const mappingSchema = z.object({
-  appType: z.enum(APP_TYPES),
-  taxCode: z.string().trim().min(1),
-})
+type TaxCodeFormValues = {
+  name: string
+  key: string
+  description: string
+  appMappings: { appType: (typeof APP_TYPES)[number]; taxCode: string }[]
+}
 
-const baseSchema = z.object({
-  name: z.string().trim().min(1).max(256),
-  description: z.string().trim().max(1024),
-  // One mapping per app type: duplicate appType rows are rejected up front.
-  appMappings: z
-    .array(mappingSchema)
-    .refine(
+/**
+ * shadcn's FormMessage renders error.message, so the validation copy must
+ * live on the zod checks themselves; rebuilding per language keeps it in
+ * sync with the active locale.
+ */
+function buildSchemas(t: (key: string) => string) {
+  const mappingSchema = z.object({
+    appType: z.enum(APP_TYPES),
+    taxCode: z
+      .string()
+      .trim()
+      .min(1, t('config.taxCodes.form.validation.required')),
+  })
+
+  const baseSchema = z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, t('config.taxCodes.form.validation.required'))
+      .max(256, t('config.taxCodes.form.validation.required')),
+    description: z.string().trim().max(1024),
+    // One mapping per app type: duplicate appType rows are rejected up front.
+    appMappings: z.array(mappingSchema).refine(
       (rows) => new Set(rows.map((row) => row.appType)).size === rows.length,
-      'duplicateAppType'
+      t('config.taxCodes.form.validation.duplicateAppType')
     ),
-})
+  })
 
-const createSchema = baseSchema.extend({
-  key: z.string().trim().regex(RESOURCE_KEY, 'invalid'),
-})
-
-// Edit keeps the exact createSchema shape so the control's generics stay
-// unified; the key rules are relaxed because the field renders read-only and
-// the upsert body has no key field anyway (same pattern as the recharge
-// product dialog's immutable fields).
-const editSchema = baseSchema.extend({
-  key: z.string(),
-})
-
-type TaxCodeFormValues = z.infer<typeof createSchema>
+  return {
+    // Edit keeps the exact create shape so the control's generics stay
+    // unified; the key rules are relaxed because the field renders
+    // read-only and the upsert body has no key field anyway (same pattern
+    // as the recharge product dialog's immutable fields).
+    createSchema: baseSchema.extend({
+      key: z
+        .string()
+        .trim()
+        .regex(RESOURCE_KEY, t('config.taxCodes.form.validation.key')),
+    }),
+    editSchema: baseSchema.extend({
+      key: z.string(),
+    }),
+  }
+}
 
 const EMPTY_VALUES: TaxCodeFormValues = {
   name: '',
@@ -100,8 +121,10 @@ export function TaxCodeFormDialog({
   const createMutation = useCreateTaxCode()
   const upsertMutation = useUpsertTaxCode()
 
+  const schemas = useMemo(() => buildSchemas(t), [t])
+
   const form = useForm<TaxCodeFormValues>({
-    resolver: zodResolver(isCreate ? createSchema : editSchema),
+    resolver: zodResolver(isCreate ? schemas.createSchema : schemas.editSchema),
     defaultValues: EMPTY_VALUES,
   })
 
@@ -200,11 +223,7 @@ export function TaxCodeFormDialog({
                     <FormControl>
                       <Input placeholder='Digital Services' {...field} />
                     </FormControl>
-                    <FormMessage>
-                      {form.formState.errors.name
-                        ? t('config.taxCodes.form.validation.required')
-                        : undefined}
-                    </FormMessage>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -228,11 +247,7 @@ export function TaxCodeFormDialog({
                         {t('config.taxCodes.form.keyImmutable')}
                       </FormDescription>
                     )}
-                    <FormMessage>
-                      {form.formState.errors.key
-                        ? t('config.taxCodes.form.validation.key')
-                        : undefined}
-                    </FormMessage>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -306,11 +321,7 @@ export function TaxCodeFormDialog({
                             {...codeField}
                           />
                         </FormControl>
-                        <FormMessage>
-                          {form.formState.errors.appMappings?.[index]?.taxCode
-                            ? t('config.taxCodes.form.validation.required')
-                            : undefined}
-                        </FormMessage>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -328,10 +339,9 @@ export function TaxCodeFormDialog({
                   </Button>
                 </div>
               ))}
-              {form.formState.errors.appMappings?.message ===
-                'duplicateAppType' && (
+              {form.formState.errors.appMappings?.root?.message && (
                 <p className='text-sm text-destructive'>
-                  {t('config.taxCodes.form.validation.duplicateAppType')}
+                  {form.formState.errors.appMappings?.root?.message}
                 </p>
               )}
               {fields.length === 0 && (
