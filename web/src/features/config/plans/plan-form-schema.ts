@@ -9,6 +9,7 @@ const RESOURCE_KEY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/
 const ISO8601_DURATION =
   /^P(?:\d+(?:\.\d+)?Y)?(?:\d+(?:\.\d+)?M)?(?:\d+(?:\.\d+)?W)?(?:\d+(?:\.\d+)?D)?(?:T(?:\d+(?:\.\d+)?H)?(?:\d+(?:\.\d+)?M)?(?:\d+(?:\.\d+)?S)?)?$/
 const AMOUNT = /^\d+(\.\d+)?$/
+const NON_NEGATIVE_INT = /^\d+$/
 const CURRENCY = /^[A-Z]{3}$|^[A-Za-z0-9]{4,24}$/
 
 /**
@@ -18,6 +19,34 @@ const CURRENCY = /^[A-Z]{3}$|^[A-Za-z0-9]{4,24}$/
  * - #8 扩展：+ { kind:'tiered', mode, tiers }
  * zod message 一律是 i18n key，由 FieldError 组件翻译。
  */
+export const tierSchema = z.object({
+  firstUnit: z
+    .string()
+    .refine(
+      (value) => NON_NEGATIVE_INT.test(value),
+      'config.plans.wizard.errors.tierBound'
+    ),
+  // '' = 无上限（仅末档允许，由 rateCardSchema.superRefine 强制）。
+  lastUnit: z
+    .string()
+    .refine(
+      (value) => value === '' || NON_NEGATIVE_INT.test(value),
+      'config.plans.wizard.errors.tierBound'
+    ),
+  unitAmount: z
+    .string()
+    .refine((value) => AMOUNT.test(value), 'config.plans.wizard.errors.amount'),
+  // '' = 该档不收固定费（映射时省略 flat_price）。
+  flatAmount: z
+    .string()
+    .refine(
+      (value) => value === '' || AMOUNT.test(value),
+      'config.plans.wizard.errors.amount'
+    ),
+})
+
+export type TierFormValues = z.infer<typeof tierSchema>
+
 export const priceFormSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('free') }),
   z.object({
@@ -37,6 +66,13 @@ export const priceFormSchema = z.discriminatedUnion('kind', [
         (value) => AMOUNT.test(value),
         'config.plans.wizard.errors.amount'
       ),
+  }),
+  z.object({
+    kind: z.literal('tiered'),
+    mode: z.enum(['graduated', 'volume']),
+    tiers: z
+      .array(tierSchema)
+      .min(1, 'config.plans.wizard.errors.tiersRequired'),
   }),
 ])
 
@@ -82,7 +118,7 @@ export const rateCardSchema = z
           message: 'config.plans.wizard.errors.featureRequired',
         })
       }
-      if (card.price.kind !== 'unit') {
+      if (card.price.kind !== 'unit' && card.price.kind !== 'tiered') {
         ctx.addIssue({
           code: 'custom',
           path: ['type'],
@@ -99,6 +135,59 @@ export const rateCardSchema = z
         code: 'custom',
         path: ['billingCadence'],
         message: 'config.plans.wizard.errors.oneTimeFlatOnly',
+      })
+    }
+    if (card.price.kind === 'tiered') {
+      const { tiers } = card.price
+      // 首档必须从 0 起。
+      if (tiers.length > 0 && Number(tiers[0].firstUnit) !== 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['price', 'tiers', 0, 'firstUnit'],
+          message: 'config.plans.wizard.errors.tierFirstFromZero',
+        })
+      }
+      tiers.forEach((tier, index) => {
+        const isLast = index === tiers.length - 1
+        // 末档必须开区间（lastUnit 空）。
+        if (isLast && tier.lastUnit !== '') {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['price', 'tiers', index, 'lastUnit'],
+            message: 'config.plans.wizard.errors.tierLastOpen',
+          })
+        }
+        // 非末档必须闭合。
+        if (!isLast && tier.lastUnit === '') {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['price', 'tiers', index, 'lastUnit'],
+            message: 'config.plans.wizard.errors.tierLastRequired',
+          })
+        }
+        if (
+          tier.lastUnit !== '' &&
+          Number(tier.lastUnit) < Number(tier.firstUnit)
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['price', 'tiers', index, 'lastUnit'],
+            message: 'config.plans.wizard.errors.tierRange',
+          })
+        }
+        // 区间连续无重叠：lastUnit + 1 必须等于下档 firstUnit，否则在下档 firstUnit 报缺口/重叠。
+        const next = tiers[index + 1]
+        if (
+          next &&
+          tier.lastUnit !== '' &&
+          Number(tier.lastUnit) + 1 !== Number(next.firstUnit)
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['price', 'tiers', index + 1, 'firstUnit'],
+            message: 'config.plans.wizard.errors.tierGap',
+          })
+        }
       })
     }
   })
@@ -180,6 +269,10 @@ export function defaultRateCard(): RateCardFormValues {
   }
 }
 
+export function defaultTier(): TierFormValues {
+  return { firstUnit: '0', lastUnit: '', unitAmount: '', flatAmount: '' }
+}
+
 export function defaultPhase(): PhaseFormValues {
   return { key: '', name: '', duration: '', rateCards: [defaultRateCard()] }
 }
@@ -201,6 +294,17 @@ function toPriceInput(price: PriceFormValue): RateCardInput['price'] {
       return { type: 'flat', amount: price.amount }
     case 'unit':
       return { type: 'unit', amount: price.amount }
+    case 'tiered':
+      return {
+        type: price.mode,
+        tiers: price.tiers.map((tier) => ({
+          upToAmount: tier.lastUnit === '' ? undefined : tier.lastUnit,
+          unitPrice: { type: 'unit' as const, amount: tier.unitAmount },
+          ...(tier.flatAmount === ''
+            ? {}
+            : { flatPrice: { type: 'flat' as const, amount: tier.flatAmount } }),
+        })),
+      }
   }
 }
 
