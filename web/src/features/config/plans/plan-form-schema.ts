@@ -29,6 +29,15 @@ export const priceFormSchema = z.discriminatedUnion('kind', [
         'config.plans.wizard.errors.amount'
       ),
   }),
+  z.object({
+    kind: z.literal('unit'),
+    amount: z
+      .string()
+      .refine(
+        (value) => AMOUNT.test(value),
+        'config.plans.wizard.errors.amount'
+      ),
+  }),
 ])
 
 export type PriceFormValue = z.infer<typeof priceFormSchema>
@@ -63,6 +72,33 @@ export const rateCardSchema = z
         code: 'custom',
         path: ['type'],
         message: 'config.plans.wizard.errors.flatFeePriceKind',
+      })
+    }
+    if (card.type === 'usage_based') {
+      if (!card.featureId || card.featureId.trim() === '') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['featureId'],
+          message: 'config.plans.wizard.errors.featureRequired',
+        })
+      }
+      if (card.price.kind !== 'unit') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['type'],
+          message: 'config.plans.wizard.errors.usagePriceKind',
+        })
+      }
+    }
+    if (
+      card.billingCadence === null &&
+      card.price.kind !== 'free' &&
+      card.price.kind !== 'flat'
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['billingCadence'],
+        message: 'config.plans.wizard.errors.oneTimeFlatOnly',
       })
     }
   })
@@ -163,6 +199,8 @@ function toPriceInput(price: PriceFormValue): RateCardInput['price'] {
       return { type: 'free' }
     case 'flat':
       return { type: 'flat', amount: price.amount }
+    case 'unit':
+      return { type: 'unit', amount: price.amount }
   }
 }
 
@@ -170,6 +208,7 @@ function toRateCardInput(card: RateCardFormValues): RateCardInput {
   return {
     key: card.key.trim(),
     name: card.name.trim(),
+    feature: card.featureId ? { id: card.featureId } : undefined,
     // null=一次性：v3 上与省略等价（*ISO8601Duration 的 nil），发 undefined。
     billingCadence: card.billingCadence ?? undefined,
     price: toPriceInput(card.price),

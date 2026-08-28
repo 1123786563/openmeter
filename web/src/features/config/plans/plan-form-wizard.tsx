@@ -7,10 +7,11 @@ import {
   type UseFormReturn,
 } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import type { Feature } from '@openmeter/client'
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { useCreatePlan } from '@/api/hooks'
+import { useAllFeatures, useCreatePlan } from '@/api/hooks'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,8 +53,8 @@ import { FieldError, PriceEditor } from './price-editor'
 const STEPS = ['basics', 'phases', 'rateCards'] as const
 type Step = (typeof STEPS)[number]
 
-/** #6 的价目卡类型选项；#7 追加 'usage_based'。 */
-const RATE_CARD_TYPES = ['flat_fee'] as const
+/** #7 起 usage_based 可用；#8 扩展价格类型时不改此列表。 */
+const RATE_CARD_TYPES = ['flat_fee', 'usage_based'] as const
 
 export type PlanFormWizardProps = {
   open: boolean
@@ -403,6 +404,8 @@ function PhaseRateCardsSection({
   currency: string
 }) {
   const { t } = useTranslation()
+  // feature 必选下拉的唯一数据源：全量列表（分页版会只出现第一页功能）。
+  const { data: features, isLoading: featuresLoading } = useAllFeatures()
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: `phases.${phaseIndex}.rateCards`,
@@ -426,125 +429,17 @@ function PhaseRateCardsSection({
         </span>
       </div>
       {fields.map((cardField, cardIndex) => (
-        <div
+        <RateCardRow
           key={cardField.id}
-          className='space-y-3 rounded-md border bg-muted/30 p-3'
-        >
-          <div className='grid grid-cols-3 gap-3'>
-            <FormField
-              control={form.control}
-              name={`phases.${phaseIndex}.rateCards.${cardIndex}.type`}
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>
-                    {t('config.plans.wizard.fields.rateCardType')}
-                  </FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className='w-full'>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {RATE_CARD_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {t(`config.plans.wizard.rateCardType.${type}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={fieldState.error?.message} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name={`phases.${phaseIndex}.rateCards.${cardIndex}.name`}
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>{t('config.plans.detail.rateCardName')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder='平台费' {...field} />
-                  </FormControl>
-                  <FieldError message={fieldState.error?.message} />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name={`phases.${phaseIndex}.rateCards.${cardIndex}.key`}
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>{t('config.plans.fields.key')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder='platform_fee'
-                      autoComplete='off'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FieldError message={fieldState.error?.message} />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className='grid grid-cols-3 gap-3'>
-            <FormField
-              control={form.control}
-              name={`phases.${phaseIndex}.rateCards.${cardIndex}.billingCadence`}
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>{t('config.plans.detail.cadence')}</FormLabel>
-                  <Select
-                    value={field.value ?? 'one_time'}
-                    onValueChange={(value) =>
-                      field.onChange(
-                        value === 'one_time' ? null : (value as 'P1M' | 'P1Y')
-                      )
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger className='w-full'>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value='P1M'>
-                        {t('config.plans.wizard.cadence.P1M')}
-                      </SelectItem>
-                      <SelectItem value='P1Y'>
-                        {t('config.plans.wizard.cadence.P1Y')}
-                      </SelectItem>
-                      <SelectItem value='one_time'>
-                        {t('config.plans.wizard.cadence.oneTime')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={fieldState.error?.message} />
-                </FormItem>
-              )}
-            />
-          </div>
-          <PriceEditor
-            control={form.control}
-            phaseIndex={phaseIndex}
-            cardIndex={cardIndex}
-            currency={currency}
-          />
-          <div className='flex justify-end'>
-            <Button
-              type='button'
-              variant='ghost'
-              size='sm'
-              className='text-destructive hover:text-destructive'
-              disabled={fields.length === 1}
-              onClick={() => remove(cardIndex)}
-            >
-              <Trash2 className='size-4' />
-              {t('config.plans.wizard.removeRateCard')}
-            </Button>
-          </div>
-        </div>
+          form={form}
+          phaseIndex={phaseIndex}
+          cardIndex={cardIndex}
+          currency={currency}
+          features={features}
+          featuresLoading={featuresLoading}
+          onRemove={() => remove(cardIndex)}
+          canRemove={fields.length > 1}
+        />
       ))}
       <FieldError
         message={
@@ -562,6 +457,212 @@ function PhaseRateCardsSection({
         <Plus className='size-4' />
         {t('config.plans.wizard.addRateCard')}
       </Button>
+    </div>
+  )
+}
+
+/** 单张价目卡行（hooks 不能写在 map 里）。 */
+function RateCardRow({
+  form,
+  phaseIndex,
+  cardIndex,
+  currency,
+  features,
+  featuresLoading,
+  onRemove,
+  canRemove,
+}: {
+  form: UseFormReturn<PlanWizardValues>
+  phaseIndex: number
+  cardIndex: number
+  currency: string
+  features: Feature[] | undefined
+  featuresLoading: boolean
+  onRemove: () => void
+  canRemove: boolean
+}) {
+  const { t } = useTranslation()
+  const cardType = useWatch({
+    control: form.control,
+    name: `phases.${phaseIndex}.rateCards.${cardIndex}.type`,
+  }) as 'flat_fee' | 'usage_based'
+  const priceKind = useWatch({
+    control: form.control,
+    name: `phases.${phaseIndex}.rateCards.${cardIndex}.price.kind`,
+  })
+
+  return (
+    <div className='space-y-3 rounded-md border bg-muted/30 p-3'>
+      <div className='grid grid-cols-3 gap-3'>
+        <FormField
+          control={form.control}
+          name={`phases.${phaseIndex}.rateCards.${cardIndex}.type`}
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>
+                {t('config.plans.wizard.fields.rateCardType')}
+              </FormLabel>
+              <Select
+                value={field.value}
+                onValueChange={(value) => {
+                  field.onChange(value)
+                  // 切换类型时把 price 重置为该类型的合法形态，
+                  // 避免残留非法组合（usage_based+flat）卡在校验上。
+                  form.setValue(
+                    `phases.${phaseIndex}.rateCards.${cardIndex}.price`,
+                    value === 'usage_based'
+                      ? { kind: 'unit', amount: '' }
+                      : { kind: 'flat', amount: '' },
+                    { shouldValidate: true }
+                  )
+                }}
+              >
+                <FormControl>
+                  <SelectTrigger className='w-full'>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {RATE_CARD_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {t(`config.plans.wizard.rateCardType.${type}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError message={fieldState.error?.message} />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`phases.${phaseIndex}.rateCards.${cardIndex}.name`}
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>{t('config.plans.detail.rateCardName')}</FormLabel>
+              <FormControl>
+                <Input placeholder='平台费' {...field} />
+              </FormControl>
+              <FieldError message={fieldState.error?.message} />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`phases.${phaseIndex}.rateCards.${cardIndex}.key`}
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>{t('config.plans.fields.key')}</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder='platform_fee'
+                  autoComplete='off'
+                  {...field}
+                />
+              </FormControl>
+              <FieldError message={fieldState.error?.message} />
+            </FormItem>
+          )}
+        />
+      </div>
+      <div className='grid grid-cols-3 gap-3'>
+        {cardType === 'usage_based' && (
+          <FormField
+            control={form.control}
+            name={`phases.${phaseIndex}.rateCards.${cardIndex}.featureId`}
+            render={({ field, fieldState }) => (
+              <FormItem>
+                <FormLabel>{t('config.plans.wizard.fields.feature')}</FormLabel>
+                <Select
+                  value={field.value ?? ''}
+                  onValueChange={field.onChange}
+                >
+                  <FormControl>
+                    <SelectTrigger className='w-full'>
+                      <SelectValue
+                        placeholder={t(
+                          'config.plans.wizard.fields.featurePlaceholder'
+                        )}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {featuresLoading ? (
+                      <SelectItem value='_loading' disabled>
+                        {t('common.loading')}
+                      </SelectItem>
+                    ) : (
+                      (features ?? []).map((feature) => (
+                        <SelectItem key={feature.id} value={feature.id}>
+                          {feature.name}（{feature.key}）
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FieldError message={fieldState.error?.message} />
+              </FormItem>
+            )}
+          />
+        )}
+        <FormField
+          control={form.control}
+          name={`phases.${phaseIndex}.rateCards.${cardIndex}.billingCadence`}
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormLabel>{t('config.plans.detail.cadence')}</FormLabel>
+              <Select
+                value={field.value ?? 'one_time'}
+                onValueChange={(value) =>
+                  field.onChange(
+                    value === 'one_time' ? null : (value as 'P1M' | 'P1Y')
+                  )
+                }
+              >
+                <FormControl>
+                  <SelectTrigger className='w-full'>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value='P1M'>
+                    {t('config.plans.wizard.cadence.P1M')}
+                  </SelectItem>
+                  <SelectItem value='P1Y'>
+                    {t('config.plans.wizard.cadence.P1Y')}
+                  </SelectItem>
+                  {/* spec：一次性（null cadence）仅固定费价卡合法。 */}
+                  {(priceKind === 'free' || priceKind === 'flat') && (
+                    <SelectItem value='one_time'>
+                      {t('config.plans.wizard.cadence.oneTime')}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <FieldError message={fieldState.error?.message} />
+            </FormItem>
+          )}
+        />
+      </div>
+      <PriceEditor
+        control={form.control}
+        phaseIndex={phaseIndex}
+        cardIndex={cardIndex}
+        currency={currency}
+      />
+      <div className='flex justify-end'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          className='text-destructive hover:text-destructive'
+          disabled={!canRemove}
+          onClick={onRemove}
+        >
+          <Trash2 className='size-4' />
+          {t('config.plans.wizard.removeRateCard')}
+        </Button>
+      </div>
     </div>
   )
 }

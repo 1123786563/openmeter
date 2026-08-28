@@ -34,6 +34,13 @@ export function FieldError({ message }: { message?: string }) {
   )
 }
 
+/** kind 切换后的重置值；unit 分支为 #7 新增。 */
+function resetPrice(kind: string): PriceFormValue {
+  if (kind === 'free') return { kind: 'free' }
+  if (kind === 'unit') return { kind: 'unit', amount: '' }
+  return { kind: 'flat', amount: '' }
+}
+
 /**
  * 编辑一张价目卡的 price 判别联合（kind 切换会重置其余字段）。
  * #7 增加 unit 分支，#8 增加 tiered 分支，props 不变。
@@ -61,13 +68,7 @@ export function PriceEditor({
             <FormLabel>{t('config.plans.wizard.fields.priceKind')}</FormLabel>
             <Select
               value={kind}
-              onValueChange={(value) =>
-                field.onChange(
-                  value === 'free'
-                    ? { kind: 'free' }
-                    : { kind: 'flat', amount: '' }
-                )
-              }
+              onValueChange={(value) => field.onChange(resetPrice(value))}
             >
               <FormControl>
                 <SelectTrigger className='w-full'>
@@ -77,23 +78,26 @@ export function PriceEditor({
               <SelectContent>
                 <SelectItem value='free'>{t('plan.priceType.free')}</SelectItem>
                 <SelectItem value='flat'>{t('plan.priceType.flat')}</SelectItem>
+                <SelectItem value='unit'>{t('plan.priceType.unit')}</SelectItem>
               </SelectContent>
             </Select>
             <FieldError message={fieldState.error?.message} />
           </FormItem>
         )}
       />
-      {kind === 'flat' && (
+      {(kind === 'flat' || kind === 'unit') && (
         <FormField
           control={control}
           name={`${pricePath}.amount` as never}
           render={({ field, fieldState }) => (
             <FormItem>
               <FormLabel>
-                {t('config.plans.wizard.fields.amount', { currency })}
+                {kind === 'unit'
+                  ? t('config.plans.wizard.fields.unitAmount', { currency })
+                  : t('config.plans.wizard.fields.amount', { currency })}
               </FormLabel>
               <FormControl>
-                <Input inputMode='decimal' placeholder='99.00' {...field} />
+                <Input inputMode='decimal' placeholder='0.05' {...field} />
               </FormControl>
               <FieldError message={fieldState.error?.message} />
             </FormItem>
