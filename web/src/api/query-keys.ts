@@ -48,4 +48,6 @@ export const queryKeys = {
   feature: (id: string) => ns('feature', id),
   featureCostQuery: (id: string, params: object) =>
     ns('feature-cost-query', id, params),
+  receivablePeriods: (customerId: string, params: object = {}) =>
+    ns('receivable-periods', customerId, params),
 }

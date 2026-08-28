@@ -818,6 +818,41 @@ export function useCreateChannel() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Receivable periods & external invoices (v3 commerce)                */
+/* ------------------------------------------------------------------ */
+
+export function useReceivablePeriods(customerId: string, after?: string) {
+  return useQuery({
+    queryKey: queryKeys.receivablePeriods(customerId, { after: after ?? null }),
+    queryFn: ({ signal }) =>
+      api.commerce.listReceivablePeriods(
+        { customerId, page: { after, size: 20 } },
+        { signal }
+      ),
+    enabled: Boolean(customerId),
+  })
+}
+
+export function useUpdateExternalInvoice(customerId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      periodId,
+      body,
+    }: {
+      periodId: string
+      body: Parameters<typeof api.commerce.updateExternalInvoice>[0]['body']
+    }) =>
+      api.commerce.updateExternalInvoice({ customerId, periodId, body }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.receivablePeriods(customerId),
+      })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 

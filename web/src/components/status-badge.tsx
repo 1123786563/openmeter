@@ -73,6 +73,13 @@ const tones: Record<
     fulfilled: 'success',
     failed: 'destructive',
   },
+  receivablePeriod: {
+    open: 'info',
+    closed: 'outline',
+    partially_paid: 'warn',
+    paid: 'success',
+    overdue: 'destructive',
+  },
   grant: {
     active: 'success',
     voided: 'outline',
