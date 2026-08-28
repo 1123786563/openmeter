@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { Plan } from '@openmeter/client'
+import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { usePlansPage, type PlanListParams } from '@/api/hooks'
 import { formatDateTime } from '@/lib/format'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -17,6 +19,7 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
+import { PlanFormWizard } from './plan-form-wizard'
 
 const STATUS_OPTIONS = ['draft', 'active', 'scheduled', 'archived'] as const
 
@@ -25,6 +28,7 @@ export function PlansPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [status, setStatus] = useState<PlanListParams['status']>()
+  const [createOpen, setCreateOpen] = useState(false)
 
   const { data, isLoading, isFetching } = usePlansPage({
     page,
@@ -100,6 +104,12 @@ export function PlansPage() {
         <PageHeader
           title={t('config.plans.title')}
           description={t('config.plans.description')}
+          actions={
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className='size-4' />
+              {t('config.plans.wizard.createTitle')}
+            </Button>
+          }
         />
         <ServerTable
           className='mt-6'
@@ -148,6 +158,7 @@ export function PlansPage() {
           emptyMessage={t('config.plans.empty')}
         />
       </Main>
+      <PlanFormWizard open={createOpen} onOpenChange={setCreateOpen} />
     </>
   )
 }

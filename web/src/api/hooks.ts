@@ -201,6 +201,19 @@ export function usePlan(planId: string) {
   })
 }
 
+export function useCreatePlan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.plans.create>[0]) =>
+      api.plans.create(input),
+    onSuccess: (plan) => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans') })
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plans-page') })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plan(plan.id) })
+    },
+  })
+}
+
 export function usePublishPlan() {
   const queryClient = useQueryClient()
   return useMutation({
