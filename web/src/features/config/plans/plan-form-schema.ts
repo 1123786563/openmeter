@@ -312,7 +312,8 @@ function toPriceInput(price: PriceFormValue): RateCardInput['price'] {
   }
 }
 
-function toRateCardInput(card: RateCardFormValues): RateCardInput {
+/** 单张价卡 → RateCardInput；plans 向导与 addons 表单（#10）共用。 */
+export function toRateCardInput(card: RateCardFormValues): RateCardInput {
   return {
     key: card.key.trim(),
     name: card.name.trim(),
@@ -346,8 +347,8 @@ export function toCreatePlanRequest(
   }
 }
 
-/** 把单张价卡已选 feature 展开回 featureId（flat_fee 卡为 ''，提交时省略 feature）。 */
-function fromRateCardToForm(card: RateCard): RateCardFormValues {
+/** 把单张价卡已选 feature 展开回 featureId（flat_fee 卡为 ''，提交时省略 feature）；addons 编辑（#10）共用。 */
+export function fromRateCardToForm(card: RateCard): RateCardFormValues {
   return {
     key: card.key,
     name: card.name,
