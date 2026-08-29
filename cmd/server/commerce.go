@@ -1075,9 +1075,10 @@ func (g creditGrantAdapter) GrantCredits(ctx context.Context, in fulfillment.Gra
 	}
 
 	// Wallet bucket priority: recharge=30, plan=10 (see commerce.SourcePriority).
-	if in.Source == commerce.BucketSourceRecharge {
+	switch in.Source {
+	case commerce.BucketSourceRecharge:
 		input.Priority = 30
-	} else if in.Source == commerce.BucketSourcePlan {
+	case commerce.BucketSourcePlan:
 		input.Priority = 10
 	}
 	if g.metered != nil {
