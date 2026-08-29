@@ -990,6 +990,78 @@ export function useCreateCustomCurrency() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Addons (config)                                                     */
+/* ------------------------------------------------------------------ */
+
+/** v3 addon list. The page always loads the first page (size 100). */
+export function useAddons() {
+  return useQuery({
+    queryKey: queryKeys.addons(),
+    queryFn: ({ signal }) =>
+      api.addons.list({ page: { number: 1, size: 100 } }, { signal }),
+  })
+}
+
+export function useCreateAddon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      body: Parameters<typeof api.addons.create>[0]
+    ) => api.addons.create(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('addons') })
+    },
+  })
+}
+
+/** PUT is an upsert body: key and currency are immutable after creation. */
+export function useUpdateAddon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: {
+      addonId: string
+      body: Parameters<typeof api.addons.update>[0]['body']
+    }) => api.addons.update(request),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('addons') })
+    },
+  })
+}
+
+export function useDeleteAddon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ addonId }: { addonId: string }) =>
+      api.addons.delete({ addonId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('addons') })
+    },
+  })
+}
+
+export function useArchiveAddon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ addonId }: { addonId: string }) =>
+      api.addons.archive({ addonId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('addons') })
+    },
+  })
+}
+
+export function usePublishAddon() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ addonId }: { addonId: string }) =>
+      api.addons.publish({ addonId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('addons') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Tax codes (config)                                                  */
 /* ------------------------------------------------------------------ */
 
