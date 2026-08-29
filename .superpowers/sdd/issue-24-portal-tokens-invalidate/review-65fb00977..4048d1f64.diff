@@ -1,0 +1,117 @@
+# Review package: 65fb00977..4048d1f64
+
+## Commits
+4048d1f64 feat(admin): 门户令牌列表与失效 API 层 (issue #24 T1)
+
+## Files changed
+ web/src/api/hooks.ts  | 22 ++++++++++++++++++++++
+ web/src/api/legacy.ts | 19 +++++++++++++++++++
+ 2 files changed, 41 insertions(+)
+
+## Diff
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..85c9a7904 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -5,24 +5,26 @@ import {
+   type UseQueryResult,
+ } from '@tanstack/react-query'
+ import { api } from '@/api/client'
+ import {
+   clonePlanNextVersion,
+   createNotificationChannel,
+   createNotificationRule,
+   createPortalToken,
+   deleteNotificationChannel,
+   getCustomerEntitlementValueV2,
++  invalidatePortalTokens,
+   listCustomerEntitlementsV2,
+   listFiatCurrencies,
+   listNotificationChannels,
+   listNotificationRules,
++  listPortalTokens,
+   listSubjects,
+   updateNotificationChannel,
+   updateNotificationRule,
+   ruleToUpdateBody,
+   type EntitlementValueV2,
+   type EntitlementV2,
+   type NotificationChannelCreateRequest,
+   type NotificationRule,
+   type NotificationRuleCreateRequest,
+   type Subject,
+@@ -1082,20 +1084,40 @@ export function useCreatePortalToken() {
+     mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
+       createPortalToken(body),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({
+         queryKey: nsPrefix('portal-tokens'),
+       })
+     },
+   })
+ }
+ 
++export function usePortalTokens(limit = 100) {
++  return useQuery({
++    queryKey: queryKeys.portalTokens({ limit }),
++    queryFn: () => listPortalTokens(limit),
++  })
++}
++
++export function useInvalidatePortalToken() {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (body: { id?: string; subject?: string }) =>
++      invalidatePortalTokens(body),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({
++        queryKey: nsPrefix('portal-tokens'),
++      })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Billing profiles (v3)                                               */
+ /* ------------------------------------------------------------------ */
+ 
+ export function useBillingProfiles() {
+   return useQuery({
+     queryKey: queryKeys.billingProfiles({ page: 1, pageSize: 100 }),
+     queryFn: ({ signal }) =>
+       api.billing.listProfiles(
+         { page: { number: 1, size: 100 } },
+diff --git a/web/src/api/legacy.ts b/web/src/api/legacy.ts
+index 66242c3c0..2acf9866a 100644
+--- a/web/src/api/legacy.ts
++++ b/web/src/api/legacy.ts
+@@ -449,10 +449,29 @@ export interface PortalToken {
+  */
+ export async function createPortalToken(body: {
+   subject: string
+   allowedMeterSlugs?: string[]
+ }): Promise<PortalToken> {
+   return apiFetch<PortalToken>('/v1/portal/tokens', {
+     method: 'POST',
+     body: JSON.stringify(body),
+   })
+ }
++
++/** GET /api/v1/portal/tokens — 列表（spec 为裸数组，无分页包装）。limit 1-100。 */
++export async function listPortalTokens(limit = 100): Promise<PortalToken[]> {
++  return apiFetch<PortalToken[]>(`/v1/portal/tokens?limit=${limit}`)
++}
++
++/**
++ * POST /api/v1/portal/tokens/invalidate — 按 id 或 subject 失效（二选一），
++ * 204 无内容。管理端按行 id 失效。
++ */
++export async function invalidatePortalTokens(body: {
++  id?: string
++  subject?: string
++}): Promise<void> {
++  return apiFetch<void>('/v1/portal/tokens/invalidate', {
++    method: 'POST',
++    body: JSON.stringify(body),
++  })
++}

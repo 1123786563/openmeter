@@ -684,6 +684,24 @@ export default {
       copied: '已复制',
       copyFailed: '复制失败，请手动选中文本复制。',
       copiedClose: '我已保存，关闭',
+      list: {
+        title: '已发放令牌',
+        empty: '暂无令牌，点击右上角「发放令牌」发放',
+        fields: {
+          subject: '主体 (Subject)',
+          createdAt: '创建时间',
+          meters: '允许的 meter',
+          status: '状态',
+          actions: '操作',
+        },
+        unrestricted: '不限 meter',
+      },
+      invalidateConfirm: {
+        title: '失效令牌',
+        description:
+          '确定失效「{{subject}}」的门户令牌吗？失效后立即无法访问 Consumer Portal，操作不可撤销。',
+      },
+      status: { expired: '已过期' },
       form: {
         title: '发放门户令牌',
         description: '不勾选 meter 表示允许访问全部 meter。',
@@ -697,6 +715,7 @@ export default {
       toast: {
         issued: '令牌已发放',
         noPlaintext: '创建响应未包含令牌明文（异常）',
+        invalidated: '令牌已失效',
       },
     },
     billingProfiles: {

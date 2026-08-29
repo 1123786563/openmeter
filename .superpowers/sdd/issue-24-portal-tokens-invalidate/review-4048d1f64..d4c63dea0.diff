@@ -1,0 +1,327 @@
+# Review package: 4048d1f64..d4c63dea0
+
+## Commits
+d4c63dea0 feat(admin): 门户令牌列表与失效 (issue #24)
+
+## Files changed
+ web/src/features/config/portal-tokens/index.tsx | 161 +++++++++++++++++++++++-
+ web/src/i18n/locales/en.ts                      |  19 +++
+ web/src/i18n/locales/zh-CN.ts                   |  19 +++
+ 3 files changed, 195 insertions(+), 4 deletions(-)
+
+## Diff
+diff --git a/web/src/features/config/portal-tokens/index.tsx b/web/src/features/config/portal-tokens/index.tsx
+index 92704d27a..902768f84 100644
+--- a/web/src/features/config/portal-tokens/index.tsx
++++ b/web/src/features/config/portal-tokens/index.tsx
+@@ -1,37 +1,190 @@
+ import { useState } from 'react'
+-import { KeyRound } from 'lucide-react'
++import { Ban, KeyRound } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
++import { toast } from 'sonner'
++import { useInvalidatePortalToken, usePortalTokens } from '@/api/hooks'
++import type { PortalToken } from '@/api/legacy'
++import { formatDateTime } from '@/lib/format'
++import { handleServerError } from '@/lib/handle-server-error'
++import { Badge } from '@/components/ui/badge'
+ import { Button } from '@/components/ui/button'
++import { Skeleton } from '@/components/ui/skeleton'
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from '@/components/ui/table'
++import { ConfirmDialog } from '@/components/confirm-dialog'
+ import { Header } from '@/components/layout/header'
+ import { Main } from '@/components/layout/main'
+ import { PageHeader } from '@/components/page-header'
+ import { IssueTokenDialog } from './issue-token-dialog'
+ 
+ /**
+- * Consumer portal token issuance (v1). The list + invalidate land in the
+- * follow-up issue; this page ships the issue flow with the one-time
+- * plaintext reveal.
++ * Consumer portal token administration (v1): issue flow plus the issued-token
++ * list. The list response never carries the plaintext (shown once at issuance
++ * only), so no column can render it. Invalidation is destructive and goes
++ * through a confirm dialog, per row id.
+  */
+ export function PortalTokensPage() {
+   const { t } = useTranslation()
++  const { data: tokens, isLoading } = usePortalTokens()
++  const tokenList = tokens ?? []
++
++  const invalidateMutation = useInvalidatePortalToken()
++
+   const [issueOpen, setIssueOpen] = useState(false)
++  const [invalidateTarget, setInvalidateTarget] = useState<PortalToken | null>(
++    null
++  )
+ 
+   return (
+     <>
+       <Header />
+       <Main fixed>
+         <PageHeader
+           title={t('config.portalTokens.title')}
+           description={t('config.portalTokens.description')}
+           actions={
+             <Button onClick={() => setIssueOpen(true)}>
+               <KeyRound className='size-4' />
+               {t('config.portalTokens.issue')}
+             </Button>
+           }
+         />
++        <div className='mt-6'>
++          <h2 className='mb-3 text-sm font-medium text-muted-foreground'>
++            {t('config.portalTokens.list.title')}
++          </h2>
++          {isLoading ? (
++            <div className='space-y-2'>
++              {Array.from({ length: 3 }).map((_, i) => (
++                <Skeleton key={i} className='h-10 w-full' />
++              ))}
++            </div>
++          ) : (
++            <Table>
++              <TableHeader>
++                <TableRow className='bg-hover/50'>
++                  <TableHead className='pl-6'>
++                    {t('config.portalTokens.list.fields.subject')}
++                  </TableHead>
++                  <TableHead>
++                    {t('config.portalTokens.list.fields.createdAt')}
++                  </TableHead>
++                  <TableHead>
++                    {t('config.portalTokens.list.fields.meters')}
++                  </TableHead>
++                  <TableHead>
++                    {t('config.portalTokens.list.fields.status')}
++                  </TableHead>
++                  <TableHead className='pr-6 text-right'>
++                    {t('config.portalTokens.list.fields.actions')}
++                  </TableHead>
++                </TableRow>
++              </TableHeader>
++              <TableBody>
++                {tokenList.map((token) => (
++                  <TableRow key={token.id}>
++                    <TableCell className='pl-6 font-mono font-medium'>
++                      {token.subject}
++                    </TableCell>
++                    <TableCell className='text-muted-foreground'>
++                      {formatDateTime(token.createdAt)}
++                    </TableCell>
++                    <TableCell>
++                      {!token.allowedMeterSlugs ||
++                      token.allowedMeterSlugs.length === 0 ? (
++                        <Badge variant='outline' className='font-normal'>
++                          {t('config.portalTokens.list.unrestricted')}
++                        </Badge>
++                      ) : (
++                        <div className='flex flex-wrap gap-1'>
++                          {token.allowedMeterSlugs.map((slug) => (
++                            <Badge
++                              key={slug}
++                              variant='secondary'
++                              className='font-normal'
++                            >
++                              {slug}
++                            </Badge>
++                          ))}
++                        </div>
++                      )}
++                    </TableCell>
++                    <TableCell>
++                      {token.expired ? (
++                        <Badge
++                          variant='outline'
++                          className='font-normal text-muted-foreground'
++                        >
++                          {t('config.portalTokens.status.expired')}
++                        </Badge>
++                      ) : (
++                        '—'
++                      )}
++                    </TableCell>
++                    <TableCell className='pr-6'>
++                      <div className='flex justify-end'>
++                        <Button
++                          variant='ghost'
++                          size='sm'
++                          className='h-7 px-2 text-destructive hover:text-destructive'
++                          disabled={token.expired}
++                          onClick={() => setInvalidateTarget(token)}
++                        >
++                          <Ban className='size-4' />
++                          {t('config.portalTokens.invalidateConfirm.title')}
++                        </Button>
++                      </div>
++                    </TableCell>
++                  </TableRow>
++                ))}
++                {tokenList.length === 0 && (
++                  <TableRow>
++                    <TableCell
++                      colSpan={5}
++                      className='h-24 text-center text-muted-foreground'
++                    >
++                      {t('config.portalTokens.list.empty')}
++                    </TableCell>
++                  </TableRow>
++                )}
++              </TableBody>
++            </Table>
++          )}
++        </div>
+       </Main>
+       <IssueTokenDialog open={issueOpen} onOpenChange={setIssueOpen} />
++
++      <ConfirmDialog
++        open={Boolean(invalidateTarget)}
++        onOpenChange={(open) => !open && setInvalidateTarget(null)}
++        title={t('config.portalTokens.invalidateConfirm.title')}
++        desc={t('config.portalTokens.invalidateConfirm.description', {
++          subject: invalidateTarget?.subject ?? '',
++        })}
++        confirmText={t('config.portalTokens.invalidateConfirm.title')}
++        cancelBtnText={t('common.cancel')}
++        destructive
++        isLoading={invalidateMutation.isPending}
++        handleConfirm={() => {
++          if (!invalidateTarget) return
++          invalidateMutation.mutate(
++            { id: invalidateTarget.id },
++            {
++              onSuccess: () => {
++                toast.success(t('config.portalTokens.toast.invalidated'))
++                setInvalidateTarget(null)
++              },
++              onError: handleServerError,
++            }
++          )
++        }}
++      />
+     </>
+   )
+ }
+diff --git a/web/src/i18n/locales/en.ts b/web/src/i18n/locales/en.ts
+index c28d112c3..df2f5679b 100644
+--- a/web/src/i18n/locales/en.ts
++++ b/web/src/i18n/locales/en.ts
+@@ -571,35 +571,54 @@ export default {
+       issue: 'Issue Token',
+       onceTitle: 'Token Issued',
+       onceDescription:
+         'Copy and store it now — the plaintext is shown only this once.',
+       onceWarning:
+         'After closing, the plaintext cannot be viewed again (the list never shows it). If lost, issue a new token and invalidate the old one.',
+       copy: 'Copy',
+       copied: 'Copied',
+       copyFailed: 'Copy failed — please select the text and copy manually.',
+       copiedClose: "I've saved it, close",
++      list: {
++        title: 'Issued tokens',
++        empty: 'No tokens yet — issue one from the button above',
++        fields: {
++          subject: 'Subject',
++          createdAt: 'Created at',
++          meters: 'Allowed meters',
++          status: 'Status',
++          actions: 'Actions',
++        },
++        unrestricted: 'All meters',
++      },
++      invalidateConfirm: {
++        title: 'Invalidate token',
++        description:
++          'Invalidate the portal token for "{{subject}}"? It immediately loses Consumer Portal access. This cannot be undone.',
++      },
++      status: { expired: 'Expired' },
+       form: {
+         title: 'Issue Portal Token',
+         description:
+           'Leave meters unselected to allow access to all meters.',
+         customer: 'Customer',
+         allowedMeters: 'Allowed meters',
+         allMeters: 'All meters (no restriction)',
+         meterSearch: 'Search meters…',
+         noMeters: 'No meters found',
+         customerRequired: 'Please select a customer',
+       },
+       toast: {
+         issued: 'Token issued',
+         noPlaintext:
+           'Create response did not include the token plaintext (unexpected)',
++        invalidated: 'Token invalidated',
+       },
+     },
+     billingProfiles: {
+       title: 'Billing Profiles',
+       description:
+         'Billing and invoicing settings profiles; each profile is bound to a set of apps (immutable after creation).',
+       create: 'New Profile',
+       fields: {
+         name: 'Name',
+         description: 'Description',
+diff --git a/web/src/i18n/locales/zh-CN.ts b/web/src/i18n/locales/zh-CN.ts
+index 29904b791..fc566e591 100644
+--- a/web/src/i18n/locales/zh-CN.ts
++++ b/web/src/i18n/locales/zh-CN.ts
+@@ -551,33 +551,52 @@ export default {
+       description: '为客户发放 Consumer Portal 访问令牌；明文仅发放时可见。',
+       issue: '发放令牌',
+       onceTitle: '令牌已发放',
+       onceDescription: '请立即复制保存——令牌明文仅此一次展示。',
+       onceWarning:
+         '关闭后无法再次查看；列表中也不会显示明文。丢失只能重新发放并失效旧令牌。',
+       copy: '复制',
+       copied: '已复制',
+       copyFailed: '复制失败，请手动选中文本复制。',
+       copiedClose: '我已保存，关闭',
++      list: {
++        title: '已发放令牌',
++        empty: '暂无令牌，点击右上角「发放令牌」发放',
++        fields: {
++          subject: '主体 (Subject)',
++          createdAt: '创建时间',
++          meters: '允许的 meter',
++          status: '状态',
++          actions: '操作',
++        },
++        unrestricted: '不限 meter',
++      },
++      invalidateConfirm: {
++        title: '失效令牌',
++        description:
++          '确定失效「{{subject}}」的门户令牌吗？失效后立即无法访问 Consumer Portal，操作不可撤销。',
++      },
++      status: { expired: '已过期' },
+       form: {
+         title: '发放门户令牌',
+         description: '不勾选 meter 表示允许访问全部 meter。',
+         customer: '客户',
+         allowedMeters: '允许的 meter',
+         allMeters: '全部 meter（不限制）',
+         meterSearch: '搜索 meter…',
+         noMeters: '未找到 meter',
+         customerRequired: '请选择客户',
+       },
+       toast: {
+         issued: '令牌已发放',
+         noPlaintext: '创建响应未包含令牌明文（异常）',
++        invalidated: '令牌已失效',
+       },
+     },
+     billingProfiles: {
+       title: '账单档案',
+       description:
+         '开票与收款设置档案；每个档案绑定一组应用（创建后不可变）。',
+       create: '新建档案',
+       fields: {
+         name: '名称',
+         description: '描述',

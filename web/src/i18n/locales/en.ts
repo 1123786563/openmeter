@@ -710,6 +710,24 @@ export default {
       copied: 'Copied',
       copyFailed: 'Copy failed — please select the text and copy manually.',
       copiedClose: "I've saved it, close",
+      list: {
+        title: 'Issued tokens',
+        empty: 'No tokens yet — issue one from the button above',
+        fields: {
+          subject: 'Subject',
+          createdAt: 'Created at',
+          meters: 'Allowed meters',
+          status: 'Status',
+          actions: 'Actions',
+        },
+        unrestricted: 'All meters',
+      },
+      invalidateConfirm: {
+        title: 'Invalidate token',
+        description:
+          'Invalidate the portal token for "{{subject}}"? It immediately loses Consumer Portal access. This cannot be undone.',
+      },
+      status: { expired: 'Expired' },
       form: {
         title: 'Issue Portal Token',
         description:
@@ -725,6 +743,7 @@ export default {
         issued: 'Token issued',
         noPlaintext:
           'Create response did not include the token plaintext (unexpected)',
+        invalidated: 'Token invalidated',
       },
     },
     billingProfiles: {
