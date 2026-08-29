@@ -24,10 +24,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { PlanFormWizard } from './plan-form-wizard'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { EnumBadge, StatusBadge } from '@/components/status-badge'
+import { PlanFormWizard } from './plan-form-wizard'
 
 function InfoRow({
   label,
@@ -151,7 +151,11 @@ export function PlanDetail() {
             </Button>
           )}
           {!statusBusy && plan.status === 'draft' && (
-            <Button size='sm' variant='outline' onClick={() => setEditOpen(true)}>
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => setEditOpen(true)}
+            >
               {t('common.edit')}
             </Button>
           )}
