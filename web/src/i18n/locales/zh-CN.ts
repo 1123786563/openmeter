@@ -447,6 +447,27 @@ export default {
           },
         },
       },
+      costBasis: {
+        title: '「{{code}}」成本基准',
+        description:
+          '自定义货币兑法币的成本费率时间线（追加式，新记录按生效期覆盖旧记录）。',
+        empty: '暂无成本基准，可在下方添加首条。',
+        manage: '管理成本基准',
+        period: '{{from}} 至 {{to}}',
+        openEnded: '至今',
+        form: {
+          fiatCode: '法币',
+          rate: '费率（1 本币兑法币）',
+          effectiveFrom: '生效自',
+          effectiveFromHint: '留空表示立即生效。',
+          add: '添加成本基准',
+        },
+        validation: {
+          required: '必填',
+          rate: '非负十进制数，如 0.015',
+        },
+        toast: { added: '成本基准已添加' },
+      },
     },
     taxCodes: {
       title: '税码',
