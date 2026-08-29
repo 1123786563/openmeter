@@ -29,7 +29,12 @@ import { ChannelFormDialog } from './channel-form-dialog'
 
 const PAGE_SIZE = 20
 
-/** Rebuilds the full PUT body from a row (PUT is a full replacement). */
+/**
+ * Rebuilds the full PUT body from a row (PUT is a full replacement).
+ * `metadata` is backfilled like `signingSecret`: the UI never sets it, but
+ * channels created via the API can carry it and an omitted field is cleared
+ * server-side.
+ */
 function toChannelBody(channel: NotificationChannel) {
   const customHeaders = Object.fromEntries(
     Object.entries(channel.customHeaders ?? {}).filter(([key]) => key !== '')
@@ -43,6 +48,9 @@ function toChannelBody(channel: NotificationChannel) {
     ...(hasHeaders ? { customHeaders } : {}),
     ...(channel.signingSecret
       ? { signingSecret: channel.signingSecret }
+      : {}),
+    ...(channel.metadata && Object.keys(channel.metadata).length > 0
+      ? { metadata: channel.metadata }
       : {}),
   }
 }
