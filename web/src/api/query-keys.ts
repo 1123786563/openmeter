@@ -45,6 +45,8 @@ export const queryKeys = {
   notificationChannels: (params: object = {}) =>
     ns('notification.channels', params),
   notificationRules: (params: object = {}) => ns('notification.rules', params),
+  notificationEvents: (params: object = {}) =>
+    ns('notification.events', params),
   features: (params: object = {}) => ns('features', params),
   feature: (id: string) => ns('feature', id),
   featureCostQuery: (id: string, params: object) =>

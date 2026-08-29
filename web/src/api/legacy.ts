@@ -481,6 +481,71 @@ export async function testNotificationRule(
   )
 }
 
+/* ------------------------------------------------------------------ */
+/* Notifications (v1) — events                                         */
+/* ------------------------------------------------------------------ */
+
+export interface NotificationEventListParams {
+  /** RFC 3339 date-time, inclusive. */
+  from?: string
+  to?: string
+  feature?: string[]
+  subject?: string[]
+  rule?: string[]
+  channel?: string[]
+  page?: number
+  pageSize?: number
+}
+
+export interface NotificationEventPaginatedResponse {
+  totalCount: number
+  page: number
+  pageSize: number
+  items: NotificationEvent[]
+}
+
+export async function listNotificationEvents(
+  params: NotificationEventListParams = {}
+): Promise<NotificationEventPaginatedResponse> {
+  const search = new URLSearchParams()
+  if (params.from) search.set('from', params.from)
+  if (params.to) search.set('to', params.to)
+  // Repeated array params per spec: ?rule=a&rule=b
+  params.feature?.forEach((value) => search.append('feature', value))
+  params.subject?.forEach((value) => search.append('subject', value))
+  params.rule?.forEach((value) => search.append('rule', value))
+  params.channel?.forEach((value) => search.append('channel', value))
+  if (params.page) search.set('page', String(params.page))
+  if (params.pageSize) search.set('pageSize', String(params.pageSize))
+  const qs = search.toString()
+  return apiFetch<NotificationEventPaginatedResponse>(
+    `/v1/notification/events${qs ? `?${qs}` : ''}`
+  )
+}
+
+export async function getNotificationEvent(
+  eventId: string
+): Promise<NotificationEvent> {
+  return apiFetch<NotificationEvent>(
+    `/v1/notification/events/${encodeURIComponent(eventId)}`
+  )
+}
+
+/** POST resend — 202 Accepted with no content; omitting `channels` resends to the original channels. */
+export interface NotificationEventResendRequest {
+  channels?: string[]
+}
+
+export async function resendNotificationEvent(
+  eventId: string,
+  body: NotificationEventResendRequest = {}
+): Promise<void> {
+  return apiFetch<void>(
+    `/v1/notification/events/${encodeURIComponent(eventId)}/resend`,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+}
+
 /** GET /api/v1/info/currencies — fiat currency list (v1-only lookup endpoint). */
 export interface FiatCurrency {
   code: string
