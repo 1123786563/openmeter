@@ -508,7 +508,34 @@ export default {
     },
     portalTokens: {
       title: 'Portal Tokens',
-      description: 'Issue and manage customer portal tokens.',
+      description:
+        'Issue Consumer Portal access tokens for customers; the plaintext is shown once at issuance.',
+      issue: 'Issue Token',
+      onceTitle: 'Token Issued',
+      onceDescription:
+        'Copy and store it now — the plaintext is shown only this once.',
+      onceWarning:
+        'After closing, the plaintext cannot be viewed again (the list never shows it). If lost, issue a new token and invalidate the old one.',
+      copy: 'Copy',
+      copied: 'Copied',
+      copyFailed: 'Copy failed — please select the text and copy manually.',
+      copiedClose: "I've saved it, close",
+      form: {
+        title: 'Issue Portal Token',
+        description:
+          'Leave meters unselected to allow access to all meters.',
+        customer: 'Customer',
+        allowedMeters: 'Allowed meters',
+        allMeters: 'All meters (no restriction)',
+        meterSearch: 'Search meters…',
+        noMeters: 'No meters found',
+        customerRequired: 'Please select a customer',
+      },
+      toast: {
+        issued: 'Token issued',
+        noPlaintext:
+          'Create response did not include the token plaintext (unexpected)',
+      },
     },
     billingProfiles: {
       title: 'Billing Profiles',

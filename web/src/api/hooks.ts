@@ -8,6 +8,7 @@ import { api } from '@/api/client'
 import {
   clonePlanNextVersion,
   createNotificationChannel,
+  createPortalToken,
   deleteNotificationChannel,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
@@ -982,6 +983,23 @@ export function useUninstallApp() {
       api.internal.apps.uninstall({ appId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Portal tokens (v1, via legacy layer)                                */
+/* ------------------------------------------------------------------ */
+
+export function useCreatePortalToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
+      createPortalToken(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('portal-tokens'),
+      })
     },
   })
 }

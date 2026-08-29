@@ -52,4 +52,5 @@ export const queryKeys = {
   currencies: (params: object = {}) => ns('currencies', params),
   taxCodes: (params: object = {}) => ns('tax-codes', params),
   apps: () => ns('apps'),
+  portalTokens: (params: object = {}) => ns('portal-tokens', params),
 }
