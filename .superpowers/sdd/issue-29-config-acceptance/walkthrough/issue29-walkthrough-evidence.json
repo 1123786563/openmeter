@@ -1,0 +1,46 @@
+[
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "http://127.0.0.1:4173/api/v3/openmeter/namespaces"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "http://127.0.0.1:4173/api/v3/openmeter/defaults/tax-codes"
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "http://127.0.0.1:4173/api/v3/openmeter/tax-codes?page%5Bnumber%5D=1&page%5Bsize%5D=100&include_deleted=false"
+  },
+  {
+    "kind": "request",
+    "method": "POST",
+    "url": "http://127.0.0.1:4173/api/v3/openmeter/tax-codes"
+  },
+  {
+    "kind": "tax-code-created",
+    "stored": {
+      "id": "01JDVF0R4T2Z3Y8W7X6V5U4T5T",
+      "name": "验收税码",
+      "key": "acceptance_tax_code",
+      "app_mappings": [],
+      "created_at": "2026-08-29T12:00:00.000Z",
+      "updated_at": "2026-08-29T12:00:00.000Z"
+    }
+  },
+  {
+    "kind": "request",
+    "method": "GET",
+    "url": "http://127.0.0.1:4173/api/v3/openmeter/tax-codes?page%5Bnumber%5D=1&page%5Bsize%5D=100&include_deleted=false"
+  },
+  {
+    "kind": "assert",
+    "block": 3,
+    "passed": [
+      "toast 税码已创建",
+      "row 验收税码"
+    ]
+  }
+]
