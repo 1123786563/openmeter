@@ -1,0 +1,712 @@
+# Review package: f60cb90b0..7551c94c0
+
+## Commits
+7551c94c0 feat(admin): 客户线下支付登记 dialog (issue #28)
+566c8eb4e feat(admin): 线下支付登记 API hook (issue #28 T1)
+0924043cf docs(admin): issue #28 SDD 实施计划
+
+## Files changed
+ docs/superpowers/plans/issue-28-offline-payment.md |  79 +++++
+ web/src/api/hooks.ts                               |  14 +
+ .../features/customers/offline-payment-dialog.tsx  | 358 +++++++++++++++++++++
+ .../features/customers/receivable-periods-tab.tsx  |  24 +-
+ web/src/i18n/locales/en.ts                         |  28 ++
+ web/src/i18n/locales/zh-CN.ts                      |  26 ++
+ 6 files changed, 528 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/docs/superpowers/plans/issue-28-offline-payment.md b/docs/superpowers/plans/issue-28-offline-payment.md
+new file mode 100644
+index 000000000..2b6a55567
+--- /dev/null
++++ b/docs/superpowers/plans/issue-28-offline-payment.md
+@@ -0,0 +1,79 @@
++# Plan — issue #28 客户详情：线下支付登记
++
++- Issue: https://github.com/1123786563/openmeter/issues/28
++  ([admin-config 28/29] 客户详情：线下支付登记)
++- Master plan: docs/superpowers/plans/2026-08-27-admin-config-domains.md Task 14 后半
++  （前半 #27 已合入：应收周期 tab + 外部发票登记 + lib/idempotency.ts）。
++- Branch codex/admin-config-28 @ base f60cb90b0；worktree
++  /Users/wuyongjun/trea/openmeter-issue-28。
++- Ledger: .superpowers/sdd/issue-28-offline-payment/progress.md（worktree-local）。
++
++## 范围（Scope）
++
++- `web/src/api/hooks.ts`（Receivable periods 段内追加）：
++  `useCreateOfflinePayment(customerId)`（`api.commerce.createOfflinePayment`，
++  onSuccess 失效 `queryKeys.receivablePeriods(customerId)`——周期已付金额刷新
++  是 Issue 验收项）。
++- 新建 `web/src/features/customers/offline-payment-dialog.tsx`：
++  - 字段（Issue 处方逐项）：幂等键（打开时 `generateIdempotencyKey()` 预填、
++    可改，模式照抄 external-invoice-dialog）/ 金额（元，zod 正数；提交
++    `BigInt(Math.round(Number(yuan) * 100))` → amountFen，先例
++    recharge-product-form-dialog.tsx:169）/ 币种（必填；选中周期时自动预填
++    该周期 currency）/ 外部参照 externalReference（必填，银行流水/汇款附言）/
++    received_at（datetime-local 必填 → `new Date(v)`）/ 所属周期下拉
++    （可选，选项=当前已加载周期 `期间 ~ 期间 · 应付 formatFen`；未选可提交）/
++    note（可选）。
++  - 提交体 deep-equal `{ idempotencyKey, amountFen, currency,
++    receivablePeriodId?, externalReference, receivedAt, note? }`
++    （`CommerceOfflinePaymentCreate`）；成功 toast + 关闭。
++- `web/src/features/customers/receivable-periods-tab.tsx`：tab 页首新增一行
++  （左侧说明文案「无列表端点，已缴见周期已付金额」——Issue 明示；右侧
++  「登记线下支付」按钮），向 dialog 传入 `periods={allPeriods}` 与 customerId。
++- i18n：`customers.receivablePeriods.offlinePayment.*` 完整子树（标题/描述/
++  字段/提示/toast/周期占位），zh-CN 与 en 同构。
++
++## 非目标（Non-goals）
++
++- 线下支付列表/删除（v3 无列表端点——Issue 明示页面只需说明文案）。
++- 外部发票登记、周期 tab 本体（#27 已交付，列表列与分页零改动）。
++- 金额跨币种换算（元→fen 仅小数点移位，币种照填照传）。
++- 后端/TypeSpec 改动。
++
++## 已核实的契约事实（SDK dist models/operations/commerce.d.ts，2026-08-29）
++
++- `api.commerce.createOfflinePayment({ customerId, body })`；
++  `CommerceOfflinePaymentCreate = { idempotencyKey: string, amountFen: bigint,
++  currency: string, receivablePeriodId?: string, externalReference: string,
++  receivedAt: Date, note?: string }`——externalReference/receivedAt/idempotencyKey/
++  amountFen/currency 必填，与 Issue 处方一致。
++- `generateIdempotencyKey()`（lib/idempotency.ts，#27 入库）安全上下文回退
++  已处理；dialog reset-on-open 模式照抄 external-invoice-dialog.tsx L74-84。
++- `allPeriods`（tab 内已聚合的跨页周期数组）即周期下拉数据源；
++  `formatFen`/`formatShortDateTime` 已存在。
++- 元→fen 先例：`BigInt(Math.round(Number(values.amountYuan) * 100))`。
++
++## 任务拆分（每任务独立 commit + `cd web && pnpm build && pnpm lint`）
++
++- T1 API 层：useCreateOfflinePayment。
++- T2 dialog + tab 页首挂载 + i18n（zh/en 同构）。
++
++## 测试与验收命令
++
++- 每 commit：`cd web && pnpm build && pnpm lint`（routeTree 零 diff）。
++- 终态追加：`pnpm test:e2e`（与并行轨串行）；locale parity 真实求值；
++  prettier 新文件 clean、修改文件差异恰为插入块。
++- 浏览器走查（全端点 mock）：页首说明文案 + 登记按钮；打开 dialog 幂等键
++  预填 UUID 且可改；空金额/负数/外部参照空/received_at 空 → zod 拦截；
++  选中周期后币种预填该周期 currency；提交 wire 体 deep-equal（含
++  BigInt(amountFen)、未选周期时无 receivablePeriodId 键、note 空时无键）；
++  成功 toast + 关闭 + 周期列表已付金额刷新（query 失效）；无周期时下拉
++  占位「不关联周期」仍可提交。
++
++## 全局约束
++
++- 只动 web/ 下上述文件；三 Go 模块不可误改。
++- 与并行轨 #22/#24/#26 共享面仅 hooks.ts 追加段与 locale 文件互不相交子树。
++- 文案全部 i18n（zh-CN + en 同步），术语沿 CONTEXT.md 词表（应收周期/线下支付）。
++- 所有 API 请求经 v3 SDK 单例；金额换算仅元↔fen，不得引入浮点累计。
++- 未经用户批准不得 push/merge/close/改 GitHub 状态。
++- implementer 不得自行派生 subagent；不得跳过任务审查/修复复审/终审/台账。
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..9964c78b8 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -1153,18 +1153,32 @@ export function useUpdateExternalInvoice(customerId: string) {
+     }) =>
+       api.commerce.updateExternalInvoice({ customerId, periodId, body }),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({
+         queryKey: queryKeys.receivablePeriods(customerId),
+       })
+     },
+   })
+ }
+ 
++export function useCreateOfflinePayment(customerId: string) {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (
++      body: Parameters<typeof api.commerce.createOfflinePayment>[0]['body']
++    ) => api.commerce.createOfflinePayment({ customerId, body }),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({
++        queryKey: queryKeys.receivablePeriods(customerId),
++      })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Helpers                                                             */
+ /* ------------------------------------------------------------------ */
+ 
+ /** Prefix that scopes invalidation to the active namespace cache branch. */
+ function nsPrefix(domain: string): [string, string, string] {
+   return ['api', useNamespaceStore.getState().currentNamespace ?? '', domain]
+ }
+diff --git a/web/src/features/customers/offline-payment-dialog.tsx b/web/src/features/customers/offline-payment-dialog.tsx
+new file mode 100644
+index 000000000..d7379c372
+--- /dev/null
++++ b/web/src/features/customers/offline-payment-dialog.tsx
+@@ -0,0 +1,358 @@
++import { useEffect, useMemo } from 'react'
++import { z } from 'zod'
++import { useForm } from 'react-hook-form'
++import { zodResolver } from '@hookform/resolvers/zod'
++import type { CommerceReceivablePeriod } from '@openmeter/client'
++import { useTranslation } from 'react-i18next'
++import { toast } from 'sonner'
++import { useCreateOfflinePayment } from '@/api/hooks'
++import { formatFen, formatShortDateTime } from '@/lib/format'
++import { handleServerError } from '@/lib/handle-server-error'
++import { generateIdempotencyKey } from '@/lib/idempotency'
++import { Button } from '@/components/ui/button'
++import {
++  Dialog,
++  DialogContent,
++  DialogDescription,
++  DialogFooter,
++  DialogHeader,
++  DialogTitle,
++} from '@/components/ui/dialog'
++import {
++  Form,
++  FormControl,
++  FormDescription,
++  FormField,
++  FormItem,
++  FormLabel,
++  FormMessage,
++} from '@/components/ui/form'
++import { Input } from '@/components/ui/input'
++import {
++  Select,
++  SelectContent,
++  SelectItem,
++  SelectTrigger,
++  SelectValue,
++} from '@/components/ui/select'
++import { Textarea } from '@/components/ui/textarea'
++
++/**
++ * Amounts are entered in the major currency unit (yuan) and converted to fen
++ * on submit (same precedent as the recharge product form).
++ */
++const POSITIVE_AMOUNT = /^\d+(\.\d{1,2})?$/
++
++/**
++ * Radix Select forbids empty-string item values, so the "no period" option
++ * uses a sentinel; the form value stays '' (= key omitted from the wire body)
++ * and submit maps it to undefined.
++ */
++const NO_PERIOD = '__none__'
++
++/**
++ * Register an offline payment for a customer (POST offline-payments).
++ * Idempotency key is generated per dialog open — a retry of the same submit
++ * reuses the same key, a new open starts a new payment.
++ */
++export function OfflinePaymentDialog({
++  open,
++  onOpenChange,
++  customerId,
++  periods,
++}: {
++  open: boolean
++  onOpenChange: (open: boolean) => void
++  customerId: string
++  periods: CommerceReceivablePeriod[]
++}) {
++  const { t } = useTranslation()
++  const createMutation = useCreateOfflinePayment(customerId)
++
++  // Schema lives inside the component so validation messages resolve through
++  // i18n (FormMessage renders error.message verbatim).
++  const schema = useMemo(
++    () =>
++      z.object({
++        idempotencyKey: z.string().min(1),
++        amountYuan: z
++          .string()
++          .regex(
++            POSITIVE_AMOUNT,
++            t('customers.receivablePeriods.offlinePayment.validation.amount')
++          ),
++        currency: z
++          .string()
++          .min(
++            1,
++            t('customers.receivablePeriods.offlinePayment.validation.currency')
++          ),
++        externalReference: z
++          .string()
++          .min(
++            1,
++            t(
++              'customers.receivablePeriods.offlinePayment.validation.externalReference'
++            )
++          ),
++        // datetime-local 字符串；提交时转 Date
++        receivedAt: z
++          .string()
++          .min(
++            1,
++            t(
++              'customers.receivablePeriods.offlinePayment.validation.receivedAt'
++            )
++          ),
++        receivablePeriodId: z.string(),
++        note: z.string(),
++      }),
++    [t]
++  )
++
++  type FormValues = z.infer<typeof schema>
++
++  const form = useForm<FormValues>({
++    resolver: zodResolver(schema),
++    defaultValues: {
++      idempotencyKey: '',
++      amountYuan: '',
++      currency: '',
++      externalReference: '',
++      receivedAt: '',
++      receivablePeriodId: '',
++      note: '',
++    },
++  })
++
++  useEffect(() => {
++    if (open) {
++      form.reset({
++        idempotencyKey: generateIdempotencyKey(),
++        amountYuan: '',
++        currency: '',
++        externalReference: '',
++        receivedAt: '',
++        receivablePeriodId: '',
++        note: '',
++      })
++    }
++  }, [open, form])
++
++  const onSubmit = (values: FormValues) => {
++    createMutation.mutate(
++      {
++        idempotencyKey: values.idempotencyKey.trim(),
++        amountFen: BigInt(Math.round(Number(values.amountYuan) * 100)),
++        currency: values.currency.trim(),
++        receivablePeriodId: values.receivablePeriodId || undefined,
++        externalReference: values.externalReference.trim(),
++        receivedAt: new Date(values.receivedAt),
++        note: values.note?.trim() || undefined,
++      },
++      {
++        onSuccess: () => {
++          toast.success(
++            t('customers.receivablePeriods.offlinePayment.toast.created')
++          )
++          onOpenChange(false)
++        },
++        onError: handleServerError,
++      }
++    )
++  }
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      <DialogContent className='sm:max-w-lg'>
++        <DialogHeader>
++          <DialogTitle>
++            {t('customers.receivablePeriods.offlinePayment.title')}
++          </DialogTitle>
++          <DialogDescription>
++            {t('customers.receivablePeriods.offlinePayment.description')}
++          </DialogDescription>
++        </DialogHeader>
++        <Form {...form}>
++          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
++            <FormField
++              control={form.control}
++              name='receivablePeriodId'
++              render={({ field }) => (
++                <FormItem>
++                  <FormLabel>
++                    {t('customers.receivablePeriods.offlinePayment.period')}
++                  </FormLabel>
++                  <Select
++                    value={field.value || NO_PERIOD}
++                    onValueChange={(value) => {
++                      field.onChange(value === NO_PERIOD ? '' : value)
++                      // Selecting a period prefills the payment currency.
++                      const period = periods.find(
++                        (period) => period.id === value
++                      )
++                      if (period) {
++                        form.setValue('currency', period.currency, {
++                          shouldValidate: true,
++                        })
++                      }
++                    }}
++                  >
++                    <FormControl>
++                      <SelectTrigger className='w-full'>
++                        <SelectValue />
++                      </SelectTrigger>
++                    </FormControl>
++                    <SelectContent>
++                      <SelectItem value={NO_PERIOD}>
++                        {t(
++                          'customers.receivablePeriods.offlinePayment.periodPlaceholder'
++                        )}
++                      </SelectItem>
++                      {periods.map((period) => (
++                        <SelectItem key={period.id} value={period.id}>
++                          {`${formatShortDateTime(period.periodStart)} ~ ${formatShortDateTime(period.periodEnd)} · ${formatFen(period.amountDueFen, period.currency)}`}
++                        </SelectItem>
++                      ))}
++                    </SelectContent>
++                  </Select>
++                </FormItem>
++              )}
++            />
++            <div className='grid grid-cols-2 gap-4'>
++              <FormField
++                control={form.control}
++                name='amountYuan'
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>
++                      {t('customers.receivablePeriods.offlinePayment.amount')}
++                    </FormLabel>
++                    <FormControl>
++                      <Input
++                        inputMode='decimal'
++                        placeholder='199.00'
++                        autoComplete='off'
++                        {...field}
++                      />
++                    </FormControl>
++                    <FormDescription>
++                      {t(
++                        'customers.receivablePeriods.offlinePayment.amountHint'
++                      )}
++                    </FormDescription>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++              <FormField
++                control={form.control}
++                name='currency'
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>
++                      {t('customers.receivablePeriods.offlinePayment.currency')}
++                    </FormLabel>
++                    <FormControl>
++                      <Input placeholder='CNY' autoComplete='off' {...field} />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++            </div>
++            <div className='grid grid-cols-2 gap-4'>
++              <FormField
++                control={form.control}
++                name='externalReference'
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>
++                      {t(
++                        'customers.receivablePeriods.offlinePayment.externalReference'
++                      )}
++                    </FormLabel>
++                    <FormControl>
++                      <Input
++                        placeholder='20260829-12345678'
++                        autoComplete='off'
++                        {...field}
++                      />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++              <FormField
++                control={form.control}
++                name='receivedAt'
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>
++                      {t(
++                        'customers.receivablePeriods.offlinePayment.receivedAt'
++                      )}
++                    </FormLabel>
++                    <FormControl>
++                      <Input type='datetime-local' {...field} />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++            </div>
++            <FormField
++              control={form.control}
++              name='note'
++              render={({ field }) => (
++                <FormItem>
++                  <FormLabel>
++                    {t('customers.receivablePeriods.offlinePayment.noteLabel')}
++                  </FormLabel>
++                  <FormControl>
++                    <Textarea rows={2} {...field} />
++                  </FormControl>
++                </FormItem>
++              )}
++            />
++            <FormField
++              control={form.control}
++              name='idempotencyKey'
++              render={({ field }) => (
++                <FormItem>
++                  <FormLabel>
++                    {t(
++                      'customers.receivablePeriods.offlinePayment.idempotencyKey'
++                    )}
++                  </FormLabel>
++                  <FormControl>
++                    <Input className='font-mono text-xs' {...field} />
++                  </FormControl>
++                  <FormDescription>
++                    {t(
++                      'customers.receivablePeriods.offlinePayment.idempotencyHint'
++                    )}
++                  </FormDescription>
++                </FormItem>
++              )}
++            />
++            <DialogFooter>
++              <Button
++                type='button'
++                variant='outline'
++                onClick={() => onOpenChange(false)}
++              >
++                {t('common.cancel')}
++              </Button>
++              <Button type='submit' disabled={createMutation.isPending}>
++                {createMutation.isPending
++                  ? t('common.submitting')
++                  : t('common.confirm')}
++              </Button>
++            </DialogFooter>
++          </form>
++        </Form>
++      </DialogContent>
++    </Dialog>
++  )
++}
+diff --git a/web/src/features/customers/receivable-periods-tab.tsx b/web/src/features/customers/receivable-periods-tab.tsx
+index c36798e55..5831ddb72 100644
+--- a/web/src/features/customers/receivable-periods-tab.tsx
++++ b/web/src/features/customers/receivable-periods-tab.tsx
+@@ -1,28 +1,29 @@
+ import { useState } from 'react'
+ import type { CommerceReceivablePeriod } from '@openmeter/client'
+-import { ChevronRight, FilePlus2 } from 'lucide-react'
++import { ChevronRight, FilePlus2, HandCoins } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+ import { useReceivablePeriods } from '@/api/hooks'
+ import { formatFen, formatNumber, formatShortDateTime } from '@/lib/format'
+ import { Button } from '@/components/ui/button'
+ import { Skeleton } from '@/components/ui/skeleton'
+ import {
+   Table,
+   TableBody,
+   TableCell,
+   TableHead,
+   TableHeader,
+   TableRow,
+ } from '@/components/ui/table'
+ import { StatusBadge } from '@/components/status-badge'
+ import { ExternalInvoiceDialog } from './external-invoice-dialog'
++import { OfflinePaymentDialog } from './offline-payment-dialog'
+ 
+ /**
+  * Receivable periods for one customer, cursor paginated. Mirrors the events
+  * page "load more": `pages` accumulates cursors already advanced past, `data`
+  * is the current cursor's page; meta.page.next is a raw cursor (verified in
+  * api/v3/response/cursorpagination.go), reusable as page[after].
+  */
+ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
+   const { t } = useTranslation()
+   const [cursor, setCursor] = useState<string | undefined>(undefined)
+@@ -31,34 +32,49 @@ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
+   >([])
+ 
+   const { data, isLoading, isFetching } = useReceivablePeriods(
+     customerId,
+     cursor
+   )
+ 
+   const [invoiceTarget, setInvoiceTarget] =
+     useState<CommerceReceivablePeriod | null>(null)
+ 
++  const [offlineOpen, setOfflineOpen] = useState(false)
++
+   const allPeriods = [
+     ...pages.flatMap((page) => page?.data ?? []),
+     ...(data?.data ?? []),
+   ]
+ 
+   const loadMore = () => {
+     if (data?.meta.page.next) {
+       setPages((prev) => [...prev, data])
+       setCursor(data.meta.page.next ?? undefined)
+     }
+   }
+ 
+   return (
+     <div className='space-y-4'>
++      <div className='flex items-center justify-between'>
++        <p className='text-xs text-muted-foreground'>
++          {t('customers.receivablePeriods.offlinePayment.note')}
++        </p>
++        <Button
++          variant='outline'
++          size='sm'
++          onClick={() => setOfflineOpen(true)}
++        >
++          <HandCoins />
++          {t('customers.receivablePeriods.offlinePayment.action')}
++        </Button>
++      </div>
+       <Table>
+         <TableHeader>
+           <TableRow className='bg-hover/50'>
+             <TableHead className='pl-6'>
+               {t('customers.receivablePeriods.fields.period')}
+             </TableHead>
+             <TableHead>
+               {t('customers.receivablePeriods.fields.creditsConsumed')}
+             </TableHead>
+             <TableHead>
+@@ -151,13 +167,19 @@ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
+             <ChevronRight className='size-3.5' />
+           </Button>
+         </div>
+       )}
+       <ExternalInvoiceDialog
+         open={Boolean(invoiceTarget)}
+         onOpenChange={(open) => !open && setInvoiceTarget(null)}
+         customerId={customerId}
+         period={invoiceTarget}
+       />
++      <OfflinePaymentDialog
++        open={offlineOpen}
++        onOpenChange={setOfflineOpen}
++        customerId={customerId}
++        periods={allPeriods}
++      />
+     </div>
+   )
+ }
+diff --git a/web/src/i18n/locales/en.ts b/web/src/i18n/locales/en.ts
+index c28d112c3..652d65bb1 100644
+--- a/web/src/i18n/locales/en.ts
++++ b/web/src/i18n/locales/en.ts
+@@ -718,20 +718,48 @@ export default {
+         number: 'Invoice number (required)',
+         url: 'Invoice URL (optional)',
+         urlHint: 'URL or identifier of the external invoice document',
+         issuer: 'Issuer (optional)',
+         issuedAt: 'Issued at (optional)',
+         idempotencyKey: 'Idempotency key',
+         idempotencyHint:
+           'A UUID by default, editable; replaying the same key will not duplicate the update.',
+         toast: 'External invoice registered',
+       },
++      offlinePayment: {
++        action: 'Register Offline Payment',
++        note: 'Offline payments have no list endpoint; see the “Paid” amount on each period for settled amounts.',
++        title: 'Register Offline Payment',
++        description:
++          'Record an incoming offline payment for this customer (amount, currency, external reference).',
++        idempotencyKey: 'Idempotency key',
++        idempotencyHint:
++          'A UUID by default, editable; replaying the same key will not duplicate the payment.',
++        amount: 'Amount (yuan)',
++        amountHint: 'A positive number with at most two decimals.',
++        currency: 'Currency',
++        externalReference: 'External reference (required)',
++        receivedAt: 'Received at',
++        period: 'Receivable period (optional)',
++        periodPlaceholder: 'Not linked to a period',
++        noteLabel: 'Note (optional)',
++        validation: {
++          amount: 'Amount must be a positive number with at most two decimals',
++          currency: 'Enter a currency',
++          externalReference:
++            'Enter an external reference (bank transfer number / remittance advice)',
++          receivedAt: 'Select the received-at time',
++        },
++        toast: {
++          created: 'Offline payment registered',
++        },
++      },
+     },
+   },
+   subscription: {
+     status: {
+       active: 'Active',
+       inactive: 'Inactive',
+       canceled: 'Canceled',
+       scheduled: 'Scheduled',
+     },
+   },
+diff --git a/web/src/i18n/locales/zh-CN.ts b/web/src/i18n/locales/zh-CN.ts
+index 29904b791..bf7194a40 100644
+--- a/web/src/i18n/locales/zh-CN.ts
++++ b/web/src/i18n/locales/zh-CN.ts
+@@ -691,20 +691,46 @@ export default {
+         number: '发票号（必填）',
+         url: '发票链接（可选）',
+         urlHint: '外部发票文档的 URL 或标识',
+         issuer: '开票方（可选）',
+         issuedAt: '开票时间（可选）',
+         idempotencyKey: '幂等键',
+         idempotencyHint:
+           '默认自动生成 UUID，可修改；同一键重复提交不会重复更新。',
+         toast: '外部发票已登记',
+       },
++      offlinePayment: {
++        action: '登记线下支付',
++        note: '线下支付暂无列表端点，已缴情况请查看各周期的「已付」金额。',
++        title: '登记线下支付',
++        description: '登记一笔客户线下支付的到账信息（金额、币种、外部参照）。',
++        idempotencyKey: '幂等键',
++        idempotencyHint:
++          '默认自动生成 UUID，可修改；同一键重复提交不会重复入账。',
++        amount: '金额（元）',
++        amountHint: '正数，最多两位小数。',
++        currency: '币种',
++        externalReference: '外部参照（必填）',
++        receivedAt: '到账时间',
++        period: '所属周期（可选）',
++        periodPlaceholder: '不关联周期',
++        noteLabel: '备注（可选）',
++        validation: {
++          amount: '金额须为正数，最多两位小数',
++          currency: '请输入币种',
++          externalReference: '请输入外部参照（银行流水号/汇款附言）',
++          receivedAt: '请选择到账时间',
++        },
++        toast: {
++          created: '线下支付已登记',
++        },
++      },
+     },
+   },
+   subscription: {
+     status: {
+       active: '活跃',
+       inactive: '未激活',
+       canceled: '已取消',
+       scheduled: '已排期',
+     },
+   },

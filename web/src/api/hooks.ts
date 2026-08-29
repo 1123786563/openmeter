@@ -1341,6 +1341,20 @@ export function useUpdateExternalInvoice(customerId: string) {
   })
 }
 
+export function useCreateOfflinePayment(customerId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      body: Parameters<typeof api.commerce.createOfflinePayment>[0]['body']
+    ) => api.commerce.createOfflinePayment({ customerId, body }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.receivablePeriods(customerId),
+      })
+    },
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */

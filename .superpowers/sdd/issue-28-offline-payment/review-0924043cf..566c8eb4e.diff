@@ -1,0 +1,47 @@
+# Review package: 0924043cf..566c8eb4e
+
+## Commits
+566c8eb4e feat(admin): 线下支付登记 API hook (issue #28 T1)
+
+## Files changed
+ web/src/api/hooks.ts | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+## Diff
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..9964c78b8 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -1153,18 +1153,32 @@ export function useUpdateExternalInvoice(customerId: string) {
+     }) =>
+       api.commerce.updateExternalInvoice({ customerId, periodId, body }),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({
+         queryKey: queryKeys.receivablePeriods(customerId),
+       })
+     },
+   })
+ }
+ 
++export function useCreateOfflinePayment(customerId: string) {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (
++      body: Parameters<typeof api.commerce.createOfflinePayment>[0]['body']
++    ) => api.commerce.createOfflinePayment({ customerId, body }),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({
++        queryKey: queryKeys.receivablePeriods(customerId),
++      })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Helpers                                                             */
+ /* ------------------------------------------------------------------ */
+ 
+ /** Prefix that scopes invalidation to the active namespace cache branch. */
+ function nsPrefix(domain: string): [string, string, string] {
+   return ['api', useNamespaceStore.getState().currentNamespace ?? '', domain]
+ }

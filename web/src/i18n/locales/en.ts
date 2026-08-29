@@ -888,6 +888,34 @@ export default {
           'A UUID by default, editable; replaying the same key will not duplicate the update.',
         toast: 'External invoice registered',
       },
+      offlinePayment: {
+        action: 'Register Offline Payment',
+        note: 'Offline payments have no list endpoint; see the “Paid” amount on each period for settled amounts.',
+        title: 'Register Offline Payment',
+        description:
+          'Record an incoming offline payment for this customer (amount, currency, external reference).',
+        idempotencyKey: 'Idempotency key',
+        idempotencyHint:
+          'A UUID by default, editable; replaying the same key will not duplicate the payment.',
+        amount: 'Amount (yuan)',
+        amountHint: 'A positive number with at most two decimals.',
+        currency: 'Currency',
+        externalReference: 'External reference (required)',
+        receivedAt: 'Received at',
+        period: 'Receivable period (optional)',
+        periodPlaceholder: 'Not linked to a period',
+        noteLabel: 'Note (optional)',
+        validation: {
+          amount: 'Amount must be a positive number with at most two decimals',
+          currency: 'Enter a currency',
+          externalReference:
+            'Enter an external reference (bank transfer number / remittance advice)',
+          receivedAt: 'Select the received-at time',
+        },
+        toast: {
+          created: 'Offline payment registered',
+        },
+      },
     },
   },
   subscription: {

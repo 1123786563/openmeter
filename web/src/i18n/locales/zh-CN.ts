@@ -854,6 +854,32 @@ export default {
           '默认自动生成 UUID，可修改；同一键重复提交不会重复更新。',
         toast: '外部发票已登记',
       },
+      offlinePayment: {
+        action: '登记线下支付',
+        note: '线下支付暂无列表端点，已缴情况请查看各周期的「已付」金额。',
+        title: '登记线下支付',
+        description: '登记一笔客户线下支付的到账信息（金额、币种、外部参照）。',
+        idempotencyKey: '幂等键',
+        idempotencyHint:
+          '默认自动生成 UUID，可修改；同一键重复提交不会重复入账。',
+        amount: '金额（元）',
+        amountHint: '正数，最多两位小数。',
+        currency: '币种',
+        externalReference: '外部参照（必填）',
+        receivedAt: '到账时间',
+        period: '所属周期（可选）',
+        periodPlaceholder: '不关联周期',
+        noteLabel: '备注（可选）',
+        validation: {
+          amount: '金额须为正数，最多两位小数',
+          currency: '请输入币种',
+          externalReference: '请输入外部参照（银行流水号/汇款附言）',
+          receivedAt: '请选择到账时间',
+        },
+        toast: {
+          created: '线下支付已登记',
+        },
+      },
     },
   },
   subscription: {
