@@ -292,6 +292,78 @@ export default {
     addons: {
       title: 'Add-ons',
       description: 'Manage add-ons that can be purchased standalone.',
+      create: 'New add-on',
+      empty: 'No add-ons yet — create one from the top right',
+      name: 'Name',
+      key: 'Key',
+      version: 'Version',
+      instanceType: 'Instance type',
+      currency: 'Currency',
+      status: 'Status',
+      rateCards: 'Rate cards',
+      createdAt: 'Created at',
+      edit: 'Edit',
+      publish: 'Publish',
+      archive: 'Archive',
+      delete: 'Delete',
+      instanceTypes: { single: 'Single instance', multiple: 'Multiple instances' },
+      statuses: { draft: 'Draft', active: 'Active', archived: 'Archived' },
+      publishConfirm: {
+        title: 'Publish add-on',
+        description:
+          'Once published, "{{name}}" becomes available to subscriptions. Published versions cannot be rolled back — archive and create a new version instead.',
+      },
+      archiveConfirm: {
+        title: 'Archive add-on',
+        description:
+          'Archive "{{name}}"? Archived add-ons can no longer be attached to new subscriptions.',
+      },
+      deleteConfirm: {
+        title: 'Delete add-on',
+        description: 'Delete "{{name}}"? This action cannot be undone.',
+      },
+      toast: {
+        created: 'Add-on created',
+        updated: 'Add-on updated',
+        published: 'Add-on published',
+        archived: 'Add-on archived',
+        deleted: 'Add-on deleted',
+      },
+      form: {
+        createTitle: 'New add-on',
+        editTitle: 'Edit add-on',
+        createDescription:
+          'Key and currency are immutable after creation; rate cards support flat fees (free/flat) and usage-based unit pricing.',
+        name: 'Name',
+        key: 'Key',
+        keyHint: 'Unique together with the version; references the latest active version.',
+        description: 'Description',
+        instanceType: 'Instance type',
+        instanceTypes: {
+          single: 'Single instance',
+          multiple: 'Multiple instances',
+        },
+        currency: 'Currency',
+        rateCards: 'Rate cards (at least one)',
+        addRateCard: 'Add rate card',
+        removeRateCard: 'Remove',
+        validation: {
+          required: 'Required',
+          rateCardsRequired: 'At least one rate card is required',
+        },
+        card: {
+          name: 'Rate card name',
+          key: 'Rate card key',
+          type: 'Billing type',
+          types: { flat_fee: 'Flat fee', usage_based: 'Usage-based' },
+          feature: 'Feature',
+          billingCadence: 'Billing cadence',
+          cadences: { oneTime: 'One-time', P1M: 'Monthly', P1Y: 'Yearly' },
+          priceKind: 'Price type',
+          priceKinds: { free: 'Free', flat: 'Flat', unit: 'Unit' },
+          amount: 'Amount',
+        },
+      },
     },
     notification: {
       channels: {
