@@ -12,10 +12,12 @@ import {
   createPortalToken,
   deleteNotificationChannel,
   getCustomerEntitlementValueV2,
+  invalidatePortalTokens,
   listCustomerEntitlementsV2,
   listFiatCurrencies,
   listNotificationChannels,
   listNotificationRules,
+  listPortalTokens,
   listSubjects,
   updateNotificationChannel,
   updateNotificationRule,
@@ -1081,6 +1083,26 @@ export function useCreatePortalToken() {
   return useMutation({
     mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
       createPortalToken(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('portal-tokens'),
+      })
+    },
+  })
+}
+
+export function usePortalTokens(limit = 100) {
+  return useQuery({
+    queryKey: queryKeys.portalTokens({ limit }),
+    queryFn: () => listPortalTokens(limit),
+  })
+}
+
+export function useInvalidatePortalToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { id?: string; subject?: string }) =>
+      invalidatePortalTokens(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('portal-tokens'),

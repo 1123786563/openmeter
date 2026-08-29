@@ -456,3 +456,22 @@ export async function createPortalToken(body: {
     body: JSON.stringify(body),
   })
 }
+
+/** GET /api/v1/portal/tokens — 列表（spec 为裸数组，无分页包装）。limit 1-100。 */
+export async function listPortalTokens(limit = 100): Promise<PortalToken[]> {
+  return apiFetch<PortalToken[]>(`/v1/portal/tokens?limit=${limit}`)
+}
+
+/**
+ * POST /api/v1/portal/tokens/invalidate — 按 id 或 subject 失效（二选一），
+ * 204 无内容。管理端按行 id 失效。
+ */
+export async function invalidatePortalTokens(body: {
+  id?: string
+  subject?: string
+}): Promise<void> {
+  return apiFetch<void>('/v1/portal/tokens/invalidate', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
