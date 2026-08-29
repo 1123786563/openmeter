@@ -27,6 +27,8 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { EnumBadge, StatusBadge } from '@/components/status-badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PlanAddonsTab } from './plan-addons-tab'
 import { PlanFormWizard } from './plan-form-wizard'
 
 function InfoRow({
@@ -179,102 +181,119 @@ export function PlanDetail() {
           )}
         </div>
 
-        <Card className='mt-6 py-0'>
-          <CardContent className='divide-y'>
-            <InfoRow label={t('config.plans.fields.key')}>
-              <span className='font-mono text-xs'>{plan.key}</span>
-            </InfoRow>
-            <InfoRow label={t('config.plans.fields.currency')}>
-              {plan.currency}
-            </InfoRow>
-            <InfoRow label={t('config.plans.fields.billingCadence')}>
-              {plan.billingCadence}
-            </InfoRow>
-            <InfoRow label={t('config.plans.fields.createdAt')}>
-              {formatDateTime(plan.createdAt)}
-            </InfoRow>
-            <InfoRow label={t('config.plans.fields.updatedAt')}>
-              {formatDateTime(plan.updatedAt)}
-            </InfoRow>
-            {plan.description ? (
-              <InfoRow label={t('config.plans.fields.description')}>
-                {plan.description}
-              </InfoRow>
-            ) : null}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue='overview' className='mt-6'>
+          <TabsList>
+            <TabsTrigger value='overview'>
+              {t('config.planDetail.tabs.overview')}
+            </TabsTrigger>
+            <TabsTrigger value='addons'>
+              {t('config.planDetail.tabs.addons')}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value='overview' className='mt-4'>
+            <Card className='py-0'>
+              <CardContent className='divide-y'>
+                <InfoRow label={t('config.plans.fields.key')}>
+                  <span className='font-mono text-xs'>{plan.key}</span>
+                </InfoRow>
+                <InfoRow label={t('config.plans.fields.currency')}>
+                  {plan.currency}
+                </InfoRow>
+                <InfoRow label={t('config.plans.fields.billingCadence')}>
+                  {plan.billingCadence}
+                </InfoRow>
+                <InfoRow label={t('config.plans.fields.createdAt')}>
+                  {formatDateTime(plan.createdAt)}
+                </InfoRow>
+                <InfoRow label={t('config.plans.fields.updatedAt')}>
+                  {formatDateTime(plan.updatedAt)}
+                </InfoRow>
+                {plan.description ? (
+                  <InfoRow label={t('config.plans.fields.description')}>
+                    {plan.description}
+                  </InfoRow>
+                ) : null}
+              </CardContent>
+            </Card>
 
-        <h2 className='mt-8 text-lg font-semibold'>
-          {t('config.plans.detail.phases')}
-        </h2>
-        {plan.phases.map((phase, phaseIndex) => (
-          <Card key={phase.key ?? phaseIndex} className='mt-4 py-0'>
-            <CardHeader>
-              <CardTitle className='flex items-baseline gap-2 text-base'>
-                <span>
-                  {t('config.plans.detail.phaseIndex', {
-                    index: phaseIndex + 1,
-                  })}{' '}
-                  · {phase.name}
-                </span>
-                <span className='text-xs font-normal text-muted-foreground'>
-                  {phase.duration
-                    ? t('config.plans.detail.duration', {
-                        duration: phase.duration,
-                      })
-                    : t('config.plans.detail.noDuration')}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <Table>
-              <TableHeader>
-                <TableRow className='bg-hover/50'>
-                  <TableHead className='pl-6'>
-                    {t('config.plans.detail.rateCardName')}
-                  </TableHead>
-                  <TableHead>{t('config.plans.detail.priceType')}</TableHead>
-                  <TableHead>{t('config.plans.detail.feature')}</TableHead>
-                  <TableHead>{t('config.plans.detail.price')}</TableHead>
-                  <TableHead>{t('config.plans.detail.cadence')}</TableHead>
-                  <TableHead className='pr-6'>
-                    {t('config.plans.detail.key')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {phase.rateCards.map((card) => (
-                  <TableRow key={card.key}>
-                    <TableCell className='pl-6 font-medium'>
-                      {card.name}
-                    </TableCell>
-                    <TableCell>
-                      <EnumBadge
-                        domain='plan'
-                        kind='priceType'
-                        value={card.price.type}
-                      />
-                    </TableCell>
-                    <TableCell className='font-mono text-xs text-muted-foreground'>
-                      {card.feature?.id ?? '—'}
-                    </TableCell>
-                    <TableCell>
-                      <RateCardPriceSummary
-                        card={card}
-                        planCurrency={plan.currency}
-                      />
-                    </TableCell>
-                    <TableCell className='text-muted-foreground'>
-                      {card.billingCadence ?? plan.billingCadence}
-                    </TableCell>
-                    <TableCell className='pr-6 font-mono text-xs text-muted-foreground'>
-                      {card.key}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        ))}
+            <h2 className='mt-8 text-lg font-semibold'>
+              {t('config.plans.detail.phases')}
+            </h2>
+            {plan.phases.map((phase, phaseIndex) => (
+              <Card key={phase.key ?? phaseIndex} className='mt-4 py-0'>
+                <CardHeader>
+                  <CardTitle className='flex items-baseline gap-2 text-base'>
+                    <span>
+                      {t('config.plans.detail.phaseIndex', {
+                        index: phaseIndex + 1,
+                      })}{' '}
+                      · {phase.name}
+                    </span>
+                    <span className='text-xs font-normal text-muted-foreground'>
+                      {phase.duration
+                        ? t('config.plans.detail.duration', {
+                            duration: phase.duration,
+                          })
+                        : t('config.plans.detail.noDuration')}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow className='bg-hover/50'>
+                      <TableHead className='pl-6'>
+                        {t('config.plans.detail.rateCardName')}
+                      </TableHead>
+                      <TableHead>
+                        {t('config.plans.detail.priceType')}
+                      </TableHead>
+                      <TableHead>{t('config.plans.detail.feature')}</TableHead>
+                      <TableHead>{t('config.plans.detail.price')}</TableHead>
+                      <TableHead>{t('config.plans.detail.cadence')}</TableHead>
+                      <TableHead className='pr-6'>
+                        {t('config.plans.detail.key')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {phase.rateCards.map((card) => (
+                      <TableRow key={card.key}>
+                        <TableCell className='pl-6 font-medium'>
+                          {card.name}
+                        </TableCell>
+                        <TableCell>
+                          <EnumBadge
+                            domain='plan'
+                            kind='priceType'
+                            value={card.price.type}
+                          />
+                        </TableCell>
+                        <TableCell className='font-mono text-xs text-muted-foreground'>
+                          {card.feature?.id ?? '—'}
+                        </TableCell>
+                        <TableCell>
+                          <RateCardPriceSummary
+                            card={card}
+                            planCurrency={plan.currency}
+                          />
+                        </TableCell>
+                        <TableCell className='text-muted-foreground'>
+                          {card.billingCadence ?? plan.billingCadence}
+                        </TableCell>
+                        <TableCell className='pr-6 font-mono text-xs text-muted-foreground'>
+                          {card.key}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            ))}
+          </TabsContent>
+          <TabsContent value='addons' className='mt-4'>
+            <PlanAddonsTab planId={plan.id} />
+          </TabsContent>
+        </Tabs>
       </Main>
 
       <ConfirmDialog
