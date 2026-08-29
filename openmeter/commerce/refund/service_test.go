@@ -2435,8 +2435,8 @@ func TestListRefundsFiltersAndPageWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 2 {
-		t.Fatalf("pending-fence total = %d, want 2", total)
+	if total != 2 || len(refunds) != 2 {
+		t.Fatalf("pending-fence list = %d items, total %d; want 2/2", len(refunds), total)
 	}
 
 	fulfilled := RefundStatusFulfilled

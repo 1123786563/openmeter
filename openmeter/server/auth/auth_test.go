@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -107,7 +106,7 @@ func baseClaims(mutate func(jwt.MapClaims)) jwt.MapClaims {
 }
 
 func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
+	return slog.New(slog.DiscardHandler)
 }
 
 // baseConfig matches baseClaims: organization acme, admin as Operator,
