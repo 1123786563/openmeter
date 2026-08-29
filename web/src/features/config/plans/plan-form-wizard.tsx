@@ -7,11 +7,11 @@ import {
   type UseFormReturn,
 } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Feature } from '@openmeter/client'
+import type { Feature, Plan } from '@openmeter/client'
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { useAllFeatures, useCreatePlan } from '@/api/hooks'
+import { useAllFeatures, useCreatePlan, useUpdatePlan } from '@/api/hooks'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,8 +44,10 @@ import {
   EMPTY_PLAN,
   defaultPhase,
   defaultRateCard,
+  fromPlanToWizardValues,
   planWizardSchema,
   toCreatePlanRequest,
+  toUpsertPlanRequest,
   type PlanWizardValues,
 } from './plan-form-schema'
 import { FieldError, PriceEditor } from './price-editor'
@@ -59,13 +61,17 @@ const RATE_CARD_TYPES = ['flat_fee', 'usage_based'] as const
 export type PlanFormWizardProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** 传入 draft 计划进入编辑模式（回填 + PUT 提交）。 */
+  plan?: Plan
 }
 
-export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
+export function PlanFormWizard({ open, onOpenChange, plan }: PlanFormWizardProps) {
   const { t } = useTranslation()
   const [step, setStep] = useState<Step>('basics')
 
+  const isEdit = Boolean(plan)
   const createPlan = useCreatePlan()
+  const updatePlan = useUpdatePlan()
 
   const form = useForm<PlanWizardValues>({
     resolver: zodResolver(planWizardSchema),
@@ -75,11 +81,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
 
   useEffect(() => {
     if (open) {
-      form.reset(EMPTY_PLAN)
+      form.reset(plan ? fromPlanToWizardValues(plan) : EMPTY_PLAN)
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reopen must return to the first wizard step
       setStep('basics')
     }
-  }, [open, form])
+  }, [open, plan, form])
 
   const {
     fields: phaseFields,
@@ -120,13 +126,27 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
   }
 
   const onSubmit = (values: PlanWizardValues) => {
-    createPlan.mutate(toCreatePlanRequest(values), {
-      onSuccess: () => {
-        toast.success(t('config.plans.wizard.toast.created'))
-        onOpenChange(false)
-      },
-      onError: handleServerError,
-    })
+    if (plan) {
+      updatePlan.mutate(
+        { planId: plan.id, body: toUpsertPlanRequest(values) },
+        {
+          onSuccess: () => {
+            toast.success(t('config.plans.wizard.toast.updated'))
+            onOpenChange(false)
+          },
+          onError: handleServerError,
+        }
+      )
+    } else {
+      // api.plans.create 的请求形状就是 body 本体（SDK CreatePlanRequest 无包装）。
+      createPlan.mutate(toCreatePlanRequest(values), {
+        onSuccess: () => {
+          toast.success(t('config.plans.wizard.toast.created'))
+          onOpenChange(false)
+        },
+        onError: handleServerError,
+      })
+    }
   }
 
   const stepIndex = STEPS.indexOf(step)
@@ -135,7 +155,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
-          <DialogTitle>{t('config.plans.wizard.createTitle')}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t('config.plans.wizard.editTitle')
+              : t('config.plans.wizard.createTitle')}
+          </DialogTitle>
           <DialogDescription>
             {t(`config.plans.wizard.steps.${step}`)} ({stepIndex + 1}/
             {STEPS.length})
@@ -150,6 +174,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
           >
             {step === 'basics' && (
               <>
+                {isEdit && (
+                  <p className='text-xs text-muted-foreground'>
+                    {t('config.plans.wizard.immutableHint')}
+                  </p>
+                )}
                 <div className='grid grid-cols-2 gap-4'>
                   <FormField
                     control={form.control}
@@ -174,6 +203,7 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                           <Input
                             placeholder='pro_plan'
                             autoComplete='off'
+                            disabled={isEdit}
                             {...field}
                           />
                         </FormControl>
@@ -192,7 +222,12 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                           {t('config.plans.fields.currency')}
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder='CNY' maxLength={24} {...field} />
+                          <Input
+                            placeholder='CNY'
+                            maxLength={24}
+                            disabled={isEdit}
+                            {...field}
+                          />
                         </FormControl>
                         <FieldError message={fieldState.error?.message} />
                       </FormItem>
@@ -211,9 +246,14 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                           onValueChange={(value) =>
                             field.onChange(value as 'P1M' | 'P1Y')
                           }
+                          disabled={isEdit}
                         >
                           <div className='flex items-center gap-2'>
-                            <RadioGroupItem value='P1M' id='cadence-p1m' />
+                            <RadioGroupItem
+                              value='P1M'
+                              id='cadence-p1m'
+                              disabled={isEdit}
+                            />
                             <Label
                               htmlFor='cadence-p1m'
                               className='font-normal'
@@ -222,7 +262,11 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
                             </Label>
                           </div>
                           <div className='flex items-center gap-2'>
-                            <RadioGroupItem value='P1Y' id='cadence-p1y' />
+                            <RadioGroupItem
+                              value='P1Y'
+                              id='cadence-p1y'
+                              disabled={isEdit}
+                            />
                             <Label
                               htmlFor='cadence-p1y'
                               className='font-normal'
@@ -380,11 +424,13 @@ export function PlanFormWizard({ open, onOpenChange }: PlanFormWizardProps) {
             <Button
               type='submit'
               form='plan-form-wizard'
-              disabled={createPlan.isPending}
+              disabled={createPlan.isPending || updatePlan.isPending}
             >
-              {createPlan.isPending
+              {createPlan.isPending || updatePlan.isPending
                 ? t('common.submitting')
-                : t('config.plans.wizard.createSubmit')}
+                : isEdit
+                  ? t('config.plans.wizard.editSubmit')
+                  : t('config.plans.wizard.createSubmit')}
             </Button>
           )}
         </DialogFooter>

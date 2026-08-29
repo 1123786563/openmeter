@@ -1,8 +1,12 @@
 import { z } from 'zod'
 import type {
   CreatePlanRequestInput,
+  Plan,
   PlanPhaseInput,
+  Price,
+  RateCard,
   RateCardInput,
+  UpsertPlanRequestInput,
 } from '@openmeter/client'
 
 const RESOURCE_KEY = /^[a-z0-9]+(?:_[a-z0-9]+)*$/
@@ -338,6 +342,86 @@ export function toCreatePlanRequest(
     key: values.key.trim(),
     currency: values.currency.trim(),
     billingCadence: values.billingCadence,
+    phases: toPlanPhases(values),
+  }
+}
+
+/** 把单张价卡已选 feature 展开回 featureId（flat_fee 卡为 ''，提交时省略 feature）。 */
+function fromRateCardToForm(card: RateCard): RateCardFormValues {
+  return {
+    key: card.key,
+    name: card.name,
+    type:
+      card.price.type === 'free' || card.price.type === 'flat'
+        ? 'flat_fee'
+        : 'usage_based',
+    featureId: card.feature?.id ?? '',
+    // 只回填 P1M/P1Y；原卡周期为其他 ISO8601 值（API 直建的少见情形）收敛为 null（一次性），
+    // 保存前界面会在该行下拉中显式重选，不会静默改写非既有值。
+    billingCadence:
+      card.billingCadence === 'P1Y' || card.billingCadence === 'P1M'
+        ? card.billingCadence
+        : null,
+    price: fromPriceToForm(card.price),
+  }
+}
+
+function fromPriceToForm(price: Price): PriceFormValue {
+  switch (price.type) {
+    case 'free':
+      return { kind: 'free' }
+    case 'flat':
+      return { kind: 'flat', amount: price.amount }
+    case 'unit':
+      return { kind: 'unit', amount: price.amount }
+    case 'graduated':
+    case 'volume': {
+      // spec 的区间起点是隐式的（上一档 up_to_amount+1），表单需要显式 firstUnit。
+      let previousUpTo = -1
+      const tiers = price.tiers.map((tier) => {
+        const firstUnit = String(previousUpTo + 1)
+        if (tier.upToAmount !== undefined)
+          previousUpTo = Number(tier.upToAmount)
+        return {
+          firstUnit,
+          lastUnit:
+            tier.upToAmount === undefined ? '' : String(tier.upToAmount),
+          unitAmount: tier.unitPrice?.amount ?? '0',
+          flatAmount: tier.flatPrice?.amount ?? '',
+        }
+      })
+      return { kind: 'tiered', mode: price.type, tiers }
+    }
+  }
+}
+
+/**
+ * v3 GET Plan → 向导初始值。key/currency/billingCadence 不可变（PUT 不提交）：
+ * billingCadence 非 P1M/P1Y 时收敛显示为 P1M，不回传服务端，无数据破坏。
+ */
+export function fromPlanToWizardValues(plan: Plan): PlanWizardValues {
+  return {
+    name: plan.name,
+    key: plan.key,
+    description: plan.description ?? '',
+    currency: plan.currency,
+    billingCadence: plan.billingCadence === 'P1Y' ? 'P1Y' : 'P1M',
+    phases: plan.phases.map((phase) => ({
+      key: phase.key,
+      name: phase.name,
+      duration: phase.duration ?? '',
+      rateCards: phase.rateCards.map(fromRateCardToForm),
+    })),
+  }
+}
+
+/** PUT /openmeter/plans/{id}：仅 name/description/phases（key/currency/billing_cadence 不可变）。 */
+export function toUpsertPlanRequest(
+  values: PlanWizardValues
+): UpsertPlanRequestInput {
+  return {
+    name: values.name.trim(),
+    description: values.description?.trim() || undefined,
     phases: toPlanPhases(values),
   }
 }

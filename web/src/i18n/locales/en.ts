@@ -166,6 +166,10 @@ export default {
       wizard: {
         createTitle: 'New plan',
         createSubmit: 'Create plan',
+        editTitle: 'Edit plan (draft)',
+        editSubmit: 'Save changes',
+        immutableHint:
+          'Key, currency, and billing cadence are immutable; clone a new version to change them.',
         steps: {
           basics: 'Basics',
           phases: 'Phases',
@@ -231,6 +235,7 @@ export default {
         },
         toast: {
           created: 'Plan created (draft)',
+          updated: 'Plan saved',
         },
       },
     },

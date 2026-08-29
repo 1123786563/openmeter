@@ -27,6 +27,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { EnumBadge, StatusBadge } from '@/components/status-badge'
+import { PlanFormWizard } from './plan-form-wizard'
 
 function InfoRow({
   label,
@@ -97,6 +98,8 @@ export function PlanDetail() {
   const archiveMutation = useArchivePlan()
   const cloneMutation = useClonePlanNext()
 
+  const [editOpen, setEditOpen] = useState(false)
+
   const statusBusy =
     publishMutation.isPending ||
     archiveMutation.isPending ||
@@ -145,6 +148,15 @@ export function PlanDetail() {
           {!statusBusy && plan.status === 'draft' && (
             <Button size='sm' onClick={() => setConfirming('publish')}>
               {t('config.plans.actions.publish')}
+            </Button>
+          )}
+          {!statusBusy && plan.status === 'draft' && (
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() => setEditOpen(true)}
+            >
+              {t('common.edit')}
             </Button>
           )}
           {!statusBusy && plan.status === 'active' && (
@@ -344,6 +356,8 @@ export function PlanDetail() {
           )
         }}
       />
+
+      <PlanFormWizard open={editOpen} onOpenChange={setEditOpen} plan={plan} />
     </>
   )
 }
