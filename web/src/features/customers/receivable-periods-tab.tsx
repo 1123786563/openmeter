@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { CommerceReceivablePeriod } from '@openmeter/client'
-import { ChevronRight, FilePlus2 } from 'lucide-react'
+import { ChevronRight, FilePlus2, HandCoins } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useReceivablePeriods } from '@/api/hooks'
 import { formatFen, formatNumber, formatShortDateTime } from '@/lib/format'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/status-badge'
 import { ExternalInvoiceDialog } from './external-invoice-dialog'
+import { OfflinePaymentDialog } from './offline-payment-dialog'
 
 /**
  * Receivable periods for one customer, cursor paginated. Mirrors the events
@@ -38,6 +39,8 @@ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
   const [invoiceTarget, setInvoiceTarget] =
     useState<CommerceReceivablePeriod | null>(null)
 
+  const [offlineOpen, setOfflineOpen] = useState(false)
+
   const allPeriods = [
     ...pages.flatMap((page) => page?.data ?? []),
     ...(data?.data ?? []),
@@ -52,6 +55,19 @@ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
 
   return (
     <div className='space-y-4'>
+      <div className='flex items-center justify-between'>
+        <p className='text-xs text-muted-foreground'>
+          {t('customers.receivablePeriods.offlinePayment.note')}
+        </p>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => setOfflineOpen(true)}
+        >
+          <HandCoins />
+          {t('customers.receivablePeriods.offlinePayment.action')}
+        </Button>
+      </div>
       <Table>
         <TableHeader>
           <TableRow className='bg-hover/50'>
@@ -157,6 +173,12 @@ export function ReceivablePeriodsTab({ customerId }: { customerId: string }) {
         onOpenChange={(open) => !open && setInvoiceTarget(null)}
         customerId={customerId}
         period={invoiceTarget}
+      />
+      <OfflinePaymentDialog
+        open={offlineOpen}
+        onOpenChange={setOfflineOpen}
+        customerId={customerId}
+        periods={allPeriods}
       />
     </div>
   )
