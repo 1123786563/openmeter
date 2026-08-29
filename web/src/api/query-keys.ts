@@ -55,4 +55,6 @@ export const queryKeys = {
   portalTokens: (params: object = {}) => ns('portal-tokens', params),
   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
   billingProfile: (id: string) => ns('billing-profile', id),
+  receivablePeriods: (customerId: string, params: object = {}) =>
+    ns('receivable-periods', customerId, params),
 }

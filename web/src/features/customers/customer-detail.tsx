@@ -32,6 +32,7 @@ import { Main } from '@/components/layout/main'
 import { EnumBadge, StatusBadge } from '@/components/status-badge'
 import { EntitlementsTable } from '@/features/credits/entitlements-table'
 import { CustomerFormDialog } from './customer-form-dialog'
+import { ReceivablePeriodsTab } from './receivable-periods-tab'
 
 function InfoRow({
   label,
@@ -497,6 +498,9 @@ export function CustomerDetail() {
               <TabsTrigger value='entitlements'>
                 {t('customers.detail.tabs.entitlements')}
               </TabsTrigger>
+              <TabsTrigger value='receivable-periods'>
+                {t('customers.detail.tabs.receivablePeriods')}
+              </TabsTrigger>
             </TabsList>
             <TabsContent value='subscriptions' className='mt-4'>
               <SubscriptionsTab customerId={customerId} />
@@ -514,6 +518,9 @@ export function CustomerDetail() {
               <Card className='py-0'>
                 <EntitlementsTable customerId={customerId} />
               </Card>
+            </TabsContent>
+            <TabsContent value='receivable-periods' className='mt-4'>
+              <ReceivablePeriodsTab customerId={customerId} />
             </TabsContent>
           </Tabs>
         </div>
