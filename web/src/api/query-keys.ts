@@ -51,4 +51,5 @@ export const queryKeys = {
   fiatCurrencies: () => ns('fiat-currencies'),
   currencies: (params: object = {}) => ns('currencies', params),
   taxCodes: (params: object = {}) => ns('tax-codes', params),
+  apps: () => ns('apps'),
 }

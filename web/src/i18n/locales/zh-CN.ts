@@ -444,7 +444,54 @@ export default {
     },
     apps: {
       title: '应用',
-      description: '管理应用集成的安装与配置。',
+      description:
+        '已安装的计费应用与可安装的应用目录（Stripe / Sandbox / 外部开票）。',
+      fields: {
+        name: '名称',
+        type: '类型',
+        status: '状态',
+        capabilities: '能力',
+        stripeInfo: 'Stripe 信息',
+        actions: '操作',
+      },
+      type: {
+        sandbox: 'Sandbox',
+        stripe: 'Stripe',
+        external_invoicing: '外部开票',
+      },
+      status: {
+        ready: '就绪',
+        unauthorized: '未授权',
+      },
+      capability: {
+        report_usage: '用量上报',
+        report_events: '事件上报',
+        calculate_tax: '税费计算',
+        invoice_customers: '客户开票',
+        collect_payments: '支付收款',
+      },
+      stripe: { livemode: '正式模式', testmode: '测试模式' },
+      installed: {
+        title: '已安装应用',
+        empty: '暂无已安装应用，从下方应用目录安装',
+      },
+      uninstall: '卸载',
+      uninstallConfirm: {
+        title: '卸载应用',
+        description:
+          '确定卸载「{{name}}」（{{type}}）吗？关联该应用的计费档案将失去对应能力，操作不可撤销。',
+      },
+      stripeKey: {
+        open: '更换 API Key',
+        title: '更换 Stripe API Key：{{name}}',
+        description: '当前 Key：{{masked}}。保存后立即使用新 Key 调用 Stripe。',
+        newKey: '新的 Secret API Key',
+        hint: '以 sk_live_ 或 sk_test_ 开头；仅保存一次，后续仅显示掩码。',
+        confirm: '保存新 Key',
+        validation: { required: '必填' },
+        toast: { updated: 'Stripe API Key 已更新' },
+      },
+      toast: { uninstalled: '应用已卸载' },
     },
     portalTokens: {
       title: '门户令牌',

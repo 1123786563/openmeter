@@ -459,7 +459,52 @@ export default {
     },
     apps: {
       title: 'Apps',
-      description: 'Manage app integrations and installations.',
+      description:
+        'Installed billing apps and the installable catalog (Stripe / Sandbox / external invoicing).',
+      fields: {
+        name: 'Name',
+        type: 'Type',
+        status: 'Status',
+        capabilities: 'Capabilities',
+        stripeInfo: 'Stripe info',
+        actions: 'Actions',
+      },
+      type: {
+        sandbox: 'Sandbox',
+        stripe: 'Stripe',
+        external_invoicing: 'External invoicing',
+      },
+      status: { ready: 'Ready', unauthorized: 'Unauthorized' },
+      capability: {
+        report_usage: 'Report usage',
+        report_events: 'Report events',
+        calculate_tax: 'Calculate tax',
+        invoice_customers: 'Invoice customers',
+        collect_payments: 'Collect payments',
+      },
+      stripe: { livemode: 'Live mode', testmode: 'Test mode' },
+      installed: {
+        title: 'Installed apps',
+        empty: 'No installed apps yet — install one from the catalog below',
+      },
+      uninstall: 'Uninstall',
+      uninstallConfirm: {
+        title: 'Uninstall app',
+        description:
+          'Uninstall "{{name}}" ({{type}})? Billing profiles using this app lose the related capabilities. This cannot be undone.',
+      },
+      stripeKey: {
+        open: 'Replace API key',
+        title: 'Replace Stripe API key: {{name}}',
+        description:
+          'Current key: {{masked}}. The new key is used for Stripe calls immediately after saving.',
+        newKey: 'New secret API key',
+        hint: 'Starts with sk_live_ or sk_test_; stored once, only shown masked afterwards.',
+        confirm: 'Save new key',
+        validation: { required: 'Required' },
+        toast: { updated: 'Stripe API key updated' },
+      },
+      toast: { uninstalled: 'App uninstalled' },
     },
     portalTokens: {
       title: 'Portal Tokens',
