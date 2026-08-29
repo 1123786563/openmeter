@@ -52,6 +52,7 @@ export const queryKeys = {
   fiatCurrencies: () => ns('fiat-currencies'),
   currencies: (params: object = {}) => ns('currencies', params),
   taxCodes: (params: object = {}) => ns('tax-codes', params),
+  addons: (params: object = {}) => ns('addons', params),
   apps: () => ns('apps'),
   portalTokens: (params: object = {}) => ns('portal-tokens', params),
   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
