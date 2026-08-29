@@ -22,6 +22,7 @@ import {
   updateNotificationChannel,
   updateNotificationRule,
   ruleToUpdateBody,
+  testNotificationRule,
   type EntitlementValueV2,
   type EntitlementV2,
   type NotificationChannelCreateRequest,
@@ -933,6 +934,19 @@ export function useToggleRule() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('notification.rules'),
+      })
+    },
+  })
+}
+
+/** Test-fires a rule; the generated event feeds the toast, and the events page cache is dropped so the new event shows up. */
+export function useTestRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (ruleId: string) => testNotificationRule(ruleId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.events'),
       })
     },
   })

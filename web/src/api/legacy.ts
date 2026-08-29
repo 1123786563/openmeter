@@ -415,6 +415,72 @@ export function ruleToUpdateBody(
   }
 }
 
+/** Notification event type — same discriminator values as rule types. */
+export type NotificationEventType =
+  | 'entitlements.balance.threshold'
+  | 'entitlements.reset'
+  | 'invoice.created'
+  | 'invoice.updated'
+
+export type NotificationEventDeliveryState =
+  | 'SUCCESS'
+  | 'FAILED'
+  | 'SENDING'
+  | 'PENDING'
+  | 'RESENDING'
+
+/** Spec: EventDeliveryAttemptResponse — what the recipient answered. */
+export interface EventDeliveryAttemptResponse {
+  statusCode?: number
+  body: string
+  durationMs: number
+}
+
+export interface NotificationEventDeliveryAttempt {
+  state: NotificationEventDeliveryState
+  response: EventDeliveryAttemptResponse
+  timestamp: string
+}
+
+export interface NotificationEventDeliveryStatus {
+  state: NotificationEventDeliveryState
+  reason: string
+  updatedAt: string
+  channel: NotificationChannelMeta
+  nextAttempt?: string | null
+  attempts: NotificationEventDeliveryAttempt[]
+}
+
+/**
+ * Payload envelope shared by all four event types (spec oneOf discriminated by
+ * `type`); `data` varies per type and stays opaque for UI purposes.
+ */
+export interface NotificationEventPayload {
+  id: string
+  type: NotificationEventType
+  timestamp: string
+  data: unknown
+}
+
+export interface NotificationEvent {
+  id: string
+  type: NotificationEventType
+  createdAt: string
+  rule: NotificationRule
+  deliveryStatus: NotificationEventDeliveryStatus[]
+  payload: NotificationEventPayload
+}
+
+/** POST /api/v1/notification/rules/{ruleId}/test — sends a test event with random data; 201 returns the generated event. */
+export async function testNotificationRule(
+  ruleId: string
+): Promise<NotificationEvent> {
+  return apiFetch<NotificationEvent>(
+    `/v1/notification/rules/${encodeURIComponent(ruleId)}/test`,
+    { method: 'POST' }
+  )
+}
+
 /** GET /api/v1/info/currencies — fiat currency list (v1-only lookup endpoint). */
 export interface FiatCurrency {
   code: string

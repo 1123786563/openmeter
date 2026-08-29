@@ -1,18 +1,24 @@
 import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
-import { useForm } from 'react-hook-form'
+import {
+  type Control,
+  type FieldErrors,
+  useFieldArray,
+  useForm,
+} from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   useCreateRule,
+  useFeatures,
   useNotificationChannels,
   useUpdateRule,
 } from '@/api/hooks'
 import type {
+  NotificationRule,
   NotificationRuleCreateRequest,
-  NotificationRuleInvoiceCreated,
-  NotificationRuleInvoiceUpdated,
 } from '@/api/legacy'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
@@ -44,14 +50,24 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { MultiSelect } from '@/components/multi-select'
 
-/**
- * Rule types editable in this dialog. The API also defines
- * `entitlements.balance.threshold` and `entitlements.reset`; their editors
- * (threshold rows / feature multi-select) land in a follow-up change and the
- * union below is extended there.
- */
-const RULE_TYPES = ['invoice.created', 'invoice.updated'] as const
+const RULE_TYPES = [
+  'entitlements.balance.threshold',
+  'entitlements.reset',
+  'invoice.created',
+  'invoice.updated',
+] as const
 export type RuleFormType = (typeof RULE_TYPES)[number]
+
+/** Spec: NotificationRuleBalanceThresholdValueType (PERCENT/NUMBER deprecated). */
+const THRESHOLD_TYPES = [
+  'PERCENT',
+  'NUMBER',
+  'balance_value',
+  'usage_percentage',
+  'usage_value',
+] as const
+
+const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/
 
 const ruleFormBase = {
   name: z.string().min(1).max(256),
@@ -59,12 +75,39 @@ const ruleFormBase = {
   disabled: z.boolean(),
 }
 
+const thresholdRowSchema = z.object({
+  value: z
+    .string()
+    .trim()
+    .refine((value) => NUMERIC_PATTERN.test(value), 'number'),
+  type: z.enum(THRESHOLD_TYPES),
+})
+
 const ruleFormSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('entitlements.balance.threshold'),
+    ...ruleFormBase,
+    thresholds: z.array(thresholdRowSchema).min(1).max(10),
+    features: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal('entitlements.reset'),
+    ...ruleFormBase,
+    features: z.array(z.string()),
+  }),
   z.object({ type: z.literal('invoice.created'), ...ruleFormBase }),
   z.object({ type: z.literal('invoice.updated'), ...ruleFormBase }),
 ])
 
 type RuleFormValues = z.infer<typeof ruleFormSchema>
+type ThresholdFormValues = Extract<
+  RuleFormValues,
+  { type: 'entitlements.balance.threshold' }
+>
+type FeaturesAwareFormValues = Extract<
+  RuleFormValues,
+  { type: 'entitlements.balance.threshold' | 'entitlements.reset' }
+>
 
 const CREATE_DEFAULT: RuleFormValues = {
   type: 'invoice.created',
@@ -73,15 +116,11 @@ const CREATE_DEFAULT: RuleFormValues = {
   disabled: false,
 }
 
-type EditableRule =
-  | NotificationRuleInvoiceCreated
-  | NotificationRuleInvoiceUpdated
-
 type RuleFormDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Present when editing an existing invoice-type rule. */
-  rule?: EditableRule
+  /** Present when editing an existing rule of any type. */
+  rule?: NotificationRule
 }
 
 export function RuleFormDialog({
@@ -108,20 +147,55 @@ export function RuleFormDialog({
     [channelsData]
   )
 
+  const { data: featuresData } = useFeatures({ page: 1, pageSize: 100 })
+  const featureOptions = useMemo(
+    () =>
+      (featuresData?.data ?? []).map((feature) => ({
+        value: feature.id,
+        label: feature.name || feature.key,
+      })),
+    [featuresData]
+  )
+
   const form = useForm<RuleFormValues>({
     resolver: zodResolver(ruleFormSchema),
     defaultValues: CREATE_DEFAULT,
   })
+
+  // `thresholds` only exists on the threshold branch; the array control is
+  // bound to that branch and only rendered while it is active.
+  const thresholdRows = useFieldArray({
+    control: form.control as unknown as Control<ThresholdFormValues>,
+    name: 'thresholds',
+  })
+
+  const watchedType = form.watch('type')
 
   useEffect(() => {
     if (!open) return
     form.reset(
       rule
         ? {
-            type: rule.type,
             name: rule.name,
             channels: rule.channels.map((channel) => channel.id),
             disabled: rule.disabled,
+            ...(rule.type === 'entitlements.balance.threshold'
+              ? {
+                  type: rule.type,
+                  thresholds: rule.thresholds.map((threshold) => ({
+                    value: String(threshold.value),
+                    type: threshold.type,
+                  })),
+                  features: (rule.features ?? []).map((feature) => feature.id),
+                }
+              : rule.type === 'entitlements.reset'
+                ? {
+                    type: rule.type,
+                    features: (rule.features ?? []).map(
+                      (feature) => feature.id
+                    ),
+                  }
+                : { type: rule.type }),
           }
         : CREATE_DEFAULT
     )
@@ -129,13 +203,70 @@ export function RuleFormDialog({
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
 
+  /** Type switch must migrate the union shape (add/drop type-specific keys). */
+  const switchType = (next: RuleFormType) => {
+    const current = form.getValues()
+    const common = {
+      name: current.name,
+      channels: current.channels,
+      disabled: current.disabled,
+    }
+    const currentFeatures =
+      current.type === 'entitlements.balance.threshold' ||
+      current.type === 'entitlements.reset'
+        ? current.features
+        : []
+    if (next === 'entitlements.balance.threshold') {
+      form.reset({
+        ...common,
+        type: next,
+        thresholds:
+          current.type === 'entitlements.balance.threshold'
+            ? current.thresholds
+            : [{ value: '100', type: 'usage_value' }],
+        features: currentFeatures,
+      })
+    } else if (next === 'entitlements.reset') {
+      form.reset({ ...common, type: next, features: currentFeatures })
+    } else {
+      form.reset({ ...common, type: next })
+    }
+  }
+
   const onSubmit = (values: RuleFormValues) => {
-    const body: NotificationRuleCreateRequest = {
-      type: values.type,
+    const common = {
       name: values.name.trim(),
       disabled: values.disabled,
       channels: values.channels,
     }
+    // An empty features array is invalid per spec (minItems 1); omitting the
+    // field entirely means "applies to all features".
+    let body: NotificationRuleCreateRequest
+    switch (values.type) {
+      case 'entitlements.balance.threshold':
+        body = {
+          ...common,
+          type: values.type,
+          thresholds: values.thresholds.map((row) => ({
+            value: Number(row.value),
+            type: row.type,
+          })),
+          ...(values.features.length ? { features: values.features } : {}),
+        }
+        break
+      case 'entitlements.reset':
+        body = {
+          ...common,
+          type: values.type,
+          ...(values.features.length ? { features: values.features } : {}),
+        }
+        break
+      case 'invoice.created':
+      case 'invoice.updated':
+        body = { ...common, type: values.type }
+        break
+    }
+
     if (isCreate) {
       createMutation.mutate(body, {
         onSuccess: () => {
@@ -185,7 +316,7 @@ export function RuleFormDialog({
                   </FormLabel>
                   <Select
                     value={field.value}
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => switchType(value as RuleFormType)}
                     disabled={!isCreate}
                   >
                     <FormControl>
@@ -216,7 +347,7 @@ export function RuleFormDialog({
                     {t('config.notification.rules.fields.name')}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder='Invoice created' {...field} />
+                    <Input placeholder='Balance threshold reached' {...field} />
                   </FormControl>
                   <FormMessage>
                     {form.formState.errors.name
@@ -257,6 +388,134 @@ export function RuleFormDialog({
                 </FormItem>
               )}
             />
+            {watchedType === 'entitlements.balance.threshold' && (
+              <div className='space-y-2'>
+                <FormLabel>
+                  {t('config.notification.rules.fields.thresholds')}
+                </FormLabel>
+                <FormDescription>
+                  {t('config.notification.rules.form.thresholdsHint')}
+                </FormDescription>
+                {thresholdRows.fields.map((row, index) => (
+                  <div key={row.id} className='space-y-1'>
+                    <div className='flex items-start gap-2'>
+                      <FormField
+                        control={
+                          form.control as unknown as Control<ThresholdFormValues>
+                        }
+                        name={`thresholds.${index}.value`}
+                        render={({ field }) => (
+                          <FormItem className='flex-1'>
+                            <FormControl>
+                              <Input
+                                inputMode='decimal'
+                                placeholder='100'
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={
+                          form.control as unknown as Control<ThresholdFormValues>
+                        }
+                        name={`thresholds.${index}.type`}
+                        render={({ field }) => (
+                          <FormItem className='flex-1'>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger className='w-full'>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {THRESHOLD_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {t(
+                                      `config.notification.rules.thresholdTypes.${type}`
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='icon'
+                        className='size-9 shrink-0'
+                        disabled={thresholdRows.fields.length <= 1}
+                        onClick={() => thresholdRows.remove(index)}
+                      >
+                        <Trash2 className='size-4' />
+                        <span className='sr-only'>
+                          {t('config.notification.rules.form.removeThreshold')}
+                        </span>
+                      </Button>
+                    </div>
+                    {(form.formState.errors as FieldErrors<ThresholdFormValues>)
+                      .thresholds?.[index]?.value && (
+                      <p className='text-sm text-destructive'>
+                        {t(
+                          'config.notification.rules.form.validation.threshold'
+                        )}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  disabled={thresholdRows.fields.length >= 10}
+                  onClick={() =>
+                    thresholdRows.append({ value: '', type: 'usage_value' })
+                  }
+                >
+                  <Plus className='size-4' />
+                  {t('config.notification.rules.form.addThreshold')}
+                </Button>
+              </div>
+            )}
+            {(watchedType === 'entitlements.balance.threshold' ||
+              watchedType === 'entitlements.reset') && (
+              <FormField
+                control={
+                  form.control as unknown as Control<FeaturesAwareFormValues>
+                }
+                name='features'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t('config.notification.rules.fields.features')}
+                    </FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={featureOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder={t(
+                          'config.notification.rules.form.featuresPlaceholder'
+                        )}
+                        searchPlaceholder={t('common.search')}
+                        emptyText={t(
+                          'config.notification.rules.form.noFeatures'
+                        )}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('config.notification.rules.form.featuresHint')}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name='disabled'

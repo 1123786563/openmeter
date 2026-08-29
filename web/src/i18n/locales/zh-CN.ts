@@ -469,6 +469,7 @@ export default {
         empty: '暂无通知规则',
         enable: '启用',
         disable: '禁用',
+        test: '发送测试',
         actions: '操作',
         pagination: { total: '共 {{total}} 条' },
         types: {
@@ -483,6 +484,15 @@ export default {
           channels: '投递渠道',
           status: '状态',
           disabled: '禁用规则',
+          thresholds: '阈值（1-10 项）',
+          features: '功能范围',
+        },
+        thresholdTypes: {
+          PERCENT: '用量百分比（旧）',
+          NUMBER: '用量数值（旧）',
+          balance_value: '剩余额度数值',
+          usage_percentage: '用量百分比',
+          usage_value: '用量数值',
         },
         form: {
           createTitle: '新建通知规则',
@@ -495,11 +505,25 @@ export default {
           channelsHint:
             '至少选择一个渠道；规则触发时事件将投递到全部所选渠道。',
           noChannels: '暂无可选渠道，请先创建通知渠道',
+          thresholdsHint:
+            '规则在用量/额度达到任一阈值时触发；最少 1 项、最多 10 项。',
+          addThreshold: '添加阈值',
+          removeThreshold: '移除该阈值',
+          featuresPlaceholder: '选择功能（可多选，留空=全部功能）',
+          featuresHint:
+            '仅对所选功能触发；不选则作用于全部功能（API 不接受空数组，留空即省略该字段）。',
+          noFeatures: '暂无功能，请先在功能目录创建',
           disabledHint: '禁用后规则停止触发通知。',
           validation: {
             required: '必填，1-256 字符。',
             channels: '至少选择一个投递渠道。',
+            threshold: '阈值必须为数字（可负、可小数）。',
           },
+        },
+        testConfirm: {
+          title: '发送测试通知',
+          description:
+            '将用随机数据向「{{name}}」绑定的全部渠道真实投递一条测试事件，继续吗？',
         },
         toggleConfirm: {
           enableTitle: '启用通知规则',
@@ -512,6 +536,7 @@ export default {
           updated: '通知规则已更新。',
           enabled: '通知规则已启用。',
           disabled: '通知规则已禁用。',
+          testSent: '测试事件已生成（{{id}}），投递状态见通知事件页。',
         },
       },
       events: {
