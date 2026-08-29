@@ -1,0 +1,1467 @@
+# Review package: 33921bc41..b40d256c7
+
+## Commits
+b40d256c7 fix(repo): anchor .gitignore server rule to repo root and recover four swallowed paths (issue #31)
+
+## Files changed
+ .gitignore                         |   5 +-
+ api/v3/server/namespaces_test.go   |  41 +++
+ cmd/server/commerce_loopback.go    |  43 +++
+ openmeter/server/auth/auth.go      | 411 +++++++++++++++++++++++++++
+ openmeter/server/auth/auth_test.go | 550 +++++++++++++++++++++++++++++++++++++
+ openmeter/server/auth/jwks.go      | 224 +++++++++++++++
+ openmeter/server/cors_test.go      | 116 ++++++++
+ 7 files changed, 1389 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/.gitignore b/.gitignore
+index 32464d00b..28547e67c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -26,21 +26,24 @@ openmeter.log
+ .claude/plans/
+ .claude/todos.json
+ .claude/worktrees
+ CLAUDE.local.md
+ 
+ # oapi-codegen patched templates (generated from patch files)
+ api/v3/templates/chi-middleware.tmpl
+ 
+ # CodeGraph
+ .codegraph/
+-server
++# CodeGraph server binary at repo root only. Anchored: a bare `server`
++# pattern also swallowed nested server dirs (openmeter/server/auth etc.),
++# breaking pristine-clone builds (issue #31).
++/server
+ 
+ # SDD worktrees
+ .worktrees/
+ .idea/
+ # Local e2e scratch stands (sandbox keys, verification evidence); do not
+ # ignore all of e2e/ — new test files must stay visible in git status.
+ e2e/alipay-sandbox/
+ e2e/commerce-verify/
+ .playwright-mcp/
+ .mimosa/
+diff --git a/api/v3/server/namespaces_test.go b/api/v3/server/namespaces_test.go
+new file mode 100644
+index 000000000..f0f715632
+--- /dev/null
++++ b/api/v3/server/namespaces_test.go
+@@ -0,0 +1,41 @@
++package server
++
++import (
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	namespaceshandler "github.com/openmeterio/openmeter/api/v3/handlers/namespaces"
++	"github.com/openmeterio/openmeter/app/config"
++)
++
++func TestListNamespacesRoute(t *testing.T) {
++	s := Server{
++		Config: &Config{},
++		namespacesHandler: namespaceshandler.New(config.NamespaceConfiguration{
++			Default:   "default",
++			Allowlist: []string{"tenant-a", "tenant-b"},
++		}),
++	}
++
++	rec := httptest.NewRecorder()
++	s.ListNamespaces(rec, httptest.NewRequest(http.MethodGet, "/api/v3/openmeter/namespaces", nil))
++
++	require.Equal(t, http.StatusOK, rec.Code)
++
++	var body struct {
++		Default    string   `json:"default"`
++		Namespaces []string `json:"namespaces"`
++	}
++	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
++	require.Equal(t, "default", body.Default)
++	require.Equal(t, []string{"default", "tenant-a", "tenant-b"}, body.Namespaces)
++}
++
++func TestNamespacesHandlerIsRequired(t *testing.T) {
++	err := (&Config{}).Validate()
++	require.ErrorContains(t, err, "namespaces handler is required")
++}
+diff --git a/cmd/server/commerce_loopback.go b/cmd/server/commerce_loopback.go
+new file mode 100644
+index 000000000..05f28755a
+--- /dev/null
++++ b/cmd/server/commerce_loopback.go
+@@ -0,0 +1,43 @@
++package main
++
++import (
++	"context"
++
++	"github.com/openmeterio/openmeter/app/config"
++	"github.com/openmeterio/openmeter/openmeter/commerce/refund"
++)
++
++// Loopback-only automatic-refund collaborators.
++//
++// Production wiring passes nil runtime dependencies and commerce wiring
++// fails closed until real refund-fence collaborators (the WeKnora fence API)
++// are assembled. When commerce.test.enabled is true, configuration
++// validation already guarantees that every enabled provider endpoint is
++// loopback HTTP and a >=24 char control token is set, so this stand-in only
++// ever exists on the loopback protocol test stand. It must not be used for
++// production.
++type loopbackFenceClient struct{}
++
++func (loopbackFenceClient) EstablishFence(context.Context, string, string, string) (refund.FenceResult, error) {
++	return refund.FenceResult{Sequence: "loopback-fence-1", Established: true}, nil
++}
++
++func (loopbackFenceClient) ReleaseFence(context.Context, string, string, string, string) error {
++	return nil
++}
++
++type loopbackCreditReverser struct{}
++
++func (loopbackCreditReverser) ReverseCredits(_ context.Context, in refund.ReverseCreditsInput) (refund.ReverseCreditsResult, error) {
++	return refund.ReverseCreditsResult{LedgerEntryID: "loopback-reversal-1", Credits: in.Credits}, nil
++}
++
++func loopbackTestRuntimeDependencies(cfg config.CommerceConfiguration) *commerceRuntimeDependencies {
++	if !cfg.Test.Enabled {
++		return nil
++	}
++	return &commerceRuntimeDependencies{
++		RefundFence:          loopbackFenceClient{},
++		RefundCreditReverser: loopbackCreditReverser{},
++	}
++}
+diff --git a/openmeter/server/auth/auth.go b/openmeter/server/auth/auth.go
+new file mode 100644
+index 000000000..08b27d748
+--- /dev/null
++++ b/openmeter/server/auth/auth.go
+@@ -0,0 +1,411 @@
++// Package auth implements Casdoor OIDC bearer authentication for the fork's
++// admin-facing API surface (see docs/adr/0001-casdoor-oidc-auth-middleware.md).
++//
++// Access tokens are verified locally against a cached JWKS key set. Beyond
++// signature and standard claim validation, tokens are narrowed to an
++// organization allowlist and a two-level role model: Viewer may only issue
++// read requests (GET/HEAD/OPTIONS), Operator has full access.
++package auth
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"log/slog"
++	"net/http"
++	"slices"
++	"strings"
++	"time"
++
++	"github.com/golang-jwt/jwt/v5"
++
++	"github.com/openmeterio/openmeter/pkg/defaultx"
++	"github.com/openmeterio/openmeter/pkg/models"
++)
++
++// Default claim names following Casdoor's token layout: the organization a user
++// belongs to is the "owner" claim and its roles are the "roles" claim.
++const (
++	DefaultOrganizationClaim = "owner"
++	DefaultRoleClaim         = "roles"
++)
++
++// Role is the coarse-grained API access level derived from the token's role claim.
++type Role string
++
++const (
++	// RoleViewer allows read-only requests.
++	RoleViewer Role = "Viewer"
++	// RoleOperator allows read and write requests.
++	RoleOperator Role = "Operator"
++)
++
++// readMethods are HTTP methods a Viewer may issue.
++var readMethods = []string{http.MethodGet, http.MethodHead, http.MethodOptions}
++
++// Identity is the authenticated caller placed into the request context after
++// the middleware passes.
++type Identity struct {
++	// Subject is the token sub claim (the Casdoor user name).
++	Subject string
++	// Organization is the token organization claim (empty when the token has none).
++	Organization string
++	// Role is the mapped access level.
++	Role Role
++}
++
++type identityContextKey struct{}
++
++// FromContext returns the authenticated identity from the request context.
++func FromContext(ctx context.Context) (Identity, bool) {
++	identity, ok := ctx.Value(identityContextKey{}).(Identity)
++
++	return identity, ok
++}
++
++// Config configures the OIDC bearer middleware.
++type Config struct {
++	// Logger receives rejected-request diagnostics.
++	Logger *slog.Logger
++
++	// Issuer is the expected JWT iss claim.
++	Issuer string
++
++	// JwksURL is the JWKS endpoint serving the issuer's public RSA keys.
++	JwksURL string
++
++	// Audience validates the JWT aud claim when non-empty; empty skips the check.
++	Audience string
++
++	// AllowedOrganizations restricts access to tokens whose organization claim
++	// is listed here. Empty skips the organization check.
++	AllowedOrganizations []string
++
++	// OrganizationClaim names the token claim carrying the organization.
++	// Defaults to DefaultOrganizationClaim when empty.
++	OrganizationClaim string
++
++	// ViewerRoles are token roles mapped to RoleViewer.
++	ViewerRoles []string
++
++	// OperatorRoles are token roles mapped to RoleOperator.
++	OperatorRoles []string
++
++	// RoleClaim names the token claim carrying role names.
++	// Defaults to DefaultRoleClaim when empty.
++	RoleClaim string
++
++	// HTTPClient fetches the JWKS endpoint. Defaults to a client with a short
++	// timeout when nil.
++	HTTPClient *http.Client
++}
++
++var _ models.Validator = (*Config)(nil)
++
++// Validate validates the configuration.
++func (c Config) Validate() error {
++	var errs []error
++
++	if c.Logger == nil {
++		errs = append(errs, errors.New("logger is required"))
++	}
++
++	if c.Issuer == "" {
++		errs = append(errs, errors.New("issuer is required"))
++	}
++
++	if c.JwksURL == "" {
++		errs = append(errs, errors.New("jwks url is required"))
++	}
++
++	return models.NewNillableGenericValidationError(errors.Join(errs...))
++}
++
++// Middleware authenticates requests with Casdoor-issued OIDC bearer tokens.
++type Middleware struct {
++	logger *slog.Logger
++
++	parser     *jwt.Parser
++	jwks       *jwksCache
++	audience   string
++	allowedOrg []string
++	orgClaim   string
++	viewer     []string
++	operator   []string
++	roleClaim  string
++	// rolesConfigured is true when either role list is set. When false, passing
++	// the organization check grants Operator.
++	rolesConfigured bool
++}
++
++// New builds the middleware from a validated configuration.
++func New(config Config) (*Middleware, error) {
++	if err := config.Validate(); err != nil {
++		return nil, fmt.Errorf("invalid oidc auth config: %w", err)
++	}
++
++	parserOptions := []jwt.ParserOption{
++		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}),
++		jwt.WithIssuer(config.Issuer),
++		jwt.WithExpirationRequired(),
++	}
++	if config.Audience != "" {
++		parserOptions = append(parserOptions, jwt.WithAudience(config.Audience))
++	}
++
++	httpClient := config.HTTPClient
++	if httpClient == nil {
++		httpClient = &http.Client{Timeout: 10 * time.Second}
++	}
++
++	return &Middleware{
++		logger:          config.Logger,
++		parser:          jwt.NewParser(parserOptions...),
++		jwks:            newJWKSCache(config.JwksURL, httpClient),
++		audience:        config.Audience,
++		allowedOrg:      config.AllowedOrganizations,
++		orgClaim:        defaultString(config.OrganizationClaim, DefaultOrganizationClaim),
++		viewer:          config.ViewerRoles,
++		operator:        config.OperatorRoles,
++		roleClaim:       defaultString(config.RoleClaim, DefaultRoleClaim),
++		rolesConfigured: len(config.ViewerRoles) > 0 || len(config.OperatorRoles) > 0,
++	}, nil
++}
++
++// NewOptional returns the authentication middleware when enabled, and nil when
++// disabled so callers can mount the result unconditionally: a nil middleware
++// fully bypasses authentication.
++func NewOptional(enabled bool, config Config) (func(http.Handler) http.Handler, error) {
++	if !enabled {
++		return nil, nil
++	}
++
++	middleware, err := New(config)
++	if err != nil {
++		return nil, err
++	}
++
++	return middleware.Handle, nil
++}
++
++// publicPaths are exact request paths that bypass authentication: the OpenAPI
++// documents and the debug metrics endpoint used by container healthchecks.
++var publicPaths = []string{
++	"/api/swagger.json",
++	"/api/v3/openapi.json",
++	"/api/v3/openapi.yaml",
++	"/api/v1/debug/metrics",
++}
++
++// publicPathPrefixes are request path prefixes that bypass authentication.
++// Only the portal meter queries carry their own PortalTokenAuth; the portal
++// token management endpoints (mint/list/invalidate) have no operation-level
++// security upstream and must stay behind OIDC authentication here.
++var publicPathPrefixes = []string{
++	"/api/v1/portal/meters/",
++}
++
++// bypassesAuthentication reports whether the request skips OIDC checks.
++// CORS preflight requests cannot carry credentials, so OPTIONS always passes through.
++func bypassesAuthentication(r *http.Request) bool {
++	if r.Method == http.MethodOptions {
++		return true
++	}
++
++	if slices.Contains(publicPaths, r.URL.Path) {
++		return true
++	}
++
++	for _, prefix := range publicPathPrefixes {
++		if strings.HasPrefix(r.URL.Path, prefix) {
++			return true
++		}
++	}
++
++	return false
++}
++
++// Handle wraps next with OIDC bearer authentication.
++func (m *Middleware) Handle(next http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if bypassesAuthentication(r) {
++			next.ServeHTTP(w, r)
++
++			return
++		}
++
++		bearer, err := bearerToken(r)
++		if err != nil {
++			m.reject(w, r, http.StatusUnauthorized, err)
++
++			return
++		}
++
++		identity, err := m.authenticate(r.Context(), bearer)
++		if err != nil {
++			m.reject(w, r, http.StatusUnauthorized, err)
++
++			return
++		}
++
++		if err := m.authorize(identity, r); err != nil {
++			m.reject(w, r, http.StatusForbidden, err)
++
++			return
++		}
++
++		ctx := context.WithValue(r.Context(), identityContextKey{}, identity)
++		next.ServeHTTP(w, r.WithContext(ctx))
++	})
++}
++
++// authenticate verifies signature and standard claims, then extracts the
++// identity from the token payload.
++func (m *Middleware) authenticate(ctx context.Context, bearer string) (Identity, error) {
++	token, err := m.parser.Parse(bearer, func(token *jwt.Token) (any, error) {
++		kid, _ := token.Header["kid"].(string)
++		if kid == "" {
++			return nil, errors.New("token header is missing the kid")
++		}
++
++		return m.jwks.publicKey(ctx, kid)
++	})
++	if err != nil {
++		return Identity{}, fmt.Errorf("invalid token: %w", err)
++	}
++
++	claims, ok := token.Claims.(jwt.MapClaims)
++	if !ok {
++		return Identity{}, errors.New("invalid token claims")
++	}
++
++	subject, err := claims.GetSubject()
++	if err != nil {
++		return Identity{}, fmt.Errorf("invalid subject claim: %w", err)
++	}
++
++	if subject == "" {
++		return Identity{}, errors.New("token is missing the subject")
++	}
++
++	organization, _ := claims[m.orgClaim].(string)
++	roles := claimStrings(claims[m.roleClaim])
++
++	return Identity{
++		Subject:      subject,
++		Organization: organization,
++		Role:         m.resolveRole(roles),
++	}, nil
++}
++
++// authorize enforces the organization allowlist and the Viewer read-only
++// restriction. The role itself is resolved from the claims in authenticate;
++// unmapped tokens resolve to the empty role and fail here.
++func (m *Middleware) authorize(identity Identity, r *http.Request) error {
++	if len(m.allowedOrg) > 0 && !slices.Contains(m.allowedOrg, identity.Organization) {
++		return fmt.Errorf("organization %q is not allowed", identity.Organization)
++	}
++
++	if identity.Role == "" {
++		return errors.New("token has no allowed role")
++	}
++
++	if identity.Role == RoleViewer && !slices.Contains(readMethods, r.Method) {
++		return fmt.Errorf("viewer role is not allowed to send %s requests", r.Method)
++	}
++
++	return nil
++}
++
++// resolveRole maps token roles to an access level. Operator wins over Viewer
++// when both match. Without configured role lists, every authenticated token is
++// an Operator; otherwise an empty result means the token matched no role.
++func (m *Middleware) resolveRole(roles []string) Role {
++	if !m.rolesConfigured {
++		return RoleOperator
++	}
++
++	if containsAny(roles, m.operator) {
++		return RoleOperator
++	}
++
++	if containsAny(roles, m.viewer) {
++		return RoleViewer
++	}
++
++	return ""
++}
++
++// Response bodies carry static text only: the internal errors (JWKS URLs,
++// network details, claim specifics) must not leak to unauthenticated callers.
++var (
++	errUnauthorizedResponse = errors.New("unauthorized")
++	errForbiddenResponse    = errors.New("forbidden")
++)
++
++// reject responds with an RFC 7807 problem and logs the real rejection cause.
++func (m *Middleware) reject(w http.ResponseWriter, r *http.Request, status int, err error) {
++	m.logger.WarnContext(r.Context(), "oidc authentication rejected",
++		slog.String("method", r.Method),
++		slog.String("path", r.URL.Path),
++		slog.Int("status", status),
++		slog.Any("error", err),
++	)
++
++	responseErr := errUnauthorizedResponse
++	if status == http.StatusForbidden {
++		responseErr = errForbiddenResponse
++	}
++
++	models.NewStatusProblem(r.Context(), responseErr, status).Respond(w)
++}
++
++// bearerToken extracts the token from the Authorization header.
++func bearerToken(r *http.Request) (string, error) {
++	authorization := strings.TrimSpace(r.Header.Get("Authorization"))
++	if authorization == "" {
++		return "", errors.New("missing authorization header")
++	}
++
++	scheme, token, found := strings.Cut(authorization, " ")
++	if !found || scheme != "Bearer" || token == "" {
++		return "", errors.New("invalid authorization header: expected a bearer token")
++	}
++
++	return token, nil
++}
++
++// claimStrings reads a claim that may appear as a single string or as a JSON
++// array of strings; Casdoor emits both shapes depending on the role source.
++func claimStrings(claim any) []string {
++	switch value := claim.(type) {
++	case string:
++		return []string{value}
++	case []any:
++		values := make([]string, 0, len(value))
++		for _, item := range value {
++			if s, ok := item.(string); ok {
++				values = append(values, s)
++			}
++		}
++
++		return values
++	default:
++		return nil
++	}
++}
++
++// containsAny reports whether any of values is contained in candidates.
++func containsAny(values, candidates []string) bool {
++	for _, value := range values {
++		if slices.Contains(candidates, value) {
++			return true
++		}
++	}
++
++	return false
++}
++
++func defaultString(value, fallback string) string {
++	return defaultx.IfZero(value, fallback)
++}
+diff --git a/openmeter/server/auth/auth_test.go b/openmeter/server/auth/auth_test.go
+new file mode 100644
+index 000000000..0c0504872
+--- /dev/null
++++ b/openmeter/server/auth/auth_test.go
+@@ -0,0 +1,550 @@
++package auth
++
++import (
++	"crypto/rand"
++	"crypto/rsa"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"encoding/base64"
++	"encoding/json"
++	"encoding/pem"
++	"io"
++	"log/slog"
++	"math/big"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/golang-jwt/jwt/v5"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const (
++	testIssuer     = "https://casdoor.test"
++	testAudience   = "openmeter-api"
++	testJwksPath   = "/api/certs"
++	testOperatorKV = "/api/v1/customers"
++)
++
++// testCasdoor is a minimal Casdoor stand-in: an RSA signing key whose
++// certificate endpoint is served by an in-process HTTP test server. Rotating
++// the key field simulates Casdoor-side key rotation.
++type testCasdoor struct {
++	key    *rsa.PrivateKey
++	kid    string
++	server *httptest.Server
++}
++
++func newTestCasdoor(t testing.TB, kid string) *testCasdoor {
++	t.Helper()
++
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++
++	casdoor := &testCasdoor{key: key, kid: kid}
++
++	mux := http.NewServeMux()
++	mux.HandleFunc(testJwksPath, func(w http.ResponseWriter, _ *http.Request) {
++		w.Header().Set("Content-Type", "application/json")
++		_ = json.NewEncoder(w).Encode(map[string]any{
++			"keys": []jsonWebKey{{
++				Kid: casdoor.kid,
++				Kty: "RSA",
++				N:   base64.RawURLEncoding.EncodeToString(casdoor.key.PublicKey.N.Bytes()),
++				E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(casdoor.key.PublicKey.E)).Bytes()),
++			}},
++		})
++	})
++
++	casdoor.server = httptest.NewServer(mux)
++	t.Cleanup(casdoor.server.Close)
++
++	return casdoor
++}
++
++func (c *testCasdoor) jwksURL() string {
++	return c.server.URL + testJwksPath
++}
++
++// token mints an RS256 token signed with the issuer's current key.
++func (c *testCasdoor) token(t testing.TB, mutate func(jwt.MapClaims)) string {
++	t.Helper()
++
++	return signToken(t, c.key, c.kid, baseClaims(mutate))
++}
++
++// signToken signs the given claims, allowing tokens from foreign keys.
++func signToken(t testing.TB, key *rsa.PrivateKey, kid string, claims jwt.MapClaims) string {
++	t.Helper()
++
++	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
++	token.Header["kid"] = kid
++
++	signed, err := token.SignedString(key)
++	require.NoError(t, err)
++
++	return signed
++}
++
++func baseClaims(mutate func(jwt.MapClaims)) jwt.MapClaims {
++	claims := jwt.MapClaims{
++		"iss":   testIssuer,
++		"sub":   "alice",
++		"aud":   testAudience,
++		"exp":   time.Now().Add(5 * time.Minute).Unix(),
++		"iat":   time.Now().Add(time.Minute).Unix(),
++		"owner": "acme",
++		"roles": []any{"admin"},
++	}
++
++	if mutate != nil {
++		mutate(claims)
++	}
++
++	return claims
++}
++
++func testLogger() *slog.Logger {
++	return slog.New(slog.NewTextHandler(io.Discard, nil))
++}
++
++// baseConfig matches baseClaims: organization acme, admin as Operator,
++// viewer as Viewer, audience enforced.
++func baseConfig(casdoor *testCasdoor) Config {
++	return Config{
++		Logger:               testLogger(),
++		Issuer:               testIssuer,
++		JwksURL:              casdoor.jwksURL(),
++		Audience:             testAudience,
++		AllowedOrganizations: []string{"acme"},
++		OrganizationClaim:    "owner",
++		ViewerRoles:          []string{"viewer"},
++		OperatorRoles:        []string{"admin"},
++		RoleClaim:            "roles",
++	}
++}
++
++func TestMiddlewareHandle(t *testing.T) {
++	casdoor := newTestCasdoor(t, "test-key-1")
++
++	rogueKey, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++
++	tests := []struct {
++		name          string
++		config        func(*Config)
++		method        string
++		path          string
++		authorization func() string
++		wantStatus    int
++		wantIdentity  *Identity
++	}{
++		{
++			name:          "valid operator token",
++			method:        http.MethodGet,
++			path:          testOperatorKV,
++			authorization: func() string { return "Bearer " + casdoor.token(t, nil) },
++			wantStatus:    http.StatusOK,
++			wantIdentity:  &Identity{Subject: "alice", Organization: "acme", Role: RoleOperator},
++		},
++		{
++			name:          "operator can write",
++			method:        http.MethodPost,
++			path:          testOperatorKV,
++			authorization: func() string { return "Bearer " + casdoor.token(t, nil) },
++			wantStatus:    http.StatusOK,
++			wantIdentity:  &Identity{Subject: "alice", Organization: "acme", Role: RoleOperator},
++		},
++		{
++			name:   "viewer can read",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["roles"] = []any{"viewer"} })
++			},
++			wantStatus:   http.StatusOK,
++			wantIdentity: &Identity{Subject: "alice", Organization: "acme", Role: RoleViewer},
++		},
++		{
++			name:   "viewer cannot write",
++			method: http.MethodPost,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["roles"] = []any{"viewer"} })
++			},
++			wantStatus: http.StatusForbidden,
++		},
++		{
++			name:   "viewer cannot delete",
++			method: http.MethodDelete,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["roles"] = "viewer" })
++			},
++			wantStatus: http.StatusForbidden,
++		},
++		{
++			name:   "expired token",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["exp"] = time.Now().Add(-time.Minute).Unix() })
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "not yet valid token",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["nbf"] = time.Now().Add(time.Hour).Unix() })
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "wrong issuer",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["iss"] = "https://evil.test" })
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "wrong audience",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["aud"] = "other-api" })
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "wrong signature",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + signToken(t, rogueKey, "test-key-1", baseClaims(nil))
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "unknown key id",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + signToken(t, rogueKey, "unknown-kid", baseClaims(nil))
++			},
++			wantStatus: http.StatusUnauthorized,
++		},
++		{
++			name:   "organization not allowed",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["owner"] = "contoso" })
++			},
++			wantStatus: http.StatusForbidden,
++		},
++		{
++			name:   "missing organization claim",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { delete(claims, "owner") })
++			},
++			wantStatus: http.StatusForbidden,
++		},
++		{
++			name:   "no matching role",
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["roles"] = []any{"nobody"} })
++			},
++			wantStatus: http.StatusForbidden,
++		},
++		{
++			name:   "empty role lists grant operator",
++			config: func(c *Config) { c.ViewerRoles, c.OperatorRoles = nil, nil },
++			method: http.MethodPost,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { delete(claims, "roles") })
++			},
++			wantStatus:   http.StatusOK,
++			wantIdentity: &Identity{Subject: "alice", Organization: "acme", Role: RoleOperator},
++		},
++		{
++			name:   "audience check skipped when not configured",
++			config: func(c *Config) { c.Audience = "" },
++			method: http.MethodGet,
++			path:   testOperatorKV,
++			authorization: func() string {
++				return "Bearer " + casdoor.token(t, func(claims jwt.MapClaims) { claims["aud"] = "other-api" })
++			},
++			wantStatus:   http.StatusOK,
++			wantIdentity: &Identity{Subject: "alice", Organization: "acme", Role: RoleOperator},
++		},
++		{
++			name:          "missing authorization header",
++			method:        http.MethodGet,
++			path:          testOperatorKV,
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusUnauthorized,
++		},
++		{
++			name:          "non bearer authorization header",
++			method:        http.MethodGet,
++			path:          testOperatorKV,
++			authorization: func() string { return "Basic dXNlcjpwYXNz" },
++			wantStatus:    http.StatusUnauthorized,
++		},
++		{
++			name:          "malformed token",
++			method:        http.MethodGet,
++			path:          testOperatorKV,
++			authorization: func() string { return "Bearer not-a-jwt" },
++			wantStatus:    http.StatusUnauthorized,
++		},
++		{
++			name:          "portal path bypasses authentication",
++			method:        http.MethodGet,
++			path:          "/api/v1/portal/meters/api_requests_total/values",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++		{
++			name:          "v3 openapi json bypasses authentication",
++			method:        http.MethodGet,
++			path:          "/api/v3/openapi.json",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++		{
++			name:          "v3 openapi yaml bypasses authentication",
++			method:        http.MethodGet,
++			path:          "/api/v3/openapi.yaml",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++		{
++			name:          "v1 swagger json bypasses authentication",
++			method:        http.MethodGet,
++			path:          "/api/swagger.json",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++		{
++			name:          "debug metrics bypasses authentication",
++			method:        http.MethodGet,
++			path:          "/api/v1/debug/metrics",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++		{
++			name:          "portal token management requires authentication",
++			method:        http.MethodPost,
++			path:          "/api/v1/portal/tokens",
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusUnauthorized,
++		},
++		{
++			name:          "preflight options bypasses authentication",
++			method:        http.MethodOptions,
++			path:          testOperatorKV,
++			authorization: func() string { return "" },
++			wantStatus:    http.StatusOK,
++		},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			config := baseConfig(casdoor)
++			if test.config != nil {
++				test.config(&config)
++			}
++
++			middleware, err := New(config)
++			require.NoError(t, err)
++
++			var gotIdentity Identity
++			var gotOK bool
++			handler := middleware.Handle(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				gotIdentity, gotOK = FromContext(r.Context())
++				w.WriteHeader(http.StatusOK)
++			}))
++
++			req := httptest.NewRequest(test.method, test.path, nil).WithContext(t.Context())
++			if authorization := test.authorization(); authorization != "" {
++				req.Header.Set("Authorization", authorization)
++			}
++			recorder := httptest.NewRecorder()
++
++			handler.ServeHTTP(recorder, req)
++
++			assert.Equal(t, test.wantStatus, recorder.Code)
++
++			if test.wantIdentity != nil {
++				require.True(t, gotOK, "expected an identity in the request context")
++				assert.Equal(t, *test.wantIdentity, gotIdentity)
++			} else {
++				assert.False(t, gotOK, "expected no identity in the request context")
++			}
++		})
++	}
++}
++
++func TestMiddlewareJwksKeyRotation(t *testing.T) {
++	casdoor := newTestCasdoor(t, "test-key-1")
++
++	middleware, err := New(baseConfig(casdoor))
++	require.NoError(t, err)
++
++	do := func(token string) int {
++		t.Helper()
++
++		handler := middleware.Handle(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++			w.WriteHeader(http.StatusOK)
++		}))
++
++		req := httptest.NewRequest(http.MethodGet, testOperatorKV, nil).WithContext(t.Context())
++		req.Header.Set("Authorization", "Bearer "+token)
++		recorder := httptest.NewRecorder()
++
++		handler.ServeHTTP(recorder, req)
++
++		return recorder.Code
++	}
++
++	// given the initial key is served, its tokens pass
++	assert.Equal(t, http.StatusOK, do(casdoor.token(t, nil)))
++
++	// when Casdoor rotates the key, cached verification keeps rejecting the
++	// new tokens until the lazy refresh interval elapses
++	rotatedKey, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++	casdoor.key = rotatedKey
++
++	assert.Equal(t, http.StatusUnauthorized, do(casdoor.token(t, nil)))
++
++	// then a refresh past the throttle window picks the rotated key up
++	middleware.jwks.mu.Lock()
++	middleware.jwks.lastRefresh = time.Now().Add(-2 * jwksMinRefreshInterval)
++	middleware.jwks.mu.Unlock()
++
++	assert.Equal(t, http.StatusOK, do(casdoor.token(t, nil)))
++}
++
++func TestNewOptional(t *testing.T) {
++	t.Run("disabled bypasses authentication without validating the config", func(t *testing.T) {
++		middleware, err := NewOptional(false, Config{})
++		require.NoError(t, err)
++		assert.Nil(t, middleware)
++	})
++
++	t.Run("enabled with invalid config returns an error", func(t *testing.T) {
++		middleware, err := NewOptional(true, Config{Logger: testLogger()})
++		require.Error(t, err)
++		assert.Nil(t, middleware)
++	})
++
++	t.Run("enabled with valid config returns the middleware", func(t *testing.T) {
++		casdoor := newTestCasdoor(t, "test-key-1")
++
++		middleware, err := NewOptional(true, baseConfig(casdoor))
++		require.NoError(t, err)
++		require.NotNil(t, middleware)
++	})
++}
++
++func TestConfigValidate(t *testing.T) {
++	tests := []struct {
++		name   string
++		config Config
++		valid  bool
++	}{
++		{
++			name:   "empty config is invalid",
++			config: Config{},
++		},
++		{
++			name:   "missing issuer",
++			config: Config{Logger: testLogger(), JwksURL: "https://casdoor.test/api/certs"},
++		},
++		{
++			name:   "missing jwks url",
++			config: Config{Logger: testLogger(), Issuer: testIssuer},
++		},
++		{
++			name:   "missing logger",
++			config: Config{Issuer: testIssuer, JwksURL: "https://casdoor.test/api/certs"},
++		},
++		{
++			name: "complete config",
++			config: Config{
++				Logger:  testLogger(),
++				Issuer:  testIssuer,
++				JwksURL: "https://casdoor.test/api/certs",
++			},
++			valid: true,
++		},
++	}
++
++	for _, test := range tests {
++		t.Run(test.name, func(t *testing.T) {
++			if test.valid {
++				require.NoError(t, test.config.Validate())
++			} else {
++				require.Error(t, test.config.Validate())
++			}
++		})
++	}
++}
++
++func TestJSONWebKeyPublicKeyFromX5c(t *testing.T) {
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++
++	template := &x509.Certificate{
++		SerialNumber: big.NewInt(1),
++		Subject:      pkix.Name{CommonName: "casdoor-test"},
++		NotBefore:    time.Now().Add(-time.Hour),
++		NotAfter:     time.Now().Add(time.Hour),
++	}
++	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
++	require.NoError(t, err)
++
++	// The middleware parses the base64 DER form from the JWKS x5c array.
++	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
++	block, _ := pem.Decode(pemCert)
++	require.NotNil(t, block)
++
++	jwk := jsonWebKey{Kid: "x5c-key", Kty: "RSA", X5c: []string{base64.StdEncoding.EncodeToString(block.Bytes)}}
++
++	publicKey, err := jwk.publicKey()
++	require.NoError(t, err)
++	assert.Equal(t, &key.PublicKey, publicKey)
++}
++
++// TestJWKSCacheThrottlesFailedRefresh guards the refresh rate limit: while a
++// JWKS endpoint is failing, an unknown kid must not trigger a fetch per request.
++func TestJWKSCacheThrottlesFailedRefresh(t *testing.T) {
++	var requests int
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		requests++
++		w.WriteHeader(http.StatusServiceUnavailable)
++	}))
++	t.Cleanup(server.Close)
++
++	cache := newJWKSCache(server.URL, server.Client())
++
++	for range 3 {
++		_, err := cache.publicKey(t.Context(), "test-key-1")
++		require.Error(t, err)
++	}
++
++	assert.Equal(t, 1, requests, "expected a single refresh attempt inside the throttle window")
++}
+diff --git a/openmeter/server/auth/jwks.go b/openmeter/server/auth/jwks.go
+new file mode 100644
+index 000000000..ebce97224
+--- /dev/null
++++ b/openmeter/server/auth/jwks.go
+@@ -0,0 +1,224 @@
++package auth
++
++import (
++	"context"
++	"crypto/rsa"
++	"crypto/x509"
++	"encoding/base64"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"math/big"
++	"net/http"
++	"sync"
++	"time"
++
++	"golang.org/x/sync/singleflight"
++)
++
++// jwksMinRefreshInterval throttles JWKS refresh attempts. It is short enough
++// to pick up key rotations promptly and long enough to keep an unreachable
++// JWKS endpoint from being hammered on every request.
++const jwksMinRefreshInterval = time.Minute
++
++// jwksFetchTimeout bounds a single JWKS refresh independently of the caller's
++// request context.
++const jwksFetchTimeout = 10 * time.Second
++
++// jwksMaxResponseSize caps the JWKS response body to bound memory usage from a
++// hostile or misbehaving endpoint.
++const jwksMaxResponseSize = 1 << 20
++
++// jwksCache fetches and caches the issuer's RSA public keys from a JWKS
++// endpoint, keyed by kid. Keys are fetched lazily on the first lookup of an
++// unknown kid, which covers both the initial load and later rotations without
++// background workers.
++type jwksCache struct {
++	jwksURL string
++	client  *http.Client
++
++	mu          sync.Mutex
++	keys        map[string]*rsa.PublicKey
++	lastRefresh time.Time
++	refresh     singleflight.Group
++}
++
++func newJWKSCache(jwksURL string, client *http.Client) *jwksCache {
++	return &jwksCache{
++		jwksURL: jwksURL,
++		client:  client,
++	}
++}
++
++// publicKey returns the RSA public key for kid, lazily refreshing the cached
++// key set at most once per jwksMinRefreshInterval. Refreshes run outside the
++// cache lock on a context detached from the triggering request, so a slow
++// endpoint or a disconnecting client can neither stall nor cancel other
++// requests' lookups. A failed refresh only rejects requests for unknown
++// kids; known kids keep serving from the stale key set.
++func (c *jwksCache) publicKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
++	refreshErr := c.refreshIfStale(ctx)
++
++	if key, ok := c.cachedKey(kid); ok {
++		return key, nil
++	}
++
++	if refreshErr != nil {
++		return nil, fmt.Errorf("refresh jwks from %s: %w", c.jwksURL, refreshErr)
++	}
++
++	return nil, fmt.Errorf("unknown signing key id %q", kid)
++}
++
++// refreshIfStale shares a single in-flight refresh across concurrent callers
++// and skips it entirely while the throttle window holds.
++func (c *jwksCache) refreshIfStale(ctx context.Context) error {
++	_, err, _ := c.refresh.Do("refresh", func() (any, error) {
++		if !c.shouldRefresh() {
++			return nil, nil
++		}
++
++		fetchCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), jwksFetchTimeout)
++		defer cancel()
++
++		return nil, c.refreshKeys(fetchCtx)
++	})
++
++	return err
++}
++
++func (c *jwksCache) cachedKey(kid string) (*rsa.PublicKey, bool) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++
++	key, ok := c.keys[kid]
++
++	return key, ok
++}
++
++func (c *jwksCache) shouldRefresh() bool {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++
++	return time.Since(c.lastRefresh) >= jwksMinRefreshInterval
++}
++
++// refreshKeys replaces the cached key set. The throttle timestamp advances
++// on failure too, so an unreachable endpoint is not retried per request.
++func (c *jwksCache) refreshKeys(ctx context.Context) error {
++	keys, err := c.fetch(ctx)
++
++	c.mu.Lock()
++	c.lastRefresh = time.Now()
++	if err == nil {
++		c.keys = keys
++	}
++	c.mu.Unlock()
++
++	return err
++}
++
++// fetch downloads and parses the key set from the JWKS endpoint.
++func (c *jwksCache) fetch(ctx context.Context) (map[string]*rsa.PublicKey, error) {
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.jwksURL, nil)
++	if err != nil {
++		return nil, err
++	}
++	req.Header.Set("Accept", "application/json")
++
++	resp, err := c.client.Do(req)
++	if err != nil {
++		return nil, err
++	}
++	defer resp.Body.Close()
++
++	if resp.StatusCode != http.StatusOK {
++		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
++	}
++
++	var payload struct {
++		Keys []jsonWebKey `json:"keys"`
++	}
++	if err := json.NewDecoder(io.LimitReader(resp.Body, jwksMaxResponseSize)).Decode(&payload); err != nil {
++		return nil, fmt.Errorf("decode jwks: %w", err)
++	}
++
++	keys := make(map[string]*rsa.PublicKey, len(payload.Keys))
++	for _, jwk := range payload.Keys {
++		// Skip unusable entries instead of failing the whole key set: Casdoor
++		// may advertise keys for algorithms this middleware does not accept.
++		if jwk.Kid == "" {
++			continue
++		}
++
++		key, err := jwk.publicKey()
++		if err != nil {
++			continue
++		}
++
++		keys[jwk.Kid] = key
++	}
++
++	return keys, nil
++}
++
++// jsonWebKey is the subset of the JWK format needed for RSA public keys.
++type jsonWebKey struct {
++	Kid string   `json:"kid"`
++	Kty string   `json:"kty"`
++	N   string   `json:"n"`
++	E   string   `json:"e"`
++	X5c []string `json:"x5c"`
++}
++
++// publicKey materializes the RSA public key from the modulus/exponent pair, or
++// from the first X.509 certificate when n/e are absent.
++func (k jsonWebKey) publicKey() (*rsa.PublicKey, error) {
++	if k.Kty != "RSA" {
++		return nil, fmt.Errorf("unsupported key type %q", k.Kty)
++	}
++
++	if k.N != "" && k.E != "" {
++		modulus, err := base64.RawURLEncoding.DecodeString(k.N)
++		if err != nil {
++			return nil, fmt.Errorf("decode modulus: %w", err)
++		}
++
++		exponent, err := base64.RawURLEncoding.DecodeString(k.E)
++		if err != nil {
++			return nil, fmt.Errorf("decode exponent: %w", err)
++		}
++
++		e := new(big.Int).SetBytes(exponent)
++		if !e.IsInt64() {
++			return nil, errors.New("exponent overflows int64")
++		}
++
++		return &rsa.PublicKey{
++			N: new(big.Int).SetBytes(modulus),
++			E: int(e.Int64()),
++		}, nil
++	}
++
++	if len(k.X5c) > 0 {
++		der, err := base64.StdEncoding.DecodeString(k.X5c[0])
++		if err != nil {
++			return nil, fmt.Errorf("decode x5c certificate: %w", err)
++		}
++
++		cert, err := x509.ParseCertificate(der)
++		if err != nil {
++			return nil, fmt.Errorf("parse x5c certificate: %w", err)
++		}
++
++		key, ok := cert.PublicKey.(*rsa.PublicKey)
++		if !ok {
++			return nil, errors.New("x5c certificate public key is not RSA")
++		}
++
++		return key, nil
++	}
++
++	return nil, errors.New("missing n/e and x5c key material")
++}
+diff --git a/openmeter/server/cors_test.go b/openmeter/server/cors_test.go
+new file mode 100644
+index 000000000..7edb9ec28
+--- /dev/null
++++ b/openmeter/server/cors_test.go
+@@ -0,0 +1,116 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/go-chi/chi/v5"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/openmeterio/openmeter/openmeter/namespace/namespacedriver"
++)
++
++func TestNewAPICORSMiddleware(t *testing.T) {
++	newRouter := func(t *testing.T, origins []string) http.Handler {
++		t.Helper()
++
++		middleware := NewAPICORSMiddleware(origins)
++		require.NotNil(t, middleware)
++
++		router := chi.NewRouter()
++		router.Use(middleware)
++		router.Get("/api/v3/openmeter/namespaces", func(w http.ResponseWriter, r *http.Request) {
++			w.WriteHeader(http.StatusOK)
++		})
++
++		return router
++	}
++
++	t.Run("empty origins yields no middleware", func(t *testing.T) {
++		require.Nil(t, NewAPICORSMiddleware(nil))
++		require.Nil(t, NewAPICORSMiddleware([]string{}))
++	})
++
++	t.Run("preflight from an allowed origin is answered successfully with headers", func(t *testing.T) {
++		router := newRouter(t, []string{"https://admin.example.com"})
++
++		recorder := httptest.NewRecorder()
++		request := httptest.NewRequest(http.MethodOptions, "/api/v3/openmeter/namespaces", nil)
++		request.Header.Set("Origin", "https://admin.example.com")
++		request.Header.Set("Access-Control-Request-Method", http.MethodGet)
++		request.Header.Set("Access-Control-Request-Headers", "authorization,"+namespacedriver.NamespaceHeader)
++
++		router.ServeHTTP(recorder, request)
++
++		// go-chi/cors answers preflight with 200 (any 2xx is spec-compliant).
++		require.Equal(t, http.StatusOK, recorder.Code)
++		assert.Equal(t, "https://admin.example.com", recorder.Header().Get("Access-Control-Allow-Origin"))
++		assert.Contains(t, recorder.Header().Get("Access-Control-Allow-Headers"), "Authorization")
++		assert.Contains(t, recorder.Header().Get("Access-Control-Allow-Headers"), namespacedriver.NamespaceHeader)
++		// The API uses bearer tokens instead of cookies: never credentialed.
++		assert.Empty(t, recorder.Header().Get("Access-Control-Allow-Credentials"))
++	})
++
++	t.Run("preflight from a disallowed origin carries no allow-origin header", func(t *testing.T) {
++		router := newRouter(t, []string{"https://admin.example.com"})
++
++		recorder := httptest.NewRecorder()
++		request := httptest.NewRequest(http.MethodOptions, "/api/v3/openmeter/namespaces", nil)
++		request.Header.Set("Origin", "https://evil.example.com")
++		request.Header.Set("Access-Control-Request-Method", http.MethodGet)
++
++		router.ServeHTTP(recorder, request)
++
++		assert.Empty(t, recorder.Header().Get("Access-Control-Allow-Origin"))
++	})
++
++	t.Run("wildcard origin is allowed without credentials", func(t *testing.T) {
++		router := newRouter(t, []string{"*"})
++
++		recorder := httptest.NewRecorder()
++		request := httptest.NewRequest(http.MethodGet, "/api/v3/openmeter/namespaces", nil)
++		request.Header.Set("Origin", "https://any.example.com")
++
++		router.ServeHTTP(recorder, request)
++
++		require.Equal(t, http.StatusOK, recorder.Code)
++		assert.Equal(t, "*", recorder.Header().Get("Access-Control-Allow-Origin"))
++		assert.Empty(t, recorder.Header().Get("Access-Control-Allow-Credentials"))
++	})
++
++	t.Run("portal routes are left to the portal CORS handler", func(t *testing.T) {
++		middleware := NewAPICORSMiddleware([]string{"https://admin.example.com"})
++		require.NotNil(t, middleware)
++
++		var sawRequest bool
++		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++			sawRequest = true
++		})
++
++		recorder := httptest.NewRecorder()
++		request := httptest.NewRequest(http.MethodOptions, "/api/v1/portal/meters", nil)
++		request.Header.Set("Origin", "https://admin.example.com")
++		request.Header.Set("Access-Control-Request-Method", http.MethodGet)
++
++		middleware(next).ServeHTTP(recorder, request)
++
++		// The preflight is not short-circuited by the API CORS middleware.
++		require.True(t, sawRequest)
++		assert.Empty(t, recorder.Header().Get("Access-Control-Allow-Origin"))
++	})
++
++	t.Run("actual request from an allowed origin carries the CORS header", func(t *testing.T) {
++		router := newRouter(t, []string{"https://admin.example.com"})
++
++		recorder := httptest.NewRecorder()
++		request := httptest.NewRequest(http.MethodGet, "/api/v3/openmeter/namespaces", nil)
++		request.Header.Set("Origin", "https://admin.example.com")
++
++		router.ServeHTTP(recorder, request)
++
++		require.Equal(t, http.StatusOK, recorder.Code)
++		assert.Equal(t, "https://admin.example.com", recorder.Header().Get("Access-Control-Allow-Origin"))
++	})
++}
