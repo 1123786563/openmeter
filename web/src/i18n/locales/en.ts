@@ -600,6 +600,9 @@ export default {
       description:
         'Billing and invoicing settings profiles; each profile is bound to a set of apps (immutable after creation).',
       create: 'New Profile',
+      edit: 'Edit',
+      delete: 'Delete',
+      appsImmutable: 'Immutable after creation',
       fields: {
         name: 'Name',
         description: 'Description',
@@ -622,6 +625,7 @@ export default {
       },
       form: {
         createTitle: 'New Billing Profile',
+        editTitle: 'Edit Billing Profile',
         createDescription:
           'Supplier details appear on invoices; app associations are fixed at creation.',
         keyHint: 'lowercase letters, digits, underscores',
@@ -634,9 +638,17 @@ export default {
         createdAt: 'Created',
         default: 'Default',
         empty: 'No billing profiles yet',
+        actions: 'Actions',
+      },
+      deleteConfirm: {
+        title: 'Delete billing profile',
+        description:
+          'Delete billing profile "{{name}}"? This cannot be undone.',
       },
       toast: {
         created: 'Billing profile created',
+        updated: 'Billing profile updated',
+        deleted: 'Billing profile deleted',
       },
     },
   },

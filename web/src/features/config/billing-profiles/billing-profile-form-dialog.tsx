@@ -2,10 +2,14 @@ import { useEffect } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { App } from '@openmeter/client'
+import type { App, Profile } from '@openmeter/client'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { useApps, useCreateBillingProfile } from '@/api/hooks'
+import {
+  useApps,
+  useCreateBillingProfile,
+  useUpdateBillingProfile,
+} from '@/api/hooks'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Button } from '@/components/ui/button'
 import {
@@ -88,13 +92,15 @@ function AppSlotSelect({
   apps,
   value,
   onChange,
+  disabled = false,
 }: {
   apps: App[]
   value: string
   onChange: (next: string) => void
+  disabled?: boolean
 }) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className='w-full'>
         <SelectValue />
       </SelectTrigger>
@@ -112,13 +118,19 @@ function AppSlotSelect({
 export function BillingProfileFormDialog({
   open,
   onOpenChange,
+  profile,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Pass the profile to edit; omit (or null) for the #25 create flow. */
+  profile?: Profile | null
 }) {
   const { t } = useTranslation()
   const { data: appsData } = useApps()
   const createMutation = useCreateBillingProfile()
+  const updateMutation = useUpdateBillingProfile()
+
+  const editing = Boolean(profile)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -126,34 +138,86 @@ export function BillingProfileFormDialog({
   })
 
   useEffect(() => {
-    if (open) form.reset(EMPTY_VALUES)
-  }, [open, form])
+    if (!open) return
+    if (!profile) {
+      form.reset(EMPTY_VALUES)
+      return
+    }
+    const addr = profile.supplier.addresses?.billingAddress
+    form.reset({
+      name: profile.name,
+      description: profile.description ?? '',
+      supplierName: profile.supplier.name ?? '',
+      supplierKey: profile.supplier.key ?? '',
+      supplierTaxId: profile.supplier.taxId?.code ?? '',
+      addrCountry: addr?.country ?? '',
+      addrLine1: addr?.line1 ?? '',
+      addrLine2: addr?.line2 ?? '',
+      addrCity: addr?.city ?? '',
+      addrState: addr?.state ?? '',
+      addrPostalCode: addr?.postalCode ?? '',
+      addrPhoneNumber: addr?.phoneNumber ?? '',
+      // apps are immutable after creation: backfill ids for display only,
+      // they must stay non-empty to pass the create-oriented zod min(1)
+      appTax: profile.apps.tax.id,
+      appInvoicing: profile.apps.invoicing.id,
+      appPayment: profile.apps.payment.id,
+      default: profile.default,
+    })
+  }, [open, form, profile])
 
   const apps = appsData?.data ?? []
 
   const onSubmit = (values: FormValues) => {
-    createMutation.mutate(
-      {
-        name: values.name.trim(),
-        description: values.description?.trim() || undefined,
-        supplier: {
-          name: values.supplierName.trim(),
-          key: values.supplierKey.trim() || undefined,
-          taxId: values.supplierTaxId.trim()
-            ? { code: values.supplierTaxId.trim() }
-            : undefined,
-          addresses: {
-            billingAddress: {
-              country: values.addrCountry.trim().toUpperCase() || undefined,
-              postalCode: values.addrPostalCode.trim() || undefined,
-              state: values.addrState.trim() || undefined,
-              city: values.addrCity.trim() || undefined,
-              line1: values.addrLine1.trim() || undefined,
-              line2: values.addrLine2.trim() || undefined,
-              phoneNumber: values.addrPhoneNumber.trim() || undefined,
-            },
+    // shared by create and update; workflow/apps are branch-specific
+    const body = {
+      name: values.name.trim(),
+      description: values.description?.trim() || undefined,
+      supplier: {
+        name: values.supplierName.trim(),
+        key: values.supplierKey.trim() || undefined,
+        taxId: values.supplierTaxId.trim()
+          ? { code: values.supplierTaxId.trim() }
+          : undefined,
+        addresses: {
+          billingAddress: {
+            country: values.addrCountry.trim().toUpperCase() || undefined,
+            postalCode: values.addrPostalCode.trim() || undefined,
+            state: values.addrState.trim() || undefined,
+            city: values.addrCity.trim() || undefined,
+            line1: values.addrLine1.trim() || undefined,
+            line2: values.addrLine2.trim() || undefined,
+            phoneNumber: values.addrPhoneNumber.trim() || undefined,
           },
         },
+      },
+      default: values.default,
+    }
+
+    if (editing && profile) {
+      updateMutation.mutate(
+        {
+          id: profile.id,
+          // PUT is a full replace: workflow must be echoed back or the
+          // server-side settings would be reset to defaults (unlike create,
+          // where workflow:{} asks for the defaults). apps is not part of
+          // the update contract.
+          body: { ...body, workflow: profile.workflow },
+        },
+        {
+          onSuccess: () => {
+            toast.success(t('config.billingProfiles.toast.updated'))
+            onOpenChange(false)
+          },
+          onError: handleServerError,
+        }
+      )
+      return
+    }
+
+    createMutation.mutate(
+      {
+        ...body,
         // workflow 必传但 UI 只读：空对象让服务端落各 workflow 默认设置
         workflow: {},
         apps: {
@@ -161,7 +225,6 @@ export function BillingProfileFormDialog({
           invoicing: { id: values.appInvoicing },
           payment: { id: values.appPayment },
         },
-        default: values.default,
       },
       {
         onSuccess: () => {
@@ -178,7 +241,9 @@ export function BillingProfileFormDialog({
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>
-            {t('config.billingProfiles.form.createTitle')}
+            {editing
+              ? t('config.billingProfiles.form.editTitle')
+              : t('config.billingProfiles.form.createTitle')}
           </DialogTitle>
           <DialogDescription>
             {t('config.billingProfiles.form.createDescription')}
@@ -395,8 +460,14 @@ export function BillingProfileFormDialog({
                           apps={apps}
                           value={field.value}
                           onChange={field.onChange}
+                          disabled={editing}
                         />
                       </FormControl>
+                      {editing && (
+                        <FormDescription>
+                          {t('config.billingProfiles.appsImmutable')}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -414,8 +485,14 @@ export function BillingProfileFormDialog({
                           apps={apps}
                           value={field.value}
                           onChange={field.onChange}
+                          disabled={editing}
                         />
                       </FormControl>
+                      {editing && (
+                        <FormDescription>
+                          {t('config.billingProfiles.appsImmutable')}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -433,8 +510,14 @@ export function BillingProfileFormDialog({
                           apps={apps}
                           value={field.value}
                           onChange={field.onChange}
+                          disabled={editing}
                         />
                       </FormControl>
+                      {editing && (
+                        <FormDescription>
+                          {t('config.billingProfiles.appsImmutable')}
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -456,7 +539,10 @@ export function BillingProfileFormDialog({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -470,8 +556,11 @@ export function BillingProfileFormDialog({
               >
                 {t('common.cancel')}
               </Button>
-              <Button type='submit' disabled={createMutation.isPending}>
-                {createMutation.isPending
+              <Button
+                type='submit'
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending
                   ? t('common.submitting')
                   : t('common.confirm')}
               </Button>

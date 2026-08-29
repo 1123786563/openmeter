@@ -578,6 +578,9 @@ export default {
       description:
         '开票与收款设置档案；每个档案绑定一组应用（创建后不可变）。',
       create: '新建档案',
+      edit: '编辑',
+      delete: '删除',
+      appsImmutable: '创建后不可变',
       fields: {
         name: '名称',
         description: '描述',
@@ -600,6 +603,7 @@ export default {
       },
       form: {
         createTitle: '新建账单档案',
+        editTitle: '编辑账单档案',
         createDescription: '供应商信息用于发票抬头；应用关联创建后不可修改。',
         keyHint: '小写字母/数字/下划线',
         appsImmutableHint:
@@ -611,9 +615,16 @@ export default {
         createdAt: '创建时间',
         default: '默认',
         empty: '暂无账单档案',
+        actions: '操作',
+      },
+      deleteConfirm: {
+        title: '删除账单档案',
+        description: '确定删除账单档案「{{name}}」吗？操作不可撤销。',
       },
       toast: {
         created: '账单档案已创建',
+        updated: '账单档案已更新',
+        deleted: '账单档案已删除',
       },
     },
   },
