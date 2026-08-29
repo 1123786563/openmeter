@@ -23,12 +23,14 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { Label } from '@/components/ui/label'
+import { OrgDefaultsCard } from './org-defaults-card'
 import { TaxCodeFormDialog } from './tax-code-form-dialog'
 
 /**
  * Tax code administration: list (optionally including deleted codes),
- * create/edit (key immutable after creation) and delete. App mappings bind
- * the internal tax code to per-app provider codes.
+ * create/edit (key immutable after creation), delete, and the organization
+ * default tax codes for invoicing / credit grants. App mappings bind the
+ * internal tax code to per-app provider codes.
  */
 export function TaxCodesPage() {
   const { t } = useTranslation()
@@ -78,7 +80,8 @@ export function TaxCodesPage() {
             </div>
           }
         />
-        <div className='mt-6'>
+        <div className='mt-6 space-y-6'>
+          <OrgDefaultsCard taxCodes={taxCodes} />
           {isLoading ? (
             <div className='space-y-2'>
               {Array.from({ length: 5 }).map((_, i) => (
