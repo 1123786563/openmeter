@@ -53,6 +53,7 @@ export const queryKeys = {
   currencies: (params: object = {}) => ns('currencies', params),
   taxCodes: (params: object = {}) => ns('tax-codes', params),
   apps: () => ns('apps'),
+  appCatalog: () => ns('app-catalog'),
   portalTokens: (params: object = {}) => ns('portal-tokens', params),
   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
   billingProfile: (id: string) => ns('billing-profile', id),
