@@ -61,4 +61,6 @@ export const queryKeys = {
   billingProfile: (id: string) => ns('billing-profile', id),
   receivablePeriods: (customerId: string, params: object = {}) =>
     ns('receivable-periods', customerId, params),
+  planAddons: (planId: string, params: object = {}) =>
+    ns('plan-addons', planId, params),
 }

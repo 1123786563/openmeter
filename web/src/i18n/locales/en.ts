@@ -239,6 +239,53 @@ export default {
         },
       },
     },
+    planDetail: {
+      tabs: { overview: 'Overview', addons: 'Add-ons' },
+    },
+    planAddons: {
+      create: 'Add Add-on',
+      actions: 'Actions',
+      empty: 'No add-ons in this plan yet',
+      unlimited: 'Unlimited',
+      editPriceHint: 'Prices are maintained on the add-ons page',
+      fields: {
+        name: 'Name',
+        addon: 'Add-on',
+        fromPlanPhase: 'From Phase',
+        maxQuantity: 'Max Quantity',
+        description: 'Description',
+        createdAt: 'Created At',
+      },
+      form: {
+        createTitle: 'Add Add-on',
+        createDescription:
+          'Attach an active add-on to this plan; the association cannot be changed after creation.',
+        editTitle: 'Edit Add-on Association',
+        editDescription:
+          'Change the name, from-phase, and quantity limit; the add-on itself cannot be swapped.',
+        selectAddon: 'Select an add-on',
+        addonImmutable: 'The associated add-on cannot be changed after creation.',
+        maxQuantityHint:
+          'Leave empty for unlimited; only multi-instance add-ons support a limit.',
+        maxQuantitySingle:
+          'Single-instance add-ons cannot have a quantity limit.',
+        validation: {
+          name: 'Required, 1-256 characters',
+          addon: 'Please select an add-on',
+          maxQuantity: 'Must be a positive integer',
+        },
+      },
+      deleteConfirm: {
+        title: 'Remove Add-on',
+        description:
+          'Remove "{{name}}" from this plan? Existing subscribers are unaffected, but new subscriptions can no longer purchase it.',
+      },
+      toast: {
+        created: 'Add-on added to the plan',
+        updated: 'Add-on association updated',
+        deleted: 'Add-on removed from the plan',
+      },
+    },
     features: {
       title: 'Features',
       description: 'Manage sellable and grantable feature definitions.',
