@@ -8,10 +8,12 @@ import { api } from '@/api/client'
 import {
   clonePlanNextVersion,
   createNotificationChannel,
+  deleteNotificationChannel,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
   listNotificationChannels,
   listSubjects,
+  updateNotificationChannel,
   type EntitlementValueV2,
   type EntitlementV2,
   type NotificationChannelCreateRequest,
@@ -809,6 +811,36 @@ export function useCreateChannel() {
   return useMutation({
     mutationFn: (body: NotificationChannelCreateRequest) =>
       createNotificationChannel(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.channels'),
+      })
+    },
+  })
+}
+
+export function useUpdateChannel() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      channelId,
+      body,
+    }: {
+      channelId: string
+      body: NotificationChannelCreateRequest
+    }) => updateNotificationChannel(channelId, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.channels'),
+      })
+    },
+  })
+}
+
+export function useDeleteChannel() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (channelId: string) => deleteNotificationChannel(channelId),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('notification.channels'),

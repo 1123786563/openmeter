@@ -187,3 +187,28 @@ export async function createNotificationChannel(
     body: JSON.stringify(body),
   })
 }
+
+/**
+ * PUT is a full replacement (same body shape as create). Omitting
+ * `signingSecret` clears it server-side, so callers must backfill the current
+ * value when only flipping `disabled` or editing other fields.
+ */
+export async function updateNotificationChannel(
+  channelId: string,
+  body: NotificationChannelCreateRequest
+): Promise<NotificationChannel> {
+  return apiFetch<NotificationChannel>(
+    `/v1/notification/channels/${encodeURIComponent(channelId)}`,
+    { method: 'PUT', body: JSON.stringify(body) }
+  )
+}
+
+/** Soft delete; once deleted a channel cannot be undeleted. */
+export async function deleteNotificationChannel(
+  channelId: string
+): Promise<void> {
+  return apiFetch<void>(
+    `/v1/notification/channels/${encodeURIComponent(channelId)}`,
+    { method: 'DELETE' }
+  )
+}

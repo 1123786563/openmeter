@@ -296,6 +296,23 @@ export default {
         empty: 'No notification channels yet',
         enabled: 'Enabled',
         disabled: 'Disabled',
+        actions: 'Actions',
+        enable: 'Enable',
+        disable: 'Disable',
+        delete: 'Delete',
+        toggleConfirm: {
+          enableTitle: 'Enable notification channel',
+          enableDescription:
+            'Once enabled, {{name}} resumes receiving all notification events.',
+          disableTitle: 'Disable notification channel',
+          disableDescription:
+            'Once disabled, {{name}} stops receiving notification events. This page explicitly includes disabled channels.',
+        },
+        deleteConfirm: {
+          title: 'Delete notification channel',
+          description:
+            'Delete "{{name}}"? Deletion is a soft delete and cannot be undone; rules referencing it will no longer deliver to this channel.',
+        },
         pagination: { total: '{{total}} total' },
         fields: {
           name: 'Name',
@@ -310,6 +327,9 @@ export default {
           createTitle: 'New Notification Channel',
           createDescription:
             'Create a webhook channel; notification events will be pushed to this URL.',
+          editTitle: 'Edit Notification Channel',
+          editDescription:
+            'Saving is a full replacement: an emptied signing secret is cleared server-side, keep the backfilled value unless changing it.',
           urlHint: 'Must be an https:// URL.',
           signingSecretHint:
             'Optional. Base64 (optionally whsec_-prefixed), 32-100 chars, used by receivers to verify signatures.',
@@ -327,7 +347,13 @@ export default {
             headerKey: 'Header name must be at most 256 characters.',
           },
         },
-        toast: { created: 'Notification channel created.' },
+        toast: {
+          created: 'Notification channel created.',
+          updated: 'Notification channel updated.',
+          enabled: 'Notification channel enabled.',
+          disabled: 'Notification channel disabled.',
+          deleted: 'Notification channel deleted.',
+        },
       },
       rules: {
         title: 'Notification Rules',
