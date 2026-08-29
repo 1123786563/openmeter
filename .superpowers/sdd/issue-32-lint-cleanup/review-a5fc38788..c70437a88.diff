@@ -1,0 +1,66 @@
+diff --git a/openmeter/commerce/order/service_test.go b/openmeter/commerce/order/service_test.go
+index 847d9a190..e8a072594 100644
+--- a/openmeter/commerce/order/service_test.go
++++ b/openmeter/commerce/order/service_test.go
+@@ -811,8 +811,8 @@ func TestListOrdersFiltersAndPageWindow(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if total != 2 {
+-		t.Fatalf("created-status total = %d, want 2", total)
++	if total != 2 || len(orders) != 2 {
++		t.Fatalf("created-status list = %d items, total %d; want 2/2", len(orders), total)
+ 	}
+ 
+ 	// then: filters combine
+diff --git a/openmeter/commerce/refund/service_test.go b/openmeter/commerce/refund/service_test.go
+index d51fec2dc..88bf297ee 100644
+--- a/openmeter/commerce/refund/service_test.go
++++ b/openmeter/commerce/refund/service_test.go
+@@ -2435,8 +2435,8 @@ func TestListRefundsFiltersAndPageWindow(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if total != 2 {
+-		t.Fatalf("pending-fence total = %d, want 2", total)
++	if total != 2 || len(refunds) != 2 {
++		t.Fatalf("pending-fence list = %d items, total %d; want 2/2", len(refunds), total)
+ 	}
+ 
+ 	fulfilled := RefundStatusFulfilled
+diff --git a/openmeter/server/auth/auth_test.go b/openmeter/server/auth/auth_test.go
+index 0c0504872..3a12d3565 100644
+--- a/openmeter/server/auth/auth_test.go
++++ b/openmeter/server/auth/auth_test.go
+@@ -8,7 +8,6 @@ import (
+ 	"encoding/base64"
+ 	"encoding/json"
+ 	"encoding/pem"
+-	"io"
+ 	"log/slog"
+ 	"math/big"
+ 	"net/http"
+@@ -107,7 +106,7 @@ func baseClaims(mutate func(jwt.MapClaims)) jwt.MapClaims {
+ }
+ 
+ func testLogger() *slog.Logger {
+-	return slog.New(slog.NewTextHandler(io.Discard, nil))
++	return slog.New(slog.DiscardHandler)
+ }
+ 
+ // baseConfig matches baseClaims: organization acme, admin as Operator,
+diff --git a/openmeter/subscription/service/servicevalidation_test.go b/openmeter/subscription/service/servicevalidation_test.go
+index 40af1ff57..06ba2108b 100644
+--- a/openmeter/subscription/service/servicevalidation_test.go
++++ b/openmeter/subscription/service/servicevalidation_test.go
+@@ -66,8 +66,8 @@ func TestValidateSubscriptionCurrencySupport(t *testing.T) {
+ 			spec: newSpec(currencyx.Code("USD"), &creditCurrencyReference),
+ 		},
+ 		{
+-			name: "custom subscription currency",
+-			spec: newSpec(customCurrency, nil),
++			name:     "custom subscription currency",
++			spec:     newSpec(customCurrency, nil),
+ 			expected: subscription.ErrCustomCurrencySubscriptionsNotSupported,
+ 		},
+ 		{
