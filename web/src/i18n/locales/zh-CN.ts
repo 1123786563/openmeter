@@ -497,7 +497,47 @@ export default {
       },
       events: {
         title: '通知事件',
-        description: '查看通知事件流并重发。',
+        description:
+          '规则触发的通知事件流（只读），支持按时间/规则/渠道过滤与重发。',
+        refresh: '刷新',
+        resend: '重发',
+        empty: '所选过滤条件下暂无通知事件',
+        actions: '操作',
+        pagination: { total: '共 {{total}} 条' },
+        fields: {
+          createdAt: '触发时间',
+          type: '事件类型',
+          rule: '来源规则',
+          deliveryStatus: '投递状态',
+        },
+        filter: {
+          from: '开始时间',
+          to: '结束时间',
+          rule: '规则',
+          channel: '渠道',
+          allRules: '全部规则',
+          allChannels: '全部渠道',
+          apply: '应用过滤',
+        },
+        delivery: {
+          title: '投递明细',
+          refresh: '刷新该事件',
+          nextAttempt: '下次重试：{{time}}',
+        },
+        payload: '事件载荷（JSON）',
+        toggleDetails: '展开/收起投递明细',
+        resendConfirm: {
+          title: '重发通知事件',
+          description:
+            '该{{type}}事件将按原始载荷重新投递。重发为异步受理，结果以投递状态与错误提示为准。',
+          channels: '重发渠道（可选）',
+          channelsPlaceholder: '选择渠道（可多选，留空=原渠道）',
+          channelsHint: '不选则重发到该事件原本投递的全部渠道。',
+          noChannels: '该事件没有可用的投递渠道记录',
+        },
+        toast: {
+          resent: '重发请求已受理，投递状态稍后刷新可见。',
+        },
       },
     },
     currencies: {

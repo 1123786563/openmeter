@@ -519,7 +519,48 @@ export default {
       },
       events: {
         title: 'Notification Events',
-        description: 'Browse the notification event stream and resend.',
+        description:
+          'Read-only stream of rule-triggered notification events; filter by time/rule/channel and resend.',
+        refresh: 'Refresh',
+        resend: 'Resend',
+        empty: 'No notification events for the selected filters',
+        actions: 'Actions',
+        pagination: { total: '{{total}} total' },
+        fields: {
+          createdAt: 'Triggered At',
+          type: 'Event Type',
+          rule: 'Source Rule',
+          deliveryStatus: 'Delivery Status',
+        },
+        filter: {
+          from: 'From',
+          to: 'To',
+          rule: 'Rule',
+          channel: 'Channel',
+          allRules: 'All rules',
+          allChannels: 'All channels',
+          apply: 'Apply Filters',
+        },
+        delivery: {
+          title: 'Delivery Details',
+          refresh: 'Refresh event',
+          nextAttempt: 'Next attempt: {{time}}',
+        },
+        payload: 'Payload (JSON)',
+        toggleDetails: 'Toggle delivery details',
+        resendConfirm: {
+          title: 'Resend notification event',
+          description:
+            'This {{type}} event will be redelivered with its original payload. Resend is accepted asynchronously; check delivery status and error toasts for the outcome.',
+          channels: 'Channels (optional)',
+          channelsPlaceholder: 'Select channels (empty = original)',
+          channelsHint:
+            'Leave empty to resend to every channel the event originally delivered to.',
+          noChannels: 'No delivery channels recorded for this event',
+        },
+        toast: {
+          resent: 'Resend accepted; delivery status will update shortly.',
+        },
       },
     },
     currencies: {

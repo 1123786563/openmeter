@@ -16,9 +16,11 @@ import {
   listCustomerEntitlementsV2,
   listFiatCurrencies,
   listNotificationChannels,
+  listNotificationEvents,
   listNotificationRules,
   listPortalTokens,
   listSubjects,
+  resendNotificationEvent,
   updateNotificationChannel,
   updateNotificationRule,
   ruleToUpdateBody,
@@ -26,6 +28,7 @@ import {
   type EntitlementValueV2,
   type EntitlementV2,
   type NotificationChannelCreateRequest,
+  type NotificationEventListParams,
   type NotificationRule,
   type NotificationRuleCreateRequest,
   type Subject,
@@ -944,6 +947,55 @@ export function useTestRule() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (ruleId: string) => testNotificationRule(ruleId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.events'),
+      })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Notification events (v1) — read-only stream + resend                */
+/* ------------------------------------------------------------------ */
+
+export interface NotificationEventsParams {
+  from?: string
+  to?: string
+  rule?: string
+  channel?: string
+  page: number
+  pageSize: number
+}
+
+export function useNotificationEvents(params: NotificationEventsParams) {
+  return useQuery({
+    queryKey: queryKeys.notificationEvents(params),
+    queryFn: () =>
+      listNotificationEvents({
+        ...(params.from ? { from: params.from } : {}),
+        ...(params.to ? { to: params.to } : {}),
+        // Single-select UI values lifted to the spec's repeated-array params.
+        ...(params.rule ? { rule: [params.rule] } : {}),
+        ...(params.channel ? { channel: [params.channel] } : {}),
+        page: params.page,
+        pageSize: params.pageSize,
+      } satisfies NotificationEventListParams),
+  })
+}
+
+export function useResendEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      eventId,
+      channels,
+    }: {
+      eventId: string
+      channels?: string[]
+    }) =>
+      // Empty selection means "resend to the original channels" — omit the field.
+      resendNotificationEvent(eventId, channels?.length ? { channels } : {}),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('notification.events'),
