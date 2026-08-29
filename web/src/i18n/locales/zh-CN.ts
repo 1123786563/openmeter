@@ -352,7 +352,55 @@ export default {
       },
       rules: {
         title: '通知规则',
-        description: '管理通知触发规则与发送测试。',
+        description: '管理事件触发规则，将通知投递到一个或多个渠道。',
+        create: '新建规则',
+        empty: '暂无通知规则',
+        enable: '启用',
+        disable: '禁用',
+        actions: '操作',
+        pagination: { total: '共 {{total}} 条' },
+        types: {
+          'entitlements.balance.threshold': '余额阈值',
+          'entitlements.reset': '额度重置',
+          'invoice.created': '发票创建',
+          'invoice.updated': '发票更新',
+        },
+        fields: {
+          type: '规则类型',
+          name: '名称',
+          channels: '投递渠道',
+          status: '状态',
+          disabled: '禁用规则',
+        },
+        form: {
+          createTitle: '新建通知规则',
+          createDescription: '选择规则类型并绑定投递渠道。',
+          editTitle: '编辑通知规则',
+          editDescription: '保存为全量替换；类型创建后不可更改。',
+          typeHint:
+            '创建后不可更改。余额阈值与额度重置类型的表单在后续任务提供。',
+          channelsPlaceholder: '选择渠道（可多选）',
+          channelsHint:
+            '至少选择一个渠道；规则触发时事件将投递到全部所选渠道。',
+          noChannels: '暂无可选渠道，请先创建通知渠道',
+          disabledHint: '禁用后规则停止触发通知。',
+          validation: {
+            required: '必填，1-256 字符。',
+            channels: '至少选择一个投递渠道。',
+          },
+        },
+        toggleConfirm: {
+          enableTitle: '启用通知规则',
+          enableDescription: '启用后，{{name}} 将恢复触发通知。',
+          disableTitle: '禁用通知规则',
+          disableDescription: '禁用后，{{name}} 将停止触发通知。',
+        },
+        toast: {
+          created: '通知规则已创建。',
+          updated: '通知规则已更新。',
+          enabled: '通知规则已启用。',
+          disabled: '通知规则已禁用。',
+        },
       },
       events: {
         title: '通知事件',

@@ -363,7 +363,60 @@ export default {
       },
       rules: {
         title: 'Notification Rules',
-        description: 'Manage notification rules and send tests.',
+        description:
+          'Manage event rules that deliver notifications to one or more channels.',
+        create: 'New Rule',
+        empty: 'No notification rules yet',
+        enable: 'Enable',
+        disable: 'Disable',
+        actions: 'Actions',
+        pagination: { total: '{{total}} total' },
+        types: {
+          'entitlements.balance.threshold': 'Balance Threshold',
+          'entitlements.reset': 'Entitlement Reset',
+          'invoice.created': 'Invoice Created',
+          'invoice.updated': 'Invoice Updated',
+        },
+        fields: {
+          type: 'Rule Type',
+          name: 'Name',
+          channels: 'Channels',
+          status: 'Status',
+          disabled: 'Disable rule',
+        },
+        form: {
+          createTitle: 'New Notification Rule',
+          createDescription: 'Pick a rule type and bind delivery channels.',
+          editTitle: 'Edit Notification Rule',
+          editDescription:
+            'Saving is a full replacement; the type is immutable after creation.',
+          typeHint:
+            'Immutable after creation. Forms for balance threshold and entitlement reset arrive in a follow-up.',
+          channelsPlaceholder: 'Select channels (multiple)',
+          channelsHint:
+            'At least one channel; triggered events are delivered to every selected channel.',
+          noChannels:
+            'No channels available; create a notification channel first',
+          disabledHint: 'A disabled rule stops triggering notifications.',
+          validation: {
+            required: 'Required, 1-256 characters.',
+            channels: 'Select at least one delivery channel.',
+          },
+        },
+        toggleConfirm: {
+          enableTitle: 'Enable notification rule',
+          enableDescription:
+            'Once enabled, {{name}} resumes triggering notifications.',
+          disableTitle: 'Disable notification rule',
+          disableDescription:
+            'Once disabled, {{name}} stops triggering notifications.',
+        },
+        toast: {
+          created: 'Notification rule created.',
+          updated: 'Notification rule updated.',
+          enabled: 'Notification rule enabled.',
+          disabled: 'Notification rule disabled.',
+        },
       },
       events: {
         title: 'Notification Events',
