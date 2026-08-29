@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  FlaskConical,
+  Pencil,
+  Plus,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
   useNotificationChannels,
   useNotificationRules,
+  useTestRule,
   useToggleRule,
 } from '@/api/hooks'
-import type {
-  NotificationRule,
-  NotificationRuleInvoiceCreated,
-  NotificationRuleInvoiceUpdated,
-} from '@/api/legacy'
+import type { NotificationRule } from '@/api/legacy'
 import { handleServerError } from '@/lib/handle-server-error'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,16 +47,7 @@ const TYPE_BADGE_CLASS: Record<NotificationRule['type'], string> = {
     'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300',
 }
 
-/** This iteration ships editors for invoice types only; other types still toggle fine. */
-type EditableRule =
-  | NotificationRuleInvoiceCreated
-  | NotificationRuleInvoiceUpdated
-
-function isEditableType(rule: NotificationRule): rule is EditableRule {
-  return rule.type === 'invoice.created' || rule.type === 'invoice.updated'
-}
-
-/** Notification rule management: typed list, create/edit, enable/disable. */
+/** Notification rule management: typed list, create/edit, enable/disable, test. */
 export function NotificationRulesPage() {
   const { t } = useTranslation()
   const [page, setPage] = useState(1)
@@ -75,12 +69,14 @@ export function NotificationRulesPage() {
   )
 
   const [formOpen, setFormOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<EditableRule | null>(null)
+  const [editTarget, setEditTarget] = useState<NotificationRule | null>(null)
   const [toggleTarget, setToggleTarget] = useState<NotificationRule | null>(
     null
   )
+  const [testTarget, setTestTarget] = useState<NotificationRule | null>(null)
 
   const toggleMutation = useToggleRule()
+  const testMutation = useTestRule()
 
   const openCreate = () => {
     setEditTarget(null)
@@ -88,7 +84,6 @@ export function NotificationRulesPage() {
   }
 
   const openEdit = (rule: NotificationRule) => {
-    if (!isEditableType(rule)) return
     setEditTarget(rule)
     setFormOpen(true)
   }
@@ -168,17 +163,25 @@ export function NotificationRulesPage() {
                     </TableCell>
                     <TableCell className='pr-6'>
                       <div className='flex justify-end gap-1'>
-                        {isEditableType(rule) && (
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-7 px-2'
-                            onClick={() => openEdit(rule)}
-                          >
-                            <Pencil className='size-4' />
-                            {t('common.edit')}
-                          </Button>
-                        )}
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7 px-2'
+                          onClick={() => openEdit(rule)}
+                        >
+                          <Pencil className='size-4' />
+                          {t('common.edit')}
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-7 px-2'
+                          disabled={rule.disabled}
+                          onClick={() => setTestTarget(rule)}
+                        >
+                          <FlaskConical className='size-4' />
+                          {t('config.notification.rules.test')}
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -275,6 +278,32 @@ export function NotificationRulesPage() {
               onError: handleServerError,
             }
           )
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(testTarget)}
+        onOpenChange={(open) => !open && setTestTarget(null)}
+        title={t('config.notification.rules.testConfirm.title')}
+        desc={t('config.notification.rules.testConfirm.description', {
+          name: testTarget?.name ?? '',
+        })}
+        confirmText={t('config.notification.rules.test')}
+        cancelBtnText={t('common.cancel')}
+        isLoading={testMutation.isPending}
+        handleConfirm={() => {
+          if (!testTarget) return
+          testMutation.mutate(testTarget.id, {
+            onSuccess: (event) => {
+              toast.success(
+                t('config.notification.rules.toast.testSent', {
+                  id: event.id,
+                })
+              )
+              setTestTarget(null)
+            },
+            onError: handleServerError,
+          })
         }}
       />
     </>
