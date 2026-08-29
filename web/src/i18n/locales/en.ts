@@ -441,6 +441,7 @@ export default {
         empty: 'No notification rules yet',
         enable: 'Enable',
         disable: 'Disable',
+        test: 'Send Test',
         actions: 'Actions',
         pagination: { total: '{{total}} total' },
         types: {
@@ -455,6 +456,15 @@ export default {
           channels: 'Channels',
           status: 'Status',
           disabled: 'Disable rule',
+          thresholds: 'Thresholds (1-10)',
+          features: 'Feature Scope',
+        },
+        thresholdTypes: {
+          PERCENT: 'Usage Percentage (legacy)',
+          NUMBER: 'Usage Value (legacy)',
+          balance_value: 'Remaining Balance Value',
+          usage_percentage: 'Usage Percentage',
+          usage_value: 'Usage Value',
         },
         form: {
           createTitle: 'New Notification Rule',
@@ -469,11 +479,26 @@ export default {
             'At least one channel; triggered events are delivered to every selected channel.',
           noChannels:
             'No channels available; create a notification channel first',
+          thresholdsHint:
+            'The rule fires when usage/balance reaches any threshold; 1 to 10 items.',
+          addThreshold: 'Add threshold',
+          removeThreshold: 'Remove threshold',
+          featuresPlaceholder: 'Select features (optional, empty = all)',
+          featuresHint:
+            'Only the selected features trigger; leaving it empty applies to all features (the API rejects empty arrays, empty means omitting the field).',
+          noFeatures: 'No features yet; create them in the features catalog',
           disabledHint: 'A disabled rule stops triggering notifications.',
           validation: {
             required: 'Required, 1-256 characters.',
             channels: 'Select at least one delivery channel.',
+            threshold:
+              'Threshold must be a number (negatives and decimals allowed).',
           },
+        },
+        testConfirm: {
+          title: 'Send test notification',
+          description:
+            'This delivers a real test event with random data to every channel bound to "{{name}}". Continue?',
         },
         toggleConfirm: {
           enableTitle: 'Enable notification rule',
@@ -488,6 +513,8 @@ export default {
           updated: 'Notification rule updated.',
           enabled: 'Notification rule enabled.',
           disabled: 'Notification rule disabled.',
+          testSent:
+            'Test event generated ({{id}}); see the notification events page for delivery status.',
         },
       },
       events: {
