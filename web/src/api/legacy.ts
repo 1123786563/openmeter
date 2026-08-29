@@ -212,3 +212,15 @@ export async function deleteNotificationChannel(
     { method: 'DELETE' }
   )
 }
+
+/** GET /api/v1/info/currencies — fiat currency list (v1-only lookup endpoint). */
+export interface FiatCurrency {
+  code: string
+  name: string
+  symbol: string
+  subunits: number
+}
+
+export async function listFiatCurrencies(): Promise<FiatCurrency[]> {
+  return apiFetch<FiatCurrency[]>('/v1/info/currencies')
+}
