@@ -8,17 +8,23 @@ import { api } from '@/api/client'
 import {
   clonePlanNextVersion,
   createNotificationChannel,
+  createNotificationRule,
   createPortalToken,
   deleteNotificationChannel,
   getCustomerEntitlementValueV2,
   listCustomerEntitlementsV2,
   listFiatCurrencies,
   listNotificationChannels,
+  listNotificationRules,
   listSubjects,
   updateNotificationChannel,
+  updateNotificationRule,
+  ruleToUpdateBody,
   type EntitlementValueV2,
   type EntitlementV2,
   type NotificationChannelCreateRequest,
+  type NotificationRule,
+  type NotificationRuleCreateRequest,
   type Subject,
 } from '@/api/legacy'
 import { queryKeys } from '@/api/query-keys'
@@ -846,6 +852,72 @@ export function useDeleteChannel() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: nsPrefix('notification.channels'),
+      })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Notification rules (v1)                                             */
+/* ------------------------------------------------------------------ */
+
+export interface NotificationRulesParams {
+  page: number
+  pageSize: number
+}
+
+export function useNotificationRules(params: NotificationRulesParams) {
+  return useQuery({
+    queryKey: queryKeys.notificationRules(params),
+    queryFn: () => listNotificationRules({ ...params, includeDisabled: true }),
+  })
+}
+
+export function useCreateRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NotificationRuleCreateRequest) =>
+      createNotificationRule(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.rules'),
+      })
+    },
+  })
+}
+
+export function useUpdateRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      ruleId,
+      body,
+    }: {
+      ruleId: string
+      body: NotificationRuleCreateRequest
+    }) => updateNotificationRule(ruleId, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.rules'),
+      })
+    },
+  })
+}
+
+/** Enable/disable a rule; PUT replaces the whole body, so the stored rule's type-specific fields are rebuilt. */
+export function useToggleRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      rule,
+      disabled,
+    }: {
+      rule: NotificationRule
+      disabled: boolean
+    }) => updateNotificationRule(rule.id, ruleToUpdateBody(rule, disabled)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('notification.rules'),
       })
     },
   })

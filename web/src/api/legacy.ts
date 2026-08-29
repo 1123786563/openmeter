@@ -213,6 +213,208 @@ export async function deleteNotificationChannel(
   )
 }
 
+/* ------------------------------------------------------------------ */
+/* Notifications (v1) — rules                                          */
+/* ------------------------------------------------------------------ */
+
+/** Spec oneOf discriminator value for both rules and rule create requests. */
+export type NotificationRuleType =
+  | 'entitlements.balance.threshold'
+  | 'entitlements.reset'
+  | 'invoice.created'
+  | 'invoice.updated'
+
+/** Channel reference embedded in rules (spec: NotificationChannelMeta). */
+export interface NotificationChannelMeta {
+  id: string
+  type: 'WEBHOOK'
+}
+
+/** Feature reference embedded in rules (spec: FeatureMeta, id + key only). */
+export interface FeatureMeta {
+  id: string
+  key: string
+}
+
+export interface NotificationRuleCommon {
+  id: string
+  name: string
+  disabled: boolean
+  channels: NotificationChannelMeta[]
+  metadata?: Record<string, string> | null
+  createdAt: string
+  updatedAt: string
+  deletedAt?: string | null
+}
+
+export interface NotificationRuleBalanceThreshold extends NotificationRuleCommon {
+  type: 'entitlements.balance.threshold'
+  thresholds: NotificationRuleThreshold[]
+  features?: FeatureMeta[]
+}
+
+export interface NotificationRuleEntitlementReset extends NotificationRuleCommon {
+  type: 'entitlements.reset'
+  features?: FeatureMeta[]
+}
+
+export interface NotificationRuleInvoiceCreated extends NotificationRuleCommon {
+  type: 'invoice.created'
+}
+
+export interface NotificationRuleInvoiceUpdated extends NotificationRuleCommon {
+  type: 'invoice.updated'
+}
+
+/** Rule union discriminated by `type` (spec oneOf + discriminator). */
+export type NotificationRule =
+  | NotificationRuleBalanceThreshold
+  | NotificationRuleEntitlementReset
+  | NotificationRuleInvoiceCreated
+  | NotificationRuleInvoiceUpdated
+
+/** Spec: NotificationRuleBalanceThresholdValue — value + threshold type. */
+export interface NotificationRuleThreshold {
+  value: number
+  type:
+    | 'PERCENT'
+    | 'NUMBER'
+    | 'balance_value'
+    | 'usage_percentage'
+    | 'usage_value'
+}
+
+export interface NotificationRuleListParams {
+  includeDeleted?: boolean
+  includeDisabled?: boolean
+  feature?: string[]
+  channel?: string[]
+  page?: number
+  pageSize?: number
+}
+
+export interface NotificationRulePaginatedResponse {
+  totalCount: number
+  page: number
+  pageSize: number
+  items: NotificationRule[]
+}
+
+export async function listNotificationRules(
+  params: NotificationRuleListParams = {}
+): Promise<NotificationRulePaginatedResponse> {
+  const search = new URLSearchParams()
+  if (params.includeDeleted) search.set('includeDeleted', 'true')
+  // The endpoint hides disabled rules unless asked; the admin view needs them.
+  if (params.includeDisabled !== undefined) {
+    search.set('includeDisabled', String(params.includeDisabled))
+  }
+  // Repeated array params per spec: ?feature=a&feature=b
+  params.feature?.forEach((value) => search.append('feature', value))
+  params.channel?.forEach((value) => search.append('channel', value))
+  if (params.page) search.set('page', String(params.page))
+  if (params.pageSize) search.set('pageSize', String(params.pageSize))
+  const qs = search.toString()
+  return apiFetch<NotificationRulePaginatedResponse>(
+    `/v1/notification/rules${qs ? `?${qs}` : ''}`
+  )
+}
+
+/** Spec: NotificationRuleCreateRequest — oneOf discriminated by `type`. */
+export interface NotificationRuleCreateRequestBase {
+  name: string
+  disabled?: boolean
+  /** Channel ids (spec: minItems 1). */
+  channels: string[]
+  metadata?: Record<string, string>
+}
+
+export interface NotificationRuleBalanceThresholdCreateRequest extends NotificationRuleCreateRequestBase {
+  type: 'entitlements.balance.threshold'
+  /** 1-10 thresholds (spec minItems/maxItems). */
+  thresholds: NotificationRuleThreshold[]
+  /** Optional scope by feature ids or keys. */
+  features?: string[]
+}
+
+export interface NotificationRuleEntitlementResetCreateRequest extends NotificationRuleCreateRequestBase {
+  type: 'entitlements.reset'
+  features?: string[]
+}
+
+export interface NotificationRuleInvoiceCreatedCreateRequest extends NotificationRuleCreateRequestBase {
+  type: 'invoice.created'
+}
+
+export interface NotificationRuleInvoiceUpdatedCreateRequest extends NotificationRuleCreateRequestBase {
+  type: 'invoice.updated'
+}
+
+export type NotificationRuleCreateRequest =
+  | NotificationRuleBalanceThresholdCreateRequest
+  | NotificationRuleEntitlementResetCreateRequest
+  | NotificationRuleInvoiceCreatedCreateRequest
+  | NotificationRuleInvoiceUpdatedCreateRequest
+
+export async function createNotificationRule(
+  body: NotificationRuleCreateRequest
+): Promise<NotificationRule> {
+  return apiFetch<NotificationRule>('/v1/notification/rules', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+/** PUT is a full replacement: the complete oneOf create body, every time. */
+export async function updateNotificationRule(
+  ruleId: string,
+  body: NotificationRuleCreateRequest
+): Promise<NotificationRule> {
+  return apiFetch<NotificationRule>(
+    `/v1/notification/rules/${encodeURIComponent(ruleId)}`,
+    { method: 'PUT', body: JSON.stringify(body) }
+  )
+}
+
+/**
+ * Rebuilds the full PUT body from a rule as stored, optionally overriding
+ * `disabled`. Required because rule updates replace the whole resource —
+ * toggling enabled/disabled must still send type-specific fields back.
+ */
+export function ruleToUpdateBody(
+  rule: NotificationRule,
+  disabled?: boolean
+): NotificationRuleCreateRequest {
+  const base = {
+    name: rule.name,
+    disabled: disabled ?? rule.disabled,
+    channels: rule.channels.map((channel) => channel.id),
+    ...(rule.metadata ? { metadata: rule.metadata } : {}),
+  }
+  switch (rule.type) {
+    case 'entitlements.balance.threshold':
+      return {
+        ...base,
+        type: rule.type,
+        thresholds: rule.thresholds,
+        ...(rule.features
+          ? { features: rule.features.map((feature) => feature.id) }
+          : {}),
+      }
+    case 'entitlements.reset':
+      return {
+        ...base,
+        type: rule.type,
+        ...(rule.features
+          ? { features: rule.features.map((feature) => feature.id) }
+          : {}),
+      }
+    case 'invoice.created':
+    case 'invoice.updated':
+      return { ...base, type: rule.type }
+  }
+}
+
 /** GET /api/v1/info/currencies — fiat currency list (v1-only lookup endpoint). */
 export interface FiatCurrency {
   code: string
