@@ -1,0 +1,722 @@
+# Review package: 433993e4a..871606d13
+
+## Commits
+871606d13 feat(admin): 账单档案编辑（apps 不可变）与删除 (issue #26)
+
+## Files changed
+ .../billing-profile-form-dialog.tsx                | 149 ++++++++++++++++-----
+ web/src/features/config/billing-profiles/index.tsx |  83 +++++++++++-
+ web/src/i18n/locales/en.ts                         |  12 ++
+ web/src/i18n/locales/zh-CN.ts                      |  11 ++
+ 4 files changed, 218 insertions(+), 37 deletions(-)
+
+## Diff
+diff --git a/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx b/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
+index 19f59750e..092745f3c 100644
+--- a/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
++++ b/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
+@@ -1,18 +1,22 @@
+ import { useEffect } from 'react'
+ import { z } from 'zod'
+ import { useForm } from 'react-hook-form'
+ import { zodResolver } from '@hookform/resolvers/zod'
+-import type { App } from '@openmeter/client'
++import type { App, Profile } from '@openmeter/client'
+ import { useTranslation } from 'react-i18next'
+ import { toast } from 'sonner'
+-import { useApps, useCreateBillingProfile } from '@/api/hooks'
++import {
++  useApps,
++  useCreateBillingProfile,
++  useUpdateBillingProfile,
++} from '@/api/hooks'
+ import { handleServerError } from '@/lib/handle-server-error'
+ import { Button } from '@/components/ui/button'
+ import {
+   Dialog,
+   DialogContent,
+   DialogDescription,
+   DialogFooter,
+   DialogHeader,
+   DialogTitle,
+ } from '@/components/ui/dialog'
+@@ -81,111 +85,172 @@ const EMPTY_VALUES: FormValues = {
+   appInvoicing: '',
+   appPayment: '',
+   default: false,
+ }
+ 
+ /** App slot select: lists every installed app; which type fits which slot is a backend concern. */
+ function AppSlotSelect({
+   apps,
+   value,
+   onChange,
++  disabled = false,
+ }: {
+   apps: App[]
+   value: string
+   onChange: (next: string) => void
++  disabled?: boolean
+ }) {
+   return (
+-    <Select value={value} onValueChange={onChange}>
++    <Select value={value} onValueChange={onChange} disabled={disabled}>
+       <SelectTrigger className='w-full'>
+         <SelectValue />
+       </SelectTrigger>
+       <SelectContent>
+         {apps.map((app) => (
+           <SelectItem key={app.id} value={app.id}>
+             {app.name}（{app.type}）
+           </SelectItem>
+         ))}
+       </SelectContent>
+     </Select>
+   )
+ }
+ 
+ export function BillingProfileFormDialog({
+   open,
+   onOpenChange,
++  profile,
+ }: {
+   open: boolean
+   onOpenChange: (open: boolean) => void
++  /** Pass the profile to edit; omit (or null) for the #25 create flow. */
++  profile?: Profile | null
+ }) {
+   const { t } = useTranslation()
+   const { data: appsData } = useApps()
+   const createMutation = useCreateBillingProfile()
++  const updateMutation = useUpdateBillingProfile()
++
++  const editing = Boolean(profile)
+ 
+   const form = useForm<FormValues>({
+     resolver: zodResolver(schema),
+     defaultValues: EMPTY_VALUES,
+   })
+ 
+   useEffect(() => {
+-    if (open) form.reset(EMPTY_VALUES)
+-  }, [open, form])
++    if (!open) return
++    if (!profile) {
++      form.reset(EMPTY_VALUES)
++      return
++    }
++    const addr = profile.supplier.addresses?.billingAddress
++    form.reset({
++      name: profile.name,
++      description: profile.description ?? '',
++      supplierName: profile.supplier.name ?? '',
++      supplierKey: profile.supplier.key ?? '',
++      supplierTaxId: profile.supplier.taxId?.code ?? '',
++      addrCountry: addr?.country ?? '',
++      addrLine1: addr?.line1 ?? '',
++      addrLine2: addr?.line2 ?? '',
++      addrCity: addr?.city ?? '',
++      addrState: addr?.state ?? '',
++      addrPostalCode: addr?.postalCode ?? '',
++      addrPhoneNumber: addr?.phoneNumber ?? '',
++      // apps are immutable after creation: backfill ids for display only,
++      // they must stay non-empty to pass the create-oriented zod min(1)
++      appTax: profile.apps.tax.id,
++      appInvoicing: profile.apps.invoicing.id,
++      appPayment: profile.apps.payment.id,
++      default: profile.default,
++    })
++  }, [open, form, profile])
+ 
+   const apps = appsData?.data ?? []
+ 
+   const onSubmit = (values: FormValues) => {
+-    createMutation.mutate(
+-      {
+-        name: values.name.trim(),
+-        description: values.description?.trim() || undefined,
+-        supplier: {
+-          name: values.supplierName.trim(),
+-          key: values.supplierKey.trim() || undefined,
+-          taxId: values.supplierTaxId.trim()
+-            ? { code: values.supplierTaxId.trim() }
+-            : undefined,
+-          addresses: {
+-            billingAddress: {
+-              country: values.addrCountry.trim().toUpperCase() || undefined,
+-              postalCode: values.addrPostalCode.trim() || undefined,
+-              state: values.addrState.trim() || undefined,
+-              city: values.addrCity.trim() || undefined,
+-              line1: values.addrLine1.trim() || undefined,
+-              line2: values.addrLine2.trim() || undefined,
+-              phoneNumber: values.addrPhoneNumber.trim() || undefined,
+-            },
++    // shared by create and update; workflow/apps are branch-specific
++    const body = {
++      name: values.name.trim(),
++      description: values.description?.trim() || undefined,
++      supplier: {
++        name: values.supplierName.trim(),
++        key: values.supplierKey.trim() || undefined,
++        taxId: values.supplierTaxId.trim()
++          ? { code: values.supplierTaxId.trim() }
++          : undefined,
++        addresses: {
++          billingAddress: {
++            country: values.addrCountry.trim().toUpperCase() || undefined,
++            postalCode: values.addrPostalCode.trim() || undefined,
++            state: values.addrState.trim() || undefined,
++            city: values.addrCity.trim() || undefined,
++            line1: values.addrLine1.trim() || undefined,
++            line2: values.addrLine2.trim() || undefined,
++            phoneNumber: values.addrPhoneNumber.trim() || undefined,
+           },
+         },
++      },
++      default: values.default,
++    }
++
++    if (editing && profile) {
++      updateMutation.mutate(
++        {
++          id: profile.id,
++          // PUT is a full replace: workflow must be echoed back or the
++          // server-side settings would be reset to defaults (unlike create,
++          // where workflow:{} asks for the defaults). apps is not part of
++          // the update contract.
++          body: { ...body, workflow: profile.workflow },
++        },
++        {
++          onSuccess: () => {
++            toast.success(t('config.billingProfiles.toast.updated'))
++            onOpenChange(false)
++          },
++          onError: handleServerError,
++        }
++      )
++      return
++    }
++
++    createMutation.mutate(
++      {
++        ...body,
+         // workflow 必传但 UI 只读：空对象让服务端落各 workflow 默认设置
+         workflow: {},
+         apps: {
+           tax: { id: values.appTax },
+           invoicing: { id: values.appInvoicing },
+           payment: { id: values.appPayment },
+         },
+-        default: values.default,
+       },
+       {
+         onSuccess: () => {
+           toast.success(t('config.billingProfiles.toast.created'))
+           onOpenChange(false)
+         },
+         onError: handleServerError,
+       }
+     )
+   }
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
+         <DialogHeader>
+           <DialogTitle>
+-            {t('config.billingProfiles.form.createTitle')}
++            {editing
++              ? t('config.billingProfiles.form.editTitle')
++              : t('config.billingProfiles.form.createTitle')}
+           </DialogTitle>
+           <DialogDescription>
+             {t('config.billingProfiles.form.createDescription')}
+           </DialogDescription>
+         </DialogHeader>
+         <Form {...form}>
+           <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+             <div className='grid gap-4 sm:grid-cols-2'>
+               <FormField
+                 control={form.control}
+@@ -388,60 +453,78 @@ export function BillingProfileFormDialog({
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>
+                         {t('config.billingProfiles.fields.appTax')}
+                       </FormLabel>
+                       <FormControl>
+                         <AppSlotSelect
+                           apps={apps}
+                           value={field.value}
+                           onChange={field.onChange}
++                          disabled={editing}
+                         />
+                       </FormControl>
++                      {editing && (
++                        <FormDescription>
++                          {t('config.billingProfiles.appsImmutable')}
++                        </FormDescription>
++                      )}
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+                 <FormField
+                   control={form.control}
+                   name='appInvoicing'
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>
+                         {t('config.billingProfiles.fields.appInvoicing')}
+                       </FormLabel>
+                       <FormControl>
+                         <AppSlotSelect
+                           apps={apps}
+                           value={field.value}
+                           onChange={field.onChange}
++                          disabled={editing}
+                         />
+                       </FormControl>
++                      {editing && (
++                        <FormDescription>
++                          {t('config.billingProfiles.appsImmutable')}
++                        </FormDescription>
++                      )}
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+                 <FormField
+                   control={form.control}
+                   name='appPayment'
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>
+                         {t('config.billingProfiles.fields.appPayment')}
+                       </FormLabel>
+                       <FormControl>
+                         <AppSlotSelect
+                           apps={apps}
+                           value={field.value}
+                           onChange={field.onChange}
++                          disabled={editing}
+                         />
+                       </FormControl>
++                      {editing && (
++                        <FormDescription>
++                          {t('config.billingProfiles.appsImmutable')}
++                        </FormDescription>
++                      )}
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+               </div>
+             </div>
+ 
+             <FormField
+               control={form.control}
+               name='default'
+@@ -449,36 +532,42 @@ export function BillingProfileFormDialog({
+                 <FormItem className='flex flex-row items-center justify-between rounded-lg border p-3'>
+                   <div className='space-y-0.5'>
+                     <FormLabel>
+                       {t('config.billingProfiles.fields.default')}
+                     </FormLabel>
+                     <FormDescription>
+                       {t('config.billingProfiles.form.defaultHint')}
+                     </FormDescription>
+                   </div>
+                   <FormControl>
+-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
++                    <Switch
++                      checked={field.value}
++                      onCheckedChange={field.onChange}
++                    />
+                   </FormControl>
+                 </FormItem>
+               )}
+             />
+ 
+             <DialogFooter>
+               <Button
+                 type='button'
+                 variant='outline'
+                 onClick={() => onOpenChange(false)}
+               >
+                 {t('common.cancel')}
+               </Button>
+-              <Button type='submit' disabled={createMutation.isPending}>
+-                {createMutation.isPending
++              <Button
++                type='submit'
++                disabled={createMutation.isPending || updateMutation.isPending}
++              >
++                {createMutation.isPending || updateMutation.isPending
+                   ? t('common.submitting')
+                   : t('common.confirm')}
+               </Button>
+             </DialogFooter>
+           </form>
+         </Form>
+       </DialogContent>
+     </Dialog>
+   )
+ }
+diff --git a/web/src/features/config/billing-profiles/index.tsx b/web/src/features/config/billing-profiles/index.tsx
+index 887b79248..2218d387f 100644
+--- a/web/src/features/config/billing-profiles/index.tsx
++++ b/web/src/features/config/billing-profiles/index.tsx
+@@ -1,27 +1,34 @@
+ import { useMemo, useState } from 'react'
+ import type { Profile } from '@openmeter/client'
+-import { Plus } from 'lucide-react'
++import { Pencil, Plus, Trash2 } from 'lucide-react'
+ import { useTranslation } from 'react-i18next'
+-import { useApps, useBillingProfiles } from '@/api/hooks'
++import { toast } from 'sonner'
++import {
++  useApps,
++  useBillingProfiles,
++  useDeleteBillingProfile,
++} from '@/api/hooks'
+ import { formatDateTime } from '@/lib/format'
++import { handleServerError } from '@/lib/handle-server-error'
+ import { Badge } from '@/components/ui/badge'
+ import { Button } from '@/components/ui/button'
+ import { Skeleton } from '@/components/ui/skeleton'
+ import {
+   Table,
+   TableBody,
+   TableCell,
+   TableHead,
+   TableHeader,
+   TableRow,
+ } from '@/components/ui/table'
++import { ConfirmDialog } from '@/components/confirm-dialog'
+ import { Header } from '@/components/layout/header'
+ import { Main } from '@/components/layout/main'
+ import { PageHeader } from '@/components/page-header'
+ import { BillingProfileFormDialog } from './billing-profile-form-dialog'
+ 
+ /** Profile.apps carries ids only; resolve display names from the installed-apps list. */
+ function useAppNameMap() {
+   const { data: appsData } = useApps()
+   return useMemo(() => {
+     const map = new Map<string, string>()
+@@ -29,21 +36,24 @@ function useAppNameMap() {
+       map.set(app.id, app.name)
+     }
+     return map
+   }, [appsData])
+ }
+ 
+ export function BillingProfilesPage() {
+   const { t } = useTranslation()
+   const { data, isLoading } = useBillingProfiles()
+   const appNameMap = useAppNameMap()
++  const deleteMutation = useDeleteBillingProfile()
+   const [formOpen, setFormOpen] = useState(false)
++  const [editTarget, setEditTarget] = useState<Profile | null>(null)
++  const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null)
+ 
+   const appName = (id: string) => appNameMap.get(id) ?? id
+ 
+   const renderProfile = (profile: Profile) => (
+     <TableRow key={profile.id}>
+       <TableCell className='pl-6 font-medium'>
+         {profile.name}
+         {profile.description ? (
+           <span className='block text-xs text-muted-foreground'>
+             {profile.description}
+@@ -54,21 +64,22 @@ export function BillingProfilesPage() {
+         {profile.supplier.name ?? '—'}
+         {profile.supplier.taxId?.code ? (
+           <span className='block text-xs text-muted-foreground'>
+             {t('config.billingProfiles.fields.supplierTaxId')}：
+             {profile.supplier.taxId.code}
+           </span>
+         ) : null}
+       </TableCell>
+       <TableCell className='text-xs'>
+         <span className='block'>
+-          {t('config.billingProfiles.fields.appTax')}：{appName(profile.apps.tax.id)}
++          {t('config.billingProfiles.fields.appTax')}：
++          {appName(profile.apps.tax.id)}
+         </span>
+         <span className='block'>
+           {t('config.billingProfiles.fields.appInvoicing')}：
+           {appName(profile.apps.invoicing.id)}
+         </span>
+         <span className='block'>
+           {t('config.billingProfiles.fields.appPayment')}：
+           {appName(profile.apps.payment.id)}
+         </span>
+       </TableCell>
+@@ -77,23 +88,45 @@ export function BillingProfilesPage() {
+           <Badge
+             variant='outline'
+             className='border-emerald-200 bg-emerald-50 px-1.5 font-normal text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300'
+           >
+             {t('config.billingProfiles.list.default')}
+           </Badge>
+         ) : (
+           <span className='text-muted-foreground'>—</span>
+         )}
+       </TableCell>
+-      <TableCell className='pr-6 text-muted-foreground'>
++      <TableCell className='text-muted-foreground'>
+         {formatDateTime(profile.createdAt)}
+       </TableCell>
++      <TableCell className='pr-6'>
++        <div className='flex justify-end gap-1'>
++          <Button
++            variant='ghost'
++            size='sm'
++            className='h-7 px-2'
++            onClick={() => setEditTarget(profile)}
++          >
++            <Pencil className='size-4' />
++            {t('config.billingProfiles.edit')}
++          </Button>
++          <Button
++            variant='ghost'
++            size='sm'
++            className='h-7 px-2 text-destructive hover:text-destructive'
++            onClick={() => setDeleteTarget(profile)}
++          >
++            <Trash2 className='size-4' />
++            {t('config.billingProfiles.delete')}
++          </Button>
++        </div>
++      </TableCell>
+     </TableRow>
+   )
+ 
+   return (
+     <>
+       <Header />
+       <Main fixed>
+         <PageHeader
+           title={t('config.billingProfiles.title')}
+           description={t('config.billingProfiles.description')}
+@@ -120,36 +153,72 @@ export function BillingProfilesPage() {
+                   </TableHead>
+                   <TableHead>
+                     {t('config.billingProfiles.fields.supplier')}
+                   </TableHead>
+                   <TableHead>
+                     {t('config.billingProfiles.fields.apps')}
+                   </TableHead>
+                   <TableHead>
+                     {t('config.billingProfiles.fields.default')}
+                   </TableHead>
+-                  <TableHead className='pr-6'>
++                  <TableHead>
+                     {t('config.billingProfiles.list.createdAt')}
+                   </TableHead>
++                  <TableHead className='pr-6 text-right'>
++                    {t('config.billingProfiles.list.actions')}
++                  </TableHead>
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {(data?.data ?? []).map(renderProfile)}
+                 {(data?.data ?? []).length === 0 && (
+                   <TableRow>
+                     <TableCell
+-                      colSpan={5}
++                      colSpan={6}
+                       className='h-24 text-center text-muted-foreground'
+                     >
+                       {t('config.billingProfiles.list.empty')}
+                     </TableCell>
+                   </TableRow>
+                 )}
+               </TableBody>
+             </Table>
+           )}
+         </div>
+       </Main>
+-      <BillingProfileFormDialog open={formOpen} onOpenChange={setFormOpen} />
++      <BillingProfileFormDialog
++        open={formOpen || Boolean(editTarget)}
++        onOpenChange={(open) => {
++          setFormOpen(open)
++          if (!open) setEditTarget(null)
++        }}
++        profile={editTarget}
++      />
++
++      <ConfirmDialog
++        open={Boolean(deleteTarget)}
++        onOpenChange={(open) => !open && setDeleteTarget(null)}
++        title={t('config.billingProfiles.deleteConfirm.title')}
++        desc={t('config.billingProfiles.deleteConfirm.description', {
++          name: deleteTarget?.name ?? '',
++        })}
++        confirmText={t('config.billingProfiles.delete')}
++        cancelBtnText={t('common.cancel')}
++        destructive
++        isLoading={deleteMutation.isPending}
++        handleConfirm={() => {
++          if (!deleteTarget) return
++          deleteMutation.mutate(
++            { id: deleteTarget.id },
++            {
++              onSuccess: () => {
++                toast.success(t('config.billingProfiles.toast.deleted'))
++                setDeleteTarget(null)
++              },
++              onError: handleServerError,
++            }
++          )
++        }}
++      />
+     </>
+   )
+ }
+diff --git a/web/src/i18n/locales/en.ts b/web/src/i18n/locales/en.ts
+index c28d112c3..d61b7c73f 100644
+--- a/web/src/i18n/locales/en.ts
++++ b/web/src/i18n/locales/en.ts
+@@ -593,20 +593,23 @@ export default {
+         issued: 'Token issued',
+         noPlaintext:
+           'Create response did not include the token plaintext (unexpected)',
+       },
+     },
+     billingProfiles: {
+       title: 'Billing Profiles',
+       description:
+         'Billing and invoicing settings profiles; each profile is bound to a set of apps (immutable after creation).',
+       create: 'New Profile',
++      edit: 'Edit',
++      delete: 'Delete',
++      appsImmutable: 'Immutable after creation',
+       fields: {
+         name: 'Name',
+         description: 'Description',
+         supplier: 'Supplier (BillingParty)',
+         supplierName: 'Legal name',
+         supplierTaxId: 'Tax ID',
+         supplierKey: 'Key (optional)',
+         country: 'Country (2-letter)',
+         addressLine1: 'Address line 1',
+         addressLine2: 'Address line 2',
+@@ -615,35 +618,44 @@ export default {
+         postalCode: 'Postal code',
+         phoneNumber: 'Phone',
+         apps: 'App associations',
+         appTax: 'Tax app',
+         appInvoicing: 'Invoicing app',
+         appPayment: 'Payment app',
+         default: 'Default profile',
+       },
+       form: {
+         createTitle: 'New Billing Profile',
++        editTitle: 'Edit Billing Profile',
+         createDescription:
+           'Supplier details appear on invoices; app associations are fixed at creation.',
+         keyHint: 'lowercase letters, digits, underscores',
+         appsImmutableHint:
+           'The three slots (tax/invoicing/payment) are decided at creation and cannot be changed afterwards.',
+         defaultHint:
+           'The default profile is used for customers without an explicit override; uniqueness is decided by the backend.',
+       },
+       list: {
+         createdAt: 'Created',
+         default: 'Default',
+         empty: 'No billing profiles yet',
++        actions: 'Actions',
++      },
++      deleteConfirm: {
++        title: 'Delete billing profile',
++        description:
++          'Delete billing profile "{{name}}"? This cannot be undone.',
+       },
+       toast: {
+         created: 'Billing profile created',
++        updated: 'Billing profile updated',
++        deleted: 'Billing profile deleted',
+       },
+     },
+   },
+   dashboard: {
+     title: 'Dashboard',
+     description: 'Key metrics and recent invoices for the active namespace.',
+     stats: {
+       customers: 'Total customers',
+       activeSubscriptions: 'Active subscriptions',
+       monthInvoices: 'Invoices this month',
+diff --git a/web/src/i18n/locales/zh-CN.ts b/web/src/i18n/locales/zh-CN.ts
+index 29904b791..2e8ad8514 100644
+--- a/web/src/i18n/locales/zh-CN.ts
++++ b/web/src/i18n/locales/zh-CN.ts
+@@ -571,20 +571,23 @@ export default {
+       toast: {
+         issued: '令牌已发放',
+         noPlaintext: '创建响应未包含令牌明文（异常）',
+       },
+     },
+     billingProfiles: {
+       title: '账单档案',
+       description:
+         '开票与收款设置档案；每个档案绑定一组应用（创建后不可变）。',
+       create: '新建档案',
++      edit: '编辑',
++      delete: '删除',
++      appsImmutable: '创建后不可变',
+       fields: {
+         name: '名称',
+         description: '描述',
+         supplier: '供应商（BillingParty）',
+         supplierName: '法定名称',
+         supplierTaxId: '税号',
+         supplierKey: 'Key（可选）',
+         country: '国家/地区（两位代码）',
+         addressLine1: '地址行 1',
+         addressLine2: '地址行 2',
+@@ -593,34 +596,42 @@ export default {
+         postalCode: '邮编',
+         phoneNumber: '电话',
+         apps: '应用关联',
+         appTax: '税务应用',
+         appInvoicing: '开票应用',
+         appPayment: '收款应用',
+         default: '默认档案',
+       },
+       form: {
+         createTitle: '新建账单档案',
++        editTitle: '编辑账单档案',
+         createDescription: '供应商信息用于发票抬头；应用关联创建后不可修改。',
+         keyHint: '小写字母/数字/下划线',
+         appsImmutableHint:
+           '三个槽位（税务/开票/收款）均在创建时确定，创建后不可修改。',
+         defaultHint:
+           '默认档案用于未单独指定档案的客户；唯一默认由后端裁决。',
+       },
+       list: {
+         createdAt: '创建时间',
+         default: '默认',
+         empty: '暂无账单档案',
++        actions: '操作',
++      },
++      deleteConfirm: {
++        title: '删除账单档案',
++        description: '确定删除账单档案「{{name}}」吗？操作不可撤销。',
+       },
+       toast: {
+         created: '账单档案已创建',
++        updated: '账单档案已更新',
++        deleted: '账单档案已删除',
+       },
+     },
+   },
+   dashboard: {
+     title: '仪表板',
+     description: '当前命名空间的关键指标与最近发票。',
+     stats: {
+       customers: '客户总数',
+       activeSubscriptions: '活跃订阅数',
+       monthInvoices: '本月发票数',

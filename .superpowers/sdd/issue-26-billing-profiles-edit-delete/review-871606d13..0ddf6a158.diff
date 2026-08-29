@@ -1,0 +1,44 @@
+# Review package: 871606d13..0ddf6a158
+
+## Commits
+0ddf6a158 fix(admin): 账单档案更新回显 labels 防清空 (issue #26)
+
+## Files changed
+ .../config/billing-profiles/billing-profile-form-dialog.tsx      | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx b/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
+index 092745f3c..8df70d7ab 100644
+--- a/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
++++ b/web/src/features/config/billing-profiles/billing-profile-form-dialog.tsx
+@@ -195,21 +195,28 @@ export function BillingProfileFormDialog({
+     }
+ 
+     if (editing && profile) {
+       updateMutation.mutate(
+         {
+           id: profile.id,
+           // PUT is a full replace: workflow must be echoed back or the
+           // server-side settings would be reset to defaults (unlike create,
+           // where workflow:{} asks for the defaults). apps is not part of
+           // the update contract.
+-          body: { ...body, workflow: profile.workflow },
++          // 服务端 update 为全量替换且无 labels 回填保护，须回显避免清空
++          body: {
++            ...body,
++            workflow: profile.workflow,
++            ...(profile.labels && Object.keys(profile.labels).length > 0
++              ? { labels: profile.labels }
++              : {}),
++          },
+         },
+         {
+           onSuccess: () => {
+             toast.success(t('config.billingProfiles.toast.updated'))
+             onOpenChange(false)
+           },
+           onError: handleServerError,
+         }
+       )
+       return
