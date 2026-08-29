@@ -234,6 +234,50 @@ export default {
         },
       },
     },
+    planDetail: {
+      tabs: { overview: '概览', addons: '附加组件' },
+    },
+    planAddons: {
+      create: '添加附加组件',
+      actions: '操作',
+      empty: '该计划暂无附加组件',
+      unlimited: '不限',
+      editPriceHint: '价格在附加组件页维护',
+      fields: {
+        name: '名称',
+        addon: '附加组件',
+        fromPlanPhase: '起始阶段',
+        maxQuantity: '最大数量',
+        description: '描述',
+        createdAt: '创建时间',
+      },
+      form: {
+        createTitle: '添加附加组件',
+        createDescription:
+          '将一个生效状态的附加组件挂到本计划；关联创建后不可更换附加组件。',
+        editTitle: '编辑附加组件关联',
+        editDescription: '可修改名称、起始阶段与数量限制；附加组件本身不可更换。',
+        selectAddon: '选择附加组件',
+        addonImmutable: '关联的附加组件创建后不可更换。',
+        maxQuantityHint: '留空表示不限数量；仅多实例附加组件可设置。',
+        maxQuantitySingle: '单实例附加组件不可设置数量限制。',
+        validation: {
+          name: '必填，长度 1-256',
+          addon: '请选择附加组件',
+          maxQuantity: '必须为正整数',
+        },
+      },
+      deleteConfirm: {
+        title: '移除附加组件',
+        description:
+          '确定将该附加组件「{{name}}」从计划中移除吗？已订阅客户不受影响，但新订阅不可再购买。',
+      },
+      toast: {
+        created: '附加组件已添加到计划',
+        updated: '附加组件关联已更新',
+        deleted: '附加组件已从计划移除',
+      },
+    },
     features: {
       title: '功能目录',
       description: '管理可售卖与可授权的功能定义。',

@@ -1356,6 +1356,71 @@ export function useCreateOfflinePayment(customerId: string) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Plan addons                                                         */
+/* ------------------------------------------------------------------ */
+
+export interface PlanAddonListParams {
+  page: number
+  pageSize: number
+}
+
+export function usePlanAddons(planId: string, params: PlanAddonListParams) {
+  return useQuery({
+    queryKey: queryKeys.planAddons(planId, params),
+    queryFn: ({ signal }) =>
+      api.planAddons.list(
+        {
+          planId,
+          page: { number: params.page, size: params.pageSize },
+        },
+        { signal }
+      ),
+    enabled: Boolean(planId),
+  })
+}
+
+export function useCreatePlanAddon(planId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      body: Parameters<typeof api.planAddons.create>[0]['body']
+    }) => api.planAddons.create({ planId, body: input.body }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plan-addons') })
+    },
+  })
+}
+
+export function useUpdatePlanAddon(planId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      planAddonId: string
+      body: Parameters<typeof api.planAddons.update>[0]['body']
+    }) =>
+      api.planAddons.update({
+        planId,
+        planAddonId: input.planAddonId,
+        body: input.body,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plan-addons') })
+    },
+  })
+}
+
+export function useDeletePlanAddon(planId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { planAddonId: string }) =>
+      api.planAddons.delete({ planId, planAddonId: input.planAddonId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('plan-addons') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
