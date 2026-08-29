@@ -537,6 +537,27 @@ export default {
           },
         },
       },
+      costBasis: {
+        title: 'Cost bases for {{code}}',
+        description:
+          'Fiat cost-rate timeline for the custom currency (append-only; a new entry supersedes earlier ones for its period).',
+        empty: 'No cost bases yet — add the first one below.',
+        manage: 'Manage cost bases',
+        period: '{{from}} — {{to}}',
+        openEnded: 'open-ended',
+        form: {
+          fiatCode: 'Fiat currency',
+          rate: 'Rate (1 custom unit in fiat)',
+          effectiveFrom: 'Effective from',
+          effectiveFromHint: 'Leave empty to make it effective immediately.',
+          add: 'Add cost basis',
+        },
+        validation: {
+          required: 'Required',
+          rate: 'Non-negative decimal, e.g. 0.015',
+        },
+        toast: { added: 'Cost basis added' },
+      },
     },
     taxCodes: {
       title: 'Tax codes',

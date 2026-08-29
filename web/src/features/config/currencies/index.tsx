@@ -20,13 +20,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
+import { CostBasisDialog } from './cost-basis-dialog'
 import { CustomCurrencyDialog } from './custom-currency-dialog'
 
 /**
  * Currency administration: read-only fiat list (v1 info endpoint) and the
  * custom currency catalog (v3 filter[type]=custom + expand=cost_basis).
  * Custom currencies have no update/delete endpoint, so the page states that
- * creation is permanent.
+ * creation is permanent. Each custom row manages its append-only cost bases.
  */
 export function CurrenciesPage() {
   const { t } = useTranslation()
@@ -40,6 +41,9 @@ export function CurrenciesPage() {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [costBasisTarget, setCostBasisTarget] = useState<CurrencyCustom | null>(
+    null
+  )
 
   return (
     <>
@@ -167,7 +171,15 @@ export function CurrenciesPage() {
                           {currency.decimalMark} / {currency.thousandSeparator}
                         </TableCell>
                         <TableCell className='tabular-nums'>
-                          {currency.costBasis?.length ?? 0}
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-7 px-2 tabular-nums'
+                            title={t('config.currencies.costBasis.manage')}
+                            onClick={() => setCostBasisTarget(currency)}
+                          >
+                            {currency.costBasis?.length ?? 0}
+                          </Button>
                         </TableCell>
                         <TableCell className='pr-6 text-muted-foreground'>
                           {formatShortDateTime(currency.createdAt)}
@@ -193,6 +205,13 @@ export function CurrenciesPage() {
       </Main>
 
       <CustomCurrencyDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CostBasisDialog
+        open={costBasisTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCostBasisTarget(null)
+        }}
+        currency={costBasisTarget}
+      />
     </>
   )
 }
