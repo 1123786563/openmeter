@@ -989,6 +989,26 @@ export function useCreateCustomCurrency() {
   })
 }
 
+/**
+ * Appends a cost basis to a custom currency. The list itself is carried by
+ * the currencies query (expand=cost_basis), so creation only invalidates
+ * that prefix; cost bases are append-only (no update/delete endpoints).
+ */
+export function useCreateCostBasis() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: {
+      currencyId: string
+      body: Parameters<
+        typeof api.internal.currencies.createCostBasis
+      >[0]['body']
+    }) => api.internal.currencies.createCostBasis(request),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('currencies') })
+    },
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Tax codes (config)                                                  */
 /* ------------------------------------------------------------------ */
