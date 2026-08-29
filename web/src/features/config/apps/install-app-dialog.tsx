@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { AppCatalogItem } from '@openmeter/client'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useInstallApp } from '@/api/hooks'
@@ -32,12 +33,17 @@ import { PasswordInput } from '@/components/password-input'
 /**
  * The API key is required only for Stripe installs (issue acceptance item),
  * so the schema is built per catalog item type; the caller remounts this
- * dialog with a per-type key to keep the resolver in sync.
+ * dialog with a per-type key to keep the resolver in sync. Messages are
+ * resolved through `t` at schema build time — FormMessage renders
+ * error.message verbatim, so raw keys would leak to the UI.
  */
-function createInstallSchema(isStripe: boolean) {
+function createInstallSchema(isStripe: boolean, t: TFunction) {
   return z
     .object({
-      name: z.string().trim().min(1),
+      name: z
+        .string()
+        .trim()
+        .min(1, t('config.apps.install.validation.nameRequired')),
       apiKey: z.string().trim(),
       createBillingProfile: z.boolean(),
     })
@@ -46,7 +52,7 @@ function createInstallSchema(isStripe: boolean) {
         ctx.addIssue({
           code: 'custom',
           path: ['apiKey'],
-          message: 'config.apps.install.validation.apiKeyRequired',
+          message: t('config.apps.install.validation.apiKeyRequired'),
         })
       }
     })
@@ -75,8 +81,10 @@ export function InstallAppDialog({
 
   const isStripe = item?.type === 'stripe'
 
+  const schema = useMemo(() => createInstallSchema(isStripe, t), [isStripe, t])
+
   const form = useForm<InstallAppFormValues>({
-    resolver: zodResolver(createInstallSchema(isStripe)),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: item?.name ?? '',
       apiKey: '',
@@ -143,11 +151,7 @@ export function InstallAppDialog({
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
-                  <FormMessage>
-                    {form.formState.errors.name
-                      ? t('config.apps.install.validation.nameRequired')
-                      : undefined}
-                  </FormMessage>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -169,11 +173,7 @@ export function InstallAppDialog({
                       <FormDescription>
                         {t('config.apps.install.apiKeyHint')}
                       </FormDescription>
-                      <FormMessage>
-                        {form.formState.errors.apiKey
-                          ? t('config.apps.install.validation.apiKeyRequired')
-                          : undefined}
-                      </FormMessage>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

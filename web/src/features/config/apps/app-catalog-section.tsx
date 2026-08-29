@@ -52,7 +52,7 @@ export function AppCatalogSection() {
               <TableHead>{t('config.apps.fields.type')}</TableHead>
               <TableHead>{t('config.apps.fields.capabilities')}</TableHead>
               <TableHead>
-                {/* install methods, badges self-describe */}
+                {t('config.apps.catalog.installMethodsLabel')}
               </TableHead>
               <TableHead className='pr-6 text-right'>
                 {t('config.apps.fields.actions')}

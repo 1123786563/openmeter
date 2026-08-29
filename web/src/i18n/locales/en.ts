@@ -571,6 +571,7 @@ export default {
           with_api_key: 'API key',
           no_credentials_required: 'No credentials required',
         },
+        installMethodsLabel: 'Install methods',
         installAction: 'Install',
         oauthUnsupported: 'OAuth install is not supported yet',
       },

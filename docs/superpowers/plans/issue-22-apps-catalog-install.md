@@ -23,7 +23,8 @@
   - sandbox / external_invoicing：仅名称（createBillingProfile 隐式 false，
     见 Ruling）。
 - `web/src/features/config/apps/index.tsx`：已装列表下方挂载目录区。
-- i18n：`config.apps.catalog.*`（区标题/空态/字段）与 `config.apps.install.*`
+- i18n：`config.apps.catalog.*`（区标题/空态/字段/installMethodsLabel
+  安装方式列表头）与 `config.apps.install.*`
   （标题/描述/名称/API Key/开关及后果提示/校验/提交/成功 toast）子树，
   zh-CN 与 en 同构。
 

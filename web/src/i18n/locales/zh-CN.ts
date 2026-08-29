@@ -553,6 +553,7 @@ export default {
           with_api_key: 'API Key',
           no_credentials_required: '无需凭证',
         },
+        installMethodsLabel: '安装方式',
         installAction: '安装',
         oauthUnsupported: '暂不支持 OAuth 安装',
       },
