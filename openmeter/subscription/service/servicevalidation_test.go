@@ -66,8 +66,8 @@ func TestValidateSubscriptionCurrencySupport(t *testing.T) {
 			spec: newSpec(currencyx.Code("USD"), &creditCurrencyReference),
 		},
 		{
-			name: "custom subscription currency",
-			spec: newSpec(customCurrency, nil),
+			name:     "custom subscription currency",
+			spec:     newSpec(customCurrency, nil),
 			expected: subscription.ErrCustomCurrencySubscriptionsNotSupported,
 		},
 		{

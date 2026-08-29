@@ -811,8 +811,8 @@ func TestListOrdersFiltersAndPageWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total != 2 {
-		t.Fatalf("created-status total = %d, want 2", total)
+	if total != 2 || len(orders) != 2 {
+		t.Fatalf("created-status list = %d items, total %d; want 2/2", len(orders), total)
 	}
 
 	// then: filters combine
