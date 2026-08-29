@@ -791,7 +791,6 @@ export function useFeatureCostQuery(
 }
 
 /* ------------------------------------------------------------------ */
-/* ------------------------------------------------------------------ */
 /* Notification channels (v1)                                          */
 /* ------------------------------------------------------------------ */
 
@@ -900,6 +899,55 @@ export function useCreateCustomCurrency() {
     ) => api.internal.currencies.createCustomCurrency(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: nsPrefix('currencies') })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
+/* Tax codes (config)                                                  */
+/* ------------------------------------------------------------------ */
+
+export function useTaxCodes(includeDeleted = false) {
+  return useQuery({
+    queryKey: queryKeys.taxCodes({ includeDeleted }),
+    queryFn: ({ signal }) =>
+      api.tax.listCodes(
+        { includeDeleted, page: { number: 1, size: 100 } },
+        { signal }
+      ),
+  })
+}
+
+export function useCreateTaxCode() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.tax.createCode>[0]) =>
+      api.tax.createCode(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('tax-codes') })
+    },
+  })
+}
+
+export function useUpsertTaxCode() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: Parameters<typeof api.tax.upsertCode>[0]
+    ) => api.tax.upsertCode(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('tax-codes') })
+    },
+  })
+}
+
+export function useDeleteTaxCode() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ taxCodeId }: { taxCodeId: string }) =>
+      api.tax.deleteCode({ taxCodeId }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('tax-codes') })
     },
   })
 }
