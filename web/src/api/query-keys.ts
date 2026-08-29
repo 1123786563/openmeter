@@ -55,6 +55,7 @@ export const queryKeys = {
   addons: (params: object = {}) => ns('addons', params),
   orgDefaultTaxCodes: () => ns('org-default-tax-codes'),
   apps: () => ns('apps'),
+  appCatalog: () => ns('app-catalog'),
   portalTokens: (params: object = {}) => ns('portal-tokens', params),
   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
   billingProfile: (id: string) => ns('billing-profile', id),

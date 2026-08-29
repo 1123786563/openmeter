@@ -642,6 +642,35 @@ export default {
         toast: { updated: 'Stripe API Key 已更新' },
       },
       toast: { uninstalled: '应用已卸载' },
+      catalog: {
+        title: '应用目录',
+        empty: '暂无可安装的应用',
+        installMethod: {
+          with_oauth2: 'OAuth',
+          with_api_key: 'API Key',
+          no_credentials_required: '无需凭证',
+        },
+        installMethodsLabel: '安装方式',
+        installAction: '安装',
+        oauthUnsupported: '暂不支持 OAuth 安装',
+      },
+      install: {
+        title: '安装应用：{{name}}',
+        description:
+          '安装会在当前命名空间创建该应用的关联；Stripe 应用可在安装时同时创建计费档案。',
+        name: '名称',
+        apiKey: 'Stripe API Key',
+        apiKeyHint: '以 sk_live_ 或 sk_test_ 开头；仅保存一次，后续仅显示掩码。',
+        createBillingProfile: '同时创建计费档案',
+        createBillingProfileHint:
+          '安装时为该应用创建计费档案；若当前默认档案是 Sandbox 应用，安装后该应用将成为默认计费档案。',
+        validation: {
+          nameRequired: '必填',
+          apiKeyRequired: '必填',
+        },
+        submit: '安装',
+        toast: { installed: '应用已安装' },
+      },
     },
     portalTokens: {
       title: '门户令牌',

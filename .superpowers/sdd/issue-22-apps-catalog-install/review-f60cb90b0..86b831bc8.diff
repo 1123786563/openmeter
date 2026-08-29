@@ -1,0 +1,737 @@
+# Review package: f60cb90b0..86b831bc8
+
+## Commits
+86b831bc8 fix(admin): 安装表单错误文案本地化与目录表头补键 (issue #22)
+a99dd981b feat(admin): 应用目录浏览与安装表单 (issue #22)
+76ecccf9c feat(admin): 应用目录与安装 API hooks (issue #22 T1)
+ba20de72f docs(admin): issue #22 SDD 实施计划
+
+## Files changed
+ .../plans/issue-22-apps-catalog-install.md         |  89 ++++++++
+ web/src/api/hooks.ts                               |  19 ++
+ web/src/api/query-keys.ts                          |   1 +
+ .../features/config/apps/app-catalog-section.tsx   | 151 ++++++++++++++
+ web/src/features/config/apps/index.tsx             |   6 +-
+ .../features/config/apps/install-app-dialog.tsx    | 225 +++++++++++++++++++++
+ web/src/i18n/locales/en.ts                         |  30 +++
+ web/src/i18n/locales/zh-CN.ts                      |  29 +++
+ 8 files changed, 549 insertions(+), 1 deletion(-)
+
+## Diff
+diff --git a/docs/superpowers/plans/issue-22-apps-catalog-install.md b/docs/superpowers/plans/issue-22-apps-catalog-install.md
+new file mode 100644
+index 000000000..cc5058f0f
+--- /dev/null
++++ b/docs/superpowers/plans/issue-22-apps-catalog-install.md
+@@ -0,0 +1,89 @@
++# Plan — issue #22 应用：目录浏览与安装表单
++
++- Issue: https://github.com/1123786563/openmeter/issues/22
++  ([admin-config 22/29] 应用：目录浏览与安装表单)
++- Master plan: docs/superpowers/plans/2026-08-27-admin-config-domains.md Task 11 后半
++  （前半 #21 已合入：已装列表/卸载/Stripe 换 Key）。
++- Branch codex/admin-config-22 @ base f60cb90b0；worktree
++  /Users/wuyongjun/trea/openmeter-issue-22。
++- Ledger: .superpowers/sdd/issue-22-apps-catalog-install/progress.md（worktree-local）。
++
++## 范围（Scope）
++
++- `web/src/api/query-keys.ts`：追加 `appCatalog()`。
++- `web/src/api/hooks.ts`：追加 `useAppCatalog()`（v3 `api.internal.apps.listCatalog`，
++  Apps 段内，模式照抄 useApps）与 `useInstallApp()`（mutation，onSuccess 失效
++  `nsPrefix('apps')` 前缀——安装成功后已装列表刷新是验收项）。
++- 新建 `web/src/features/config/apps/app-catalog-section.tsx`：应用目录区
++  （type 徽章/name/description/capabilities 徽章/installMethods 徽章/安装按钮）。
++- 新建 `web/src/features/config/apps/install-app-dialog.tsx`：安装 dialog，
++  按目录项 `type` 分支：
++  - stripe：名称 + API Key（密码框，zod min(1) 必填——验收项）+
++    createBillingProfile 开关（默认开）；
++  - sandbox / external_invoicing：仅名称（createBillingProfile 隐式 false，
++    见 Ruling）。
++- `web/src/features/config/apps/index.tsx`：已装列表下方挂载目录区。
++- i18n：`config.apps.catalog.*`（区标题/空态/字段/installMethodsLabel
++  安装方式列表头）与 `config.apps.install.*`
++  （标题/描述/名称/API Key/开关及后果提示/校验/提交/成功 toast）子树，
++  zh-CN 与 en 同构。
++
++## 非目标（Non-goals）
++
++- OAuth 安装流（仓库共识无 OAuth；目录项 installMethods 仅含 with_oauth2 时
++  安装按钮禁用并提示不支持，不实现流程）。
++- 已装列表/卸载/Stripe 换 Key（#21 已交付，零改动）。
++- 安装后 default_for_capability_types 展示（#21 已在页头注释说明仅安装响应携带）。
++- 后端/TypeSpec 改动。
++
++## 已核实的契约事实（SDK dist = api/spec/packages/aip-client-javascript，2026-08-29）
++
++- `api.internal.apps.listCatalog()` → `AppCatalogItemPagePaginatedResponse`
++  `{ data: AppCatalogItem[], meta }`；`AppCatalogItem = { type: 'sandbox' |
++  'stripe' | 'external_invoicing', name, description, capabilities:
++  AppCapability[], installMethods: ('with_oauth2' | 'with_api_key' |
++  'no_credentials_required')[] }`；`AppCapability = { type: 'report_usage' |
++  'report_events' | 'calculate_tax' | 'invoice_customers' | 'collect_payments',
++  key, name, description }`。
++- `api.internal.apps.install(request)`：oneOf `InstallAppStripeWithApiKey
++  {type:'stripe', name, createBillingProfile: boolean, apiKey}` |
++  `InstallAppSandbox {type:'sandbox', name, createBillingProfile: boolean}` |
++  `InstallAppExternalInvoicing {type:'external_invoicing', name,
++  createBillingProfile: boolean}`。
++- Ruling（SDK 事实 vs 总纲笔误）：三分支 `createBillingProfile` 均为**必填
++  boolean**（总纲 `createBillingProfile?` 为笔误）。Issue 文案「stripe（名称/
++  API Key/createBillingProfile 开关）、sandbox / external_invoicing（仅名称）」
++  → 非 stripe 分支表单不渲染开关、提交固定 `createBillingProfile: false`。
++  代价：若后端对 sandbox 也支持建档案则 UI 未暴露——与 Issue 验收一致，无碍。
++- 既有 UI 事实：`config.apps.type.*`、`config.apps.capability.*`、
++  `config.apps.status.*` 键已存在（#21），目录区直接复用；模式对齐
++  stripe-key-dialog.tsx（Form/zod/toast/handleServerError/一次性提交）。
++- 页头注释（index.tsx L25-31）已说明 default_for_capability_types 语义，不改动。
++
++## 任务拆分（每任务独立 commit + `cd web && pnpm build && pnpm lint`）
++
++- T1 API 层：query-keys.appCatalog + useAppCatalog + useInstallApp。
++- T2 目录区 + 安装 dialog + 挂载 + i18n（zh/en 同构）。
++
++## 测试与验收命令
++
++- 每 commit：`cd web && pnpm build && pnpm lint`（build 含 tsr generate + tsc -b
++  + vite build；routeTree 零 diff）。
++- 终态追加：`pnpm test:e2e`（与并行轨串行执行，4173 端口）；
++  locale parity 真实求值（zh/en 递归叶键数相等且新增键全被引用）；
++  prettier：新文件 clean、修改文件差异恰为插入块。
++- 浏览器走查（全端点 mock）：目录区渲染目录项三段信息；sandbox 项安装表单
++  仅名称、提交 wire 体 `{type:'sandbox', name, createBillingProfile:false}`；
++  stripe 项空 API Key 前端拦截（zod），填 Key 后 wire 体含 apiKey 与开关值；
++  安装成功 toast + 已装列表出现新应用；installMethods 仅 with_oauth2 的项
++  安装按钮禁用 + 提示。
++
++## 全局约束
++
++- 只动 web/ 下上述文件；三 Go 模块不可误改。
++- 与并行轨 #24/#26/#28 共享面仅 hooks.ts/query-keys.ts 追加段与 locale 文件
++  互不相交子树（apps vs portalTokens/billingProfiles/receivablePeriods）。
++- 文案全部 i18n（zh-CN + en 同步），术语沿 CONTEXT.md 词表（应用/目录/安装）。
++- 所有 API 请求经 SDK（v3 单例已注入 Bearer + X-Namespace）。
++- 未经用户批准不得 push/merge/close/改 GitHub 状态。
++- implementer 不得自行派生 subagent；不得跳过任务审查/修复复审/终审/台账。
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..37a4f936a 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -1065,20 +1065,39 @@ export function useUninstallApp() {
+   const queryClient = useQueryClient()
+   return useMutation({
+     mutationFn: ({ appId }: { appId: string }) =>
+       api.internal.apps.uninstall({ appId }),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+     },
+   })
+ }
+ 
++export function useAppCatalog() {
++  return useQuery({
++    queryKey: queryKeys.appCatalog(),
++    queryFn: ({ signal }) =>
++      api.internal.apps.listCatalog(undefined, { signal }),
++  })
++}
++
++export function useInstallApp() {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (body: Parameters<typeof api.internal.apps.install>[0]) =>
++      api.internal.apps.install(body),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Portal tokens (v1, via legacy layer)                                */
+ /* ------------------------------------------------------------------ */
+ 
+ export function useCreatePortalToken() {
+   const queryClient = useQueryClient()
+   return useMutation({
+     mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
+       createPortalToken(body),
+     onSuccess: () => {
+diff --git a/web/src/api/query-keys.ts b/web/src/api/query-keys.ts
+index 57f836a36..084e94411 100644
+--- a/web/src/api/query-keys.ts
++++ b/web/src/api/query-keys.ts
+@@ -46,16 +46,17 @@ export const queryKeys = {
+     ns('notification.channels', params),
+   notificationRules: (params: object = {}) => ns('notification.rules', params),
+   features: (params: object = {}) => ns('features', params),
+   feature: (id: string) => ns('feature', id),
+   featureCostQuery: (id: string, params: object) =>
+     ns('feature-cost-query', id, params),
+   fiatCurrencies: () => ns('fiat-currencies'),
+   currencies: (params: object = {}) => ns('currencies', params),
+   taxCodes: (params: object = {}) => ns('tax-codes', params),
+   apps: () => ns('apps'),
++  appCatalog: () => ns('app-catalog'),
+   portalTokens: (params: object = {}) => ns('portal-tokens', params),
+   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
+   billingProfile: (id: string) => ns('billing-profile', id),
+   receivablePeriods: (customerId: string, params: object = {}) =>
+     ns('receivable-periods', customerId, params),
+ }
+diff --git a/web/src/features/config/apps/app-catalog-section.tsx b/web/src/features/config/apps/app-catalog-section.tsx
+new file mode 100644
+index 000000000..1a65c259f
+--- /dev/null
++++ b/web/src/features/config/apps/app-catalog-section.tsx
+@@ -0,0 +1,151 @@
++import { useState } from 'react'
++import type { AppCatalogItem } from '@openmeter/client'
++import { Plus } from 'lucide-react'
++import { useTranslation } from 'react-i18next'
++import { useAppCatalog } from '@/api/hooks'
++import { Badge } from '@/components/ui/badge'
++import { Button } from '@/components/ui/button'
++import { Skeleton } from '@/components/ui/skeleton'
++import {
++  Table,
++  TableBody,
++  TableCell,
++  TableHead,
++  TableHeader,
++  TableRow,
++} from '@/components/ui/table'
++import { InstallAppDialog } from './install-app-dialog'
++
++/**
++ * Installable app catalog below the installed list. Entries offering only
++ * OAuth install are shown but not installable (the API has no OAuth flow),
++ * so their install button stays disabled with an explanatory note next to
++ * it.
++ */
++export function AppCatalogSection() {
++  const { t } = useTranslation()
++  const { data, isLoading } = useAppCatalog()
++  const items = data?.data ?? []
++
++  const [installTarget, setInstallTarget] = useState<AppCatalogItem | null>(
++    null
++  )
++
++  return (
++    <div className='mt-6'>
++      <h2 className='mb-3 text-sm font-medium text-muted-foreground'>
++        {t('config.apps.catalog.title')}
++      </h2>
++      {isLoading ? (
++        <div className='space-y-2'>
++          {Array.from({ length: 3 }).map((_, i) => (
++            <Skeleton key={i} className='h-10 w-full' />
++          ))}
++        </div>
++      ) : (
++        <Table>
++          <TableHeader>
++            <TableRow className='bg-hover/50'>
++              <TableHead className='pl-6'>
++                {t('config.apps.fields.name')}
++              </TableHead>
++              <TableHead>{t('config.apps.fields.type')}</TableHead>
++              <TableHead>{t('config.apps.fields.capabilities')}</TableHead>
++              <TableHead>
++                {t('config.apps.catalog.installMethodsLabel')}
++              </TableHead>
++              <TableHead className='pr-6 text-right'>
++                {t('config.apps.fields.actions')}
++              </TableHead>
++            </TableRow>
++          </TableHeader>
++          <TableBody>
++            {items.map((item) => {
++              const installable =
++                item.installMethods.includes('with_api_key') ||
++                item.installMethods.includes('no_credentials_required')
++              return (
++                <TableRow key={item.type}>
++                  <TableCell className='pl-6'>
++                    <div className='font-medium'>{item.name}</div>
++                    <div className='text-xs text-muted-foreground'>
++                      {item.description}
++                    </div>
++                  </TableCell>
++                  <TableCell>
++                    <Badge variant='outline'>
++                      {t(`config.apps.type.${item.type}`)}
++                    </Badge>
++                  </TableCell>
++                  <TableCell>
++                    <div className='flex flex-wrap gap-1'>
++                      {item.capabilities.map((capability) => (
++                        <Badge
++                          key={capability.key}
++                          variant='secondary'
++                          className='font-normal'
++                        >
++                          {t(`config.apps.capability.${capability.type}`)}
++                        </Badge>
++                      ))}
++                    </div>
++                  </TableCell>
++                  <TableCell>
++                    <div className='flex flex-wrap gap-1'>
++                      {item.installMethods.map((method) => (
++                        <Badge
++                          key={method}
++                          variant='outline'
++                          className='font-normal'
++                        >
++                          {t(`config.apps.catalog.installMethod.${method}`)}
++                        </Badge>
++                      ))}
++                    </div>
++                  </TableCell>
++                  <TableCell className='pr-6'>
++                    <div className='flex items-center justify-end gap-2'>
++                      {!installable && (
++                        <span className='text-xs text-muted-foreground'>
++                          {t('config.apps.catalog.oauthUnsupported')}
++                        </span>
++                      )}
++                      <Button
++                        variant='ghost'
++                        size='sm'
++                        className='h-7 px-2'
++                        disabled={!installable}
++                        onClick={() => setInstallTarget(item)}
++                      >
++                        <Plus className='size-4' />
++                        {t('config.apps.catalog.installAction')}
++                      </Button>
++                    </div>
++                  </TableCell>
++                </TableRow>
++              )
++            })}
++            {items.length === 0 && (
++              <TableRow>
++                <TableCell
++                  colSpan={5}
++                  className='h-24 text-center text-muted-foreground'
++                >
++                  {t('config.apps.catalog.empty')}
++                </TableCell>
++              </TableRow>
++            )}
++          </TableBody>
++        </Table>
++      )}
++      {/* The per-type key remounts the dialog so its zod resolver (API key
++          required only for Stripe) matches the selected catalog item. */}
++      <InstallAppDialog
++        key={installTarget?.type ?? 'none'}
++        open={Boolean(installTarget)}
++        onOpenChange={(open) => !open && setInstallTarget(null)}
++        item={installTarget}
++      />
++    </div>
++  )
++}
+diff --git a/web/src/features/config/apps/index.tsx b/web/src/features/config/apps/index.tsx
+index 6bb29bfab..b23a3e651 100644
+--- a/web/src/features/config/apps/index.tsx
++++ b/web/src/features/config/apps/index.tsx
+@@ -13,28 +13,31 @@ import {
+   TableBody,
+   TableCell,
+   TableHead,
+   TableHeader,
+   TableRow,
+ } from '@/components/ui/table'
+ import { ConfirmDialog } from '@/components/confirm-dialog'
+ import { Header } from '@/components/layout/header'
+ import { Main } from '@/components/layout/main'
+ import { PageHeader } from '@/components/page-header'
++import { AppCatalogSection } from './app-catalog-section'
+ import { StripeKeyDialog } from './stripe-key-dialog'
+ 
+ /**
+  * Installed apps administration. The GET /apps response carries the catalog
+  * definition (capabilities) per app but not default_for_capability_types —
+  * that field only exists on the install response and is surfaced by the
+  * install flow. Uninstall requires confirmation; Stripe apps expose a
+- * replace-API-key dialog (the API has no OAuth flow).
++ * replace-API-key dialog (the API has no OAuth flow). Below the installed
++ * list, the catalog section installs apps from the installable catalog
++ * (OAuth-only entries are disabled there).
+  */
+ export function AppsPage() {
+   const { t } = useTranslation()
+   const { data, isLoading } = useApps()
+   const apps = data?.data ?? []
+ 
+   const uninstallMutation = useUninstallApp()
+ 
+   const [keyTarget, setKeyTarget] = useState<AppStripe | null>(null)
+   const [uninstallTarget, setUninstallTarget] = useState<App | null>(null)
+@@ -159,20 +162,21 @@ export function AppsPage() {
+                       className='h-24 text-center text-muted-foreground'
+                     >
+                       {t('config.apps.installed.empty')}
+                     </TableCell>
+                   </TableRow>
+                 )}
+               </TableBody>
+             </Table>
+           )}
+         </div>
++        <AppCatalogSection />
+       </Main>
+ 
+       <StripeKeyDialog
+         open={Boolean(keyTarget)}
+         onOpenChange={(open) => !open && setKeyTarget(null)}
+         app={keyTarget}
+       />
+ 
+       <ConfirmDialog
+         open={Boolean(uninstallTarget)}
+diff --git a/web/src/features/config/apps/install-app-dialog.tsx b/web/src/features/config/apps/install-app-dialog.tsx
+new file mode 100644
+index 000000000..789d78deb
+--- /dev/null
++++ b/web/src/features/config/apps/install-app-dialog.tsx
+@@ -0,0 +1,225 @@
++import { useEffect, useMemo } from 'react'
++import { z } from 'zod'
++import { useForm } from 'react-hook-form'
++import { zodResolver } from '@hookform/resolvers/zod'
++import type { AppCatalogItem } from '@openmeter/client'
++import type { TFunction } from 'i18next'
++import { useTranslation } from 'react-i18next'
++import { toast } from 'sonner'
++import { useInstallApp } from '@/api/hooks'
++import { handleServerError } from '@/lib/handle-server-error'
++import { Button } from '@/components/ui/button'
++import {
++  Dialog,
++  DialogContent,
++  DialogDescription,
++  DialogFooter,
++  DialogHeader,
++  DialogTitle,
++} from '@/components/ui/dialog'
++import {
++  Form,
++  FormControl,
++  FormDescription,
++  FormField,
++  FormItem,
++  FormLabel,
++  FormMessage,
++} from '@/components/ui/form'
++import { Input } from '@/components/ui/input'
++import { Switch } from '@/components/ui/switch'
++import { PasswordInput } from '@/components/password-input'
++
++/**
++ * The API key is required only for Stripe installs (issue acceptance item),
++ * so the schema is built per catalog item type; the caller remounts this
++ * dialog with a per-type key to keep the resolver in sync. Messages are
++ * resolved through `t` at schema build time — FormMessage renders
++ * error.message verbatim, so raw keys would leak to the UI.
++ */
++function createInstallSchema(isStripe: boolean, t: TFunction) {
++  return z
++    .object({
++      name: z
++        .string()
++        .trim()
++        .min(1, t('config.apps.install.validation.nameRequired')),
++      apiKey: z.string().trim(),
++      createBillingProfile: z.boolean(),
++    })
++    .superRefine((values, ctx) => {
++      if (isStripe && values.apiKey.length === 0) {
++        ctx.addIssue({
++          code: 'custom',
++          path: ['apiKey'],
++          message: t('config.apps.install.validation.apiKeyRequired'),
++        })
++      }
++    })
++}
++
++type InstallAppFormValues = z.infer<ReturnType<typeof createInstallSchema>>
++
++type InstallAppDialogProps = {
++  open: boolean
++  onOpenChange: (open: boolean) => void
++  item: AppCatalogItem | null
++}
++
++/**
++ * Install a catalog app. The SDK install contract requires
++ * createBillingProfile on every branch, but the switch is only exposed for
++ * Stripe; sandbox and external_invoicing always submit false.
++ */
++export function InstallAppDialog({
++  open,
++  onOpenChange,
++  item,
++}: InstallAppDialogProps) {
++  const { t } = useTranslation()
++  const installMutation = useInstallApp()
++
++  const isStripe = item?.type === 'stripe'
++
++  const schema = useMemo(() => createInstallSchema(isStripe, t), [isStripe, t])
++
++  const form = useForm<InstallAppFormValues>({
++    resolver: zodResolver(schema),
++    defaultValues: {
++      name: item?.name ?? '',
++      apiKey: '',
++      createBillingProfile: true,
++    },
++  })
++
++  useEffect(() => {
++    if (open) {
++      form.reset({
++        name: item?.name ?? '',
++        apiKey: '',
++        createBillingProfile: true,
++      })
++    }
++  }, [open, item, form])
++
++  const onSubmit = (values: InstallAppFormValues) => {
++    if (!item) return
++    installMutation.mutate(
++      item.type === 'stripe'
++        ? {
++            type: 'stripe',
++            name: values.name,
++            createBillingProfile: values.createBillingProfile,
++            apiKey: values.apiKey,
++          }
++        : item.type === 'sandbox'
++          ? { type: 'sandbox', name: values.name, createBillingProfile: false }
++          : {
++              type: 'external_invoicing',
++              name: values.name,
++              createBillingProfile: false,
++            },
++      {
++        onSuccess: () => {
++          toast.success(t('config.apps.install.toast.installed'))
++          onOpenChange(false)
++        },
++        onError: handleServerError,
++      }
++    )
++  }
++
++  return (
++    <Dialog open={open} onOpenChange={onOpenChange}>
++      <DialogContent className='sm:max-w-md'>
++        <DialogHeader>
++          <DialogTitle>
++            {t('config.apps.install.title', { name: item?.name ?? '' })}
++          </DialogTitle>
++          <DialogDescription>
++            {t('config.apps.install.description')}
++          </DialogDescription>
++        </DialogHeader>
++        <Form {...form}>
++          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
++            <FormField
++              control={form.control}
++              name='name'
++              render={({ field }) => (
++                <FormItem>
++                  <FormLabel>{t('config.apps.install.name')}</FormLabel>
++                  <FormControl>
++                    <Input {...field} />
++                  </FormControl>
++                  <FormMessage />
++                </FormItem>
++              )}
++            />
++            {isStripe && (
++              <>
++                <FormField
++                  control={form.control}
++                  name='apiKey'
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>{t('config.apps.install.apiKey')}</FormLabel>
++                      <FormControl>
++                        <PasswordInput
++                          placeholder='sk_live_...'
++                          autoComplete='new-password'
++                          {...field}
++                        />
++                      </FormControl>
++                      <FormDescription>
++                        {t('config.apps.install.apiKeyHint')}
++                      </FormDescription>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++                <FormField
++                  control={form.control}
++                  name='createBillingProfile'
++                  render={({ field }) => (
++                    <FormItem>
++                      <div className='flex items-center justify-between gap-4'>
++                        <div className='space-y-0.5'>
++                          <FormLabel>
++                            {t('config.apps.install.createBillingProfile')}
++                          </FormLabel>
++                          <FormDescription>
++                            {t('config.apps.install.createBillingProfileHint')}
++                          </FormDescription>
++                        </div>
++                        <FormControl>
++                          <Switch
++                            checked={field.value}
++                            onCheckedChange={field.onChange}
++                          />
++                        </FormControl>
++                      </div>
++                    </FormItem>
++                  )}
++                />
++              </>
++            )}
++            <DialogFooter>
++              <Button
++                type='button'
++                variant='outline'
++                onClick={() => onOpenChange(false)}
++              >
++                {t('common.cancel')}
++              </Button>
++              <Button type='submit' disabled={installMutation.isPending}>
++                {installMutation.isPending
++                  ? t('common.submitting')
++                  : t('config.apps.install.submit')}
++              </Button>
++            </DialogFooter>
++          </form>
++        </Form>
++      </DialogContent>
++    </Dialog>
++  )
++}
+diff --git a/web/src/i18n/locales/en.ts b/web/src/i18n/locales/en.ts
+index c28d112c3..85f30b3ef 100644
+--- a/web/src/i18n/locales/en.ts
++++ b/web/src/i18n/locales/en.ts
+@@ -556,20 +556,50 @@ export default {
+         title: 'Replace Stripe API key: {{name}}',
+         description:
+           'Current key: {{masked}}. The new key is used for Stripe calls immediately after saving.',
+         newKey: 'New secret API key',
+         hint: 'Starts with sk_live_ or sk_test_; stored once, only shown masked afterwards.',
+         confirm: 'Save new key',
+         validation: { required: 'Required' },
+         toast: { updated: 'Stripe API key updated' },
+       },
+       toast: { uninstalled: 'App uninstalled' },
++      catalog: {
++        title: 'App catalog',
++        empty: 'No apps available for install',
++        installMethod: {
++          with_oauth2: 'OAuth',
++          with_api_key: 'API key',
++          no_credentials_required: 'No credentials required',
++        },
++        installMethodsLabel: 'Install methods',
++        installAction: 'Install',
++        oauthUnsupported: 'OAuth install is not supported yet',
++      },
++      install: {
++        title: 'Install app: {{name}}',
++        description:
++          "Installing creates this app's association in the current namespace; Stripe apps can also create a billing profile at the same time.",
++        name: 'Name',
++        apiKey: 'Stripe API key',
++        apiKeyHint:
++          'Starts with sk_live_ or sk_test_; stored once, only shown masked afterwards.',
++        createBillingProfile: 'Create a billing profile',
++        createBillingProfileHint:
++          'Creates a billing profile for this app during install; if the current default profile is a Sandbox app, this app becomes the default billing profile afterwards.',
++        validation: {
++          nameRequired: 'Required',
++          apiKeyRequired: 'Required',
++        },
++        submit: 'Install',
++        toast: { installed: 'App installed' },
++      },
+     },
+     portalTokens: {
+       title: 'Portal Tokens',
+       description:
+         'Issue Consumer Portal access tokens for customers; the plaintext is shown once at issuance.',
+       issue: 'Issue Token',
+       onceTitle: 'Token Issued',
+       onceDescription:
+         'Copy and store it now — the plaintext is shown only this once.',
+       onceWarning:
+diff --git a/web/src/i18n/locales/zh-CN.ts b/web/src/i18n/locales/zh-CN.ts
+index 29904b791..99c8315a7 100644
+--- a/web/src/i18n/locales/zh-CN.ts
++++ b/web/src/i18n/locales/zh-CN.ts
+@@ -538,20 +538,49 @@ export default {
+         open: '更换 API Key',
+         title: '更换 Stripe API Key：{{name}}',
+         description: '当前 Key：{{masked}}。保存后立即使用新 Key 调用 Stripe。',
+         newKey: '新的 Secret API Key',
+         hint: '以 sk_live_ 或 sk_test_ 开头；仅保存一次，后续仅显示掩码。',
+         confirm: '保存新 Key',
+         validation: { required: '必填' },
+         toast: { updated: 'Stripe API Key 已更新' },
+       },
+       toast: { uninstalled: '应用已卸载' },
++      catalog: {
++        title: '应用目录',
++        empty: '暂无可安装的应用',
++        installMethod: {
++          with_oauth2: 'OAuth',
++          with_api_key: 'API Key',
++          no_credentials_required: '无需凭证',
++        },
++        installMethodsLabel: '安装方式',
++        installAction: '安装',
++        oauthUnsupported: '暂不支持 OAuth 安装',
++      },
++      install: {
++        title: '安装应用：{{name}}',
++        description:
++          '安装会在当前命名空间创建该应用的关联；Stripe 应用可在安装时同时创建计费档案。',
++        name: '名称',
++        apiKey: 'Stripe API Key',
++        apiKeyHint: '以 sk_live_ 或 sk_test_ 开头；仅保存一次，后续仅显示掩码。',
++        createBillingProfile: '同时创建计费档案',
++        createBillingProfileHint:
++          '安装时为该应用创建计费档案；若当前默认档案是 Sandbox 应用，安装后该应用将成为默认计费档案。',
++        validation: {
++          nameRequired: '必填',
++          apiKeyRequired: '必填',
++        },
++        submit: '安装',
++        toast: { installed: '应用已安装' },
++      },
+     },
+     portalTokens: {
+       title: '门户令牌',
+       description: '为客户发放 Consumer Portal 访问令牌；明文仅发放时可见。',
+       issue: '发放令牌',
+       onceTitle: '令牌已发放',
+       onceDescription: '请立即复制保存——令牌明文仅此一次展示。',
+       onceWarning:
+         '关闭后无法再次查看；列表中也不会显示明文。丢失只能重新发放并失效旧令牌。',
+       copy: '复制',

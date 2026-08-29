@@ -20,6 +20,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
+import { AppCatalogSection } from './app-catalog-section'
 import { StripeKeyDialog } from './stripe-key-dialog'
 
 /**
@@ -27,7 +28,9 @@ import { StripeKeyDialog } from './stripe-key-dialog'
  * definition (capabilities) per app but not default_for_capability_types —
  * that field only exists on the install response and is surfaced by the
  * install flow. Uninstall requires confirmation; Stripe apps expose a
- * replace-API-key dialog (the API has no OAuth flow).
+ * replace-API-key dialog (the API has no OAuth flow). Below the installed
+ * list, the catalog section installs apps from the installable catalog
+ * (OAuth-only entries are disabled there).
  */
 export function AppsPage() {
   const { t } = useTranslation()
@@ -166,6 +169,7 @@ export function AppsPage() {
             </Table>
           )}
         </div>
+        <AppCatalogSection />
       </Main>
 
       <StripeKeyDialog

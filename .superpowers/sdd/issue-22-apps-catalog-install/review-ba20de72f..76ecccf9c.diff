@@ -1,0 +1,77 @@
+# Review package: ba20de72f..76ecccf9c
+
+## Commits
+76ecccf9c feat(admin): 应用目录与安装 API hooks (issue #22 T1)
+
+## Files changed
+ web/src/api/hooks.ts      | 19 +++++++++++++++++++
+ web/src/api/query-keys.ts |  1 +
+ 2 files changed, 20 insertions(+)
+
+## Diff
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..37a4f936a 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -1065,20 +1065,39 @@ export function useUninstallApp() {
+   const queryClient = useQueryClient()
+   return useMutation({
+     mutationFn: ({ appId }: { appId: string }) =>
+       api.internal.apps.uninstall({ appId }),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+     },
+   })
+ }
+ 
++export function useAppCatalog() {
++  return useQuery({
++    queryKey: queryKeys.appCatalog(),
++    queryFn: ({ signal }) =>
++      api.internal.apps.listCatalog(undefined, { signal }),
++  })
++}
++
++export function useInstallApp() {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (body: Parameters<typeof api.internal.apps.install>[0]) =>
++      api.internal.apps.install(body),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Portal tokens (v1, via legacy layer)                                */
+ /* ------------------------------------------------------------------ */
+ 
+ export function useCreatePortalToken() {
+   const queryClient = useQueryClient()
+   return useMutation({
+     mutationFn: (body: { subject: string; allowedMeterSlugs?: string[] }) =>
+       createPortalToken(body),
+     onSuccess: () => {
+diff --git a/web/src/api/query-keys.ts b/web/src/api/query-keys.ts
+index 57f836a36..084e94411 100644
+--- a/web/src/api/query-keys.ts
++++ b/web/src/api/query-keys.ts
+@@ -46,16 +46,17 @@ export const queryKeys = {
+     ns('notification.channels', params),
+   notificationRules: (params: object = {}) => ns('notification.rules', params),
+   features: (params: object = {}) => ns('features', params),
+   feature: (id: string) => ns('feature', id),
+   featureCostQuery: (id: string, params: object) =>
+     ns('feature-cost-query', id, params),
+   fiatCurrencies: () => ns('fiat-currencies'),
+   currencies: (params: object = {}) => ns('currencies', params),
+   taxCodes: (params: object = {}) => ns('tax-codes', params),
+   apps: () => ns('apps'),
++  appCatalog: () => ns('app-catalog'),
+   portalTokens: (params: object = {}) => ns('portal-tokens', params),
+   billingProfiles: (params: object = {}) => ns('billing-profiles', params),
+   billingProfile: (id: string) => ns('billing-profile', id),
+   receivablePeriods: (customerId: string, params: object = {}) =>
+     ns('receivable-periods', customerId, params),
+ }

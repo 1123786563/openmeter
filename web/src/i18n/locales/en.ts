@@ -665,6 +665,36 @@ export default {
         toast: { updated: 'Stripe API key updated' },
       },
       toast: { uninstalled: 'App uninstalled' },
+      catalog: {
+        title: 'App catalog',
+        empty: 'No apps available for install',
+        installMethod: {
+          with_oauth2: 'OAuth',
+          with_api_key: 'API key',
+          no_credentials_required: 'No credentials required',
+        },
+        installMethodsLabel: 'Install methods',
+        installAction: 'Install',
+        oauthUnsupported: 'OAuth install is not supported yet',
+      },
+      install: {
+        title: 'Install app: {{name}}',
+        description:
+          "Installing creates this app's association in the current namespace; Stripe apps can also create a billing profile at the same time.",
+        name: 'Name',
+        apiKey: 'Stripe API key',
+        apiKeyHint:
+          'Starts with sk_live_ or sk_test_; stored once, only shown masked afterwards.',
+        createBillingProfile: 'Create a billing profile',
+        createBillingProfileHint:
+          'Creates a billing profile for this app during install; if the current default profile is a Sandbox app, this app becomes the default billing profile afterwards.',
+        validation: {
+          nameRequired: 'Required',
+          apiKeyRequired: 'Required',
+        },
+        submit: 'Install',
+        toast: { installed: 'App installed' },
+      },
     },
     portalTokens: {
       title: 'Portal Tokens',

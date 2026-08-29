@@ -1187,6 +1187,25 @@ export function useUninstallApp() {
   })
 }
 
+export function useAppCatalog() {
+  return useQuery({
+    queryKey: queryKeys.appCatalog(),
+    queryFn: ({ signal }) =>
+      api.internal.apps.listCatalog(undefined, { signal }),
+  })
+}
+
+export function useInstallApp() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.internal.apps.install>[0]) =>
+      api.internal.apps.install(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: nsPrefix('apps') })
+    },
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Portal tokens (v1, via legacy layer)                                */
 /* ------------------------------------------------------------------ */
