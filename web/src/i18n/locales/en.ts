@@ -607,6 +607,15 @@ export default {
         updated: 'Tax code updated',
         deleted: 'Tax code deleted',
       },
+      defaults: {
+        title: 'Organization default tax codes',
+        description:
+          'Default tax codes applied to invoicing and credit grants.',
+        invoicingTaxCode: 'Invoicing tax code',
+        creditGrantTaxCode: 'Credit grant tax code',
+        save: 'Save defaults',
+        toast: { updated: 'Organization default tax codes updated.' },
+      },
     },
     apps: {
       title: 'Apps',

@@ -1130,6 +1130,29 @@ export function useDeleteTaxCode() {
   })
 }
 
+/** Organization-level default tax codes for invoicing and credit grants. */
+export function useOrgDefaultTaxCodes() {
+  return useQuery({
+    queryKey: queryKeys.orgDefaultTaxCodes(),
+    queryFn: ({ signal }) =>
+      api.defaults.getOrganizationTaxCodes({}, { signal }),
+  })
+}
+
+export function useUpdateOrgDefaultTaxCodes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      body: Parameters<typeof api.defaults.updateOrganizationTaxCodes>[0]
+    ) => api.defaults.updateOrganizationTaxCodes(body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('org-default-tax-codes'),
+      })
+    },
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Apps (config)                                                       */
 /* ------------------------------------------------------------------ */

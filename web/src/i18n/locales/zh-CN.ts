@@ -583,6 +583,14 @@ export default {
         updated: '税码已更新',
         deleted: '税码已删除',
       },
+      defaults: {
+        title: '组织默认税码',
+        description: '开票与额度发放场景默认使用的税码。',
+        invoicingTaxCode: '开票税码',
+        creditGrantTaxCode: '额度发放税码',
+        save: '保存默认设置',
+        toast: { updated: '组织默认税码已更新。' },
+      },
     },
     apps: {
       title: '应用',
