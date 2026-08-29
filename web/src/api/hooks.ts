@@ -1125,6 +1125,31 @@ export function useCreateBillingProfile() {
   })
 }
 
+export function useUpdateBillingProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.billing.updateProfile>[0]) =>
+      api.billing.updateProfile(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('billing-profiles'),
+      })
+    },
+  })
+}
+
+export function useDeleteBillingProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.billing.deleteProfile({ id }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('billing-profiles'),
+      })
+    },
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /* Receivable periods & external invoices (v3 commerce)                */
 /* ------------------------------------------------------------------ */
