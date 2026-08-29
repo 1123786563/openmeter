@@ -33,7 +33,10 @@ api/v3/templates/chi-middleware.tmpl
 
 # CodeGraph
 .codegraph/
-server
+# CodeGraph server binary at repo root only. Anchored: a bare `server`
+# pattern also swallowed nested server dirs (openmeter/server/auth etc.),
+# breaking pristine-clone builds (issue #31).
+/server
 
 # SDD worktrees
 .worktrees/
