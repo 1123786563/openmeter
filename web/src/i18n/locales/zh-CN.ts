@@ -163,6 +163,10 @@ export default {
       wizard: {
         createTitle: '新建计划',
         createSubmit: '创建计划',
+        editTitle: '编辑计划（草稿）',
+        editSubmit: '保存修改',
+        immutableHint:
+          'Key、币种与计费周期创建后不可修改；如需变更请克隆新版本。',
         steps: {
           basics: '基本信息',
           phases: '阶段列表',
@@ -226,6 +230,7 @@ export default {
         },
         toast: {
           created: '计划已创建（草稿）',
+          updated: '计划已保存',
         },
       },
     },
