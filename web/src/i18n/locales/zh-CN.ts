@@ -522,7 +522,46 @@ export default {
     },
     billingProfiles: {
       title: '账单档案',
-      description: '管理账单档案与开票工作流。',
+      description:
+        '开票与收款设置档案；每个档案绑定一组应用（创建后不可变）。',
+      create: '新建档案',
+      fields: {
+        name: '名称',
+        description: '描述',
+        supplier: '供应商（BillingParty）',
+        supplierName: '法定名称',
+        supplierTaxId: '税号',
+        supplierKey: 'Key（可选）',
+        country: '国家/地区（两位代码）',
+        addressLine1: '地址行 1',
+        addressLine2: '地址行 2',
+        city: '城市',
+        state: '省/州',
+        postalCode: '邮编',
+        phoneNumber: '电话',
+        apps: '应用关联',
+        appTax: '税务应用',
+        appInvoicing: '开票应用',
+        appPayment: '收款应用',
+        default: '默认档案',
+      },
+      form: {
+        createTitle: '新建账单档案',
+        createDescription: '供应商信息用于发票抬头；应用关联创建后不可修改。',
+        keyHint: '小写字母/数字/下划线',
+        appsImmutableHint:
+          '三个槽位（税务/开票/收款）均在创建时确定，创建后不可修改。',
+        defaultHint:
+          '默认档案用于未单独指定档案的客户；唯一默认由后端裁决。',
+      },
+      list: {
+        createdAt: '创建时间',
+        default: '默认',
+        empty: '暂无账单档案',
+      },
+      toast: {
+        created: '账单档案已创建',
+      },
     },
   },
   dashboard: {

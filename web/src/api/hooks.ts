@@ -1005,6 +1005,42 @@ export function useCreatePortalToken() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Billing profiles (v3)                                               */
+/* ------------------------------------------------------------------ */
+
+export function useBillingProfiles() {
+  return useQuery({
+    queryKey: queryKeys.billingProfiles({ page: 1, pageSize: 100 }),
+    queryFn: ({ signal }) =>
+      api.billing.listProfiles(
+        { page: { number: 1, size: 100 } },
+        { signal }
+      ),
+  })
+}
+
+export function useBillingProfile(id: string) {
+  return useQuery({
+    queryKey: queryKeys.billingProfile(id),
+    queryFn: ({ signal }) => api.billing.getProfile({ id }, { signal }),
+    enabled: Boolean(id),
+  })
+}
+
+export function useCreateBillingProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.billing.createProfile>[0]) =>
+      api.billing.createProfile(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: nsPrefix('billing-profiles'),
+      })
+    },
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 

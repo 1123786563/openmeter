@@ -539,7 +539,47 @@ export default {
     },
     billingProfiles: {
       title: 'Billing Profiles',
-      description: 'Manage billing profiles and invoicing workflows.',
+      description:
+        'Billing and invoicing settings profiles; each profile is bound to a set of apps (immutable after creation).',
+      create: 'New Profile',
+      fields: {
+        name: 'Name',
+        description: 'Description',
+        supplier: 'Supplier (BillingParty)',
+        supplierName: 'Legal name',
+        supplierTaxId: 'Tax ID',
+        supplierKey: 'Key (optional)',
+        country: 'Country (2-letter)',
+        addressLine1: 'Address line 1',
+        addressLine2: 'Address line 2',
+        city: 'City',
+        state: 'State/Province',
+        postalCode: 'Postal code',
+        phoneNumber: 'Phone',
+        apps: 'App associations',
+        appTax: 'Tax app',
+        appInvoicing: 'Invoicing app',
+        appPayment: 'Payment app',
+        default: 'Default profile',
+      },
+      form: {
+        createTitle: 'New Billing Profile',
+        createDescription:
+          'Supplier details appear on invoices; app associations are fixed at creation.',
+        keyHint: 'lowercase letters, digits, underscores',
+        appsImmutableHint:
+          'The three slots (tax/invoicing/payment) are decided at creation and cannot be changed afterwards.',
+        defaultHint:
+          'The default profile is used for customers without an explicit override; uniqueness is decided by the backend.',
+      },
+      list: {
+        createdAt: 'Created',
+        default: 'Default',
+        empty: 'No billing profiles yet',
+      },
+      toast: {
+        created: 'Billing profile created',
+      },
     },
   },
   dashboard: {
