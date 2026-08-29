@@ -1,0 +1,45 @@
+# Review package: 7551c94c0..20e5cc9c7
+
+## Commits
+20e5cc9c7 fix(admin): 线下支付金额禁止 0 值 (issue #28)
+
+## Files changed
+ web/src/features/customers/offline-payment-dialog.tsx | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+## Diff
+diff --git a/web/src/features/customers/offline-payment-dialog.tsx b/web/src/features/customers/offline-payment-dialog.tsx
+index d7379c372..a35a98445 100644
+--- a/web/src/features/customers/offline-payment-dialog.tsx
++++ b/web/src/features/customers/offline-payment-dialog.tsx
+@@ -68,26 +68,24 @@ export function OfflinePaymentDialog({
+ }) {
+   const { t } = useTranslation()
+   const createMutation = useCreateOfflinePayment(customerId)
+ 
+   // Schema lives inside the component so validation messages resolve through
+   // i18n (FormMessage renders error.message verbatim).
+   const schema = useMemo(
+     () =>
+       z.object({
+         idempotencyKey: z.string().min(1),
+-        amountYuan: z
+-          .string()
+-          .regex(
+-            POSITIVE_AMOUNT,
+-            t('customers.receivablePeriods.offlinePayment.validation.amount')
+-          ),
++        amountYuan: z.string().refine(
++          (value) => POSITIVE_AMOUNT.test(value) && Number(value) > 0,
++          t('customers.receivablePeriods.offlinePayment.validation.amount')
++        ),
+         currency: z
+           .string()
+           .min(
+             1,
+             t('customers.receivablePeriods.offlinePayment.validation.currency')
+           ),
+         externalReference: z
+           .string()
+           .min(
+             1,
