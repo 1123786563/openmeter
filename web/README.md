@@ -85,8 +85,20 @@ docker run -p 8080:80 -e OPENMETER_UPSTREAM=openmeter:8888 openmeter-admin
 
 1. 登录冒烟：访问 `/` → 守卫跳 `/sign-in` → 点击「使用 Casdoor 登录」→ mock IdP 自动 302 回 `/auth/callback` → 落回 dashboard，断言标题与侧边栏。
 2. 客户列表冒烟：`page.route` 拦截客户列表 API——`**/api/v3/openmeter/customers*`（v3 SDK 实际调用路径，按 SDK `listCustomersResponseWire` 的 wire 格式）与 `**/api/v1/customers**`（`api/openapi.yaml` 的 `CustomerPaginatedResponse`），返回固定 JSON；导航 `/customers` 断言表格渲染（页面实现前断言占位文案）。
+3. 配置计划页冒烟：`page.route` 拦截 `**/api/v3/openmeter/plans*`（v3 SDK wire 格式，`BillingPlan` schema）返回固定计划；断言侧边栏「配置」分组后导航 `/config/plans`，校验 URL 与表格渲染（页面实现前断言占位文案）。
 
 CI 中由 `ci.yaml` 的 `web` job 执行 lint / build / test:e2e（含 `playwright install chromium --with-deps`）。
+
+## 配置域（/config）
+
+侧边栏「配置」分组覆盖运营配置四大块（实施计划见 `docs/superpowers/plans/2026-08-27-admin-config-domains.md`）：
+
+- 计划 / 功能 / 附加组件：`/config/plans`、`/config/features`、`/config/addons`
+- 通知中心：`/config/notification/channels`（渠道）、`/config/notification/rules`（规则）、`/config/notification/events`（事件流）
+- 货币与税码：`/config/currencies`、`/config/tax-codes`
+- 应用 / 门户 / 账单档案：`/config/apps`、`/config/portal-tokens`、`/config/billing-profiles`
+
+文案走 i18n（zh-CN / en，key 前缀 `config.*`，见 `src/i18n/locales/`）；API 经 `src/api/client.ts`（v3 SDK）与 `src/api/legacy.ts`（v1 补齐端点）调用，配置域无后端改动。
 
 ## 与 OpenMeter API / Casdoor 的关系
 
