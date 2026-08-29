@@ -75,12 +75,10 @@ export function OfflinePaymentDialog({
     () =>
       z.object({
         idempotencyKey: z.string().min(1),
-        amountYuan: z
-          .string()
-          .regex(
-            POSITIVE_AMOUNT,
-            t('customers.receivablePeriods.offlinePayment.validation.amount')
-          ),
+        amountYuan: z.string().refine(
+          (value) => POSITIVE_AMOUNT.test(value) && Number(value) > 0,
+          t('customers.receivablePeriods.offlinePayment.validation.amount')
+        ),
         currency: z
           .string()
           .min(
