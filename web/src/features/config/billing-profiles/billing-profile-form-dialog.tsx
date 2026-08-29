@@ -202,7 +202,14 @@ export function BillingProfileFormDialog({
           // server-side settings would be reset to defaults (unlike create,
           // where workflow:{} asks for the defaults). apps is not part of
           // the update contract.
-          body: { ...body, workflow: profile.workflow },
+          // 服务端 update 为全量替换且无 labels 回填保护，须回显避免清空
+          body: {
+            ...body,
+            workflow: profile.workflow,
+            ...(profile.labels && Object.keys(profile.labels).length > 0
+              ? { labels: profile.labels }
+              : {}),
+          },
         },
         {
           onSuccess: () => {
