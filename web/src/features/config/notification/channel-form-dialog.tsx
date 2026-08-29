@@ -149,6 +149,12 @@ export function ChannelFormDialog({
       disabled: values.disabled,
       ...(hasHeaders ? { customHeaders } : {}),
       ...(values.signingSecret ? { signingSecret: values.signingSecret } : {}),
+      // Edit mode: PUT is a full replacement, so externally-set metadata (the
+      // UI never edits it) is backfilled from the original entity like the
+      // signing secret. Create mode sends no metadata.
+      ...(channel?.metadata && Object.keys(channel.metadata).length > 0
+        ? { metadata: channel.metadata }
+        : {}),
     }
 
     if (isCreate) {
