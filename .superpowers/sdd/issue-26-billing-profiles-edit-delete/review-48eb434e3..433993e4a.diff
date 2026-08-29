@@ -1,0 +1,60 @@
+# Review package: 48eb434e3..433993e4a
+
+## Commits
+433993e4a feat(admin): 账单档案更新与删除 API hooks (issue #26 T1)
+
+## Files changed
+ web/src/api/hooks.ts | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+## Diff
+diff --git a/web/src/api/hooks.ts b/web/src/api/hooks.ts
+index a4af435f9..956faa066 100644
+--- a/web/src/api/hooks.ts
++++ b/web/src/api/hooks.ts
+@@ -1118,20 +1118,45 @@ export function useCreateBillingProfile() {
+     mutationFn: (input: Parameters<typeof api.billing.createProfile>[0]) =>
+       api.billing.createProfile(input),
+     onSuccess: () => {
+       void queryClient.invalidateQueries({
+         queryKey: nsPrefix('billing-profiles'),
+       })
+     },
+   })
+ }
+ 
++export function useUpdateBillingProfile() {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: (input: Parameters<typeof api.billing.updateProfile>[0]) =>
++      api.billing.updateProfile(input),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({
++        queryKey: nsPrefix('billing-profiles'),
++      })
++    },
++  })
++}
++
++export function useDeleteBillingProfile() {
++  const queryClient = useQueryClient()
++  return useMutation({
++    mutationFn: ({ id }: { id: string }) => api.billing.deleteProfile({ id }),
++    onSuccess: () => {
++      void queryClient.invalidateQueries({
++        queryKey: nsPrefix('billing-profiles'),
++      })
++    },
++  })
++}
++
+ /* ------------------------------------------------------------------ */
+ /* Receivable periods & external invoices (v3 commerce)                */
+ /* ------------------------------------------------------------------ */
+ 
+ export function useReceivablePeriods(customerId: string, after?: string) {
+   return useQuery({
+     queryKey: queryKeys.receivablePeriods(customerId, { after: after ?? null }),
+     queryFn: ({ signal }) =>
+       api.commerce.listReceivablePeriods(
+         { customerId, page: { after, size: 20 } },

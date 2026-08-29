@@ -1,9 +1,15 @@
 import { useMemo, useState } from 'react'
 import type { Profile } from '@openmeter/client'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useApps, useBillingProfiles } from '@/api/hooks'
+import { toast } from 'sonner'
+import {
+  useApps,
+  useBillingProfiles,
+  useDeleteBillingProfile,
+} from '@/api/hooks'
 import { formatDateTime } from '@/lib/format'
+import { handleServerError } from '@/lib/handle-server-error'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
@@ -36,7 +43,10 @@ export function BillingProfilesPage() {
   const { t } = useTranslation()
   const { data, isLoading } = useBillingProfiles()
   const appNameMap = useAppNameMap()
+  const deleteMutation = useDeleteBillingProfile()
   const [formOpen, setFormOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Profile | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null)
 
   const appName = (id: string) => appNameMap.get(id) ?? id
 
@@ -61,7 +71,8 @@ export function BillingProfilesPage() {
       </TableCell>
       <TableCell className='text-xs'>
         <span className='block'>
-          {t('config.billingProfiles.fields.appTax')}：{appName(profile.apps.tax.id)}
+          {t('config.billingProfiles.fields.appTax')}：
+          {appName(profile.apps.tax.id)}
         </span>
         <span className='block'>
           {t('config.billingProfiles.fields.appInvoicing')}：
@@ -84,8 +95,30 @@ export function BillingProfilesPage() {
           <span className='text-muted-foreground'>—</span>
         )}
       </TableCell>
-      <TableCell className='pr-6 text-muted-foreground'>
+      <TableCell className='text-muted-foreground'>
         {formatDateTime(profile.createdAt)}
+      </TableCell>
+      <TableCell className='pr-6'>
+        <div className='flex justify-end gap-1'>
+          <Button
+            variant='ghost'
+            size='sm'
+            className='h-7 px-2'
+            onClick={() => setEditTarget(profile)}
+          >
+            <Pencil className='size-4' />
+            {t('config.billingProfiles.edit')}
+          </Button>
+          <Button
+            variant='ghost'
+            size='sm'
+            className='h-7 px-2 text-destructive hover:text-destructive'
+            onClick={() => setDeleteTarget(profile)}
+          >
+            <Trash2 className='size-4' />
+            {t('config.billingProfiles.delete')}
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   )
@@ -127,8 +160,11 @@ export function BillingProfilesPage() {
                   <TableHead>
                     {t('config.billingProfiles.fields.default')}
                   </TableHead>
-                  <TableHead className='pr-6'>
+                  <TableHead>
                     {t('config.billingProfiles.list.createdAt')}
+                  </TableHead>
+                  <TableHead className='pr-6 text-right'>
+                    {t('config.billingProfiles.list.actions')}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -137,7 +173,7 @@ export function BillingProfilesPage() {
                 {(data?.data ?? []).length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className='h-24 text-center text-muted-foreground'
                     >
                       {t('config.billingProfiles.list.empty')}
@@ -149,7 +185,40 @@ export function BillingProfilesPage() {
           )}
         </div>
       </Main>
-      <BillingProfileFormDialog open={formOpen} onOpenChange={setFormOpen} />
+      <BillingProfileFormDialog
+        open={formOpen || Boolean(editTarget)}
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) setEditTarget(null)
+        }}
+        profile={editTarget}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={t('config.billingProfiles.deleteConfirm.title')}
+        desc={t('config.billingProfiles.deleteConfirm.description', {
+          name: deleteTarget?.name ?? '',
+        })}
+        confirmText={t('config.billingProfiles.delete')}
+        cancelBtnText={t('common.cancel')}
+        destructive
+        isLoading={deleteMutation.isPending}
+        handleConfirm={() => {
+          if (!deleteTarget) return
+          deleteMutation.mutate(
+            { id: deleteTarget.id },
+            {
+              onSuccess: () => {
+                toast.success(t('config.billingProfiles.toast.deleted'))
+                setDeleteTarget(null)
+              },
+              onError: handleServerError,
+            }
+          )
+        }}
+      />
     </>
   )
 }
