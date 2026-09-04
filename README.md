@@ -50,6 +50,33 @@ already use.
 | **[Bill usage](https://openmeter.io/docs/billing/overview)** | Rate flat and usage-based charges, manage customer credit balances and subscription changes, and run the invoice lifecycle. |
 | **[Integrate](https://openmeter.io/docs/api/open-source)** | Use the OSS REST API and JavaScript, Python, or Go SDKs, send webhooks, and connect external invoicing providers. |
 
+## 前端管理端（front 子模块）
+
+本 fork 采用门面仓库 + 子模块结构（对齐 [Lago](https://github.com/getlago/lago)）：
+Go 后端与发版在本仓库，前端管理端是 git 子模块 `front/`，指向
+[1123786563/flexprice-front](https://github.com/1123786563/flexprice-front)
+（fork 自 [flexprice/flexprice-front](https://github.com/flexprice/flexprice-front)）。
+前端工具链、CI 与部署全部由子模块仓库自管，本仓库只维护指针。
+
+克隆时带上子模块：
+
+```sh
+git clone --recurse-submodules https://github.com/1123786563/openmeter.git
+```
+
+已克隆的仓库初始化子模块：
+
+```sh
+git submodule update --init front
+```
+
+升级前端指针（`.gitmodules` 不固定分支，指针变更一律由本仓库显式提交）：
+
+```sh
+cd front && git pull origin main && cd ..
+git add front && git commit -m "chore(repo): bump front submodule"
+```
+
 ## Quickstart
 
 The local evaluation stack requires [Git](https://git-scm.com/) and
