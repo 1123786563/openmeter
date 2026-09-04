@@ -859,7 +859,11 @@ func TestAuthRoutes(t *testing.T) {
 	var idpURL string
 
 	discoveryIDP := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/.well-known/openid-configuration", r.URL.Path)
+		// This handler runs on a non-test goroutine, where require's FailNow
+		// is forbidden; report through t.Errorf instead.
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			t.Errorf("unexpected IdP request path: %s", r.URL.Path)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -1010,6 +1014,27 @@ func TestSessionAuthRoutes(t *testing.T) {
 		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/swagger.json", nil))
 
 		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	// The /api/v1/portal/ prefix is exempt from session enforcement because
+	// portal routes authenticate with their own portal bearer tokens. This
+	// probes a REGISTERED portal route through the full server stack with
+	// SessionAuth enabled and no credentials: the session middleware's only
+	// outcomes are pass-through or 401, so any other status proves the
+	// exemption let the request reach the real handler. The noop portal
+	// service answers the token listing with 501 (pinned, matching TestRoutes)
+	// because listing is not implemented on the mock — which is precisely the
+	// handler speaking, not the middleware.
+	t.Run("exempted portal route reaches its handler anonymously", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/portal/tokens", nil))
+
+		require.NotEqual(t, http.StatusUnauthorized, w.Code)
+		require.Equal(t, http.StatusNotImplemented, w.Code)
 	})
 }
 

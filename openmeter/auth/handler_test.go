@@ -109,6 +109,10 @@ func (idp *fakeIDP) serveHTTP(w http.ResponseWriter, r *http.Request) {
 
 		now := time.Now()
 
+		// Claim-shape divergence by design: the Node e2e fake IdP
+		// (front/e2e/support/fake-oidp.mjs) sends only the "organization"
+		// claim, while this fixture sends only "owner" — the two deliberately
+		// exercise both claim paths; keep them in sync when changing shapes.
 		claims := jwt.MapClaims{
 			"iss":   idp.URL,
 			"aud":   testClientID,
