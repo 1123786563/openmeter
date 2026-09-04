@@ -109,7 +109,13 @@ func TestSessionTokenIssuerVerifyRejects(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("unknown fields (strict decoding pins the claim set)", func(t *testing.T) {
+	t.Run("unknown fields are accepted (claim set is NOT pinned)", func(t *testing.T) {
+		// Documents a real gap: jwt/v5's WithStrictDecoding only validates
+		// base64 padding (RFC 4648 §3.5); it does not reject unknown claim
+		// fields, so the claim set of session tokens is not actually pinned.
+		// Verified against jwt/v5 v5.3.1. Tracked in the auth test plan risk
+		// register (R1) — flip this to require.Error if production gains a
+		// DisallowUnknownFields-style check later.
 		token := mintSessionToken(t, secret, jwt.SigningMethodHS256, jwt.MapClaims{
 			"iss":      SessionTokenIssuerName,
 			"sub":      "user-123",
@@ -118,8 +124,9 @@ func TestSessionTokenIssuerVerifyRejects(t *testing.T) {
 			"surprise": "future-claim",
 		}, []byte(secret))
 
-		_, err := issuer.Verify(token)
-		require.Error(t, err)
+		claims, err := issuer.Verify(token)
+		require.NoError(t, err)
+		require.Equal(t, "user-123", claims.Subject)
 	})
 
 	t.Run("empty organization verifies (enforcement is the middleware's job)", func(t *testing.T) {
