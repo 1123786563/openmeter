@@ -33,3 +33,5 @@ api/v3/templates/chi-middleware.tmpl
 
 # CodeGraph
 .codegraph/
+.mimosa/
+.zcode/
