@@ -10,6 +10,7 @@ import (
 	"os"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/oklog/run"
 	"github.com/samber/lo"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/openmeterio/openmeter/app/common"
 	"github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/auth"
 	"github.com/openmeterio/openmeter/openmeter/debug"
 	"github.com/openmeterio/openmeter/openmeter/ingest/kafkaingest"
 	"github.com/openmeterio/openmeter/openmeter/namespace"
@@ -154,9 +156,52 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize management-plane OIDC authentication (e.g. Casdoor) when enabled.
+	var authHandler *auth.Handler
+	sessionAuth := auth.SessionMiddlewareConfig{}
+	if conf.Auth.OIDC.Enabled {
+		tokenIssuer, err := auth.NewSessionTokenIssuer(conf.Auth.TokenSecret, conf.Auth.TokenExpiration)
+		if err != nil {
+			logger.Error("failed to create session token issuer", "error", err)
+			os.Exit(1)
+		}
+
+		sessionAuth = auth.SessionMiddlewareConfig{
+			Tokens: tokenIssuer,
+			Logger: logger,
+		}
+
+		// Discovery is a startup-time network call; bound it so a hanging
+		// identity provider cannot stall boot indefinitely.
+		discoveryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		authHandler, err = auth.NewHandler(discoveryCtx, auth.HandlerConfig{
+			Issuer:       conf.Auth.OIDC.Issuer,
+			ClientID:     conf.Auth.OIDC.ClientID,
+			ClientSecret: conf.Auth.OIDC.ClientSecret,
+			RedirectURL:  conf.Auth.OIDC.RedirectURL,
+			DashboardURL: conf.Auth.OIDC.DashboardURL,
+			Tokens:       tokenIssuer,
+		}, logger)
+		if err != nil {
+			logger.Error("failed to create OIDC auth handler", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	// Requests carrying an authenticated session resolve the namespace from
+	// the session organization; everything else falls back to the default.
+	staticNamespaceDecoder := namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace())
+
+	var namespaceDecoder namespacedriver.NamespaceDecoder = staticNamespaceDecoder
+	if authHandler != nil {
+		namespaceDecoder = namespacedriver.NewSessionNamespaceDecoder(string(staticNamespaceDecoder))
+	}
+
 	s, err := server.NewServer(&server.Config{
 		RouterConfig: router.Config{
-			NamespaceDecoder:            namespacedriver.StaticNamespaceDecoder(app.NamespaceManager.GetDefaultNamespace()),
+			NamespaceDecoder:            namespaceDecoder,
 			Addon:                       app.Addon,
 			App:                         app.AppRegistry.Service,
 			AppStripe:                   app.AppRegistry.Stripe,
@@ -205,6 +250,8 @@ func main() {
 		PostAuthMiddlewares: app.PostAuthMiddlewares,
 		ResponseValidation:  conf.Server.ResponseValidation,
 		ClientIPMiddleware:  pkgserver.MiddlewareFunc(app.ClientIPMiddleware),
+		AuthRouter:          authHandler,
+		SessionAuth:         sessionAuth,
 	})
 	if err != nil {
 		logger.Error("failed to create server", "error", err)

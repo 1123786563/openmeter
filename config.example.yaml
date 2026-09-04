@@ -138,6 +138,19 @@ events:
 #   enabled: true
 #   tokenSecret: this-isnt-secure
 
+# Management-plane authentication via an OIDC provider (e.g. Casdoor).
+# Secrets must come from environment variables, never from this file:
+#   AUTH_OIDC_CLIENTSECRET  — OAuth2 client secret registered in the provider
+#   AUTH_TOKENSECRET        — HMAC secret for the session tokens OpenMeter issues
+# auth:
+#   oidc:
+#     enabled: true
+#     issuer: https://casdoor.example.com
+#     clientId: openmeter
+#     redirectURL: http://localhost:8888/auth/oidc/callback
+#     dashboardURL: http://localhost:5173/auth/callback
+#   tokenExpiration: 720h
+
 postgres:
   url: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
   autoMigrate: migration # Valid values are: migration, migration-job, false

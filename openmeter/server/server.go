@@ -18,6 +18,7 @@ import (
 	"github.com/openmeterio/openmeter/api"
 	v3server "github.com/openmeterio/openmeter/api/v3/server"
 	appconfig "github.com/openmeterio/openmeter/app/config"
+	"github.com/openmeterio/openmeter/openmeter/auth"
 	"github.com/openmeterio/openmeter/openmeter/portal/authenticator"
 	"github.com/openmeterio/openmeter/openmeter/server/router"
 	"github.com/openmeterio/openmeter/pkg/contextx"
@@ -71,6 +72,22 @@ type Config struct {
 	PostAuthMiddlewares PostAuthMiddlewares
 	ResponseValidation  appconfig.ResponseValidationConfig
 	ClientIPMiddleware  server.MiddlewareFunc
+
+	// AuthRouter optionally serves the management-plane authentication routes
+	// (OIDC login/callback). It is nil when authentication is disabled.
+	AuthRouter *auth.Handler
+
+	// SessionAuth optionally enforces OpenMeter session tokens on the v1 and
+	// v3 management-plane route groups. It is disabled when Tokens is nil.
+	SessionAuth auth.SessionMiddlewareConfig
+}
+
+// sessionAuthExemptPathPrefixes are v1 paths that carry their own
+// authentication scheme (portal bearer tokens) or must stay reachable for
+// tooling (the served OpenAPI spec).
+var sessionAuthExemptPathPrefixes = []string{
+	"/api/v1/portal/",
+	"/api/swagger.json",
 }
 
 func (c Config) Validate() error {
@@ -116,6 +133,22 @@ func NewServer(config *Config) (*Server, error) {
 	// telemetry hook, but unsafe for any future hook with construction side effects.
 	hookMiddlewares := collectMiddlewareHooks(config.RouterHooks.Middlewares)
 
+	// Session enforcement runs on both API groups ahead of the feature-flag
+	// post-auth middlewares, which expect an attached session.
+	var sessionAuthMiddleware func(http.Handler) http.Handler
+
+	if config.SessionAuth.Enabled() {
+		sessionAuthConfig := config.SessionAuth
+		sessionAuthConfig.ExemptPathPrefixes = append(sessionAuthConfig.ExemptPathPrefixes, sessionAuthExemptPathPrefixes...)
+
+		var err error
+
+		sessionAuthMiddleware, err = auth.NewSessionMiddleware(sessionAuthConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create session auth middleware: %w", err)
+		}
+	}
+
 	// v3 gets the hook middlewares (e.g. otelhttp tracing/metrics) plus the standard
 	// stack, so it has the same OTEL HTTP instrumentation as the v1 router group.
 	v3Middlewares := append([]server.MiddlewareFunc{}, hookMiddlewares...)
@@ -133,6 +166,9 @@ func NewServer(config *Config) (*Server, error) {
 		server.NewRequestLoggerMiddleware(slog.Default().Handler()),
 		middleware.Recoverer,
 	}...)
+	if sessionAuthMiddleware != nil {
+		v3Middlewares = append(v3Middlewares, sessionAuthMiddleware)
+	}
 
 	v3API, err := v3server.NewServer(&v3server.Config{
 		BaseURL:                     "/api/v3",
@@ -182,6 +218,22 @@ func NewServer(config *Config) (*Server, error) {
 	})
 	if v3RegisterErr != nil {
 		return nil, fmt.Errorf("failed to register v3 API routes: %w", v3RegisterErr)
+	}
+
+	if config.AuthRouter != nil {
+		var authRegisterErr error
+
+		r.Group(func(r chi.Router) {
+			r.Use(config.ClientIPMiddleware)
+			r.Use(middleware.RequestID)
+			r.Use(server.NewRequestLoggerMiddleware(slog.Default().Handler()))
+			r.Use(middleware.Recoverer)
+
+			authRegisterErr = config.AuthRouter.RegisterRoutes(r)
+		})
+		if authRegisterErr != nil {
+			return nil, fmt.Errorf("failed to register auth routes: %w", authRegisterErr)
+		}
 	}
 
 	r.Group(func(r chi.Router) {
@@ -235,7 +287,15 @@ func NewServer(config *Config) (*Server, error) {
 			routeHook(r)
 		}
 
-		middlewares := []api.MiddlewareFunc{
+		middlewares := []api.MiddlewareFunc{}
+
+		// Session enforcement runs first so downstream handlers and the
+		// feature-flag post-auth middlewares see an attached session.
+		if sessionAuthMiddleware != nil {
+			middlewares = append(middlewares, api.MiddlewareFunc(sessionAuthMiddleware))
+		}
+
+		middlewares = append(middlewares,
 			authenticator.NewAuthenticator(config.RouterConfig.Portal, config.RouterConfig.ErrorHandler).NewAuthenticatorMiddlewareFunc(swagger),
 			oapimiddleware.OapiRequestValidatorWithOptions(swagger, &oapimiddleware.Options{
 				ErrorHandler: func(w http.ResponseWriter, message string, statusCode int) {
@@ -251,7 +311,7 @@ func NewServer(config *Config) (*Server, error) {
 					ExcludeReadOnlyValidations: true,
 				},
 			}),
-		}
+		)
 
 		postAuthMiddlewares := lo.Map(config.PostAuthMiddlewares, func(mwf server.MiddlewareFunc, _ int) api.MiddlewareFunc {
 			return api.MiddlewareFunc(mwf)

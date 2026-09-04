@@ -102,6 +102,9 @@ func TestComplete(t *testing.T) {
 			Default:           "default",
 			DisableManagement: false,
 		},
+		Auth: AuthConfiguration{
+			TokenExpiration: 720 * time.Hour,
+		},
 		Ingest: IngestConfiguration{
 			Kafka: KafkaIngestConfiguration{
 				KafkaConfiguration: KafkaConfiguration{

@@ -36,6 +36,11 @@ func GetActiveSession(ctx context.Context) *AuthenticationSession {
 	return nil
 }
 
+// WithAuthenticationSession returns a new context with the given session attached.
+func WithAuthenticationSession(ctx context.Context, session *AuthenticationSession) context.Context {
+	return context.WithValue(ctx, AuthenticationSessionKey, session)
+}
+
 // NewAuthenticationSession creates a new authentication session
 func NewAuthenticationSession(orgID, orgSlug, orgRole, userID string, orgPermissions []string) (*AuthenticationSession, error) {
 	session := &AuthenticationSession{

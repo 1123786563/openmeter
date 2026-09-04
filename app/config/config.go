@@ -32,6 +32,7 @@ type Configuration struct {
 	Server ServerConfig
 
 	Aggregation        AggregationConfiguration
+	Auth               AuthConfiguration
 	Entitlements       EntitlementsConfiguration
 	Customer           CustomerConfiguration
 	Credits            CreditsConfiguration
@@ -70,6 +71,10 @@ func (c Configuration) Validate() error {
 
 	if err := c.Namespace.Validate(); err != nil {
 		errs = append(errs, errorsx.WithPrefix(err, "namespace"))
+	}
+
+	if err := c.Auth.Validate(); err != nil {
+		errs = append(errs, errorsx.WithPrefix(err, "auth"))
 	}
 
 	if err := c.Ingest.Validate(); err != nil {
@@ -218,6 +223,7 @@ func SetViperDefaults(v *viper.Viper, flags *pflag.FlagSet) {
 	v.SetDefault("postgres.autoMigrate", "migration")
 
 	ConfigureNamespace(v)
+	ConfigureAuth(v)
 	ConfigureIngest(v)
 	ConfigureAggregation(v)
 	ConfigureSink(v)
