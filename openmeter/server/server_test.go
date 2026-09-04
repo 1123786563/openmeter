@@ -3,11 +3,15 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +30,7 @@ import (
 	"github.com/openmeterio/openmeter/openmeter/app"
 	appcustominvoicing "github.com/openmeterio/openmeter/openmeter/app/custominvoicing"
 	appstripe "github.com/openmeterio/openmeter/openmeter/app/stripe"
+	"github.com/openmeterio/openmeter/openmeter/auth"
 	"github.com/openmeterio/openmeter/openmeter/billing"
 	billingcharges "github.com/openmeterio/openmeter/openmeter/billing/charges"
 	"github.com/openmeterio/openmeter/openmeter/billing/charges/creditpurchase"
@@ -698,7 +703,7 @@ func TestRoutes(t *testing.T) {
 
 // getTestServer returns a test server and its streaming connector mock.
 // Optional opts functions are applied to the router.Config before the server is created.
-func getTestServer(t *testing.T, opts ...func(*router.Config)) (*Server, *MockStreamingConnector) {
+func getTestServer(t *testing.T, opts ...func(*Config)) (*Server, *MockStreamingConnector) {
 	portal, err := portaladapter.New(portaladapter.Config{
 		Secret: "12345",
 		Expire: time.Hour,
@@ -806,7 +811,7 @@ func getTestServer(t *testing.T, opts ...func(*router.Config)) (*Server, *MockSt
 	}
 
 	for _, opt := range opts {
-		opt(&config.RouterConfig)
+		opt(config)
 	}
 
 	// Create server
@@ -820,8 +825,8 @@ func TestListCustomerChargesRoute(t *testing.T) {
 	path := "/api/v3/openmeter/customers/" + customerID + "/charges"
 
 	t.Run("with charge service configured returns empty list", func(t *testing.T) {
-		testServer, _ := getTestServer(t, func(c *router.Config) {
-			c.ChargeService = &NoopChargeService{}
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.RouterConfig.ChargeService = &NoopChargeService{}
 		})
 
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -833,6 +838,236 @@ func TestListCustomerChargesRoute(t *testing.T) {
 			`{"data":[],"meta":{"page":{"number":1,"size":20,"total":0}}}`,
 			w.Body.String(),
 		)
+	})
+}
+
+// TestAuthRoutes verifies the OIDC endpoints are reachable through the full
+// server middleware stack only when an auth handler is configured.
+func TestAuthRoutes(t *testing.T) {
+	// randomTestSecret returns a non-reusable secret so no credential literal
+	// ever appears in source control.
+	randomTestSecret := func() string {
+		buf := make([]byte, 32)
+		_, err := rand.Read(buf)
+		require.NoError(t, err)
+
+		return hex.EncodeToString(buf)
+	}
+
+	// discoveryIDP serves only OIDC discovery; the login redirect itself does
+	// not call the identity provider.
+	var idpURL string
+
+	discoveryIDP := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/.well-known/openid-configuration", r.URL.Path)
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"issuer":                 idpURL,
+			"authorization_endpoint": idpURL + "/login/oauth/authorize",
+			"token_endpoint":         idpURL + "/api/login/oauth/access_token",
+			"jwks_uri":               idpURL + "/api/certs",
+		})
+	}))
+	defer discoveryIDP.Close()
+	idpURL = discoveryIDP.URL
+
+	tokens, err := auth.NewSessionTokenIssuer(randomTestSecret(), time.Hour)
+	require.NoError(t, err)
+
+	handler, err := auth.NewHandler(t.Context(), auth.HandlerConfig{
+		Issuer:       idpURL,
+		ClientID:     "openmeter-client",
+		ClientSecret: randomTestSecret(),
+		RedirectURL:  "http://api.example.com/auth/oidc/callback",
+		DashboardURL: "http://front.example.com/auth/callback",
+		Tokens:       tokens,
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	require.NoError(t, err)
+
+	t.Run("with auth handler configured login redirects to the provider", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.AuthRouter = handler
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/auth/oidc/login", nil))
+
+		require.Equal(t, http.StatusFound, w.Code)
+
+		location, err := url.Parse(w.Header().Get("Location"))
+		require.NoError(t, err)
+		require.Equal(t, idpURL+"/login/oauth/authorize", location.Scheme+"://"+location.Host+location.Path)
+		require.NotEmpty(t, location.Query().Get("state"))
+	})
+
+	t.Run("with auth handler configured callback without state cookie is rejected", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.AuthRouter = handler
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/auth/oidc/callback?code=x&state=y", nil))
+
+		require.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("without auth handler configured auth routes are not served", func(t *testing.T) {
+		testServer, _ := getTestServer(t)
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/auth/oidc/login", nil))
+
+		require.Equal(t, http.StatusNotFound, w.Code)
+	})
+}
+
+// TestSessionAuthRoutes verifies the v1/v3 management APIs require a session
+// token when enforcement is configured, while exempted paths stay reachable.
+func TestSessionAuthRoutes(t *testing.T) {
+	// randomTestSecret returns a non-reusable secret so no credential literal
+	// ever appears in source control.
+	randomTestSecret := func() string {
+		buf := make([]byte, 32)
+		_, err := rand.Read(buf)
+		require.NoError(t, err)
+
+		return hex.EncodeToString(buf)
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	tokens, err := auth.NewSessionTokenIssuer(randomTestSecret(), time.Hour)
+	require.NoError(t, err)
+
+	token, err := tokens.Issue(auth.IssueSessionTokenInput{
+		UserID:       "user-123",
+		Organization: DefaultNamespace,
+	})
+	require.NoError(t, err)
+
+	authedGet := func(t *testing.T, testServer *Server, path string) *httptest.ResponseRecorder {
+		t.Helper()
+
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, req)
+
+		return w
+	}
+
+	t.Run("v1 rejects anonymous requests", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/meters", nil))
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("v1 accepts session tokens", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := authedGet(t, testServer, "/api/v1/meters")
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("v3 rejects anonymous requests", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v3/openmeter/customers/01ARZ3NDEKTSV4RRFFQ69G5FAV/charges", nil))
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("v3 accepts session tokens", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+			c.RouterConfig.ChargeService = &NoopChargeService{}
+		})
+
+		w := authedGet(t, testServer, "/api/v3/openmeter/customers/01ARZ3NDEKTSV4RRFFQ69G5FAV/charges")
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("swagger stays reachable anonymously", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/swagger.json", nil))
+
+		require.Equal(t, http.StatusOK, w.Code)
+	})
+}
+
+// TestSessionAuthBlastRadius pins the intended behavior change of enabling
+// session enforcement: the previously anonymous v1 surface (including event
+// ingestion) starts requiring a session token, and disabling enforcement
+// restores anonymous access. If a test here fails after touching exempt
+// prefixes or middleware ordering, the blast radius moved on purpose — update
+// this test and the deployment notes together.
+func TestSessionAuthBlastRadius(t *testing.T) {
+	randomTestSecret := func() string {
+		buf := make([]byte, 32)
+		_, err := rand.Read(buf)
+		require.NoError(t, err)
+
+		return hex.EncodeToString(buf)
+	}
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	tokens, err := auth.NewSessionTokenIssuer(randomTestSecret(), time.Hour)
+	require.NoError(t, err)
+
+	t.Run("ingestion requires a session when enforcement is on", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/v1/events", strings.NewReader(`{"specversion":"1.0"}`)))
+
+		require.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	// The session middleware only runs on registered OpenAPI operations, so a
+	// path with no route (e.g. the bare portal prefix, which the exemption
+	// deliberately does not cover) never reaches it and falls through to the
+	// group's NotFound handler. This pins that the bare prefix is not an
+	// anonymously served surface; the prefix boundary itself is unit-tested in
+	// the auth package.
+	t.Run("portal prefix without trailing slash is not anonymously served", func(t *testing.T) {
+		testServer, _ := getTestServer(t, func(c *Config) {
+			c.SessionAuth = auth.SessionMiddlewareConfig{Tokens: tokens, Logger: logger}
+		})
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/portal", nil))
+
+		require.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("disabling enforcement restores the anonymous surface", func(t *testing.T) {
+		testServer, _ := getTestServer(t)
+
+		w := httptest.NewRecorder()
+		testServer.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/v1/meters", nil))
+
+		require.Equal(t, http.StatusOK, w.Code)
 	})
 }
 
